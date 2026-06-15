@@ -23,6 +23,7 @@ const GLOBAL_STYLES = `
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--yellow); outline-offset: 2px; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
   .fade-in { animation: fadeIn 0.4s ease both; }
 `;
 
@@ -1539,6 +1540,11 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [messageIA, setMessageIA] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
+  const [sessionStreamText, setSessionStreamText] = useState("");
+  const [showCoachChat, setShowCoachChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const days = daysUntil(profile.raceDate);
 
@@ -1703,6 +1709,65 @@ Génère UN message court (2-3 phrases max) qui:
     setLoadingMessage(false);
   }
 
+  async function sendChatMessage() {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = { role: "user", content: chatInput.trim() };
+    const newMessages = [...chatMessages, userMsg];
+    setChatMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+
+    const score = calcFitnessScore(profile);
+    const lastSess = (profile.sessions || []).slice(-1)[0];
+    const days = daysUntil(profile.raceDate);
+
+    const systemPrompt = `Tu es le Coach IA personnel de ${profile.name}, athlète HYROX. Tu parles directement à l'athlète en français, avec bienveillance et expertise.
+
+PROFIL COMPLET:
+- ${profile.name}, ${profile.age} ans, ${profile.poids}kg, ${profile.sexe}
+- Niveau HYROX: ${profile.level}/4 | VMA: ${profile.vmaKmh || "?"}km/h
+- Squat 1RM: ${profile.squat1RM_final || "?"}kg | Deadlift: ${profile.deadlift1RM_final || "?"}kg
+- Score condition: ${score.global}% (Force ${score.force}% | Endurance ${score.endurance}%)
+- Objectif: ${profile.objectifPrincipal || "HYROX"} ${profile.hyroxCategorie || ""}
+- Jours avant la course: ${days !== null ? days : "non défini"}
+- Séances réalisées: ${(profile.sessions || []).length}
+- Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficulte}/10, ressenti: ${lastSess.ressenti}` : "aucune"}
+- Streak: ${profile.streak || 0} jours
+
+DOMAINES D'EXPERTISE: HYROX, running, force fonctionnelle, nutrition sportive, récupération, planification, technique des stations (SkiErg, Rowing, Wall Balls, Sled Push/Pull, Burpee Broad Jump, Farmers Carry, Sandbag Lunges).
+
+Réponds de façon conversationnelle, précise et personnalisée. Utilise le prénom de l'athlète. Sois concret et actionnable.`;
+
+    const historyForAPI = newMessages.map(m => ({ role: m.role, content: m.content }));
+
+    // Add streaming response
+    const assistantMsgIdx = newMessages.length;
+    setChatMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+    const result = await callClaudeStream(
+      systemPrompt,
+      // Build conversation history as context in user message
+      historyForAPI.length > 1
+        ? `[Historique de notre conversation]\n${historyForAPI.slice(0, -1).map(m => `${m.role === "user" ? "Athlète" : "Coach"}: ${m.content}`).join("\n")}\n\n[Nouvelle question]\n${userMsg.content}`
+        : userMsg.content,
+      800,
+      (chunk) => {
+        setChatMessages(prev => {
+          const updated = [...prev];
+          updated[assistantMsgIdx] = { role: "assistant", content: chunk };
+          return updated;
+        });
+      }
+    );
+
+    setChatMessages(prev => {
+      const updated = [...prev];
+      updated[assistantMsgIdx] = { role: "assistant", content: result.startsWith("__ERROR__") ? "Désolé, une erreur est survenue. Réessaie." : result };
+      return updated;
+    });
+    setChatLoading(false);
+  }
+
   function formatChrono(secs) {
     const m = Math.floor(secs / 60).toString().padStart(2, "0");
     const s = (secs % 60).toString().padStart(2, "0");
@@ -1814,12 +1879,22 @@ ADAPTATION À APPLIQUER OBLIGATOIREMENT AUJOURD'HUI: ${allAdaptations.slice(-1)[
     const lastSessions3 = allSessions.slice(-3).map(s => `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti})`).join(" | ");
     const poidsComp = getPoidsHyrox(profile);
 
-    const raw = await callClaude(
-      "Coach HYROX. JSON uniquement.",
-      `Génère une séance ${sessionType} en JSON pour: ${profile.name}, ${profile.poids}kg, Niv.${profile.level}, VMA ${profile.vmaKmh||"?"}km/h, Squat ${profile.squat1RM_final||"?"}kg, Fatigue ${dailyData.fatigue}/4, ${dailyData.temps}min, ${phase}.
+    setSessionStreamText("🤖 Coach IA analyse ton profil...");
+    const raw = await callClaudeStream(
+      "Coach HYROX expert. Réponds UNIQUEMENT en JSON valide, sans texte autour, sans backticks.",
+      `Génère une séance ${sessionType} en JSON pour: ${profile.name}, ${profile.poids}kg, Niv.${profile.level}, VMA ${profile.vmaKmh||"?"}km/h, Squat ${profile.squat1RM_final||"?"}kg, Fatigue ${dailyData.fatigue}/4, ${dailyData.temps}min, phase ${phase}.
+${adaptationContext}
+TYPE DE SÉANCE À GÉNÉRER:
+${sessionTypeDescriptions[sessionType] || "Séance générale HYROX"}
 Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
 {"titre":"","type":"${sessionType}","duree":${dailyData.temps},"explication":"","echauffement":"","exercices":[{"nom":"","detail":"","rpe":"","note":""}],"retourCalme":"","nutrition":{"avant":"","apres":""},"metrique":""}`,
-      1200
+      1400,
+      (chunk) => {
+        // Extraire le titre en cours de streaming pour affichage
+        const titreMatch = chunk.match(/"titre"\s*:\s*"([^"]{3,})"/);
+        if (titreMatch) setSessionStreamText(`📋 ${titreMatch[1]}...`);
+        else if (chunk.length > 50) setSessionStreamText("🤖 Génération en cours...");
+      }
     );
 
     try {
@@ -1834,9 +1909,9 @@ Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
       if (!parsed.titre) throw new Error("JSON incomplet");
       setSession(parsed);
       setFeedback(null); setShowFeedback(false);
+      setCheckedExercices({});
     } catch (e) {
       console.error("Erreur parse séance:", e.message, "Raw:", raw?.slice(0, 500));
-      // Afficher la vraie réponse pour debug + permettre de réessayer
       setSession({
         titre: "Erreur — Réessaie",
         explication: e.message || "Erreur inconnue. Réessaie.",
@@ -1844,6 +1919,7 @@ Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
         type: "erreur",
       });
     }
+    setSessionStreamText("");
     setLoadingSession(false);
   }
 
@@ -2025,6 +2101,88 @@ JSON:
 
       {/* Video Modal */}
       {videoModal && <VideoModal mouvement={videoModal} onClose={() => setVideoModal(null)} />}
+
+      {/* Coach Chat Modal */}
+      {showCoachChat && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", flexDirection: "column", padding: "0" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 520, margin: "0 auto", width: "100%", height: "100%" }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "var(--bg)" }}>
+              <div>
+                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>🤖 COACH IA</div>
+                <div style={{ fontSize: 12, color: "#666" }}>Pose toutes tes questions</div>
+              </div>
+              <button onClick={() => setShowCoachChat(false)} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "8px 14px", color: "#aaa", cursor: "pointer", fontSize: 14 }}>✕ Fermer</button>
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", background: "var(--bg)", display: "flex", flexDirection: "column", gap: 12 }}>
+              {chatMessages.length === 0 && (
+                <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🤖</div>
+                  <div style={{ color: "#aaa", fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>Salut {profile.name} ! Je suis ton coach IA personnel. Pose-moi n'importe quelle question sur ton entraînement, ta nutrition, ta technique ou ta préparation HYROX.</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {[
+                      "Comment améliorer mon temps au Sled Push ?",
+                      "Quelle alimentation avant une séance de force ?",
+                      `Comment progresser rapidement avec ma VMA de ${profile.vmaKmh || "?"}km/h ?`,
+                      "Combien de jours de repos dois-je prendre ?",
+                    ].map((q, i) => (
+                      <button key={i} onClick={() => { setChatInput(q); }} style={{ background: "var(--bg2)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 14px", color: "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
+                        💬 {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {chatMessages.map((msg, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                  <div style={{
+                    maxWidth: "85%",
+                    background: msg.role === "user" ? "var(--yellow)" : "var(--bg2)",
+                    color: msg.role === "user" ? "#000" : "var(--white)",
+                    borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    border: msg.role === "assistant" ? "1px solid rgba(255,255,255,0.06)" : "none",
+                  }}>
+                    {msg.role === "assistant" && !msg.content && <span style={{ color: "#555" }}>●●●</span>}
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "var(--bg)", display: "flex", gap: 10 }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                placeholder="Pose ta question au coach..."
+                style={{
+                  flex: 1, background: "var(--bg2)", border: "1.5px solid rgba(255,255,255,0.1)",
+                  borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 14,
+                  outline: "none", fontFamily: "'DM Sans', sans-serif",
+                }}
+              />
+              <button
+                onClick={sendChatMessage}
+                disabled={!chatInput.trim() || chatLoading}
+                style={{
+                  background: chatInput.trim() && !chatLoading ? "var(--yellow)" : "var(--bg3)",
+                  border: "none", borderRadius: 12, padding: "12px 18px",
+                  color: chatInput.trim() && !chatLoading ? "#000" : "#555",
+                  fontSize: 18, cursor: chatInput.trim() && !chatLoading ? "pointer" : "default",
+                  transition: "all 0.2s", fontWeight: 700,
+                }}>
+                {chatLoading ? "●" : "↑"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chrono Mode — plein écran */}
       {chronoMode && session && (
@@ -2675,7 +2833,18 @@ JSON:
                 <Btn size="lg" onClick={generateSession} style={{ width: "100%", marginBottom: 20 }}>⚡ Générer ma séance du jour</Btn>
               )
             )}
-            {loadingSession && <Spinner />}
+            {loadingSession && (
+              <div className="fade-in" style={{ textAlign: "center", padding: "32px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(232,255,71,0.15)", marginBottom: 20 }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>🤖</div>
+                <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 8 }}>{sessionStreamText || "Coach IA réfléchit..."}</div>
+                <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--yellow)", opacity: 0.6, animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, color: "#555", marginTop: 12 }}>Adapté à ton profil et à tes dernières séances</div>
+              </div>
+            )}
 
             {session && !showFeedback && !feedback && (
               <div className="slide-up">
@@ -3293,6 +3462,21 @@ JSON:
         {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} />}
 
       </div>
+
+      {/* Floating Coach Chat Button */}
+      {!showCoachChat && (
+        <button
+          onClick={() => setShowCoachChat(true)}
+          style={{
+            position: "fixed", bottom: 76, right: 16, zIndex: 99,
+            width: 52, height: 52, borderRadius: "50%",
+            background: "var(--yellow)", border: "none",
+            fontSize: 22, cursor: "pointer", boxShadow: "0 4px 20px rgba(232,255,71,0.35)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          title="Coach IA"
+        >🤖</button>
+      )}
 
       {/* Bottom Nav */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--bg2)", borderTop: "1px solid var(--bg3)", display: "flex", justifyContent: "space-around", padding: "8px 0", zIndex: 100 }}>
