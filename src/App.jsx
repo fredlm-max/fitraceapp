@@ -2696,208 +2696,285 @@ JSON:
 
       {/* Coach Chat Modal */}
       {showCoachChat && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", flexDirection: "column", padding: "0" }}>
+        <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 300, display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 520, margin: "0 auto", width: "100%", height: "100%" }}>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "var(--bg)" }}>
-              <div>
-                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>🤖 COACH IA</div>
-                <div style={{ fontSize: 12, color: "#666" }}>Pose toutes tes questions</div>
+            <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(8,8,8,0.95)", backdropFilter: "blur(20px)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, rgba(232,255,71,0.2), rgba(57,255,128,0.1))", border: "1px solid rgba(232,255,71,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🤖</div>
+                <div>
+                  <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>COACH IA</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />
+                    <span style={{ fontSize: 11, color: "#555" }}>En ligne · Répond en temps réel</span>
+                  </div>
+                </div>
               </div>
-              <button onClick={() => setShowCoachChat(false)} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "8px 14px", color: "#aaa", cursor: "pointer", fontSize: 14 }}>✕ Fermer</button>
+              <button onClick={() => setShowCoachChat(false)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#666", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", background: "var(--bg)", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
               {chatMessages.length === 0 && (
-                <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>🤖</div>
-                  <div style={{ color: "#aaa", fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>Salut {profile.name} ! Je suis ton coach IA personnel. Pose-moi n'importe quelle question sur ton entraînement, ta nutrition, ta technique ou ta préparation HYROX.</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ padding: "20px 0" }}>
+                  {/* Bulle d'accueil du coach */}
+                  <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🤖</div>
+                    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px 16px 16px 16px", padding: "14px 16px", maxWidth: "85%" }}>
+                      <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7 }}>Salut <strong style={{ color: "var(--yellow)" }}>{profile.name}</strong> ! 👋 Je suis ton coach IA HYROX personnel. Connais ton profil, tes forces et tes objectifs. Pose-moi n'importe quelle question.</div>
+                    </div>
+                  </div>
+                  {/* Questions suggérées */}
+                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Suggestions</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                     {[
-                      "Comment améliorer mon temps au Sled Push ?",
-                      "Quelle alimentation avant une séance de force ?",
-                      `Comment progresser rapidement avec ma VMA de ${profile.vmaKmh || "?"}km/h ?`,
-                      "Combien de jours de repos dois-je prendre ?",
+                      "Comment améliorer mon Sled Push ?",
+                      "Que manger avant une séance de force ?",
+                      `Comment progresser avec ma VMA de ${profile.vmaKmh || "?"}km/h ?`,
+                      "Combien de jours de repos par semaine ?",
                     ].map((q, i) => (
-                      <button key={i} onClick={() => { setChatInput(q); }} style={{ background: "var(--bg2)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 14px", color: "#ccc", fontSize: 13, cursor: "pointer", textAlign: "left" }}>
-                        💬 {q}
+                      <button key={i} onClick={() => setChatInput(q)} style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "11px 14px", color: "#aaa", fontSize: 13, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>💬</span>
+                        <span>{q}</span>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
               {chatMessages.map((msg, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                <div key={i} style={{ display: "flex", gap: 8, justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-end" }}>
+                  {msg.role === "assistant" && (
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, marginBottom: 2 }}>🤖</div>
+                  )}
                   <div style={{
-                    maxWidth: "85%",
-                    background: msg.role === "user" ? "var(--yellow)" : "var(--bg2)",
-                    color: msg.role === "user" ? "#000" : "var(--white)",
-                    borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                    padding: "12px 16px",
+                    maxWidth: "82%",
+                    background: msg.role === "user"
+                      ? "linear-gradient(135deg, #e8ff47, #b8cc00)"
+                      : "rgba(255,255,255,0.04)",
+                    color: msg.role === "user" ? "#000" : "#ddd",
+                    borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
+                    padding: "11px 15px",
                     fontSize: 14,
-                    lineHeight: 1.6,
-                    border: msg.role === "assistant" ? "1px solid rgba(255,255,255,0.06)" : "none",
+                    lineHeight: 1.65,
+                    border: msg.role === "assistant" ? "1px solid rgba(255,255,255,0.07)" : "none",
+                    fontWeight: msg.role === "user" ? 600 : 400,
                   }}>
-                    {msg.role === "assistant" && !msg.content && <span style={{ color: "#555" }}>●●●</span>}
-                    {msg.content}
+                    {msg.role === "assistant" && !msg.content ? (
+                      <div style={{ display: "flex", gap: 5, alignItems: "center", padding: "2px 0" }}>
+                        {[0,1,2].map(j => <div key={j} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1.2s ${j*0.2}s ease-in-out infinite` }} />)}
+                      </div>
+                    ) : msg.content}
                   </div>
+                  {msg.role === "user" && (
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, var(--yellow), #b8cc00)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#000", flexShrink: 0, marginBottom: 2 }}>
+                      {profile.name[0].toUpperCase()}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* Input */}
-            <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "var(--bg)", display: "flex", gap: 10 }}>
+            <div style={{ padding: "12px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(8,8,8,0.95)", display: "flex", gap: 10, alignItems: "flex-end" }}>
               <input
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
-                placeholder="Pose ta question au coach..."
-                style={{
-                  flex: 1, background: "var(--bg2)", border: "1.5px solid rgba(255,255,255,0.1)",
-                  borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 14,
-                  outline: "none", fontFamily: "'DM Sans', sans-serif",
-                }}
+                placeholder="Pose ta question..."
+                style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 16px", color: "var(--white)", fontSize: 14, outline: "none", fontFamily: "'DM Sans', sans-serif" }}
               />
-              <button
-                onClick={sendChatMessage}
-                disabled={!chatInput.trim() || chatLoading}
-                style={{
-                  background: chatInput.trim() && !chatLoading ? "var(--yellow)" : "var(--bg3)",
-                  border: "none", borderRadius: 12, padding: "12px 18px",
-                  color: chatInput.trim() && !chatLoading ? "#000" : "#555",
-                  fontSize: 18, cursor: chatInput.trim() && !chatLoading ? "pointer" : "default",
-                  transition: "all 0.2s", fontWeight: 700,
-                }}>
-                {chatLoading ? "●" : "↑"}
-              </button>
+              <button onClick={sendChatMessage} disabled={!chatInput.trim() || chatLoading} style={{
+                width: 46, height: 46, borderRadius: 14, border: "none", flexShrink: 0,
+                background: chatInput.trim() && !chatLoading ? "var(--yellow)" : "rgba(255,255,255,0.05)",
+                color: chatInput.trim() && !chatLoading ? "#000" : "#333",
+                fontSize: 20, cursor: chatInput.trim() && !chatLoading ? "pointer" : "default",
+                transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700,
+              }}>{chatLoading ? "…" : "↑"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Chrono Mode — plein écran */}
+      {/* Chrono Mode — plein écran premium */}
       {chronoMode && session && (
-        <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 200, display: "flex", flexDirection: "column", padding: "20px 20px 28px", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 200, display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
 
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div>
-              <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", letterSpacing: 2 }}>FITRACE · MODE ENTRAÎNEMENT</div>
-              <div style={{ fontSize: 10, color: "#333" }}>Ex. {currentExIdx + 1}/{(session.exercices||[]).length} · Total {formatChrono(chronoSeconds)}</div>
+          {/* Header sticky */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: chronoRunning ? "var(--green)" : "#444", boxShadow: chronoRunning ? "0 0 8px var(--green)" : "none" }} />
+              <div className="bebas" style={{ fontSize: 15, color: "var(--yellow)", letterSpacing: 2 }}>MODE ENTRAÎNEMENT</div>
             </div>
-            <button onClick={() => { setChronoMode(false); setChronoRunning(false); setReposMode(false); setReposRunning(false); setLapTimes([]); }}
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #222", borderRadius: 8, padding: "5px 12px", color: "#666", fontSize: 11, cursor: "pointer" }}>Quitter</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 12, color: "#444", fontVariantNumeric: "tabular-nums" }}>
+                {currentExIdx + 1}/{(session.exercices||[]).length}
+              </div>
+              <button onClick={() => { setChronoMode(false); setChronoRunning(false); setReposMode(false); setReposRunning(false); setLapTimes([]); }}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #1a1a1a", borderRadius: 8, padding: "6px 12px", color: "#555", fontSize: 12, cursor: "pointer" }}>✕ Quitter</button>
+            </div>
+          </div>
+
+          {/* Progress bar séance */}
+          <div style={{ height: 3, background: "#111" }}>
+            <div style={{ height: "100%", background: "linear-gradient(90deg, var(--yellow), var(--green))", width: `${((currentExIdx) / Math.max((session.exercices||[]).length, 1)) * 100}%`, transition: "width 0.5s" }} />
           </div>
 
           {/* MODE REPOS */}
           {reposMode ? (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ fontSize: 13, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Temps de repos</div>
-              <div className="bebas" style={{ fontSize: 100, color: reposCountdown <= 10 ? "var(--red)" : "var(--green)", lineHeight: 1, letterSpacing: 4 }}>
-                {reposCountdown > 0 ? reposCountdown : "GO!"}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", background: reposCountdown <= 10 ? "radial-gradient(circle at 50% 40%, rgba(255,71,71,0.06) 0%, transparent 70%)" : "radial-gradient(circle at 50% 40%, rgba(57,255,128,0.06) 0%, transparent 70%)" }}>
+
+              <div style={{ fontSize: 11, color: "#333", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16 }}>Temps de repos</div>
+
+              {/* Grand compteur repos */}
+              <div style={{ position: "relative", marginBottom: 20 }}>
+                {/* Anneau SVG */}
+                {(() => {
+                  const maxSec = 120;
+                  const pct = Math.min(reposCountdown / maxSec, 1);
+                  const r = 90; const circ = 2 * Math.PI * r;
+                  const col = reposCountdown <= 10 ? "var(--red)" : "var(--green)";
+                  return (
+                    <svg width="220" height="220" viewBox="0 0 220 220">
+                      <circle cx="110" cy="110" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="8" />
+                      <circle cx="110" cy="110" r={r} fill="none" stroke={col} strokeWidth="8" strokeLinecap="round"
+                        strokeDasharray={circ} strokeDashoffset={circ - pct * circ}
+                        transform="rotate(-90 110 110)" style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s" }} />
+                      <text x="110" y="100" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="72" fill={col} style={{ transition: "fill 0.5s" }}>
+                        {reposCountdown > 0 ? reposCountdown : "GO"}
+                      </text>
+                      {reposCountdown > 0 && <text x="110" y="128" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="14" fill="#333">secondes</text>}
+                      {reposCountdown === 0 && <text x="110" y="136" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="24" fill={col}>C'EST PARTI !</text>}
+                    </svg>
+                  );
+                })()}
               </div>
-              {reposCountdown > 0 && (
-                <div style={{ marginTop: 8, color: "#333", fontSize: 12 }}>secondes restantes</div>
-              )}
+
               {/* Sélecteur durée repos */}
-              <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
                 {[30, 60, 90, 120, 180].map(sec => (
                   <button key={sec} onClick={() => { setReposCountdown(sec); setReposRunning(true); }} style={{
-                    padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer",
-                    background: reposCountdown === sec ? "var(--green)22" : "var(--bg3)",
-                    border: reposCountdown === sec ? "1.5px solid var(--green)" : "1px solid #222",
-                    color: reposCountdown === sec ? "var(--green)" : "#555",
+                    padding: "8px 12px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    background: reposCountdown === sec ? "rgba(57,255,128,0.1)" : "rgba(255,255,255,0.03)",
+                    border: reposCountdown === sec ? "1.5px solid var(--green)" : "1px solid #1a1a1a",
+                    color: reposCountdown === sec ? "var(--green)" : "#444",
+                    transition: "all 0.2s",
                   }}>{sec < 60 ? sec + "s" : sec/60 + "min"}</button>
                 ))}
               </div>
-              <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-                <button onClick={() => { setReposRunning(r => !r); }} style={{
-                  padding: "12px 24px", borderRadius: 10, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
-                  background: reposRunning ? "rgba(255,71,71,0.1)" : "rgba(57,255,128,0.1)",
-                  border: reposRunning ? "1px solid var(--red)" : "1px solid var(--green)",
+
+              <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 320 }}>
+                <button onClick={() => setReposRunning(r => !r)} style={{
+                  flex: 1, padding: "14px 0", borderRadius: 14, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
+                  background: reposRunning ? "rgba(255,71,71,0.08)" : "rgba(57,255,128,0.08)",
+                  border: reposRunning ? "1px solid rgba(255,71,71,0.4)" : "1px solid rgba(57,255,128,0.4)",
                   color: reposRunning ? "var(--red)" : "var(--green)",
                 }}>{reposRunning ? "⏸ PAUSE" : "▶ REPRENDRE"}</button>
                 <button onClick={() => { setReposMode(false); setReposRunning(false); }} style={{
-                  padding: "12px 24px", borderRadius: 10, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
-                  background: "var(--yellow)", border: "none", color: "#000",
+                  flex: 1, padding: "14px 0", borderRadius: 14, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
+                  background: "var(--yellow)", border: "none", color: "#000", fontWeight: 700,
                 }}>PASSER →</button>
               </div>
+
+              {/* Exercice suivant */}
+              {(session.exercices||[])[currentExIdx + 1] && (
+                <div style={{ marginTop: 20, background: "rgba(255,255,255,0.02)", border: "1px solid #181818", borderRadius: 12, padding: "12px 16px", width: "100%", maxWidth: 320 }}>
+                  <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Prochain exercice</div>
+                  <div style={{ fontSize: 15, color: "#666", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom}</div>
+                  <div style={{ fontSize: 13, color: "#444" }}>{(session.exercices||[])[currentExIdx + 1].detail}</div>
+                </div>
+              )}
             </div>
           ) : (
-            <>
-              {/* Exercice en cours */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 20px 24px" }}>
+              {/* Exercice en cours — hero */}
               {(session.exercices||[])[currentExIdx] && (
-                <div style={{ background: "rgba(232,255,71,0.05)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 16, padding: "16px 18px", marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>En cours</div>
-                  <div className="bebas" style={{ fontSize: 30, color: "var(--white)", lineHeight: 1.1 }}>{(session.exercices||[])[currentExIdx].nom}</div>
-                  <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", marginTop: 4 }}>{(session.exercices||[])[currentExIdx].detail}</div>
+                <div style={{ background: "rgba(232,255,71,0.04)", border: "1.5px solid rgba(232,255,71,0.18)", borderRadius: 20, padding: "18px 20px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, var(--yellow), transparent)" }} />
+                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>⚡ En cours</div>
+                  <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{(session.exercices||[])[currentExIdx].nom}</div>
+                  <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)" }}>{(session.exercices||[])[currentExIdx].detail}</div>
                   {(session.exercices||[])[currentExIdx].note && (
-                    <div style={{ fontSize: 12, color: "#555", marginTop: 8 }}>💬 {(session.exercices||[])[currentExIdx].note}</div>
+                    <div style={{ fontSize: 12, color: "#444", marginTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: 8 }}>💬 {(session.exercices||[])[currentExIdx].note}</div>
                   )}
                 </div>
               )}
 
-              {/* Exercice suivant */}
-              {(session.exercices||[])[currentExIdx + 1] && (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid #1a1a1a", borderRadius: 12, padding: "10px 14px", marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: "#333", marginBottom: 4 }}>Suivant</div>
-                  <div style={{ fontSize: 14, color: "#555", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom}</div>
-                  <div style={{ fontSize: 13, color: "#444" }}>{(session.exercices||[])[currentExIdx + 1].detail}</div>
+              {/* Grand chrono central */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <div className="bebas" style={{
+                  fontSize: 88, color: chronoRunning ? "var(--white)" : "#333",
+                  lineHeight: 1, letterSpacing: 4, fontVariantNumeric: "tabular-nums",
+                  textShadow: chronoRunning ? "0 0 40px rgba(232,255,71,0.15)" : "none",
+                  transition: "color 0.4s, text-shadow 0.4s",
+                }}>
+                  {formatChrono(chronoSeconds)}
                 </div>
-              )}
 
-              {/* Historique laps */}
-              {lapTimes.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                  {lapTimes.map((l, i) => (
-                    <div key={i} style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 6, padding: "3px 8px", fontSize: 11, color: "#555" }}>
-                      Série {i+1}: {formatChrono(l)}
-                    </div>
-                  ))}
+                {/* Laps inline */}
+                {lapTimes.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginTop: 12, maxWidth: 280 }}>
+                    {lapTimes.map((l, i) => (
+                      <div key={i} style={{ background: "rgba(57,255,128,0.06)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 8, padding: "3px 10px", fontSize: 12, color: "var(--green)", fontWeight: 700 }}>
+                        S{i+1} {formatChrono(l)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Exercice suivant (compact) */}
+              {(session.exercices||[])[currentExIdx + 1] && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.02)", border: "1px solid #151515", borderRadius: 12, padding: "10px 14px", marginBottom: 12 }}>
+                  <div style={{ fontSize: 18 }}>→</div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em" }}>Suivant</div>
+                    <div style={{ fontSize: 14, color: "#555", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom} · <span style={{ color: "#444" }}>{(session.exercices||[])[currentExIdx + 1].detail}</span></div>
+                  </div>
                 </div>
               )}
 
               {/* Contrôles principaux */}
-              <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-                {/* Ligne 1: START/PAUSE + LAP */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setChronoRunning(r => !r)} style={{
-                    flex: 2, padding: 16, borderRadius: 12, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
-                    background: chronoRunning ? "rgba(255,71,71,0.1)" : "var(--yellow)",
-                    border: chronoRunning ? "1px solid var(--red)" : "none",
+                    flex: 2, padding: 18, borderRadius: 16, fontSize: 22, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, cursor: "pointer",
+                    background: chronoRunning ? "rgba(255,71,71,0.08)" : "var(--yellow)",
+                    border: chronoRunning ? "1.5px solid rgba(255,71,71,0.4)" : "none",
                     color: chronoRunning ? "var(--red)" : "#000",
+                    transition: "all 0.2s",
                   }}>{chronoRunning ? "⏸ PAUSE" : "▶ START"}</button>
                   <button onClick={() => {
-                    // LAP = enregistre le temps de la série et lance le repos
                     setLapTimes(l => [...l, chronoSeconds]);
                     setChronoSeconds(0);
                     setReposMode(true);
-                    setReposCountdown(90); // 90s par défaut
+                    setReposCountdown(90);
                     setReposRunning(true);
                     setChronoRunning(false);
                   }} style={{
-                    flex: 1, padding: 16, borderRadius: 12, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
-                    background: "rgba(255,154,60,0.1)", border: "1px solid rgba(255,154,60,0.4)", color: "#ff9a3c",
+                    flex: 1, padding: 18, borderRadius: 16, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
+                    background: "rgba(255,154,60,0.08)", border: "1.5px solid rgba(255,154,60,0.3)", color: "var(--orange)",
                   }}>LAP</button>
                 </div>
-                {/* Ligne 2: SUIVANT ou TERMINÉ */}
                 {currentExIdx < (session.exercices||[]).length - 1 ? (
                   <button onClick={() => {
                     setCurrentExIdx(i => i + 1);
                     setChronoSeconds(0);
                     setLapTimes([]);
                     setChronoRunning(true);
-                  }} style={{ width: "100%", padding: 14, borderRadius: 12, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid #222", color: "#fff" }}>
+                  }} style={{ width: "100%", padding: 16, borderRadius: 16, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid #1a1a1a", color: "#888" }}>
                     EXERCICE SUIVANT →
                   </button>
                 ) : (
-                  <button onClick={() => { setChronoMode(false); setChronoRunning(false); setReposMode(false); setReposRunning(false); setLapTimes([]); setShowFeedback(true); }} style={{ width: "100%", padding: 14, borderRadius: 12, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer", background: "rgba(57,255,128,0.1)", border: "1px solid var(--green)", color: "var(--green)" }}>
+                  <button onClick={() => { setChronoMode(false); setChronoRunning(false); setReposMode(false); setReposRunning(false); setLapTimes([]); setShowFeedback(true); }} style={{
+                    width: "100%", padding: 16, borderRadius: 16, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer",
+                    background: "linear-gradient(135deg, rgba(57,255,128,0.15), rgba(57,255,128,0.05))",
+                    border: "1.5px solid rgba(57,255,128,0.4)", color: "var(--green)",
+                  }}>
                     SÉANCE TERMINÉE ✓
                   </button>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -4157,51 +4234,101 @@ JSON:
         {/* ZONES */}
         {tab === "zones" && (
           <div className="fade-in">
-            <Section title="Zones d'entraînement">
-              {profile.vmaKmh ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {profile.fcMax && profile.fcMin && (
-                    <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 4, fontSize: 12, color: "#888" }}>
-                      ❤️ FC max: <strong style={{ color: "var(--yellow)" }}>{profile.fcMax} bpm</strong> · FC repos: <strong style={{ color: "var(--yellow)" }}>{profile.fcMin} bpm</strong> · Méthode Karvonen
+            {/* Header */}
+            <div style={{ marginBottom: 16 }}>
+              <div className="bebas" style={{ fontSize: 28, color: "var(--green)", letterSpacing: 1, marginBottom: 2 }}>ZONES D'ENTRAÎNEMENT</div>
+              <div style={{ fontSize: 12, color: "#444" }}>Basé sur ta VMA · {profile.vmaKmh ? `${profile.vmaKmh} km/h` : "VMA non renseignée"}</div>
+            </div>
+
+            {profile.vmaKmh ? (
+              <>
+                {/* FC info card */}
+                {profile.fcMax && profile.fcMin && (
+                  <div style={{ background: "rgba(255,71,71,0.05)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 14, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 16 }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div className="bebas" style={{ fontSize: 24, color: "var(--red)", lineHeight: 1 }}>{profile.fcMax}</div>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", marginTop: 2 }}>FC max</div>
                     </div>
-                  )}
-                  {ZONES.map(z => {
+                    <div style={{ width: 1, background: "rgba(255,255,255,0.06)" }} />
+                    <div style={{ textAlign: "center" }}>
+                      <div className="bebas" style={{ fontSize: 24, color: "#888", lineHeight: 1 }}>{profile.fcMin}</div>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", marginTop: 2 }}>FC repos</div>
+                    </div>
+                    <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+                      <div style={{ fontSize: 11, color: "#444" }}>Méthode Karvonen · FC de réserve {parseInt(profile.fcMax) - parseInt(profile.fcMin)} bpm</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Zones visuelles */}
+                {(() => {
+                  const zoneColors = ["#3b82f6","#22c55e","#eab308","#f97316","#ef4444"];
+                  const zoneDescs = ["Récupération active","Endurance fondamentale","Tempo · Seuil aérobie","Seuil anaérobie","VO2max · Sprint"];
+                  return ZONES.map((z, idx) => {
                     const midPct = (z.pct[0] + z.pct[1]) / 2;
                     const hasKarvo = profile.fcMax && profile.fcMin;
                     const fcR = hasKarvo ? parseInt(profile.fcMax) - parseInt(profile.fcMin) : 0;
                     const fcLow = hasKarvo ? Math.round(parseInt(profile.fcMin) + fcR * z.pct[0] / 100) : null;
                     const fcHigh = hasKarvo ? Math.round(parseInt(profile.fcMin) + fcR * z.pct[1] / 100) : null;
+                    const col = zoneColors[idx] || "var(--yellow)";
+                    const barWidth = z.pct[1] - z.pct[0];
                     return (
-                      <Card key={z.z} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", width: 36 }}>{z.z}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>{z.label}</div>
-                          <div style={{ color: "#888", fontSize: 12 }}>{z.pct[0]}-{z.pct[1]}% VMA</div>
+                      <div key={z.z} style={{ background: `${col}08`, border: `1px solid ${col}22`, borderLeft: `3px solid ${col}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 10, background: `${col}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <span className="bebas" style={{ fontSize: 18, color: col }}>{z.z}</span>
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)" }}>{z.label}</div>
+                              <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{zoneDescs[idx]}</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div className="bebas" style={{ fontSize: 20, color: col, lineHeight: 1 }}>{paceFromVMA(profile.vmaKmh, midPct)}</div>
+                            <div style={{ fontSize: 10, color: "#444" }}>min/km</div>
+                          </div>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ color: "var(--yellow)", fontWeight: 700, fontSize: 13 }}>{paceFromVMA(profile.vmaKmh, midPct)}</div>
-                          {hasKarvo && <div style={{ color: "#ff4747", fontSize: 11, marginTop: 2 }}>❤️ {fcLow}–{fcHigh} bpm</div>}
+                        {/* Barre d'intensité */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, position: "relative", overflow: "hidden" }}>
+                            <div style={{ position: "absolute", left: `${z.pct[0]}%`, width: `${barWidth}%`, height: "100%", background: col, borderRadius: 99 }} />
+                          </div>
+                          <div style={{ fontSize: 10, color: "#444", flexShrink: 0 }}>{z.pct[0]}–{z.pct[1]}%</div>
                         </div>
-                      </Card>
+                        {hasKarvo && fcLow && (
+                          <div style={{ marginTop: 6, fontSize: 11, color: `${col}99` }}>❤️ {fcLow}–{fcHigh} bpm</div>
+                        )}
+                      </div>
                     );
-                  })}
-                </div>
-              ) : (
-                <div style={{ color: "#555", textAlign: "center", padding: 24 }}>Complète le test VMA pour voir tes zones.</div>
-              )}
-            </Section>
-            {profile.squat1RM_final && (
-              <Section title="Pourcentages de charge">
-                <Card>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--yellow)", marginBottom: 10 }}>Back Squat (1RM: {profile.squat1RM_final}kg)</div>
-                  {[50, 60, 70, 75, 80, 85, 90].map(pct => (
-                    <div key={pct} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--bg3)", fontSize: 14 }}>
-                      <span style={{ color: "#888" }}>{pct}%</span>
-                      <span style={{ fontWeight: 600 }}>{Math.round(profile.squat1RM_final * pct / 100)} kg</span>
+                  });
+                })()}
+
+                {/* Pourcentages charge */}
+                {profile.squat1RM_final && (
+                  <div style={{ marginTop: 16 }}>
+                    <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 10 }}>CHARGES AU SQUAT</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                      {[50, 60, 70, 75, 80, 85, 90, 95].map(pct => {
+                        const kg = Math.round(profile.squat1RM_final * pct / 100);
+                        const intensity = pct >= 90 ? "var(--red)" : pct >= 80 ? "var(--orange)" : pct >= 70 ? "var(--yellow)" : "var(--green)";
+                        return (
+                          <div key={pct} style={{ background: `${intensity}08`, border: `1px solid ${intensity}22`, borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
+                            <div className="bebas" style={{ fontSize: 22, color: intensity, lineHeight: 1 }}>{kg}</div>
+                            <div style={{ fontSize: 9, color: "#333", marginTop: 3 }}>kg</div>
+                            <div style={{ fontSize: 10, color: "#444", marginTop: 1, fontWeight: 700 }}>{pct}%</div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </Card>
-              </Section>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🏃</div>
+                <div style={{ fontSize: 14, color: "#555", lineHeight: 1.6 }}>Complète le test VMA pour calculer tes zones.</div>
+              </div>
             )}
           </div>
         )}
@@ -6113,52 +6240,86 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
           </div>
         )}
 
-        {phase === "done" && (
+        {phase === "done" && (() => {
+          const totalSecs = Object.values(splits).reduce((a,b)=>a+b,0);
+          const runSplits = HYROX_SEGMENTS.filter(s => s.type === "run");
+          const stationSplits = HYROX_SEGMENTS.filter(s => s.type === "station");
+          const totalRun = runSplits.reduce((a,s) => a+(splits[s.id]||0), 0);
+          const totalStation = stationSplits.reduce((a,s) => a+(splits[s.id]||0), 0);
+          return (
           <div className="fade-in">
-            {/* Résultat final */}
-            <div style={{ textAlign: "center", padding: "24px 16px", background: "rgba(255,71,71,0.06)", border: "2px solid rgba(255,71,71,0.3)", borderRadius: 18, marginBottom: 16 }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
-              <div className="bebas" style={{ fontSize: 20, color: "#888", marginBottom: 4 }}>TEMPS TOTAL</div>
-              <div className="bebas" style={{ fontSize: 64, color: "var(--red)", lineHeight: 1 }}>{fmtTime(Object.values(splits).reduce((a,b)=>a+b,0))}</div>
-              <div style={{ fontSize: 12, color: "#555", marginTop: 8 }}>{Object.values(splits).length} segments complétés</div>
+            {/* Hero résultat */}
+            <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(135deg, #1a0000 0%, #0a0000 50%, #080808 100%)", border: "1.5px solid rgba(255,71,71,0.25)", borderRadius: 20, padding: "28px 20px", marginBottom: 14, textAlign: "center" }}>
+              <div style={{ position: "absolute", top: -30, right: -30, fontSize: 120, opacity: 0.04 }}>🏆</div>
+              <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 6 }}>Simulation HYROX terminée</div>
+              <div className="bebas" style={{ fontSize: 76, color: "var(--red)", lineHeight: 1, letterSpacing: 2 }}>{fmtTime(totalSecs)}</div>
+              <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>{Object.values(splits).length} segments · {fmtTime(totalRun)} course · {fmtTime(totalStation)} stations</div>
+              {/* Barres run vs station */}
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <div style={{ flex: totalRun, background: "rgba(57,255,128,0.15)", border: "1px solid rgba(57,255,128,0.3)", borderRadius: 8, padding: "8px 0", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Course</div>
+                  <div className="bebas" style={{ fontSize: 22, color: "var(--green)" }}>{fmtTime(totalRun)}</div>
+                </div>
+                <div style={{ flex: totalStation, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "8px 0", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Stations</div>
+                  <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>{fmtTime(totalStation)}</div>
+                </div>
+              </div>
             </div>
 
-            {/* Tableau splits complet */}
-            <div style={{ background: "var(--bg2)", borderRadius: 14, padding: 16, marginBottom: 16 }}>
-              <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", marginBottom: 12 }}>SPLITS DÉTAILLÉS</div>
+            {/* Splits visuels */}
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, overflow: "hidden", marginBottom: 14 }}>
+              <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <div className="bebas" style={{ fontSize: 15, color: "#666", letterSpacing: 1 }}>SPLITS DÉTAILLÉS</div>
+              </div>
               {HYROX_SEGMENTS.map((s, i) => {
-                const t = splits[s.id];
-                const prev = i > 0 ? splits[HYROX_SEGMENTS[i-1].id] : null;
+                const t = splits[s.id] || 0;
+                const isRun = s.type === "run";
+                const col = isRun ? "var(--green)" : "var(--yellow)";
+                const bg = isRun ? "rgba(57,255,128,0.03)" : "rgba(232,255,71,0.03)";
+                // Calcul pct relatif au total
+                const pct = totalSecs > 0 ? (t / totalSecs) * 100 : 0;
                 return (
-                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < HYROX_SEGMENTS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                    <span style={{ fontSize: 18, width: 28 }}>{s.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, color: s.type === "run" ? "var(--green)" : "var(--yellow)", fontWeight: 700 }}>{s.label}</div>
-                      <div style={{ fontSize: 10, color: "#444" }}>{s.distance}</div>
+                  <div key={s.id} style={{ background: bg, borderBottom: i < HYROX_SEGMENTS.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", position: "relative", overflow: "hidden" }}>
+                    {/* Barre de fond proportionnelle */}
+                    <div style={{ position: "absolute", inset: 0, width: `${pct}%`, background: isRun ? "rgba(57,255,128,0.05)" : "rgba(232,255,71,0.04)" }} />
+                    <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "10px 16px" }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 8, background: isRun ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{s.icon}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: col, fontWeight: 700, lineHeight: 1.2 }}>{s.label}</div>
+                        <div style={{ fontSize: 10, color: "#333" }}>{s.distance}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{fmtTime(t)}</div>
+                        <div style={{ fontSize: 10, color: "#333" }}>{pct.toFixed(0)}% total</div>
+                      </div>
                     </div>
-                    <div className="bebas" style={{ fontSize: 20, color: "var(--white)" }}>{fmtTime(t)}</div>
                   </div>
                 );
               })}
             </div>
 
             {/* Analyse IA */}
-            <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 14, padding: 16, marginBottom: 16 }}>
-              <div className="bebas" style={{ fontSize: 16, color: "var(--green)", marginBottom: 8 }}>🤖 ANALYSE DU COACH</div>
+            <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(57,255,128,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+                <div className="bebas" style={{ fontSize: 15, color: "var(--green)", letterSpacing: 1 }}>ANALYSE DU COACH</div>
+              </div>
               {loadingAnalysis ? (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", opacity: 0.6, animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
                 </div>
               ) : (
-                <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.7 }}>{analysisText}</div>
+                <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.75 }}>{analysisText}</div>
               )}
             </div>
 
-            <button onClick={onClose} style={{ width: "100%", padding: "16px", background: "var(--yellow)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer" }}>
-              ← Retour au profil race
+            <button onClick={onClose} style={{ width: "100%", padding: "16px", background: "var(--yellow)", border: "none", borderRadius: 16, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: "#000", cursor: "pointer", fontWeight: 700 }}>
+              ← RETOUR AU PROFIL RACE
             </button>
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
