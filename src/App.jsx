@@ -3021,49 +3021,61 @@ JSON:
             )}
 
             {/* STREAK CARD */}
-            {streakData && (
-              <div style={{ background: streak >= 7 ? "rgba(232,255,71,0.06)" : "rgba(255,255,255,0.02)", border: streak >= 7 ? "1.5px solid rgba(232,255,71,0.3)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 20 }}>{streak >= 14 ? "🔥🔥" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "💤"}</span>
-                      <div className="bebas" style={{ fontSize: 28, color: streak >= 7 ? "var(--yellow)" : streak >= 3 ? "#ff9a3c" : "#555", lineHeight: 1 }}>
-                        {streak} JOUR{streak > 1 ? "S" : ""}
+            {streakData && (() => {
+              const streakColor = streak >= 14 ? "#ff6b35" : streak >= 7 ? "var(--yellow)" : streak >= 3 ? "var(--orange)" : "#333";
+              const streakBg = streak >= 14 ? "linear-gradient(135deg, #1a0800 0%, #080808 60%)" : streak >= 7 ? "linear-gradient(135deg, #131500 0%, #080808 60%)" : streak >= 3 ? "linear-gradient(135deg, #120800 0%, #080808 60%)" : "rgba(255,255,255,0.01)";
+              const streakBorder = streak >= 7 ? `${streakColor}44` : "rgba(255,255,255,0.05)";
+              const milestones = [3, 7, 14, 30];
+              const nextMilestone = milestones.find(m => m > streak) || 30;
+              const prevMilestone = milestones.filter(m => m <= streak).pop() || 0;
+              const milestoneProgress = ((streak - prevMilestone) / (nextMilestone - prevMilestone)) * 100;
+              return (
+              <div style={{ background: streakBg, border: `1.5px solid ${streakBorder}`, borderRadius: 18, padding: "16px 18px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                {streak >= 7 && <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${streakColor}15 0%, transparent 70%)`, pointerEvents: "none" }} />}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 30 }}>{streak >= 14 ? "🔥" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "💤"}</span>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 40, color: streakColor, lineHeight: 1, letterSpacing: 1 }}>{streak}<span style={{ fontSize: 18, color: "#444", letterSpacing: 0, marginLeft: 4 }}>JOURS</span></div>
+                      <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>
+                        {streak === 0 ? "Lance ta série aujourd'hui !" : streak === 1 ? "Jour 1 — la séquence commence !" : `Série active · record ${streakData.best}j`}
                       </div>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
-                      {streak === 0 ? "Lance ta série aujourd'hui !" : streak === 1 ? "1er jour — continue !" : `Série en cours · Record: ${streakData.best}j`}
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", marginBottom: 4 }}>Record</div>
-                    <div className="bebas" style={{ fontSize: 22, color: "#555" }}>{streakData.best}j</div>
+                  <div style={{ textAlign: "center", background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "8px 14px" }}>
+                    <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Record</div>
+                    <div className="bebas" style={{ fontSize: 26, color: "#555", lineHeight: 1 }}>{streakData.best}</div>
                   </div>
                 </div>
-                {/* 7 derniers jours */}
-                <div style={{ display: "flex", gap: 4 }}>
-                  {(streakData.lastDays || []).map((d, i) => (
-                    <div key={i} style={{ flex: 1, textAlign: "center" }}>
-                      <div style={{ fontSize: 8, color: d.isToday ? "var(--yellow)" : "#333", marginBottom: 4, textTransform: "uppercase" }}>
-                        {["L","M","M","J","V","S","D"][d.date.getDay() === 0 ? 6 : d.date.getDay() - 1]}
+                {/* 7-day visual */}
+                <div style={{ display: "flex", gap: 5, marginBottom: streak > 0 ? 12 : 0 }}>
+                  {(streakData.lastDays || []).map((d, i) => {
+                    const dayLabel = ["L","M","M","J","V","S","D"][d.date.getDay() === 0 ? 6 : d.date.getDay() - 1];
+                    return (
+                      <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: d.isToday ? streakColor : "#2a2a2a", marginBottom: 5, fontWeight: d.isToday ? 700 : 400, textTransform: "uppercase" }}>{dayLabel}</div>
+                        <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: d.done ? (d.isToday ? streakColor : `${streakColor}55`) : "rgba(255,255,255,0.03)", border: d.isToday ? `2px solid ${streakColor}` : "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: d.done ? "#000" : "#111", fontWeight: 700 }}>
+                          {d.done ? "✓" : ""}
+                        </div>
                       </div>
-                      <div style={{
-                        width: "100%", aspectRatio: "1", borderRadius: 6,
-                        background: d.done ? (d.isToday ? "var(--yellow)" : "rgba(232,255,71,0.4)") : "var(--bg3)",
-                        border: d.isToday ? "1.5px solid var(--yellow)" : "1px solid rgba(255,255,255,0.04)",
-                        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10,
-                      }}>
-                        {d.done ? (d.isToday ? "✓" : "✓") : ""}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                {/* Milestone progress */}
                 {streak > 0 && (
-                  <div style={{ marginTop: 10, padding: "6px 10px", background: "rgba(0,0,0,0.3)", borderRadius: 8, fontSize: 11, color: streak >= 7 ? "var(--yellow)" : "#555", textAlign: "center" }}>
-                    {streak >= 14 ? "🏆 Incroyable — 2 semaines sans relâche !" : streak >= 7 ? "🔥 Une semaine complète — tu es en feu !" : streak >= 3 ? "⚡ Belle série — ne la brise pas !" : "💪 Continue — 3 jours pour créer une habitude"}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                      <span style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em" }}>Prochain objectif</span>
+                      <span style={{ fontSize: 10, color: streakColor, fontWeight: 700 }}>{nextMilestone} jours</span>
+                    </div>
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${milestoneProgress}%`, background: streakColor, borderRadius: 99, transition: "width 0.6s ease" }} />
+                    </div>
                   </div>
                 )}
               </div>
+              );
+            })()}
             )}
 
             {/* MESSAGE IA DU JOUR */}
@@ -4025,30 +4037,48 @@ JSON:
               <ProgressionChargesCard profile={profile} />
             </Section>
 
-            <Section title="Stats globales">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                <StatBox label="Séances" value={profile.sessions?.length || 0} unit="total" color="var(--yellow)" />
-                <StatBox label="Niveau" value={profile.level || "?"} unit="HYROX" color={LEVELS[(profile.level || 1) - 1]?.color} />
-                <StatBox label="VMA" value={profile.vmaKmh || "?"} unit="km/h" color="var(--green)" />
-                <StatBox label="Squat 1RM" value={profile.squat1RM_final || "?"} unit="kg" color="var(--yellow)" />
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {[
+                  { label: "Séances", value: profile.sessions?.length || 0, unit: "réalisées", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #0a0a00 100%)", border: "rgba(232,255,71,0.2)", icon: "📅" },
+                  { label: "Niveau", value: profile.level || "?", unit: LEVELS[(profile.level||1)-1]?.label || "HYROX", color: LEVELS[(profile.level||1)-1]?.color || "var(--green)", bg: "linear-gradient(135deg, #001a0a 0%, #000a05 100%)", border: "rgba(57,255,128,0.2)", icon: "🏆" },
+                  { label: "VMA", value: profile.vmaKmh || "—", unit: "km/h", color: "var(--green)", bg: "linear-gradient(135deg, #001a0a 0%, #000a05 100%)", border: "rgba(57,255,128,0.15)", icon: "🏃" },
+                  { label: "Squat 1RM", value: profile.squat1RM_final || "—", unit: "kg", color: "var(--orange)", bg: "linear-gradient(135deg, #1a0800 0%, #0a0400 100%)", border: "rgba(255,154,60,0.2)", icon: "🏋️" },
+                ].map(item => (
+                  <div key={item.label} style={{ background: item.bg, border: `1.5px solid ${item.border}`, borderRadius: 16, padding: "16px 14px", position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: -20, right: -20, fontSize: 50, opacity: 0.06 }}>{item.icon}</div>
+                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{item.label}</div>
+                    <div className="bebas" style={{ fontSize: 38, color: item.color, lineHeight: 1 }}>{item.value}</div>
+                    <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>{item.unit}</div>
+                  </div>
+                ))}
               </div>
-            </Section>
+            </div>
 
-            <Section title={`Journal (${(profile.sessions||[]).length} séances)`}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Journal de séances</div>
+                <div style={{ fontSize: 12, color: "#444", fontWeight: 600 }}>{(profile.sessions||[]).length} séances</div>
+              </div>
               {(profile.sessions || []).length === 0 ? (
-                <div style={{ color: "#555", fontSize: 14, textAlign: "center", padding: 20 }}>Aucune séance enregistrée.<br/>Lance ta première séance !</div>
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🏋️</div>
+                  <div style={{ fontSize: 14, color: "#555", lineHeight: 1.6 }}>Aucune séance enregistrée.<br/>Lance ta première séance !</div>
+                </div>
               ) : (
                 <>
-                  {/* Résumé rapide */}
+                  {/* Résumé rapide — visuel */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
                     {[
-                      { label: "😴 Facile", count: (profile.sessions||[]).filter(s=>s.ressenti==="facile").length, color: "var(--yellow)" },
-                      { label: "💪 Bien", count: (profile.sessions||[]).filter(s=>s.ressenti==="bien").length, color: "var(--green)" },
-                      { label: "🔥 Dur", count: (profile.sessions||[]).filter(s=>s.ressenti==="dur").length, color: "var(--red)" },
+                      { label: "Facile", emoji: "😪", count: (profile.sessions||[]).filter(s=>s.ressenti==="facile").length, color: "var(--green)", bg: "rgba(57,255,128,0.06)" },
+                      { label: "Calibré", emoji: "💪", count: (profile.sessions||[]).filter(s=>s.ressenti==="bien").length, color: "var(--yellow)", bg: "rgba(232,255,71,0.05)" },
+                      { label: "Dur", emoji: "🔥", count: (profile.sessions||[]).filter(s=>s.ressenti==="dur").length, color: "var(--red)", bg: "rgba(255,71,71,0.06)" },
                     ].map(item => (
-                      <div key={item.label} style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 6px", textAlign: "center" }}>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: item.color }}>{item.count}</div>
-                        <div style={{ fontSize: 11, color: "#666", marginTop: 2 }}>{item.label}</div>
+                      <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.color}22`, borderRadius: 12, padding: "14px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 22, marginBottom: 4 }}>{item.emoji}</div>
+                        <div className="bebas" style={{ fontSize: 28, color: item.color, lineHeight: 1 }}>{item.count}</div>
+                        <div style={{ fontSize: 10, color: "#444", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
                       </div>
                     ))}
                   </div>
@@ -4057,50 +4087,56 @@ JSON:
                     const num = (profile.sessions||[]).length - i;
                     const adapt = (profile.adaptations||[])[num - 1];
                     const ressentiColor = s.ressenti === "bien" ? "var(--green)" : s.ressenti === "facile" ? "var(--yellow)" : "var(--red)";
+                    const typeIco = s.type === "running_zone2" ? "🏃" : s.type === "force_stations" ? "🏋️" : s.type === "running_qualite" ? "⚡" : s.type === "hybride_compromis" ? "🔀" : "💪";
                     return (
-                      <Card key={i} style={{ marginBottom: 10, borderLeft: `3px solid ${ressentiColor}` }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: 14 }}>#{num} — {s.titre}</div>
-                            <div style={{ color: "#666", fontSize: 12 }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</div>
+                      <div key={i} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderLeft: `3px solid ${ressentiColor}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
+                              <span style={{ fontSize: 14 }}>{typeIco}</span>
+                              <span style={{ fontSize: 10, color: "#333", fontWeight: 600 }}>#{num}</span>
+                              <span style={{ fontSize: 9, color: "#333" }}>·</span>
+                              <span style={{ fontSize: 10, color: "#444" }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre}</div>
                           </div>
-                          <Badge label={s.ressenti === "bien" ? "💪 Bien" : s.ressenti === "facile" ? "😴 Facile" : "🔥 Dur"} color={ressentiColor} />
+                          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 10 }}>
+                            <div className="bebas" style={{ fontSize: 24, color: ressentiColor, lineHeight: 1 }}>{s.difficulte || "—"}<span style={{ fontSize: 10, color: "#333" }}>/10</span></div>
+                            <div style={{ fontSize: 9, color: ressentiColor, fontWeight: 700, textTransform: "uppercase" }}>{s.ressenti === "bien" ? "Calibré" : s.ressenti === "facile" ? "Facile" : "Dur"}</div>
+                          </div>
                         </div>
-                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5, marginBottom: 4 }}>
-                          {s.difficulte && <span style={{ fontSize: 10, color: "#555", background: "var(--bg3)", borderRadius: 6, padding: "2px 7px" }}>RPE {s.difficulte}/10</span>}
-                          {s.tempsReel && <span style={{ fontSize: 10, color: "#555", background: "var(--bg3)", borderRadius: 6, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
-                          {s.energie && <span style={{ fontSize: 10, color: "#555", background: "var(--bg3)", borderRadius: 6, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
-                          {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 10, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 6, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
+                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                          {s.tempsReel && <span style={{ fontSize: 9, color: "#444", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
+                          {s.energie && <span style={{ fontSize: 9, color: "#444", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
+                          {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 9, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 5, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
                         </div>
-                        {s.charges && <div style={{ fontSize: 11, color: "#555", marginBottom: 4, lineHeight: 1.5 }}>{s.charges.slice(0, 80)}{s.charges.length > 80 ? "…" : ""}</div>}
-                        {s.notes && (
-                          <div style={{ fontSize: 12, color: "#aaa", fontStyle: "italic", marginBottom: 4 }}>"{s.notes}"</div>
-                        )}
+                        {s.charges && <div style={{ fontSize: 11, color: "#444", marginTop: 6, lineHeight: 1.5 }}>{s.charges.slice(0, 80)}{s.charges.length > 80 ? "…" : ""}</div>}
                         {adapt && (
-                          <div style={{ background: "var(--bg3)", borderRadius: 6, padding: "6px 10px", fontSize: 12, color: "var(--yellow)" }}>
-                            🤖 → {adapt.adaptation}
+                          <div style={{ marginTop: 8, background: "rgba(232,255,71,0.05)", borderRadius: 8, padding: "6px 10px", fontSize: 11, color: "var(--yellow)", lineHeight: 1.4 }}>
+                            🤖 {adapt.adaptation}
                           </div>
                         )}
-                      </Card>
+                      </div>
                     );
                   })}
                 </>
               )}
-            </Section>
+            </div>
 
-            <Section title="Adaptations IA">
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Adaptations IA</div>
               {(profile.adaptations || []).length === 0 ? (
-                <div style={{ color: "#555", fontSize: 14, textAlign: "center", padding: 20 }}>Pas encore d'adaptations.</div>
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 12, padding: "20px", textAlign: "center", fontSize: 13, color: "#444" }}>🤖 Pas encore d'adaptations IA.</div>
               ) : (
                 (profile.adaptations || []).slice(-5).reverse().map((a, i) => (
-                  <Card key={i} style={{ marginBottom: 8, border: "1px solid var(--green)33" }}>
-                    <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.6 }}>{a.message}</div>
-                    <div style={{ fontSize: 12, color: "var(--yellow)", marginTop: 6 }}>→ {a.adaptation}</div>
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>{new Date(a.date).toLocaleDateString("fr-FR")}</div>
-                  </Card>
+                  <div key={i} style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.1)", borderLeft: "3px solid rgba(57,255,128,0.4)", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6, marginBottom: 6 }}>{a.message}</div>
+                    <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600 }}>→ {a.adaptation}</div>
+                    <div style={{ fontSize: 10, color: "#333", marginTop: 4 }}>{new Date(a.date).toLocaleDateString("fr-FR")}</div>
+                  </div>
                 ))
               )}
-            </Section>
+            </div>
           </div>
         )}
 
@@ -4995,35 +5031,29 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
             )}
           </div>
 
-          {/* Vue compacte jours planifiés */}
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${(planningWeek.jours || []).length}, 1fr)`, gap: 4, marginBottom: 16 }}>
+          {/* Vue grid jours — cartes visuelles */}
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min((planningWeek.jours || []).length, 7)}, 1fr)`, gap: 6, marginBottom: 16 }}>
             {(planningWeek.jours || []).map((j, i) => {
               const t = TYPE_COLORS[j.type] || TYPE_COLORS.repos;
               const globalIdx = JOURS_FULL.indexOf(j.jour);
               const isToday = globalIdx === todayIdx;
               const isSelected = selectedJour?.jour === j.jour;
+              const isDone = joursFaits[j.jour];
               return (
                 <button key={i} onClick={() => setSelectedJour(isSelected ? null : j)} style={{
-                  background: isSelected ? t.bg : isToday ? "rgba(255,255,255,0.04)" : "var(--bg2)",
-                  border: isSelected ? `1.5px solid ${t.color}` : isToday ? "1.5px solid rgba(232,255,71,0.3)" : "1px solid var(--bg3)",
-                  borderRadius: 10, padding: "8px 2px", textAlign: "center", cursor: "pointer",
+                  background: isDone ? "rgba(57,255,128,0.05)" : isSelected ? t.bg : isToday ? "rgba(232,255,71,0.04)" : "rgba(255,255,255,0.02)",
+                  border: isDone ? "1.5px solid rgba(57,255,128,0.3)" : isSelected ? `1.5px solid ${t.color}88` : isToday ? "1.5px solid rgba(232,255,71,0.35)" : "1px solid rgba(255,255,255,0.05)",
+                  borderRadius: 14, padding: "12px 4px 10px", textAlign: "center", cursor: "pointer",
+                  position: "relative", overflow: "hidden", transition: "all 0.2s",
                 }}>
-                  <div style={{ fontSize: 9, color: isToday ? "var(--yellow)" : "#444", fontWeight: isToday ? 700 : 400, marginBottom: 4, textTransform: "uppercase" }}>{j.jour.slice(0, 3)}</div>
-                  <div style={{ fontSize: 16 }}>{t.icon}</div>
-                  {j.duree > 0 && <div style={{ fontSize: 8, color: "#444", marginTop: 3 }}>{j.duree}m</div>}
-                  {isToday && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)", margin: "4px auto 0" }} />}
+                  {/* Top color stripe */}
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: isDone ? "var(--green)" : isToday ? "var(--yellow)" : t.color, opacity: isDone ? 1 : isToday ? 1 : 0.4, borderRadius: "14px 14px 0 0" }} />
+                  <div style={{ fontSize: 9, color: isToday ? "var(--yellow)" : isDone ? "var(--green)" : "#333", fontWeight: isToday ? 700 : 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{j.jour.slice(0, 3)}</div>
+                  <div style={{ fontSize: 20, marginBottom: 4 }}>{isDone ? "✅" : t.icon}</div>
+                  {j.duree > 0 && <div style={{ fontSize: 8, color: "#333", letterSpacing: "0.04em" }}>{j.duree}m</div>}
                 </button>
               );
             })}
-          </div>
-
-          {/* Légende */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-            {Object.entries(TYPE_COLORS).map(([key, t]) => (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#555" }}>
-                <span style={{ fontSize: 12 }}>{t.icon}</span> {t.label}
-              </div>
-            ))}
           </div>
 
           {/* Détail du jour sélectionné */}
