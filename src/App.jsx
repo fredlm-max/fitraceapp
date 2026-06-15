@@ -3972,26 +3972,24 @@ const TYPE_COLORS = {
   mobilite: { color: "#a78bfa", bg: "rgba(167,139,250,0.08)", label: "Mobilité", icon: "🧘" },
 };
 
-async function generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, planningPrefs = {}) {
+async function generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, planningPrefs = {}, setStreamText = null) {
   setLoadingPlanning(true);
+  if (setStreamText) setStreamText("📅 Coach analyse ton profil...");
+
   const week = profile.week || 1;
   const totalWeeks = totalWeeksFromDate(profile.raceDate);
   const phase = getPhase(week, totalWeeks);
   const sessions = profile.sessions || [];
-  const nbDone = sessions.length;
   const lastSession = sessions.slice(-1)[0];
-  const score = profile.vmaKmh
-    ? `VMA ${profile.vmaKmh}km/h | Squat ${profile.squat1RM_final || "?"}kg`
-    : "Tests non complétés";
+  const adaptations = profile.adaptations || [];
+  const lastAdapt = adaptations.slice(-1)[0]?.adaptation || "";
+  const days = profile.raceDate ? Math.max(0, Math.ceil((new Date(profile.raceDate) - new Date()) / (1000*60*60*24))) : null;
 
   // Calcul des jours à planifier : aujourd'hui → dimanche
   const today = new Date();
   const todayIdx = (today.getDay() + 6) % 7; // 0=Lundi, 6=Dimanche
-  // Si dimanche (idx=6) → planifier la semaine suivante (7 jours)
-  // Sinon → planifier de aujourd'hui jusqu'au dimanche
-  const startIdx = todayIdx === 6 ? 0 : todayIdx; // dimanche = nouvelle semaine complète
+  const startIdx = todayIdx === 6 ? 0 : todayIdx;
   const joursAplanifier = JOURS_FULL.slice(startIdx);
-  const nbJours = joursAplanifier.length;
 
   // Préférences de planning
   const nbSeances = planningPrefs.nbSeances || profile.seancesParSemaine || "auto";
@@ -4000,48 +3998,78 @@ async function generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning
   const nbMuscu = planningPrefs.nbMuscu || profile.nbMuscu || "auto";
   const nbHybride = planningPrefs.nbHybride || profile.nbHybride || "auto";
 
-  // Clé cache unique selon le jour de départ + préférences
-  const cacheKey = `planning_${profile.name}_from${startIdx}`; // clé stable — ne change que si on regénère manuellement
-  // Lire le cache d'abord — ne génère que si pas de planning existant
+  const cacheKey = `planning_${profile.name}_from${startIdx}`;
   const cached = await storage.get(cacheKey);
   if (cached) {
     try {
-      // Le cache peut être déjà parsé (localStorage) ou stringifié
       const data = typeof cached === "string" ? JSON.parse(cached) : cached;
       if (data?.jours?.length > 0) {
         setPlanningWeek(data);
         setLoadingPlanning(false);
-        return; // Planning existant trouvé — on ne regénère pas
+        if (setStreamText) setStreamText("");
+        return;
       }
     } catch (e) { console.error("Cache parse error:", e); }
   }
 
-  // Construire les instructions de répartition
   const repartitionInstr = repartition === "auto"
-    ? "Choix du coach selon la phase et le profil"
-    : `${nbRun !== "auto" ? nbRun + " séance(s) de running" : ""} ${nbMuscu !== "auto" ? nbMuscu + " séance(s) de force/muscu" : ""} ${nbHybride !== "auto" ? nbHybride + " séance(s) hybride HYROX" : ""}`.trim();
+    ? "Répartition optimale selon la science HYROX (alternance run/force/repos)"
+    : `${nbRun !== "auto" ? nbRun + " séance(s) running" : ""} ${nbMuscu !== "auto" ? nbMuscu + " séance(s) force" : ""} ${nbHybride !== "auto" ? nbHybride + " séance(s) hybride" : ""}`.trim();
 
-  const nbSeancesInstr = nbSeances === "auto"
-    ? "Nombre de séances selon la phase (3-5)"
-    : `EXACTEMENT ${nbSeances} séances d'entraînement sur la période`;
-
-  const joursList = joursAplanifier.join(", ");
   const nbSeancesTarget = nbSeances === "auto"
     ? (phase === "base" ? 3 : phase === "développement" ? 4 : phase === "pic" ? 4 : 3)
     : parseInt(nbSeances);
 
-  const raw = await callClaude(
-    "Tu es coach HYROX. Réponds UNIQUEMENT avec du JSON valide sans aucun texte avant ou après.",
-    `Crée un planning pour: ${joursList}
-Athlète: ${profile.name}, Niveau ${profile.level}, Phase ${phase}, ${nbSeancesTarget} séances max.
-Répartition souhaitée: ${repartitionInstr}
+  const joursList = joursAplanifier.join(", ");
+  const paceZ2 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 65) : "?";
+  const paceTempo = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 83) : "?";
 
-Réponds avec ce JSON exact (remplace les valeurs):
-{"semaine":${week},"phase":"${phase}","debut":"${joursAplanifier[0]}","fin":"${joursAplanifier[joursAplanifier.length-1]}","conseil":"ton conseil en une phrase","jours":[${joursAplanifier.map((j, i) => `{"jour":"${j}","type":"repos","titre":"Repos","duree":0,"intensite":"","focus":""}`).join(",")}]}
+  // Résumé des 3 dernières séances
+  const recentText = sessions.slice(-3).map(s => `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti})`).join(" → ");
 
-Types valides pour "type": force_stations, running_zone2, running_qualite, hybride_compromis, repos, mobilite
-Modifie le "type", "titre", "duree" et "focus" de chaque jour selon le planning optimal.`,
-    1000
+  const raw = await callClaudeStream(
+    "Tu es coach HYROX expert. Réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans backticks.",
+    `Planifie la semaine HYROX pour ${profile.name}.
+
+PROFIL:
+- Niveau ${profile.level}/4 | Phase: ${phase} (semaine ${week}/${totalWeeks})
+- VMA: ${profile.vmaKmh || "?"}km/h | Squat: ${profile.squat1RM_final || "?"}kg | Deadlift: ${profile.deadlift1RM_final || "?"}kg
+- Jours avant la course: ${days !== null ? days : "non défini"}
+- Séances réalisées total: ${sessions.length}
+- 3 dernières séances: ${recentText || "aucune encore"}
+- Dernière adaptation IA: ${lastAdapt || "aucune"}
+- Fatigue estimée: ${lastSession?.difficulte >= 8 ? "élevée (dernière séance RPE "+lastSession.difficulte+")" : "normale"}
+
+RÈGLES SCIENTIFIQUES HYROX:
+- Phase BASE: 70% aérobie (Zone 2), 30% force. Fréquence: 3-4 séances/semaine. Repos: 2-3 jours.
+- Phase DÉVELOPPEMENT: mix run qualité + force stations + hybride compromised running
+- Phase PIC: intensité max, volume réduit, simulation race
+- Phase AFFÛTAGE: volume -40%, intensité conservée, repos++
+- Ne jamais mettre 2 séances dures consécutives (running qualité + force = ok, 2x running qualité = non)
+- Après RPE ≥ 8 → imposer un repos ou une mobilité le lendemain
+
+JOURS À PLANIFIER: ${joursList}
+NOMBRE DE SÉANCES: ${nbSeancesTarget} séances d'entraînement
+RÉPARTITION: ${repartitionInstr}
+
+Allures de référence:
+- Zone 2: ${paceZ2}/km
+- Tempo: ${paceTempo}/km
+
+Génère ce JSON (modifie chaque jour selon le plan optimal):
+{"semaine":${week},"phase":"${phase}","debut":"${joursAplanifier[0]}","fin":"${joursAplanifier[joursAplanifier.length-1]}","charge_semaine":"faible|modérée|élevée","conseil":"conseil stratégique en 1 phrase précise et chiffrée","jours":[${joursAplanifier.map(j => `{"jour":"${j}","type":"repos","titre":"","duree":0,"intensite":"","focus":"","exercices_cles":[],"objectif_seance":""}`).join(",")}]}
+
+Types valides: force_stations, running_zone2, running_qualite, hybride_compromis, repos, mobilite
+Pour chaque séance: "exercices_cles" = array de 2-3 strings (ex: "Squat 4x6@80kg", "Run 30min Z2@5:45/km", "SkiErg 4x500m")`,
+    1800,
+    (chunk) => {
+      if (setStreamText) {
+        if (chunk.includes('"conseil"')) setStreamText("💡 Stratégie de semaine...");
+        else if (chunk.includes('"jours"')) setStreamText("📋 Planification jour par jour...");
+        else if (chunk.includes('running_qualite') || chunk.includes('force_stations')) setStreamText("⚡ Équilibrage charge/repos...");
+        else if (chunk.length > 100) setStreamText("🤖 Coach IA planifie ta semaine...");
+      }
+    }
   );
 
   try {
@@ -4053,31 +4081,37 @@ Modifie le "type", "titre", "duree" et "focus" de chaque jour selon le planning 
     const data = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
     if (data?.jours?.length > 0) {
       setPlanningWeek(data);
-      await storage.set(cacheKey, data); // storage.set gère déjà JSON.stringify
+      await storage.set(cacheKey, data);
     } else {
       throw new Error("JSON sans jours");
     }
   } catch (e) {
     console.error("Planning error:", e.message, raw?.slice(0, 300));
-    // Fallback — planning basique sans IA
     const fallback = {
       semaine: week, phase, debut: joursAplanifier[0], fin: joursAplanifier[joursAplanifier.length-1],
+      charge_semaine: "modérée",
       conseil: "Programme de la semaine",
       jours: joursAplanifier.map((j, i) => ({
         jour: j,
         type: i % 2 === 0 ? ["force_stations","running_zone2","hybride_compromis"][i % 3] : "repos",
         titre: i % 2 === 0 ? ["Force stations","Zone 2","Hybride"][i % 3] : "Repos",
-        duree: i % 2 === 0 ? 60 : 0, intensite: i % 2 === 0 ? "modérée" : "", focus: ""
+        duree: i % 2 === 0 ? 60 : 0, intensite: i % 2 === 0 ? "modérée" : "",
+        focus: "", exercices_cles: [], objectif_seance: ""
       }))
     };
     setPlanningWeek(fallback);
   }
+  if (setStreamText) setStreamText("");
   setLoadingPlanning(false);
 }
 
 function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, setLoadingPlanning, onGoToSeance }) {
   const [selectedJour, setSelectedJour] = useState(null);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [streamText, setStreamText] = useState("");
+  const [joursFaits, setJoursFaits] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`fitrace_planning_done_${profile.name}`) || "{}"); } catch { return {}; }
+  });
   const [prefs, setPrefs] = useState({
     nbSeances: profile.seancesParSemaine || "auto",
     repartition: profile.repartition || "auto",
@@ -4090,20 +4124,24 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
   const todayIdx = (today.getDay() + 6) % 7;
   const isDimanche = todayIdx === 6;
   const startIdx = isDimanche ? 0 : todayIdx;
-  const joursAffichés = JOURS_FULL.slice(startIdx);
+
+  const toggleJourFait = (jourNom) => {
+    const newState = { ...joursFaits, [jourNom]: !joursFaits[jourNom] };
+    setJoursFaits(newState);
+    localStorage.setItem(`fitrace_planning_done_${profile.name}`, JSON.stringify(newState));
+  };
 
   const refreshPlanning = async (newPrefs = prefs) => {
-    const week = profile.week || 1;
     const cacheKey = `planning_${profile.name}_from${startIdx}`;
     await storage.del(cacheKey);
-    await generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, newPrefs);
+    await generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, newPrefs, setStreamText);
     setShowPrefs(false);
   };
 
   // Générer au premier chargement
   useEffect(() => {
     if (!planningWeek && !loadingPlanning) {
-      generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, prefs);
+      generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, prefs, setStreamText);
     }
   }, []);
 
@@ -4181,18 +4219,32 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
       </div>
 
       {loadingPlanning ? (
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <Spinner />
-          <div style={{ fontSize: 12, color: "#555", marginTop: 8 }}>Ton coach planifie ta semaine…</div>
+        <div className="fade-in" style={{ textAlign: "center", padding: "40px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(232,255,71,0.12)" }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
+          <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 8 }}>{streamText || "Coach IA planifie ta semaine..."}</div>
+          <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--yellow)", opacity: 0.6, animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: "#555", marginTop: 12 }}>Basé sur ta phase, tes performances et tes récupérations</div>
         </div>
       ) : planningWeek ? (
         <>
-          {/* Conseil de la semaine */}
-          {planningWeek.conseil && (
-            <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 16, fontSize: 13, color: "#ccc", lineHeight: 1.5, fontStyle: "italic" }}>
-              💡 {planningWeek.conseil}
+          {/* Header charge semaine + conseil */}
+          <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: planningWeek.conseil ? 8 : 0 }}>
+              <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Charge semaine</div>
+              <div style={{
+                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                background: planningWeek.charge_semaine === "élevée" ? "rgba(255,71,71,0.15)" : planningWeek.charge_semaine === "faible" ? "rgba(57,255,128,0.15)" : "rgba(232,255,71,0.12)",
+                color: planningWeek.charge_semaine === "élevée" ? "var(--red)" : planningWeek.charge_semaine === "faible" ? "var(--green)" : "var(--yellow)",
+              }}>{planningWeek.charge_semaine || "modérée"}</div>
             </div>
-          )}
+            {planningWeek.conseil && (
+              <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5, fontStyle: "italic" }}>💡 {planningWeek.conseil}</div>
+            )}
+          </div>
 
           {/* Vue compacte jours planifiés */}
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${(planningWeek.jours || []).length}, 1fr)`, gap: 4, marginBottom: 16 }}>
@@ -4229,23 +4281,56 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           {selectedJour && (
             <div className="fade-in" style={{ background: TYPE_COLORS[selectedJour.type]?.bg || "var(--bg2)", border: `1.5px solid ${TYPE_COLORS[selectedJour.type]?.color || "#333"}44`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 11, color: TYPE_COLORS[selectedJour.type]?.color || "#888", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{selectedJour.jour}</div>
                   <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{selectedJour.titre || TYPE_COLORS[selectedJour.type]?.label}</div>
-                  {selectedJour.duree > 0 && <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>⏱ {selectedJour.duree} min</div>}
+                  <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                    {selectedJour.duree > 0 && <span style={{ fontSize: 11, color: "#666", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>⏱ {selectedJour.duree} min</span>}
+                    {selectedJour.intensite && <span style={{ fontSize: 11, color: "#666", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>💥 {selectedJour.intensite}</span>}
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                   <div style={{ fontSize: 28 }}>{TYPE_COLORS[selectedJour.type]?.icon}</div>
-                  {selectedJour.intensite && <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>Intensité {selectedJour.intensite}</div>}
+                  {/* Bouton Fait / Non fait */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleJourFait(selectedJour.jour); }}
+                    style={{
+                      padding: "5px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                      background: joursFaits[selectedJour.jour] ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.05)",
+                      border: joursFaits[selectedJour.jour] ? "1.5px solid var(--green)" : "1px solid #333",
+                      color: joursFaits[selectedJour.jour] ? "var(--green)" : "#555", cursor: "pointer",
+                    }}
+                  >{joursFaits[selectedJour.jour] ? "✓ Fait" : "Marquer fait"}</button>
                 </div>
               </div>
-              {selectedJour.focus && (
-                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#ccc", lineHeight: 1.5, marginBottom: selectedJour.type !== "repos" && selectedJour.type !== "mobilite" ? 12 : 0 }}>
+
+              {/* Objectif de la séance */}
+              {selectedJour.objectif_seance && (
+                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#aaa", lineHeight: 1.5, marginBottom: 10 }}>
+                  🎯 <strong>Objectif :</strong> {selectedJour.objectif_seance}
+                </div>
+              )}
+              {!selectedJour.objectif_seance && selectedJour.focus && (
+                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#aaa", lineHeight: 1.5, marginBottom: 10 }}>
                   🎯 {selectedJour.focus}
                 </div>
               )}
+
+              {/* Exercices clés */}
+              {(selectedJour.exercices_cles || []).length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: TYPE_COLORS[selectedJour.type]?.color || "#666", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Programme prévu</div>
+                  {(selectedJour.exercices_cles || []).map((ex, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < selectedJour.exercices_cles.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: TYPE_COLORS[selectedJour.type]?.color || "#666", flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: "#ccc" }}>{ex}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {selectedJour.type !== "repos" && selectedJour.type !== "mobilite" && (
-                <button onClick={() => onGoToSeance(selectedJour.type)} style={{ width: "100%", padding: "12px", background: "var(--yellow)", border: "none", borderRadius: 10, fontSize: 14, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer", marginTop: 4 }}>
+                <button onClick={() => onGoToSeance(selectedJour.type)} style={{ width: "100%", padding: "12px", background: "var(--yellow)", border: "none", borderRadius: 10, fontSize: 14, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer" }}>
                   ⚡ GÉNÉRER CETTE SÉANCE
                 </button>
               )}
@@ -4253,32 +4338,46 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           )}
 
           {/* Liste complète */}
-          <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", marginBottom: 10 }}>PROGRAMME COMPLET</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)" }}>PROGRAMME COMPLET</div>
+            <div style={{ fontSize: 11, color: "#555" }}>
+              {Object.values(joursFaits).filter(Boolean).length}/{(planningWeek.jours || []).filter(j => j.type !== "repos").length} séances faites
+            </div>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(planningWeek.jours || []).map((j, i) => {
               const t = TYPE_COLORS[j.type] || TYPE_COLORS.repos;
               const globalIdx2 = JOURS_FULL.indexOf(j.jour);
               const isToday = globalIdx2 === todayIdx;
+              const isFait = joursFaits[j.jour];
+              const isSelected = selectedJour?.jour === j.jour;
               return (
-                <div key={i} onClick={() => setSelectedJour(selectedJour?.jour === j.jour ? null : j)} style={{
-                  background: "var(--bg2)", border: isToday ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid var(--bg3)",
-                  borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12,
-                  cursor: "pointer",
-                }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: t.bg, border: `1px solid ${t.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {t.icon}
+                <div key={i}
+                  onClick={() => setSelectedJour(isSelected ? null : j)}
+                  style={{
+                    background: isFait ? "rgba(57,255,128,0.04)" : "var(--bg2)",
+                    border: isSelected ? `1.5px solid ${t.color}66` : isFait ? "1.5px solid rgba(57,255,128,0.25)" : isToday ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid var(--bg3)",
+                    borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12,
+                    cursor: "pointer", opacity: isFait ? 0.7 : 1, transition: "all 0.2s",
+                  }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isFait ? "rgba(57,255,128,0.15)" : t.bg, border: `1px solid ${isFait ? "rgba(57,255,128,0.3)" : t.color+"33"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                    {isFait ? "✓" : t.icon}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? "var(--yellow)" : "var(--white)" }}>{j.jour}</span>
-                      {isToday && <span style={{ fontSize: 9, background: "var(--yellow)", color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>AUJOURD'HUI</span>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isFait ? "var(--green)" : isToday ? "var(--yellow)" : "var(--white)", textDecoration: isFait ? "line-through" : "none" }}>{j.jour}</span>
+                      {isToday && !isFait && <span style={{ fontSize: 9, background: "var(--yellow)", color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>AUJOURD'HUI</span>}
+                      {isFait && <span style={{ fontSize: 9, background: "rgba(57,255,128,0.2)", color: "var(--green)", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>FAIT</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: t.color, fontWeight: 600, marginTop: 2 }}>{j.titre || t.label}</div>
-                    {j.focus && <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>{j.focus}</div>}
+                    <div style={{ fontSize: 12, color: isFait ? "var(--green)" : t.color, fontWeight: 600, marginTop: 2 }}>{j.titre || t.label}</div>
+                    {(j.exercices_cles || []).length > 0 && (
+                      <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{j.exercices_cles.slice(0,2).join(" · ")}{j.exercices_cles.length > 2 ? "…" : ""}</div>
+                    )}
+                    {!(j.exercices_cles?.length) && j.focus && <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>{j.focus}</div>}
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    {j.duree > 0 && <div style={{ fontSize: 12, color: "#666" }}>{j.duree} min</div>}
-                    {j.intensite && <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{j.intensite}</div>}
+                  <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    {j.duree > 0 && <div style={{ fontSize: 12, color: "#666" }}>{j.duree}min</div>}
+                    <div style={{ fontSize: 14, color: isSelected ? "var(--yellow)" : "#333" }}>{isSelected ? "▲" : "▼"}</div>
                   </div>
                 </div>
               );
@@ -4288,7 +4387,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
       ) : (
         <div style={{ textAlign: "center", padding: 40 }}>
           <div style={{ fontSize: 13, color: "#555", marginBottom: 16 }}>Génère ton planning de la semaine</div>
-          <Btn onClick={() => generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning)}>📅 Générer le planning</Btn>
+          <Btn onClick={() => generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, {}, setStreamText)}>📅 Générer le planning</Btn>
         </div>
       )}
     </div>
