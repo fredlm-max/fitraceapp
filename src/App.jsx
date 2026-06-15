@@ -22,9 +22,17 @@ const GLOBAL_STYLES = `
   input, select, textarea { font-family: var(--font-body); }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--yellow); outline-offset: 2px; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeInFast { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-  .fade-in { animation: fadeIn 0.4s ease both; }
+  @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+  .fade-in { animation: fadeIn 0.35s ease both; }
+  .fade-in-fast { animation: fadeInFast 0.2s ease both; }
+  .slide-in-right { animation: slideInRight 0.3s ease both; }
+  button:active { transform: scale(0.97); }
+  input, textarea, select { transition: border-color 0.2s; }
 `;
 
 // ============================================================
@@ -1025,66 +1033,126 @@ function LoginScreen({ onLogin }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: "var(--bg)" }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)", overflow: "hidden" }}>
       <style>{GLOBAL_STYLES}</style>
-      <div style={{ textAlign: "center", marginBottom: 40 }}>
-        <div className="bebas fade-in" style={{ fontSize: 72, color: "var(--yellow)", lineHeight: 0.9, letterSpacing: 2 }}>FIT</div>
-        <div className="bebas fade-in" style={{ fontSize: 72, color: "var(--white)", lineHeight: 0.9, letterSpacing: 2 }}>RACE</div>
-        <div style={{ marginTop: 12, color: "#555", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>Entraînement HYROX · IA Adaptative</div>
+
+      {/* Hero section */}
+      <div style={{ position: "relative", padding: "60px 24px 40px", textAlign: "center", flexShrink: 0 }}>
+        {/* Glow behind logo */}
+        <div style={{ position: "absolute", top: 40, left: "50%", transform: "translateX(-50%)", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,213,0,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div className="bebas fade-in" style={{ fontSize: 80, color: "var(--yellow)", lineHeight: 0.85, letterSpacing: 3, position: "relative" }}>FIT</div>
+        <div className="bebas fade-in" style={{ fontSize: 80, color: "var(--white)", lineHeight: 0.85, letterSpacing: 3, position: "relative" }}>RACE</div>
+        <div style={{ marginTop: 14, color: "#555", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", position: "relative" }}>Entraînement HYROX · IA Adaptative</div>
       </div>
 
-      {mode === "choose" && (
-        <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: 320 }}>
-          <Btn size="lg" onClick={() => setMode("login")} style={{ width: "100%" }}>👤 Se connecter</Btn>
-          <Btn size="lg" variant="ghost" onClick={() => setMode("register")} style={{ width: "100%" }}>✨ Créer un compte</Btn>
-          <Btn variant="dark" size="sm" onClick={() => setMode("coach")} style={{ width: "100%" }}>🏅 Accès Coach</Btn>
-        </div>
-      )}
+      {/* Content card */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", padding: "0 24px 40px" }}>
+        <div style={{ width: "100%", maxWidth: 360 }}>
 
-      {mode === "login" && (
-        <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: 320 }}>
-          <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", textAlign: "center", marginBottom: 4 }}>CONNEXION</div>
-          <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" />
-          <Input label="Mot de passe" value={password} onChange={setPassword} placeholder="••••••••" type="password" />
-          {error && <div style={{ color: "var(--red)", fontSize: 13, textAlign: "center" }}>{error}</div>}
-          <Btn size="lg" disabled={!email || !password || loading} onClick={handleLogin} style={{ width: "100%" }}>
-            {loading ? "Connexion…" : "Se connecter →"}
-          </Btn>
-          <Btn variant="dark" size="sm" onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%" }}>← Retour</Btn>
-          <div style={{ textAlign: "center", fontSize: 12, color: "#444" }}>
-            Pas encore de compte ? <span onClick={() => { setMode("register"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer" }}>Créer un compte</span>
-          </div>
-        </div>
-      )}
+          {mode === "choose" && (
+            <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Feature pills */}
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
+                {["🤖 Coach IA", "📊 Progression", "🏁 Race Sim"].map(f => (
+                  <span key={f} style={{ background: "rgba(255,213,0,0.08)", border: "1px solid rgba(255,213,0,0.2)", borderRadius: 20, padding: "4px 12px", fontSize: 12, color: "#aaa" }}>{f}</span>
+                ))}
+              </div>
 
-      {mode === "register" && (
-        <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: 320 }}>
-          <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", textAlign: "center", marginBottom: 4 }}>INSCRIPTION</div>
-          <Input label="Prénom" value={name} onChange={setName} placeholder="ex: Sophie" />
-          <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" />
-          <Input label="Mot de passe" value={password} onChange={setPassword} placeholder="min. 6 caractères" type="password" />
-          {error && <div style={{ color: "var(--red)", fontSize: 13, textAlign: "center" }}>{error}</div>}
-          <Btn size="lg" disabled={!email || !password || !name || loading || password.length < 6} onClick={handleRegister} style={{ width: "100%" }}>
-            {loading ? "Création…" : "Créer mon compte →"}
-          </Btn>
-          <Btn variant="dark" size="sm" onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%" }}>← Retour</Btn>
-          <div style={{ textAlign: "center", fontSize: 12, color: "#444" }}>
-            Déjà un compte ? <span onClick={() => { setMode("login"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer" }}>Se connecter</span>
-          </div>
-        </div>
-      )}
+              <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 4 }} />
 
-      {mode === "coach" && (
-        <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: 320 }}>
-          <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", textAlign: "center", marginBottom: 4 }}>ACCÈS COACH</div>
-          <Input label="Code coach" value={code} onChange={setCode} placeholder="Code secret" type="password" />
-          {error && <div style={{ color: "var(--red)", fontSize: 13, textAlign: "center" }}>{error}</div>}
-          <Btn size="lg" disabled={!code || loading} onClick={() => { if (code === COACH_CODE) onLogin("coach", "Coach"); else setError("Code incorrect !"); }} style={{ width: "100%" }}>
-            Accès Coach →
-          </Btn>
-          <Btn variant="dark" size="sm" onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%" }}>← Retour</Btn>
+              <button onClick={() => setMode("register")} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: "0.04em" }}>
+                ✨ Créer mon compte gratuitement
+              </button>
+
+              <button onClick={() => setMode("login")} style={{ width: "100%", background: "rgba(255,255,255,0.05)", color: "var(--white)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+                👤 Se connecter
+              </button>
+
+              <div style={{ textAlign: "center", marginTop: 4 }}>
+                <span onClick={() => setMode("coach")} style={{ fontSize: 12, color: "#444", cursor: "pointer" }}>🏅 Accès Coach</span>
+              </div>
+            </div>
+          )}
+
+          {mode === "login" && (
+            <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ textAlign: "center", marginBottom: 4 }}>
+                <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)" }}>CONNEXION</div>
+                <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>Bon retour 👋</div>
+              </div>
+              <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" />
+              <Input label="Mot de passe" value={password} onChange={setPassword} placeholder="••••••••" type="password" />
+              {error && (
+                <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13, textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
+              <button disabled={!email || !password || loading} onClick={handleLogin} style={{ width: "100%", background: !email || !password || loading ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}>
+                {loading ? "Connexion…" : "Se connecter →"}
+              </button>
+              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+                ← Retour
+              </button>
+              <div style={{ textAlign: "center", fontSize: 12, color: "#444" }}>
+                Pas encore de compte ?{" "}
+                <span onClick={() => { setMode("register"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Créer un compte</span>
+              </div>
+            </div>
+          )}
+
+          {mode === "register" && (
+            <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ textAlign: "center", marginBottom: 4 }}>
+                <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)" }}>INSCRIPTION</div>
+                <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>Prêt·e à relever le défi 💪</div>
+              </div>
+              <Input label="Prénom" value={name} onChange={setName} placeholder="ex: Sophie" />
+              <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" />
+              <Input label="Mot de passe" value={password} onChange={setPassword} placeholder="min. 6 caractères" type="password" />
+              {password && password.length < 6 && (
+                <div style={{ fontSize: 12, color: "#666", marginTop: -8 }}>🔒 Au moins 6 caractères requis</div>
+              )}
+              {error && (
+                <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13, textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
+              <button disabled={!email || !password || !name || loading || password.length < 6} onClick={handleRegister} style={{ width: "100%", background: (!email || !password || !name || loading || password.length < 6) ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: (loading || password.length < 6) ? "default" : "pointer", transition: "background 0.2s" }}>
+                {loading ? "Création…" : "Créer mon compte →"}
+              </button>
+              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+                ← Retour
+              </button>
+              <div style={{ textAlign: "center", fontSize: 12, color: "#444" }}>
+                Déjà un compte ?{" "}
+                <span onClick={() => { setMode("login"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Se connecter</span>
+              </div>
+            </div>
+          )}
+
+          {mode === "coach" && (
+            <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ textAlign: "center", marginBottom: 4 }}>
+                <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)" }}>ACCÈS COACH</div>
+                <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>Espace réservé aux entraîneurs</div>
+              </div>
+              <Input label="Code coach" value={code} onChange={setCode} placeholder="Code secret" type="password" />
+              {error && (
+                <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13, textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
+              <button disabled={!code || loading} onClick={() => { if (code === COACH_CODE) onLogin("coach", "Coach"); else setError("Code incorrect !"); }} style={{ width: "100%", background: !code ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: !code ? "default" : "pointer", transition: "background 0.2s" }}>
+                Accès Coach →
+              </button>
+              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+                ← Retour
+              </button>
+            </div>
+          )}
+
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1093,10 +1161,11 @@ function LoginScreen({ onLogin }) {
 // ONBOARDING
 // ============================================================
 function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
-    name: athleteName, poids: "", age: "", sexe: "homme", raceDate: "",
+    name: athleteName || "", poids: "", age: "", sexe: "homme", raceDate: "",
     niveauRessenti: "intermédiaire", dejaFaitHyrox: "non", previousChrono: "", previousDate: "",
     squat1RM: "", deadlift1RM: "", squatReps: "", squatWeight: "", deadliftReps: "", deadliftWeight: "", aiProfile: "",
     objectifPrincipal: "", sousObjectif: "", hyroxCategorie: "open",
@@ -1111,6 +1180,56 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
     { title: "Niveau & historique", icon: "📊" },
     { title: "Profil IA généré", icon: "🤖" },
   ];
+
+  // Écran de bienvenue
+  if (showWelcome) return (
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", padding: "0" }}>
+      <style>{GLOBAL_STYLES}</style>
+      {/* Hero */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px 24px", textAlign: "center" }}>
+        <div style={{ marginBottom: 24 }}>
+          <div className="bebas" style={{ fontSize: 64, color: "var(--yellow)", lineHeight: 1, letterSpacing: 4 }}>FITRACE</div>
+          <div style={{ fontSize: 15, color: "#666", marginTop: 6, letterSpacing: 2, textTransform: "uppercase" }}>Coach IA · HYROX</div>
+        </div>
+        <div style={{ width: 60, height: 2, background: "var(--yellow)", borderRadius: 99, marginBottom: 32, opacity: 0.4 }} />
+        <div style={{ fontSize: 18, color: "var(--white)", fontWeight: 700, marginBottom: 8, lineHeight: 1.4 }}>
+          Ton programme HYROX<br/>généré par l'IA.
+        </div>
+        <div style={{ fontSize: 14, color: "#666", lineHeight: 1.7, marginBottom: 36, maxWidth: 340 }}>
+          Adapté à ton profil, tes performances et ta date de course. Chaque séance évolue avec toi.
+        </div>
+        {/* 3 bénéfices */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 360, marginBottom: 36 }}>
+          {[
+            { icon: "⚡", title: "Séances personnalisées", sub: "Générées selon ta VMA, ta force et ta fatigue du jour" },
+            { icon: "📈", title: "Progression tracée", sub: "Graphiques de charges, RPE, régularité et condition physique" },
+            { icon: "🏁", title: "Stratégie de course", sub: "Split par station, simulation HYROX, checklist J-Day" },
+          ].map(b => (
+            <div key={b.icon} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", textAlign: "left" }}>
+              <div style={{ fontSize: 24, flexShrink: 0 }}>{b.icon}</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", marginBottom: 2 }}>{b.title}</div>
+                <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>{b.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* CTA */}
+      <div style={{ padding: "0 24px 40px" }}>
+        <button onClick={() => setShowWelcome(false)} style={{
+          width: "100%", padding: "18px", background: "var(--yellow)", border: "none",
+          borderRadius: 16, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2,
+          color: "#0a0a0a", cursor: "pointer", boxShadow: "0 8px 32px rgba(232,255,71,0.25)",
+        }}>
+          CRÉER MON PROFIL →
+        </button>
+        <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, color: "#333" }}>
+          Configuration en 2 minutes · Gratuit
+        </div>
+      </div>
+    </div>
+  );
 
   async function generateAIProfile() {
     setLoading(true);
@@ -1159,22 +1278,43 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", padding: "24px 20px" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", padding: "20px 20px 32px" }}>
       <style>{GLOBAL_STYLES}</style>
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div className="bebas" style={{ fontSize: 42, color: "var(--yellow)" }}>FITRACE</div>
-        <div style={{ color: "#888", fontSize: 13, marginTop: 4 }}>{steps[step].icon} {steps[step].title}</div>
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 16 }}>
-          {steps.map((_, i) => <div key={i} style={{ height: 4, flex: 1, maxWidth: 60, borderRadius: 99, background: i <= step ? "var(--yellow)" : "var(--bg3)", transition: "background 0.3s" }} />)}
+
+      {/* Header compact */}
+      <div style={{ maxWidth: 480, margin: "0 auto", marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", letterSpacing: 2 }}>FITRACE</div>
+          <div style={{ fontSize: 12, color: "#555" }}>
+            {step + 1} / {steps.length}
+          </div>
+        </div>
+        {/* Barre de progression avec titres */}
+        <div style={{ display: "flex", gap: 4 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ flex: 1 }}>
+              <div style={{ height: 3, borderRadius: 99, background: i < step ? "var(--yellow)" : i === step ? "var(--yellow)" : "var(--bg3)", transition: "background 0.3s" }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+          <span style={{ fontSize: 18 }}>{steps[step].icon}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{steps[step].title}</span>
         </div>
       </div>
 
-      <div className="fade-in" style={{ maxWidth: 480, margin: "0 auto" }}>
+      <div className="fade-in" key={step} style={{ maxWidth: 480, margin: "0 auto" }}>
         {/* STEP 0 — Profil de base */}
         {step === 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 4 }}>
+              Quelques infos pour personnaliser ton programme. Tout peut être modifié plus tard.
+            </div>
             <Card>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {!athleteName && (
+                  <Input label="Ton prénom" value={profile.name} onChange={v => set("name", v)} placeholder="ex: Lucas" />
+                )}
                 <Input label="Poids (kg)" value={profile.poids} onChange={v => set("poids", v)} type="number" placeholder="ex: 72" />
                 <Input label="Âge" value={profile.age} onChange={v => set("age", v)} type="number" placeholder="ex: 28" />
                 <div>
@@ -1182,17 +1322,17 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
                   <div style={{ display: "flex", gap: 10 }}>
                     {[{ v: "homme", label: "👨 Homme" }, { v: "femme", label: "👩 Femme" }].map(s => (
                       <button key={s.v} onClick={() => set("sexe", s.v)} style={{
-                        flex: 1, padding: "12px", borderRadius: 10, fontSize: 14, fontWeight: 700,
+                        flex: 1, padding: "14px", borderRadius: 12, fontSize: 14, fontWeight: 700,
                         background: profile.sexe === s.v ? "var(--yellow)22" : "var(--bg3)",
                         border: profile.sexe === s.v ? "2px solid var(--yellow)" : "1.5px solid var(--bg3)",
-                        color: profile.sexe === s.v ? "var(--yellow)" : "#888", cursor: "pointer",
+                        color: profile.sexe === s.v ? "var(--yellow)" : "#888", cursor: "pointer", transition: "all 0.2s",
                       }}>{s.label}</button>
                     ))}
                   </div>
                 </div>
               </div>
             </Card>
-            <Btn size="lg" disabled={!profile.poids || !profile.age} onClick={() => setStep(1)} style={{ width: "100%" }}>Suivant →</Btn>
+            <Btn size="lg" disabled={!profile.poids || !profile.age || (!athleteName && !profile.name)} onClick={() => setStep(1)} style={{ width: "100%" }}>Suivant →</Btn>
           </div>
         )}
 
@@ -1366,28 +1506,58 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
           </div>
         )}
 
-        {/* STEP 4 — Batterie de tests avant profil IA */}
+        {/* STEP 4 — Profil IA + proposition batterie de tests */}
         {step === 4 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <Card style={{ border: "1.5px solid rgba(232,255,71,0.3)", textAlign: "center", padding: 24 }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🧪</div>
-              <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", marginBottom: 8 }}>BATTERIE DE TESTS</div>
-              <p style={{ fontSize: 14, color: "#aaa", lineHeight: 1.7, marginBottom: 16 }}>
-                Pour générer un profil précis et un programme vraiment adapté, ton coach a besoin de tes données physiques réelles — VMA, 1RM squat, Sled Push, Wall Balls…
-              </p>
-              <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 16, fontSize: 13, color: "#888", lineHeight: 1.6, textAlign: "left" }}>
-                📋 Les tests incluent : VMA Demi-Cooper · Squat & Deadlift 1RM · SkiErg · Rowing · Wall Balls · Sled Push · Farmers Carry · Burpee Broad Jump
+            {/* Profil IA streamé */}
+            <Card style={{ border: "1.5px solid rgba(232,255,71,0.25)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
+                <div>
+                  <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", lineHeight: 1 }}>TON PROFIL COACH IA</div>
+                  <div style={{ fontSize: 11, color: "#555" }}>Personnalisé par l'IA</div>
+                </div>
               </div>
-              <Btn size="lg" onClick={finishOnboarding} style={{ width: "100%", marginBottom: 10 }}>
-                Commencer la batterie de tests →
-              </Btn>
-              <Btn variant="dark" size="sm" onClick={async () => {
-                set("aiProfile", "Profil à compléter après la batterie de tests.");
-                await finishOnboarding(true);
-              }} style={{ width: "100%", color: "#555" }}>
-                Passer — je ferai les tests plus tard
-              </Btn>
+              {loading ? (
+                <div>
+                  <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.8, minHeight: 80 }}>
+                    {profile.aiProfile || <span style={{ color: "#444", fontStyle: "italic" }}>Ton coach analyse ton profil...</span>}
+                  </div>
+                  {!profile.aiProfile && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+                      {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--yellow)", opacity: 0.6, animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.8 }}>{profile.aiProfile}</div>
+              )}
             </Card>
+
+            {/* Option batterie de tests */}
+            {!loading && (
+              <div className="fade-in">
+                <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 14, padding: "16px", marginBottom: 12 }}>
+                  <div className="bebas" style={{ fontSize: 17, color: "var(--yellow)", marginBottom: 6 }}>🧪 CALIBRER TON PROGRAMME</div>
+                  <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 12 }}>
+                    Une batterie de tests rapide pour personnaliser les charges et allures au kilo près.
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                    {["VMA Demi-Cooper", "Squat 1RM", "Deadlift", "SkiErg", "Rowing", "Wall Balls", "Sled Push"].map(t => (
+                      <span key={t} style={{ fontSize: 11, background: "var(--bg3)", color: "#666", padding: "3px 8px", borderRadius: 6 }}>{t}</span>
+                    ))}
+                  </div>
+                  <Btn size="lg" onClick={finishOnboarding} style={{ width: "100%" }}>
+                    Commencer la batterie →
+                  </Btn>
+                </div>
+                <Btn variant="dark" onClick={async () => {
+                  await finishOnboarding(true);
+                }} style={{ width: "100%", color: "#555", fontSize: 13 }}>
+                  Passer — accéder directement à l'app →
+                </Btn>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -3959,13 +4129,19 @@ JSON:
       )}
 
       {/* Bottom Nav */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--bg2)", borderTop: "1px solid var(--bg3)", display: "flex", justifyContent: "space-around", padding: "8px 0", zIndex: 100 }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ background: "none", color: tab === t.id ? "var(--yellow)" : "#555", padding: "8px 12px", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <span style={{ fontSize: 20 }}>{t.icon}</span>
-            <span style={{ fontSize: 9, fontWeight: 600 }}>{t.label}</span>
-          </button>
-        ))}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(17,17,17,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-around", padding: "6px 0 10px", zIndex: 100 }}>
+        {tabs.map(t => {
+          const active = tab === t.id;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ background: "none", color: active ? "var(--yellow)" : "#444", padding: "6px 10px", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 52, transition: "color 0.2s" }}>
+              <div style={{ position: "relative" }}>
+                <span style={{ fontSize: 21, display: "block", transition: "transform 0.2s", transform: active ? "scale(1.1)" : "scale(1)" }}>{t.icon}</span>
+                {active && <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)" }} />}
+              </div>
+              <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: "0.03em" }}>{t.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
