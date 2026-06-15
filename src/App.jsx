@@ -383,6 +383,54 @@ async function callClaude(systemPrompt, userPrompt, maxTokens = 1000) {
   }
 }
 
+// ── STREAMING (texte en temps réel) ─────────────────────────
+async function callClaudeStream(systemPrompt, userPrompt, maxTokens = 1200, onChunk) {
+  try {
+    const response = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: maxTokens,
+        stream: true,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+      }),
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // garder la ligne incomplète pour le prochain chunk
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+            fullText += parsed.delta.text;
+            onChunk(fullText);
+          }
+        } catch {}
+      }
+    }
+    return fullText || "__ERROR__Réponse vide";
+  } catch (e) {
+    return `__ERROR__${e.message}`;
+  }
+}
+
 async function getApiUsageStats() {
   try {
     const allKeys = await storage.list("api_usage_");
@@ -661,10 +709,12 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
 
   async function generateAIProfile() {
     setLoading(true);
+    setStep(4); // passer à l'étape résultat pour voir le streaming
+    set("aiProfile", "");
     const squat = profile.squat1RM || (profile.squatWeight && profile.squatReps ? epley1RM(parseFloat(profile.squatWeight), parseInt(profile.squatReps)) : Math.round(parseFloat(profile.poids || 70) * 1.2));
     const dl = profile.deadlift1RM || (profile.deadliftWeight && profile.deadliftReps ? epley1RM(parseFloat(profile.deadliftWeight), parseInt(profile.deadliftReps)) : Math.round(parseFloat(profile.poids || 70) * 1.5));
 
-    const result = await callClaude(
+    const result = await callClaudeStream(
       "Tu es un coach HYROX expert et bienveillant. Réponds toujours en français.",
       `Génère un profil athlète court (200 mots max) pour :
 - Prénom: ${profile.name}, Âge: ${profile.age} ans, Poids: ${profile.poids}kg, Sexe: ${profile.sexe}
@@ -675,15 +725,15 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
 - Jours avant la course: ${profile.raceDate ? Math.max(0, Math.ceil((new Date(profile.raceDate) - new Date()) / (1000*60*60*24))) : "?"}
 - Semaines de préparation disponibles: ${profile.raceDate ? Math.max(1, Math.ceil((new Date(profile.raceDate) - new Date()) / (1000*60*60*24*7))) : "?"}
 - Aujourd'hui: ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-IMPORTANT: Utilise les dates EXACTES ci-dessus. Ne fais PAS de calcul approximatif sur le nombre de mois.
-Inclus: analyse selon l'objectif, objectif réaliste basé sur le temps disponible, encouragement. Emojis bienvenus.`
+IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif, objectif réaliste, encouragement. Emojis bienvenus.`,
+      800,
+      (chunk) => set("aiProfile", chunk) // mise à jour en temps réel
     );
 
-    set("aiProfile", result || "Profil généré — complète tes tests pour affiner ton programme !");
+    set("aiProfile", result.startsWith("__ERROR__") ? "Profil généré — complète tes tests pour affiner !" : result);
     set("squat1RM_calc", squat);
     set("deadlift1RM_calc", dl);
     setLoading(false);
-    setStep(4);
   }
 
   async function finishOnboarding(skipTests = false) {
@@ -1456,6 +1506,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [seancePerso, setSeancePerso] = useState({ titre: "", exercices: [{ nom: "", detail: "", note: "" }] });
   const [session, setSession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
+  const [checkedExercices, setCheckedExercices] = useState({});
   const [showFeedback, setShowFeedback] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [feedbackData, setFeedbackData] = useState({
@@ -2653,26 +2704,62 @@ JSON:
 
                 {/* Programme — mode effort : cartes larges et lisibles */}
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, color: "var(--yellow)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>Programme</div>
-                  {(session.exercices || []).map((ex, i) => (
-                    <div key={i} className="fade-in-fast" style={{ background: "var(--bg2)", border: i === 0 ? "2px solid var(--yellow)66" : "1px solid var(--bg3)", borderRadius: 12, padding: "14px 16px", marginBottom: 8, animationDelay: `${i * 0.06}s` }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--white)", flex: 1 }}>{ex.nom}</div>
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          {ex.rpe && <div style={{ fontSize: 11, color: "#666", background: "var(--bg3)", borderRadius: 6, padding: "2px 8px" }}>RPE {ex.rpe}</div>}
-                          {findVideoForExercice(ex.nom) && (
-                            <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
-                              background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.3)",
-                              borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "var(--yellow)",
-                              cursor: "pointer", fontWeight: 700,
-                            }}>▶ Tuto</button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", marginTop: 4, letterSpacing: "0.04em" }}>{ex.detail}</div>
-                      {ex.note && <div style={{ fontSize: 12, color: "#666", marginTop: 6, lineHeight: 1.5 }}>💬 {ex.note}</div>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, color: "var(--yellow)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.08em" }}>Programme</div>
+                    <div style={{ fontSize: 12, color: "#555" }}>
+                      {Object.values(checkedExercices).filter(Boolean).length}/{(session.exercices || []).length} complétés
                     </div>
-                  ))}
+                  </div>
+                  {(session.exercices || []).map((ex, i) => {
+                    const done = checkedExercices[i];
+                    return (
+                      <div key={i} className="fade-in-fast"
+                        onClick={() => setCheckedExercices(c => ({ ...c, [i]: !c[i] }))}
+                        style={{
+                          background: done ? "rgba(57,255,128,0.05)" : "var(--bg2)",
+                          border: done ? "1.5px solid rgba(57,255,128,0.4)" : i === 0 ? "2px solid var(--yellow)66" : "1px solid var(--bg3)",
+                          borderRadius: 12, padding: "14px 16px", marginBottom: 8,
+                          animationDelay: `${i * 0.06}s`, cursor: "pointer",
+                          transition: "all 0.2s", opacity: done ? 0.65 : 1,
+                        }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                            <div style={{
+                              width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
+                              background: done ? "var(--green)" : "var(--bg3)",
+                              border: done ? "none" : "2px solid #444",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 13, transition: "all 0.2s",
+                            }}>{done ? "✓" : ""}</div>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: done ? "var(--green)" : "var(--white)", textDecoration: done ? "line-through" : "none" }}>{ex.nom}</div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            {ex.rpe && <div style={{ fontSize: 11, color: "#666", background: "var(--bg3)", borderRadius: 6, padding: "2px 8px" }}>RPE {ex.rpe}</div>}
+                            {findVideoForExercice(ex.nom) && (
+                              <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
+                                background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.3)",
+                                borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "var(--yellow)",
+                                cursor: "pointer", fontWeight: 700,
+                              }}>▶ Tuto</button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 22, color: done ? "var(--green)" : "var(--yellow)", marginTop: 4, letterSpacing: "0.04em", paddingLeft: 34 }}>{ex.detail}</div>
+                        {ex.note && <div style={{ fontSize: 12, color: "#666", marginTop: 6, lineHeight: 1.5, paddingLeft: 34 }}>💬 {ex.note}</div>}
+                      </div>
+                    );
+                  })}
+                  {/* Barre de progression */}
+                  {(session.exercices || []).length > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      <ProgressBar
+                        value={Object.values(checkedExercices).filter(Boolean).length}
+                        max={(session.exercices || []).length}
+                        color="var(--green)"
+                        height={4}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Retour au calme + Nutrition */}
