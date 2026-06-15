@@ -2962,33 +2962,47 @@ JSON:
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ background: "rgba(10,10,10,0.9)", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(20px)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1, letterSpacing: 2 }}>FITRACE</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-              <span style={{ fontSize: 11, color: "#444" }}>{profile.name} · Niv. {profile.level}</span>
-              {streak > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 3, background: streak >= 7 ? "rgba(232,255,71,0.1)" : "rgba(255,154,60,0.1)", border: `1px solid ${streak >= 7 ? "rgba(232,255,71,0.3)" : "rgba(255,154,60,0.3)"}`, borderRadius: 20, padding: "1px 7px" }}>
-                  <span style={{ fontSize: 10 }}>{streak >= 7 ? "🔥" : "⚡"}</span>
-                  <span className="bebas" style={{ fontSize: 12, color: streak >= 7 ? "var(--yellow)" : "#ff9a3c" }}>{streak}j</span>
-                </div>
-              )}
+      {/* Header sticky premium */}
+      {(() => {
+        const tabMeta = {
+          home: { label: "Accueil", color: "var(--yellow)" },
+          today: { label: "Séance", color: "var(--green)" },
+          progress: { label: "Progression", color: "var(--purple)" },
+          planning: { label: "Planning", color: "var(--yellow)" },
+          race: { label: "Course", color: "var(--red)" },
+          technique: { label: "Technique", color: "var(--yellow)" },
+          nutri: { label: "Nutrition", color: "var(--green)" },
+          zones: { label: "Zones", color: "var(--green)" },
+          profil: { label: "Profil", color: "var(--yellow)" },
+        };
+        const meta = tabMeta[tab] || { label: "FITRACE", color: "var(--yellow)" };
+        return (
+          <div style={{ background: "rgba(8,8,8,0.92)", padding: "12px 20px 10px", borderBottom: "1px solid rgba(255,255,255,0.04)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(24px)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 2 }}>FIT<span style={{ color: "var(--white)" }}>RACE</span></div>
+                <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.08)" }} />
+                <div className="bebas" style={{ fontSize: 16, color: meta.color, letterSpacing: 1 }}>{meta.label.toUpperCase()}</div>
+              </div>
+              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                {streak > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "3px 9px" }}>
+                    <span style={{ fontSize: 11 }}>{streak >= 7 ? "🔥" : "⚡"}</span>
+                    <span className="bebas" style={{ fontSize: 13, color: streak >= 7 ? "var(--yellow)" : "#ff9a3c" }}>{streak}</span>
+                  </div>
+                )}
+                {days !== null && tab !== "race" && (
+                  <div onClick={() => setTab("race")} style={{ background: "rgba(255,71,71,0.08)", border: "1px solid rgba(255,71,71,0.18)", borderRadius: 10, padding: "4px 10px", textAlign: "center", cursor: "pointer" }}>
+                    <div className="bebas" style={{ fontSize: 20, color: "var(--red)", lineHeight: 1 }}>{days}</div>
+                    <div style={{ fontSize: 8, color: "rgba(255,71,71,0.5)", letterSpacing: "0.08em" }}>JOURS</div>
+                  </div>
+                )}
+                <button onClick={() => setShowCoachChat(true)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(57,255,128,0.08)", border: "1px solid rgba(57,255,128,0.2)", color: "var(--green)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🤖</button>
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "var(--yellow)", cursor: "pointer" }}>📤</button>
-            <button onClick={() => setTab("profil")} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "6px 10px", fontSize: 11, color: "#888", cursor: "pointer", fontWeight: 600 }}>👤 Profil</button>
-            {days !== null && (
-              <div style={{ background: "rgba(255,71,71,0.1)", border: "1px solid rgba(255,71,71,0.2)", borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
-                <div className="bebas" style={{ fontSize: 26, color: "var(--red)", lineHeight: 1 }}>{days}</div>
-                <div style={{ fontSize: 9, color: "rgba(255,71,71,0.6)" }}>jours</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
 
@@ -6186,75 +6200,83 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
     setLoading(false);
   }
 
+  const phaseLabel = days === null ? null : days <= 1 ? { text: "C'EST LE JOUR J !", color: "var(--red)", bg: "linear-gradient(135deg, #1a0000 0%, #080808 60%)" } : days <= 7 ? { text: "SEMAINE DE COURSE", color: "#ff6b6b", bg: "linear-gradient(135deg, #150000 0%, #080808 60%)" } : days <= 30 ? { text: "PHASE PIC", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)" } : { text: days > 50 ? "PHASE BASE" : "PHASE DÉVELOPPEMENT", color: "var(--green)", bg: "linear-gradient(135deg, #001a0a 0%, #080808 60%)" };
+
   return (
     <div className="fade-in">
       {showSim && <SimulationRace profile={profile} onClose={() => setShowSim(false)} />}
 
-      {/* Bouton Simulation */}
-      <div style={{ background: "rgba(255,71,71,0.06)", border: "1.5px solid rgba(255,71,71,0.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div className="bebas" style={{ fontSize: 18, color: "var(--red)" }}>SIMULATION RACE</div>
-          <div style={{ fontSize: 12, color: "#555", marginTop: 2 }}>Chronomètre tes 8 runs + 8 stations</div>
-        </div>
-        <button onClick={() => setShowSim(true)} style={{ background: "var(--red)", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#fff", cursor: "pointer" }}>
-          🏁 LANCER
-        </button>
-      </div>
-
-      <Section title="Ta course HYROX">
-        {profile.raceDate ? (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ background: "var(--bg2)", border: days <= 7 ? "2px solid var(--red)" : days <= 30 ? "1.5px solid var(--red)88" : "1.5px solid var(--red)44", borderRadius: 14, padding: 20, textAlign: "center", marginBottom: 10 }}>
-              <div className={`bebas count-pulse`} style={{ fontSize: 80, color: days <= 7 ? "var(--red)" : days <= 30 ? "#ff7070" : "#ff9a9a", lineHeight: 1 }}>{days}</div>
-              <div style={{ color: "#888", fontSize: 15, marginTop: 4 }}>jours avant le départ</div>
-              <div style={{ color: "#555", fontSize: 13, marginTop: 4 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+      {/* ── HERO RACE COUNTDOWN ── */}
+      {profile.raceDate ? (
+        <div style={{ background: phaseLabel?.bg || "linear-gradient(135deg, #150000 0%, #080808 60%)", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 22, padding: "22px 20px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,71,71,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ fontSize: 10, color: "rgba(255,71,71,0.7)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 12 }}>🏁 {phaseLabel?.text}</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 14 }}>
+            <div className="bebas" style={{ fontSize: 80, color: phaseLabel?.color || "var(--red)", lineHeight: 0.9, letterSpacing: -1 }}>{days}</div>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 16, color: "#555" }}>jours</div>
+              <div style={{ fontSize: 11, color: "#333" }}>avant le départ</div>
             </div>
-            {days <= 1 && (
-              <div style={{ background: "var(--red)22", border: "1.5px solid var(--red)", borderRadius: 12, padding: 14, textAlign: "center" }}>
-                <div style={{ fontSize: 24 }}>🏁</div>
-                <div className="bebas" style={{ fontSize: 20, color: "var(--red)", marginTop: 4 }}>C'EST AUJOURD'HUI !</div>
-                <div style={{ fontSize: 13, color: "#ccc", marginTop: 6 }}>Hydrate-toi, mange tes glucides, fais confiance à ton entraînement.</div>
-              </div>
-            )}
-            {days > 1 && days <= 7 && (
-              <div style={{ background: "var(--red)11", border: "1px solid var(--red)44", borderRadius: 10, padding: 12, fontSize: 13, color: "#ff9a9a", lineHeight: 1.6 }}>
-                ⚡ <strong>Semaine de course.</strong> Réduis le volume de 50%, maintiens 2 courtes sessions d'activation. Dors bien, bois beaucoup.
-              </div>
-            )}
-            {days > 7 && days <= 30 && (
-              <div style={{ background: "var(--yellow)11", border: "1px solid var(--yellow)33", borderRadius: 10, padding: 12, fontSize: 13, color: "#e8ff47cc", lineHeight: 1.6 }}>
-                🎯 <strong>Phase Pic.</strong> Maximise la spécificité — simulations complètes, allures de course, transitions.
-              </div>
-            )}
-            {days > 30 && (
-              <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, fontSize: 13, color: "#888", lineHeight: 1.6 }}>
-                📈 Phase {days > 50 ? "Base — construis ton moteur aérobie" : "Développement — augmente la spécificité HYROX"}.
-              </div>
-            )}
           </div>
-        ) : (
-          <div style={{ color: "#555", textAlign: "center", padding: 16 }}>Aucune date renseignée — modifie ton profil.</div>
-        )}
-      </Section>
+          <div style={{ fontSize: 12, color: "#444", marginBottom: 16 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
+          {/* Message contextuel */}
+          <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#888", lineHeight: 1.6 }}>
+            {days <= 1 ? "🔥 Hydrate-toi, mange tes glucides, fais confiance à ton entraînement." : days <= 7 ? "⚡ Réduis le volume de 50%, maintiens 2 sessions d'activation courtes. Dors bien." : days <= 30 ? "🎯 Maximise la spécificité — simulations, allures de course, transitions enchaînées." : "📈 Construis ta base aérobie. Chaque séance compte."}
+          </div>
+          {/* Bouton simulation intégré */}
+          <button onClick={() => setShowSim(true)} style={{ width: "100%", marginTop: 14, background: "var(--red)", border: "none", borderRadius: 14, padding: "14px", color: "#fff", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span>🏁</span> LANCER LA SIMULATION RACE
+          </button>
+        </div>
+      ) : (
+        <div style={{ background: "rgba(255,71,71,0.04)", border: "1px dashed rgba(255,71,71,0.2)", borderRadius: 16, padding: "24px", textAlign: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>🏁</div>
+          <div style={{ fontSize: 14, color: "#555" }}>Aucune date renseignée.<br/>Ajoute ta date de course dans ton profil.</div>
+        </div>
+      )}
 
-      {!strategy && !loading && <Btn size="lg" onClick={generateStrategy} style={{ width: "100%", marginBottom: 20 }}>🏁 Générer ma stratégie de course</Btn>}
+      {/* ── CTA STRATÉGIE ── */}
+      {!strategy && !loading && (
+        <button onClick={generateStrategy} style={{ width: "100%", background: "linear-gradient(135deg, rgba(255,71,71,0.12) 0%, rgba(255,71,71,0.04) 100%)", border: "1.5px solid rgba(255,71,71,0.3)", borderRadius: 16, padding: "18px 20px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+          <div style={{ textAlign: "left" }}>
+            <div className="bebas" style={{ fontSize: 22, color: "var(--red)", letterSpacing: 1 }}>MA STRATÉGIE DE COURSE</div>
+            <div style={{ fontSize: 12, color: "#444", marginTop: 3 }}>Objectif temps · Stations · Mental · Checklist</div>
+          </div>
+          <div style={{ width: 42, height: 42, borderRadius: "50%", background: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span className="bebas" style={{ fontSize: 20, color: "#fff" }}>→</span>
+          </div>
+        </button>
+      )}
       {loading && (
-        <div className="fade-in" style={{ textAlign: "center", padding: "32px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(255,71,71,0.15)", marginBottom: 20 }}>
-          <div style={{ fontSize: 28, marginBottom: 10 }}>🏁</div>
-          <div className="bebas" style={{ fontSize: 18, color: "var(--red)", marginBottom: 8 }}>{strategyStream || "Coach élabore ta stratégie..."}</div>
+        <div className="fade-in" style={{ background: "linear-gradient(135deg, #150000 0%, #080808 100%)", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 16, padding: "28px 20px", marginBottom: 14, textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🏁</div>
+          <div className="bebas" style={{ fontSize: 20, color: "var(--red)", marginBottom: 10 }}>{strategyStream || "Élaboration de ta stratégie..."}</div>
           <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-            {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--red)", opacity: 0.6, animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+            {[0,1,2].map(i => <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--red)", animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
           </div>
         </div>
       )}
 
       {strategy && (
         <div className="fade-in">
-          {/* Poids officiels */}
-          <Card style={{ marginBottom: 12 }}>
-            <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", marginBottom: 10 }}>TES POIDS DE COMPÉTITION</div>
-            <div style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>{poidsHyrox.categorie}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {/* Objectif + stratégie */}
+          <div style={{ background: "linear-gradient(135deg, rgba(255,71,71,0.08) 0%, rgba(255,71,71,0.02) 100%)", border: "1.5px solid rgba(255,71,71,0.25)", borderRadius: 18, padding: "18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,71,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+            <div style={{ fontSize: 10, color: "rgba(255,71,71,0.7)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>🎯 Objectif</div>
+            <div className="bebas" style={{ fontSize: 36, color: "var(--red)", lineHeight: 1, marginBottom: 10 }}>{strategy.objectifTemps}</div>
+            <div style={{ fontSize: 13, color: "#aaa", lineHeight: 1.7, marginBottom: strategy.runningRythme ? 12 : 0 }}>{strategy.strategieCourse}</div>
+            {strategy.runningRythme && (
+              <div style={{ background: "rgba(57,255,128,0.06)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "var(--green)", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>🏃</span> <span>{strategy.runningRythme}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Poids officiels — grid visuelle */}
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Poids de compétition</div>
+            <div style={{ fontSize: 11, color: "#2a2a2a", marginBottom: 12 }}>{poidsHyrox.categorie}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {[
                 { label: "Sled Push", val: poidsHyrox.sled_push, icon: "🛷" },
                 { label: "Sled Pull", val: poidsHyrox.sled_pull, icon: "🔗" },
@@ -6262,52 +6284,64 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 { label: "Wall Balls", val: poidsHyrox.wall_balls, icon: "🏀" },
                 { label: "Sandbag Lunges", val: poidsHyrox.sandbag_lunges, icon: "🎒" },
               ].map((s, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < 4 ? "1px solid var(--bg3)" : "none" }}>
-                  <span style={{ fontSize: 13, color: "#aaa" }}>{s.icon} {s.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>{s.val}</span>
+                <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>{s.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#444", marginBottom: 1 }}>{s.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>{s.val}</div>
+                  </div>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
 
-          <Card style={{ border: "1.5px solid var(--red)44", marginBottom: 16 }}>
-            <div className="bebas" style={{ fontSize: 24, color: "var(--red)", marginBottom: 8 }}>OBJECTIF : {strategy.objectifTemps}</div>
-            <p style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7, marginBottom: 12 }}>{strategy.strategieCourse}</p>
-            {strategy.runningRythme && <div style={{ background: "var(--bg3)", borderRadius: 8, padding: 10, fontSize: 13, color: "var(--yellow)" }}>🏃 Running : {strategy.runningRythme}</div>}
-          </Card>
-          <Section title="Station par station">
-            {(strategy.stations || []).map((s, i) => (
-              <Card key={i} style={{ marginBottom: 10, borderLeft: "3px solid var(--yellow)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{i + 1}. {s.nom}</div>
-                    <div style={{ color: "var(--yellow)", fontSize: 13, marginTop: 2 }}>🎯 {s.objectif}</div>
-                    {s.conseil && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>💬 {s.conseil}</div>}
+          {/* Stations — cartes numérotées */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Station par station</div>
+            {(strategy.stations || []).map((s, i) => {
+              const isRun = i % 2 === 0;
+              const col = isRun ? "var(--green)" : "var(--yellow)";
+              return (
+                <div key={i} style={{ background: isRun ? "rgba(57,255,128,0.03)" : "rgba(232,255,71,0.03)", border: `1px solid ${isRun ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.1)"}`, borderLeft: `3px solid ${col}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: col, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#000", flexShrink: 0 }}>{i+1}</div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)" }}>{s.nom}</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: col, marginBottom: s.conseil ? 4 : 0, paddingLeft: 30 }}>🎯 {s.objectif}</div>
+                      {s.conseil && <div style={{ fontSize: 11, color: "#555", paddingLeft: 30, lineHeight: 1.5 }}>💬 {s.conseil}</div>}
+                    </div>
+                    {s.chrono && <div style={{ background: `${col}18`, border: `1px solid ${col}44`, borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, color: col, flexShrink: 0, marginLeft: 10 }}>{s.chrono}</div>}
                   </div>
-                  {s.chrono && <Badge label={s.chrono} />}
                 </div>
-              </Card>
-            ))}
-          </Section>
+              );
+            })}
+          </div>
+
+          {/* Piège + Mental — côte à côte */}
           {(strategy.piege || strategy.mental) && (
-            <Card style={{ border: "1px solid var(--red)33", marginBottom: 12 }}>
-              {strategy.piege && <div style={{ marginBottom: 12 }}>
-                <div style={{ color: "var(--red)", fontWeight: 700, fontSize: 12, textTransform: "uppercase", marginBottom: 6 }}>⚠️ Piège principal</div>
-                <div style={{ fontSize: 14, color: "#ccc" }}>{strategy.piege}</div>
-              </div>}
-              {strategy.mental && <div>
-                <div style={{ color: "var(--green)", fontWeight: 700, fontSize: 12, textTransform: "uppercase", marginBottom: 6 }}>🧠 Mental</div>
-                <div style={{ fontSize: 14, color: "#ccc" }}>{strategy.mental}</div>
-              </div>}
-            </Card>
+            <div style={{ display: "grid", gridTemplateColumns: strategy.piege && strategy.mental ? "1fr 1fr" : "1fr", gap: 8, marginBottom: 12 }}>
+              {strategy.piege && (
+                <div style={{ background: "rgba(255,71,71,0.05)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 14, padding: "14px" }}>
+                  <div style={{ fontSize: 9, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>⚠️ Piège principal</div>
+                  <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{strategy.piege}</div>
+                </div>
+              )}
+              {strategy.mental && (
+                <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 14, padding: "14px" }}>
+                  <div style={{ fontSize: 9, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>🧠 Mental</div>
+                  <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{strategy.mental}</div>
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Checklist J-Day */}
-          {(strategy.checklist || []).length > 0 && (
-            <ChecklistJDay items={strategy.checklist} />
-          )}
+          {(strategy.checklist || []).length > 0 && <ChecklistJDay items={strategy.checklist} />}
 
-          <Btn variant="dark" onClick={() => setStrategy(null)} style={{ width: "100%", marginTop: 8 }}>↺ Regénérer la stratégie</Btn>
+          <button onClick={() => setStrategy(null)} style={{ width: "100%", marginTop: 8, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "13px", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            ↺ Regénérer la stratégie
+          </button>
         </div>
       )}
     </div>
