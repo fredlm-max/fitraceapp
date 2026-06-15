@@ -5518,33 +5518,309 @@ JSON: {
 // ============================================================
 // ONGLET COURSE
 // ============================================================
+function ChecklistJDay({ items }) {
+  const [checked, setChecked] = useState({});
+  const toggle = (i) => setChecked(c => ({ ...c, [i]: !c[i] }));
+  const done = Object.values(checked).filter(Boolean).length;
+  return (
+    <Card style={{ border: "1.5px solid rgba(232,255,71,0.2)", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)" }}>✅ CHECKLIST J-DAY</div>
+        <div style={{ fontSize: 11, color: "#555" }}>{done}/{items.length}</div>
+      </div>
+      <ProgressBar value={done} max={items.length} color="var(--green)" height={3} />
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        {items.map((item, i) => (
+          <div key={i} onClick={() => toggle(i)} style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "4px 0", opacity: checked[i] ? 0.5 : 1, transition: "opacity 0.2s" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 6, border: checked[i] ? "none" : "2px solid #444", background: checked[i] ? "var(--green)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0, transition: "all 0.2s" }}>
+              {checked[i] ? "✓" : ""}
+            </div>
+            <span style={{ fontSize: 13, color: checked[i] ? "var(--green)" : "#ccc", textDecoration: checked[i] ? "line-through" : "none" }}>{item}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+const HYROX_SEGMENTS = [
+  { id: "run1", type: "run", label: "Run 1", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "ski", type: "station", label: "SkiErg", distance: "1 000 m", icon: "⛷️", color: "var(--yellow)" },
+  { id: "run2", type: "run", label: "Run 2", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "sled_push", type: "station", label: "Sled Push", distance: "50 m", icon: "🛷", color: "var(--yellow)" },
+  { id: "run3", type: "run", label: "Run 3", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "sled_pull", type: "station", label: "Sled Pull", distance: "50 m", icon: "🔗", color: "var(--yellow)" },
+  { id: "run4", type: "run", label: "Run 4", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "burpee", type: "station", label: "Burpee BJ", distance: "80 m", icon: "💥", color: "var(--yellow)" },
+  { id: "run5", type: "run", label: "Run 5", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "rowing", type: "station", label: "Rowing", distance: "1 000 m", icon: "🚣", color: "var(--yellow)" },
+  { id: "run6", type: "run", label: "Run 6", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "farmers", type: "station", label: "Farmers Carry", distance: "200 m", icon: "🧳", color: "var(--yellow)" },
+  { id: "run7", type: "run", label: "Run 7", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "sandbag", type: "station", label: "Sandbag Lunges", distance: "100 m", icon: "🎒", color: "var(--yellow)" },
+  { id: "run8", type: "run", label: "Run 8", distance: "1 km", icon: "🏃", color: "var(--green)" },
+  { id: "wallball", type: "station", label: "Wall Balls", distance: "100 reps", icon: "🏀", color: "var(--red)" },
+];
+
+function fmtTime(secs) {
+  if (secs == null) return "--:--";
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60).toString().padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+}
+
+function SimulationRace({ profile, onClose }) {
+  const [phase, setPhase] = useState("ready"); // ready | running | done
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [splits, setSplits] = useState({}); // id → secs
+  const [segStart, setSegStart] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [totalElapsed, setTotalElapsed] = useState(0);
+  const [raceStart, setRaceStart] = useState(null);
+  const [analysisText, setAnalysisText] = useState("");
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+
+  // Timer tick
+  useEffect(() => {
+    if (phase !== "running") return;
+    const id = setInterval(() => {
+      const now = Date.now();
+      setElapsed(Math.floor((now - segStart) / 1000));
+      setTotalElapsed(Math.floor((now - raceStart) / 1000));
+    }, 500);
+    return () => clearInterval(id);
+  }, [phase, segStart, raceStart]);
+
+  const seg = HYROX_SEGMENTS[currentIdx];
+
+  function startRace() {
+    const now = Date.now();
+    setPhase("running");
+    setRaceStart(now);
+    setSegStart(now);
+    setElapsed(0);
+    setTotalElapsed(0);
+  }
+
+  function nextSegment() {
+    const secs = elapsed;
+    const id = seg.id;
+    setSplits(prev => ({ ...prev, [id]: secs }));
+    if (currentIdx + 1 >= HYROX_SEGMENTS.length) {
+      setPhase("done");
+      analyzeRace({ ...splits, [id]: secs });
+    } else {
+      setCurrentIdx(i => i + 1);
+      setSegStart(Date.now());
+      setElapsed(0);
+    }
+  }
+
+  async function analyzeRace(finalSplits) {
+    setLoadingAnalysis(true);
+    const totalSecs = Object.values(finalSplits).reduce((a, b) => a + b, 0);
+    const splitsText = HYROX_SEGMENTS.map(s => `${s.label}: ${fmtTime(finalSplits[s.id] || 0)}`).join(", ");
+    const runSplits = HYROX_SEGMENTS.filter(s => s.type === "run").map(s => finalSplits[s.id] || 0);
+    const stationSplits = HYROX_SEGMENTS.filter(s => s.type === "station").map(s => finalSplits[s.id] || 0);
+    const avgRun = Math.round(runSplits.reduce((a,b)=>a+b,0)/runSplits.length);
+    const avgStation = Math.round(stationSplits.reduce((a,b)=>a+b,0)/stationSplits.length);
+
+    const result = await callClaudeStream(
+      "Tu es coach HYROX expert. Analyse post-simulation concise et motivante. Pas de JSON.",
+      `Analyse cette simulation HYROX pour ${profile.name} (Niveau ${profile.level}/4, VMA ${profile.vmaKmh||"?"}km/h):
+Temps total: ${fmtTime(totalSecs)}
+Splits: ${splitsText}
+Run moyen: ${fmtTime(avgRun)} | Station moyenne: ${fmtTime(avgStation)}
+Objectif: ${profile.levelAnalysis?.objectif || "finir"}
+
+Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots max. Utilise des emojis.`,
+      500,
+      (chunk) => setAnalysisText(chunk)
+    );
+    setAnalysisText(result.startsWith("__ERROR__") ? "Super simulation ! Analyse tes splits pour identifier les segments à améliorer." : result);
+    setLoadingAnalysis(false);
+  }
+
+  const totalSecs = Object.values(splits).reduce((a,b)=>a+b,0) + (phase === "running" ? totalElapsed - Object.values(splits).reduce((a,b)=>a+b,0) : 0);
+  const completedCount = Object.keys(splits).length;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 300, display: "flex", flexDirection: "column", padding: "0" }}>
+      {/* Header */}
+      <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg)" }}>
+        <div>
+          <div className="bebas" style={{ fontSize: 20, color: "var(--red)", letterSpacing: 2 }}>🏁 SIMULATION HYROX</div>
+          {phase === "running" && <div style={{ fontSize: 11, color: "#555" }}>{completedCount}/{HYROX_SEGMENTS.length} segments</div>}
+        </div>
+        <div style={{ textAlign: "right" }}>
+          {phase !== "ready" && <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", lineHeight: 1 }}>{fmtTime(totalElapsed)}</div>}
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#555", fontSize: 13, cursor: "pointer", marginTop: 4 }}>✕ Quitter</button>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px" }}>
+        {phase === "ready" && (
+          <div className="fade-in" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🏁</div>
+            <div className="bebas" style={{ fontSize: 32, color: "var(--red)", marginBottom: 8 }}>SIMULATION RACE</div>
+            <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 24 }}>
+              16 segments à chronomètrer.<br/>
+              Tape sur le bouton à chaque fin de segment.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 28, textAlign: "left" }}>
+              {HYROX_SEGMENTS.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "4px 0" }}>
+                  <span style={{ fontSize: 14, width: 24 }}>{s.icon}</span>
+                  <span style={{ fontSize: 13, color: s.type === "run" ? "var(--green)" : "var(--yellow)" }}>{s.label}</span>
+                  <span style={{ fontSize: 11, color: "#444", marginLeft: "auto" }}>{s.distance}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={startRace} style={{ width: "100%", padding: "18px", background: "var(--red)", border: "none", borderRadius: 14, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: "#fff", cursor: "pointer" }}>
+              🏁 DÉMARRER LA SIMULATION
+            </button>
+          </div>
+        )}
+
+        {phase === "running" && (
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 16 }}>
+            {/* Segment actuel — GRAND */}
+            <div className="fade-in" style={{ background: seg.type === "run" ? "rgba(57,255,128,0.06)" : "rgba(232,255,71,0.06)", border: `2px solid ${seg.color}44`, borderRadius: 18, padding: "28px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>{seg.icon}</div>
+              <div className="bebas" style={{ fontSize: 30, color: seg.color, letterSpacing: 1, lineHeight: 1 }}>{seg.label}</div>
+              <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>{seg.distance}</div>
+              <div className="bebas" style={{ fontSize: 60, color: "var(--white)", marginTop: 16, lineHeight: 1, letterSpacing: 2 }}>{fmtTime(elapsed)}</div>
+              <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>sur ce segment</div>
+            </div>
+
+            {/* Bouton Terminer segment */}
+            <button
+              onClick={nextSegment}
+              style={{ width: "100%", padding: "20px", background: seg.color, border: "none", borderRadius: 14, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: seg.type === "run" ? "#000" : "#000", cursor: "pointer" }}
+            >
+              ✓ {currentIdx + 1 < HYROX_SEGMENTS.length ? `SEGMENT SUIVANT : ${HYROX_SEGMENTS[currentIdx + 1].label}` : "🏁 TERMINER LA RACE"}
+            </button>
+
+            {/* Mini-tableau des splits */}
+            {completedCount > 0 && (
+              <div style={{ background: "var(--bg2)", borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Splits</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                  {HYROX_SEGMENTS.slice(0, completedCount).map(s => (
+                    <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", background: "var(--bg3)", borderRadius: 6 }}>
+                      <span style={{ fontSize: 11, color: s.type === "run" ? "var(--green)" : "var(--yellow)" }}>{s.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--white)" }}>{fmtTime(splits[s.id])}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {phase === "done" && (
+          <div className="fade-in">
+            {/* Résultat final */}
+            <div style={{ textAlign: "center", padding: "24px 16px", background: "rgba(255,71,71,0.06)", border: "2px solid rgba(255,71,71,0.3)", borderRadius: 18, marginBottom: 16 }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
+              <div className="bebas" style={{ fontSize: 20, color: "#888", marginBottom: 4 }}>TEMPS TOTAL</div>
+              <div className="bebas" style={{ fontSize: 64, color: "var(--red)", lineHeight: 1 }}>{fmtTime(Object.values(splits).reduce((a,b)=>a+b,0))}</div>
+              <div style={{ fontSize: 12, color: "#555", marginTop: 8 }}>{Object.values(splits).length} segments complétés</div>
+            </div>
+
+            {/* Tableau splits complet */}
+            <div style={{ background: "var(--bg2)", borderRadius: 14, padding: 16, marginBottom: 16 }}>
+              <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", marginBottom: 12 }}>SPLITS DÉTAILLÉS</div>
+              {HYROX_SEGMENTS.map((s, i) => {
+                const t = splits[s.id];
+                const prev = i > 0 ? splits[HYROX_SEGMENTS[i-1].id] : null;
+                return (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < HYROX_SEGMENTS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                    <span style={{ fontSize: 18, width: 28 }}>{s.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: s.type === "run" ? "var(--green)" : "var(--yellow)", fontWeight: 700 }}>{s.label}</div>
+                      <div style={{ fontSize: 10, color: "#444" }}>{s.distance}</div>
+                    </div>
+                    <div className="bebas" style={{ fontSize: 20, color: "var(--white)" }}>{fmtTime(t)}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Analyse IA */}
+            <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 14, padding: 16, marginBottom: 16 }}>
+              <div className="bebas" style={{ fontSize: 16, color: "var(--green)", marginBottom: 8 }}>🤖 ANALYSE DU COACH</div>
+              {loadingAnalysis ? (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", opacity: 0.6, animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.7 }}>{analysisText}</div>
+              )}
+            </div>
+
+            <button onClick={onClose} style={{ width: "100%", padding: "16px", background: "var(--yellow)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer" }}>
+              ← Retour au profil race
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function RaceTab({ profile }) {
   const [strategy, setStrategy] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [strategyStream, setStrategyStream] = useState("");
+  const [showSim, setShowSim] = useState(false);
   const days = daysUntil(profile.raceDate);
-
   const poidsHyrox = getPoidsHyrox(profile);
 
   async function generateStrategy() {
     setLoading(true);
-    const raw = await callClaude(
+    setStrategyStream("🏁 Analyse de ton profil...");
+    const raw = await callClaudeStream(
       "Coach HYROX expert. JSON uniquement sans backticks.",
-      `Stratégie de course HYROX pour ${profile.name}, Niveau ${profile.level}, VMA ${profile.vmaKmh || "?"}km/h, Squat ${profile.squat1RM_final || "?"}kg.
+      `Stratégie de course HYROX pour ${profile.name}, Niveau ${profile.level}, VMA ${profile.vmaKmh || "?"}km/h, Squat ${profile.squat1RM_final || "?"}kg, Catégorie: ${poidsHyrox.categorie}.
 Objectif: ${profile.levelAnalysis?.objectif || "finir"}.
-JSON: {"objectifTemps":"","strategieCourse":"","stations":[{"nom":"","objectif":"","chrono":"","conseil":""}],"runningRythme":"","piege":"","mental":""}
-Stations dans l'ordre: SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad Jump 80m, Rowing 1000m, Farmers Carry 200m, Sandbag Lunges 100m, Wall Balls 100 reps`,
-      1200
+Jours avant la course: ${days !== null ? days : "?"}.
+JSON: {"objectifTemps":"","strategieCourse":"","stations":[{"nom":"","objectif":"","chrono":"","conseil":""}],"runningRythme":"","piege":"","mental":"","checklist":[]}
+Stations dans l'ordre: SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad Jump 80m, Rowing 1000m, Farmers Carry 200m, Sandbag Lunges 100m, Wall Balls 100 reps
+Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échauffement).`,
+      1400,
+      (chunk) => {
+        if (chunk.includes('"stations"')) setStrategyStream("📋 Station par station...");
+        else if (chunk.includes('"runningRythme"')) setStrategyStream("🏃 Allures de running...");
+        else if (chunk.includes('"mental"')) setStrategyStream("🧠 Préparation mentale...");
+        else if (chunk.length > 100) setStrategyStream("🤖 Coach élabore ta stratégie...");
+      }
     );
     try {
       const stCleaned = raw?.replace(/```json|```/g, "").trim() || "{}";
       const stMatch = stCleaned.match(/\{[\s\S]*\}/);
       setStrategy(JSON.parse(stMatch ? stMatch[0] : "{}"));
     } catch (e) { console.error("Stratégie parse error:", e); }
+    setStrategyStream("");
     setLoading(false);
   }
 
   return (
     <div className="fade-in">
+      {showSim && <SimulationRace profile={profile} onClose={() => setShowSim(false)} />}
+
+      {/* Bouton Simulation */}
+      <div style={{ background: "rgba(255,71,71,0.06)", border: "1.5px solid rgba(255,71,71,0.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div className="bebas" style={{ fontSize: 18, color: "var(--red)" }}>SIMULATION RACE</div>
+          <div style={{ fontSize: 12, color: "#555", marginTop: 2 }}>Chronomètre tes 8 runs + 8 stations</div>
+        </div>
+        <button onClick={() => setShowSim(true)} style={{ background: "var(--red)", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#fff", cursor: "pointer" }}>
+          🏁 LANCER
+        </button>
+      </div>
+
       <Section title="Ta course HYROX">
         {profile.raceDate ? (
           <div style={{ marginBottom: 20 }}>
@@ -5582,7 +5858,15 @@ Stations dans l'ordre: SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad 
       </Section>
 
       {!strategy && !loading && <Btn size="lg" onClick={generateStrategy} style={{ width: "100%", marginBottom: 20 }}>🏁 Générer ma stratégie de course</Btn>}
-      {loading && <Spinner />}
+      {loading && (
+        <div className="fade-in" style={{ textAlign: "center", padding: "32px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(255,71,71,0.15)", marginBottom: 20 }}>
+          <div style={{ fontSize: 28, marginBottom: 10 }}>🏁</div>
+          <div className="bebas" style={{ fontSize: 18, color: "var(--red)", marginBottom: 8 }}>{strategyStream || "Coach élabore ta stratégie..."}</div>
+          <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+            {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--red)", opacity: 0.6, animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+          </div>
+        </div>
+      )}
 
       {strategy && (
         <div className="fade-in">
@@ -5626,7 +5910,7 @@ Stations dans l'ordre: SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad 
             ))}
           </Section>
           {(strategy.piege || strategy.mental) && (
-            <Card style={{ border: "1px solid var(--red)33" }}>
+            <Card style={{ border: "1px solid var(--red)33", marginBottom: 12 }}>
               {strategy.piege && <div style={{ marginBottom: 12 }}>
                 <div style={{ color: "var(--red)", fontWeight: 700, fontSize: 12, textTransform: "uppercase", marginBottom: 6 }}>⚠️ Piège principal</div>
                 <div style={{ fontSize: 14, color: "#ccc" }}>{strategy.piege}</div>
@@ -5637,6 +5921,13 @@ Stations dans l'ordre: SkiErg 1000m, Sled Push 50m, Sled Pull 50m, Burpee Broad 
               </div>}
             </Card>
           )}
+
+          {/* Checklist J-Day */}
+          {(strategy.checklist || []).length > 0 && (
+            <ChecklistJDay items={strategy.checklist} />
+          )}
+
+          <Btn variant="dark" onClick={() => setStrategy(null)} style={{ width: "100%", marginTop: 8 }}>↺ Regénérer la stratégie</Btn>
         </div>
       )}
     </div>
