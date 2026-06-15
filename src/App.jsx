@@ -3488,175 +3488,216 @@ JSON:
 
             {session && !showFeedback && !feedback && (
               <div className="slide-up">
-                {/* En-tête séance */}
-                <div style={{ background: "var(--bg2)", border: "1.5px solid var(--yellow)44", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{session.titre}</div>
-                      <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>⏱ {session.duree} min · {session.type === "running_zone2" ? "Running Zone 2" : session.type === "force_stations" ? "Force Stations" : session.type === "running_qualite" ? "Running Qualité" : "Hybride Compromis"}</div>
+                {/* ── HERO SÉANCE ── */}
+                {(() => {
+                  const typeConf = {
+                    running_zone2: { label: "Running Zone 2", color: "var(--green)", bg: "linear-gradient(135deg, #003318 0%, #080808 60%)", border: "rgba(57,255,128,0.25)", icon: "🏃" },
+                    force_stations: { label: "Force Stations", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(232,255,71,0.25)", icon: "🏋️" },
+                    running_qualite: { label: "Running Qualité", color: "var(--orange)", bg: "linear-gradient(135deg, #1a0a00 0%, #080808 60%)", border: "rgba(255,154,60,0.25)", icon: "⚡" },
+                    hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", bg: "linear-gradient(135deg, #0d0020 0%, #080808 60%)", border: "rgba(167,139,250,0.25)", icon: "🔀" },
+                    coach: { label: "Séance Coach", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(232,255,71,0.25)", icon: "👨‍💼" },
+                    perso: { label: "Séance Perso", color: "#888", bg: "linear-gradient(135deg, #111 0%, #080808 60%)", border: "rgba(255,255,255,0.1)", icon: "✏️" },
+                  };
+                  const conf = typeConf[session.type] || typeConf.force_stations;
+                  const doneCount = Object.values(checkedExercices).filter(Boolean).length;
+                  const totalEx = (session.exercices || []).length;
+                  const pct = totalEx > 0 ? Math.round((doneCount / totalEx) * 100) : 0;
+                  return (
+                    <div style={{ background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 20, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+                      {/* Halo */}
+                      <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: `radial-gradient(circle, ${conf.color}18 0%, transparent 70%)`, pointerEvents: "none" }} />
+                      {/* Type badge */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                        <span style={{ fontSize: 18 }}>{conf.icon}</span>
+                        <span style={{ fontSize: 10, color: conf.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{conf.label}</span>
+                        <span style={{ fontSize: 10, color: "#333", marginLeft: "auto" }}>⏱ {session.duree} min</span>
+                      </div>
+                      {/* Titre */}
+                      <div className="bebas" style={{ fontSize: 30, color: "var(--white)", lineHeight: 1, letterSpacing: 0.5, marginBottom: 10 }}>{session.titre}</div>
+                      {/* Explication */}
+                      <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{session.explication}</div>
+                      {/* Progress ring inline */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                            <span style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Exercices</span>
+                            <span style={{ fontSize: 11, color: doneCount === totalEx && totalEx > 0 ? "var(--green)" : conf.color, fontWeight: 700 }}>{doneCount}/{totalEx}</span>
+                          </div>
+                          <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${pct}%`, background: doneCount === totalEx && totalEx > 0 ? "var(--green)" : conf.color, borderRadius: 99, transition: "width 0.4s ease" }} />
+                          </div>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 28, color: doneCount === totalEx && totalEx > 0 ? "var(--green)" : conf.color, lineHeight: 1 }}>{pct}%</div>
+                      </div>
                     </div>
-                    <div style={{ background: "var(--yellow)22", border: "1px solid var(--yellow)44", borderRadius: 8, padding: "6px 10px", textAlign: "center" }}>
-                      <div style={{ fontSize: 10, color: "#888" }}>RPE cible</div>
-                      <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)" }}>{session.exercices?.[0]?.rpe || "7"}</div>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 10, background: "var(--bg3)", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>💡 {session.explication}</div>
-                </div>
+                  );
+                })()}
 
                 {/* Échauffement */}
                 {session.echauffement && (
-                  <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 12, padding: "12px 16px", marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>Échauffement</div>
-                    <div style={{ fontSize: 13, color: "#ccc" }}>{session.echauffement}</div>
+                  <div style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ fontSize: 22, flexShrink: 0 }}>🔥</div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "var(--purple)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Échauffement</div>
+                      <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.6 }}>{session.echauffement}</div>
+                    </div>
                   </div>
                 )}
 
-                {/* Programme — mode effort : cartes larges et lisibles */}
+                {/* Programme */}
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, color: "var(--yellow)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.08em" }}>Programme</div>
-                    <div style={{ fontSize: 12, color: "#555" }}>
-                      {Object.values(checkedExercices).filter(Boolean).length}/{(session.exercices || []).length} complétés
-                    </div>
-                  </div>
                   {(session.exercices || []).map((ex, i) => {
                     const done = checkedExercices[i];
+                    const typeConf2 = {
+                      running_zone2: "var(--green)", force_stations: "var(--yellow)",
+                      running_qualite: "var(--orange)", hybride_compromis: "var(--purple)",
+                    };
+                    const accentColor = typeConf2[session.type] || "var(--yellow)";
                     return (
                       <div key={i} className="fade-in-fast"
                         onClick={() => setCheckedExercices(c => ({ ...c, [i]: !c[i] }))}
                         style={{
-                          background: done ? "rgba(57,255,128,0.05)" : "var(--bg2)",
-                          border: done ? "1.5px solid rgba(57,255,128,0.4)" : i === 0 ? "2px solid var(--yellow)66" : "1px solid var(--bg3)",
-                          borderRadius: 12, padding: "14px 16px", marginBottom: 8,
+                          background: done ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)",
+                          border: done ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(255,255,255,0.05)",
+                          borderLeft: done ? "3px solid var(--green)" : `3px solid ${accentColor}66`,
+                          borderRadius: 14, padding: "14px 14px 12px 16px", marginBottom: 8,
                           animationDelay: `${i * 0.06}s`, cursor: "pointer",
-                          transition: "all 0.2s", opacity: done ? 0.65 : 1,
+                          transition: "all 0.2s", opacity: done ? 0.6 : 1,
                         }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                            {/* Numéro / checkmark */}
                             <div style={{
-                              width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-                              background: done ? "var(--green)" : "var(--bg3)",
-                              border: done ? "none" : "2px solid #444",
+                              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                              background: done ? "var(--green)" : `${accentColor}18`,
+                              border: done ? "none" : `2px solid ${accentColor}44`,
                               display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 13, transition: "all 0.2s",
-                            }}>{done ? "✓" : ""}</div>
-                            <div style={{ fontWeight: 700, fontSize: 16, color: done ? "var(--green)" : "var(--white)", textDecoration: done ? "line-through" : "none" }}>{ex.nom}</div>
+                              fontSize: done ? 14 : 12, fontWeight: 700,
+                              color: done ? "#000" : accentColor, transition: "all 0.25s",
+                            }}>{done ? "✓" : i + 1}</div>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: done ? "#666" : "var(--white)", textDecoration: done ? "line-through" : "none" }}>{ex.nom}</div>
                           </div>
-                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                            {ex.rpe && <div style={{ fontSize: 11, color: "#666", background: "var(--bg3)", borderRadius: 6, padding: "2px 8px" }}>RPE {ex.rpe}</div>}
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                            {ex.rpe && <div style={{ fontSize: 10, color: "#555", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe}</div>}
                             {findVideoForExercice(ex.nom) && (
                               <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
-                                background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.3)",
-                                borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "var(--yellow)",
+                                background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)",
+                                borderRadius: 6, padding: "2px 8px", fontSize: 10, color: "var(--yellow)",
                                 cursor: "pointer", fontWeight: 700,
-                              }}>▶ Tuto</button>
+                              }}>▶</button>
                             )}
                           </div>
                         </div>
-                        <div className="bebas" style={{ fontSize: 22, color: done ? "var(--green)" : "var(--yellow)", marginTop: 4, letterSpacing: "0.04em", paddingLeft: 34 }}>{ex.detail}</div>
-                        {ex.note && <div style={{ fontSize: 12, color: "#666", marginTop: 6, lineHeight: 1.5, paddingLeft: 34 }}>💬 {ex.note}</div>}
+                        {ex.detail && <div className="bebas" style={{ fontSize: 24, color: done ? "#555" : accentColor, marginTop: 6, letterSpacing: "0.04em", paddingLeft: 38 }}>{ex.detail}</div>}
+                        {ex.note && <div style={{ fontSize: 11, color: "#555", marginTop: 5, lineHeight: 1.5, paddingLeft: 38, borderLeft: "2px solid rgba(255,255,255,0.04)", marginLeft: 38 }}>💬 {ex.note}</div>}
                       </div>
                     );
                   })}
-                  {/* Barre de progression + bouton auto séance terminée */}
-                  {(session.exercices || []).length > 0 && (
-                    <div style={{ marginTop: 6 }}>
-                      <ProgressBar
-                        value={Object.values(checkedExercices).filter(Boolean).length}
-                        max={(session.exercices || []).length}
-                        color="var(--green)"
-                        height={4}
-                      />
-                      {Object.values(checkedExercices).filter(Boolean).length === (session.exercices || []).length &&
-                       (session.exercices || []).length > 0 && (
-                        <div className="fade-in" style={{ marginTop: 14, textAlign: "center" }}>
-                          <div style={{ fontSize: 28, marginBottom: 6 }}>🏆</div>
-                          <div style={{ fontWeight: 700, color: "var(--green)", fontSize: 15, marginBottom: 10 }}>Tous les exercices complétés !</div>
-                          <Btn variant="success" onClick={() => setShowFeedback(true)} style={{ width: "100%" }}>
-                            ✓ Valider ma séance & obtenir l'analyse Coach
-                          </Btn>
-                        </div>
-                      )}
+
+                  {/* Completion card */}
+                  {(session.exercices || []).length > 0 && Object.values(checkedExercices).filter(Boolean).length === (session.exercices || []).length && (
+                    <div className="float-up" style={{ background: "linear-gradient(135deg, rgba(57,255,128,0.1) 0%, rgba(57,255,128,0.04) 100%)", border: "2px solid rgba(57,255,128,0.4)", borderRadius: 18, padding: "20px", textAlign: "center", marginTop: 6 }}>
+                      <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
+                      <div className="bebas" style={{ fontSize: 26, color: "var(--green)", letterSpacing: 1, marginBottom: 4 }}>SÉANCE COMPLÈTE !</div>
+                      <div style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Analyse de ton coach IA en cours de génération…</div>
+                      <button onClick={() => setShowFeedback(true)} style={{ width: "100%", background: "var(--green)", border: "none", borderRadius: 14, padding: "16px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 20, letterSpacing: 1, cursor: "pointer" }}>
+                        VALIDER & ANALYSER MA SÉANCE →
+                      </button>
                     </div>
                   )}
                 </div>
 
                 {/* Retour au calme + Nutrition */}
                 {(session.retourCalme || session.nutrition) && (
-                  <div style={{ display: "grid", gridTemplateColumns: session.retourCalme && session.nutrition ? "1fr 1fr" : "1fr", gap: 10, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
                     {session.retourCalme && (
-                      <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 10, padding: 12 }}>
-                        <div style={{ fontSize: 10, color: "#666", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>Retour calme</div>
-                        <div style={{ fontSize: 12, color: "#ccc", lineHeight: 1.5 }}>{session.retourCalme}</div>
+                      <div style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.12)", borderRadius: 12, padding: "12px 14px" }}>
+                        <div style={{ fontSize: 9, color: "var(--purple)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>🧘 Retour calme</div>
+                        <div style={{ fontSize: 12, color: "#999", lineHeight: 1.5 }}>{session.retourCalme}</div>
                       </div>
                     )}
                     {session.nutrition && (
-                      <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 10, padding: 12 }}>
-                        <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>Nutrition</div>
-                        <div style={{ fontSize: 12, color: "#ccc", lineHeight: 1.5 }}>🍌 {session.nutrition.avant}</div>
-                        <div style={{ fontSize: 12, color: "#ccc", marginTop: 4 }}>🥤 {session.nutrition.apres}</div>
+                      <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 12, padding: "12px 14px" }}>
+                        <div style={{ fontSize: 9, color: "var(--green)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>🥗 Nutrition</div>
+                        <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5 }}>🍌 {session.nutrition.avant}</div>
+                        <div style={{ fontSize: 11, color: "#888", marginTop: 3 }}>🥤 {session.nutrition.apres}</div>
                       </div>
                     )}
                   </div>
                 )}
 
                 {session.metrique && (
-                  <div style={{ background: "var(--yellow)11", border: "1px solid var(--yellow)33", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "var(--yellow)", marginBottom: 14 }}>
-                    🎯 À noter : {session.metrique}
+                  <div style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", fontSize: 12, color: "var(--yellow)", marginBottom: 14, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 16 }}>🎯</span>
+                    <span style={{ lineHeight: 1.5 }}>À noter : {session.metrique}</span>
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <Btn variant="dark" onClick={() => setSession(null)} style={{ flex: 1, minWidth: 100 }}>↺ Regénérer</Btn>
-                  <Btn variant="ghost" onClick={() => { setChronoMode(true); setChronoRunning(true); setChronoSeconds(0); setCurrentExIdx(0); }} style={{ flex: 1, minWidth: 100 }}>⏱ Chrono</Btn>
-                  <Btn variant="success" onClick={() => setShowFeedback(true)} style={{ width: "100%" }}>✓ Séance terminée</Btn>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setSession(null)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "#666", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↺ Refaire</button>
+                  <button onClick={() => { setChronoMode(true); setChronoRunning(true); setChronoSeconds(0); setCurrentExIdx(0); }} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "var(--white)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>⏱ Chrono</button>
+                  <button onClick={() => setShowFeedback(true)} style={{ flex: 2, background: "var(--green)", border: "none", borderRadius: 12, padding: "13px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 1, cursor: "pointer" }}>✓ TERMINÉE</button>
                 </div>
               </div>
             )}
 
             {showFeedback && (
               <div className="fade-in">
-                <div style={{ background: "var(--bg2)", border: "1.5px solid rgba(57,255,128,0.3)", borderRadius: 16, padding: 20 }}>
-                  <div className="bebas" style={{ fontSize: 24, color: "var(--green)", marginBottom: 4, letterSpacing: 1 }}>BILAN DE SÉANCE</div>
-                  <div style={{ fontSize: 12, color: "#555", marginBottom: 20 }}>Ces données permettent à ton coach d'individualiser ta prochaine séance</div>
+                <div style={{ background: "linear-gradient(145deg, #001a0a 0%, #080808 60%)", border: "1.5px solid rgba(57,255,128,0.25)", borderRadius: 20, padding: "20px 18px" }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: 14, background: "rgba(57,255,128,0.12)", border: "1px solid rgba(57,255,128,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📊</div>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 26, color: "var(--green)", letterSpacing: 1, lineHeight: 1 }}>BILAN DE SÉANCE</div>
+                      <div style={{ fontSize: 11, color: "#444", marginTop: 3 }}>Aide ton coach IA à adapter la prochaine séance</div>
+                    </div>
+                  </div>
 
                   {/* 1. Ressenti global */}
                   <div style={{ marginBottom: 18 }}>
-                    <div style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Ressenti global</div>
+                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Comment c'était ?</div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      {[{ v: "facile", emoji: "😴", label: "Trop facile" }, { v: "bien", emoji: "💪", label: "Bien calibré" }, { v: "dur", emoji: "🔥", label: "Trop dur" }].map(r => (
-                        <button key={r.v} onClick={() => setFeedbackData(d => ({ ...d, ressenti: r.v }))} style={{
-                          flex: 1, padding: "12px 6px", borderRadius: 10, textAlign: "center",
-                          background: feedbackData.ressenti === r.v ? "rgba(57,255,128,0.1)" : "var(--bg3)",
-                          border: feedbackData.ressenti === r.v ? "2px solid var(--green)" : "1.5px solid transparent",
-                          color: "var(--white)", cursor: "pointer",
-                        }}>
-                          <div style={{ fontSize: 22 }}>{r.emoji}</div>
-                          <div style={{ fontSize: 10, marginTop: 4, color: feedbackData.ressenti === r.v ? "var(--green)" : "#555" }}>{r.label}</div>
-                        </button>
-                      ))}
+                      {[
+                        { v: "facile", emoji: "😪", label: "Trop facile", color: "var(--green)" },
+                        { v: "bien", emoji: "💪", label: "Bien calibré", color: "var(--yellow)" },
+                        { v: "dur", emoji: "🔥", label: "Trop dur", color: "var(--red)" },
+                      ].map(r => {
+                        const active = feedbackData.ressenti === r.v;
+                        return (
+                          <button key={r.v} onClick={() => setFeedbackData(d => ({ ...d, ressenti: r.v }))} style={{
+                            flex: 1, padding: "14px 6px", borderRadius: 14, textAlign: "center",
+                            background: active ? `${r.color}12` : "rgba(255,255,255,0.02)",
+                            border: active ? `2px solid ${r.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                            color: "var(--white)", cursor: "pointer", transition: "all 0.2s",
+                          }}>
+                            <div style={{ fontSize: 28 }}>{r.emoji}</div>
+                            <div style={{ fontSize: 10, marginTop: 6, color: active ? r.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.label}</div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* 2. Difficulté RPE 1-10 */}
                   <div style={{ marginBottom: 18 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                      <div style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Difficulté (RPE)</div>
-                      <div className="bebas" style={{ fontSize: 20, color: feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)" }}>
-                        {feedbackData.difficulte}/10
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Difficulté (RPE)</div>
+                      <div className="bebas" style={{ fontSize: 28, color: feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)", lineHeight: 1 }}>
+                        {feedbackData.difficulte}<span style={{ fontSize: 14, color: "#333" }}>/10</span>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
-                      {[1,2,3,4,5,6,7,8,9,10].map(v => (
+                      {[1,2,3,4,5,6,7,8,9,10].map(v => {
+                        const rpeColor = feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)";
+                        return (
                         <button key={v} onClick={() => setFeedbackData(d => ({ ...d, difficulte: v }))} style={{
-                          flex: 1, height: 32, borderRadius: 6, border: "none", cursor: "pointer",
-                          background: v <= feedbackData.difficulte
-                            ? (feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)")
-                            : "var(--bg3)",
-                          fontSize: 10, fontWeight: 700,
-                          color: v <= feedbackData.difficulte ? "#000" : "#333",
+                          flex: 1, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
+                          background: v <= feedbackData.difficulte ? rpeColor : "rgba(255,255,255,0.04)",
+                          fontSize: 11, fontWeight: 700,
+                          color: v <= feedbackData.difficulte ? "#000" : "#2a2a2a",
+                          transition: "all 0.15s",
                         }}>{v}</button>
-                      ))}
+                      )})}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "#444" }}>
                       <span>Très facile</span><span>Modéré</span><span>Maximum</span>
