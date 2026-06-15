@@ -7,8 +7,8 @@ const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0a; --bg2: #111111; --bg3: #1a1a1a;
-    --yellow: #e8ff47; --red: #ff4747; --green: #39ff80;
+    --bg: #080808; --bg2: #101010; --bg3: #181818;
+    --yellow: #e8ff47; --red: #ff4747; --green: #39ff80; --orange: #ff9a3c; --purple: #a78bfa;
     --white: #f0f0f0; --gray: #555; --gray2: #333;
     --font-title: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
   }
@@ -18,7 +18,7 @@ const GLOBAL_STYLES = `
   ::-webkit-scrollbar-track { background: var(--bg2); }
   ::-webkit-scrollbar-thumb { background: var(--yellow); border-radius: 2px; }
   .bebas { font-family: var(--font-title); letter-spacing: 0.04em; }
-  button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); transition: all 0.2s; }
+  button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); transition: all 0.18s; }
   input, select, textarea { font-family: var(--font-body); }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--yellow); outline-offset: 2px; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -28,11 +28,17 @@ const GLOBAL_STYLES = `
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
   @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+  @keyframes ringFill { from { stroke-dashoffset: 283; } to { stroke-dashoffset: var(--ring-offset); } }
+  @keyframes countUp { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+  @keyframes floatUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .fade-in { animation: fadeIn 0.35s ease both; }
   .fade-in-fast { animation: fadeInFast 0.2s ease both; }
   .slide-in-right { animation: slideInRight 0.3s ease both; }
-  button:active { transform: scale(0.97); }
+  .float-up { animation: floatUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  button:active { transform: scale(0.96); }
   input, textarea, select { transition: border-color 0.2s; }
+  .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+  .card-hover:active { transform: scale(0.98); }
 `;
 
 // ============================================================
@@ -3079,160 +3085,175 @@ JSON:
               </div>
             </div>
 
-            {/* ═══ VERSION B — Score + prénom + message + CTA ═══ */}
+            {/* ═══ HERO SCORE RING ═══ */}
+            {(() => {
+              const sc = calcFitnessScore(profile);
+              const r = 54; const circ = 2 * Math.PI * r;
+              const offset = circ - (sc.global / 100) * circ;
+              const tw = totalWeeksFromDate(profile.raceDate);
+              const cw = profile.week || 1;
+              return (
+                <div className="float-up" style={{ background: "linear-gradient(145deg, #0f1200 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(232,255,71,0.12)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  {/* Halo */}
+                  <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(232,255,71,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
 
-            {/* HERO — Prénom + Barres + Partage */}
-            <div style={{ background: "rgba(232,255,71,0.04)", border: "1.5px solid rgba(232,255,71,0.18)", borderRadius: 16, padding: "16px 16px 14px", marginBottom: 10 }}>
-              {/* Ligne prénom + niveau + bouton partage */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, var(--yellow), #b8cc00)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, color: "#000", flexShrink: 0 }}>
-                    {profile.name[0].toUpperCase()}
+                  {/* Top row: name + share */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Bonjour 👋</div>
+                      <div className="bebas" style={{ fontSize: 34, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
+                      <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
+                    </div>
+                    <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                      📤 Partager
+                    </button>
                   </div>
-                  <div>
-                    <div className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
-                    <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>Niv. {profile.level} · S{profile.week || 1}/{totalWeeksFromDate(profile.raceDate)}</div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 5 }}>
-                      <span className="bebas" style={{ fontSize: 28, color: "var(--yellow)", lineHeight: 1 }}>{calcFitnessScore(profile).global}</span>
-                      <span style={{ fontSize: 10, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em" }}>/ 100</span>
+
+                  {/* Score ring + stats */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    {/* SVG Ring */}
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                      <svg width="140" height="140" viewBox="0 0 140 140">
+                        {/* bg ring */}
+                        <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
+                        {/* colored ring */}
+                        <circle cx="70" cy="70" r={r} fill="none"
+                          stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}
+                          strokeWidth="10" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          transform="rotate(-90 70 70)"
+                          style={{ transition: "stroke-dashoffset 1s ease, stroke 0.5s" }}
+                        />
+                        {/* inner glow ring */}
+                        <circle cx="70" cy="70" r={r} fill="none"
+                          stroke={sc.global >= 75 ? "rgba(57,255,128,0.15)" : sc.global >= 50 ? "rgba(232,255,71,0.15)" : "rgba(255,154,60,0.15)"}
+                          strokeWidth="18" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          transform="rotate(-90 70 70)"
+                        />
+                        {/* Score text */}
+                        <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}>{sc.global}</text>
+                        <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#444" letterSpacing="2">/ 100</text>
+                        <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#333" letterSpacing="1">SCORE FITNESS</text>
+                      </svg>
+                    </div>
+
+                    {/* Bars */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[
+                        { label: "Force", val: sc.force, color: "var(--yellow)", icon: "🏋️" },
+                        { label: "Endurance", val: sc.endurance, color: "var(--green)", icon: "🏃" },
+                        { label: "Puissance", val: sc.puissance, color: "var(--red)", icon: "⚡" },
+                      ].map(b => (
+                        <div key={b.label}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 5 }}><span>{b.icon}</span>{b.label}</span>
+                            <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#333" }}>%</span></span>
+                          </div>
+                          <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                            <div style={{ width: `${b.val}%`, height: "100%", background: `linear-gradient(90deg, ${b.color}88, ${b.color})`, borderRadius: 99, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
+
+                  {/* Programme week bar */}
+                  {tw > 0 && (
+                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
+                        <span className="bebas" style={{ fontSize: 13, color: "var(--yellow)" }}>S{cw} / {tw}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 2 }}>
+                        {Array.from({ length: Math.min(tw, 20) }, (_, i) => {
+                          const ratio = tw / Math.min(tw, 20);
+                          const w = Math.floor(i * ratio) + 1;
+                          const isPast = cw > Math.floor((i + 1) * ratio);
+                          const isActive = !isPast && cw >= w;
+                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(232,255,71,0.5)" : "rgba(255,255,255,0.05)", border: isActive ? "1px solid rgba(232,255,71,0.6)" : "none" }} />;
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {/* Bouton partage */}
-                <button onClick={() => setShowShareCard(true)} style={{
-                  display: "flex", alignItems: "center", gap: 6, background: "rgba(232,255,71,0.1)",
-                  border: "1px solid rgba(232,255,71,0.3)", borderRadius: 10, padding: "7px 12px",
-                  color: "var(--yellow)", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                }}>
-                  <span style={{ fontSize: 14 }}>📤</span> Partager
-                </button>
-              </div>
+              );
+            })()}
 
-              {/* Barres Force / Endurance / Puissance */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 9, paddingLeft: 12 }}>
-                {[
-                  { label: "Force", val: calcFitnessScore(profile).force, color: "var(--yellow)" },
-                  { label: "Endurance", val: calcFitnessScore(profile).endurance, color: "var(--green)" },
-                  { label: "Puissance", val: calcFitnessScore(profile).puissance, color: "var(--red)" },
-                ].map(b => (
-                  <div key={b.label}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: "#888" }}>{b.label}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: b.color }}>{b.val}%</span>
-                    </div>
-                    <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 5 }}>
-                      <div style={{ width: `${b.val}%`, height: 5, background: b.color, borderRadius: 99 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Séance coach dispo — encart accueil */}
+            {/* Séance coach dispo */}
             {coachSession && (
-              <div onClick={() => setTab("today")} style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 18 }}>📋</span>
+              <div onClick={() => setTab("today")} className="card-hover" style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.08) 0%, rgba(232,255,71,0.03) 100%)", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--yellow)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📋</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", marginBottom: 2 }}>Séance du coach disponible</div>
-                  <div style={{ fontSize: 13, color: "var(--white)", fontWeight: 600 }}>{coachSession.titre}</div>
+                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Séance du coach disponible</div>
+                  <div style={{ fontSize: 14, color: "var(--white)", fontWeight: 700 }}>{coachSession.titre}</div>
                 </div>
-                <span style={{ color: "var(--yellow)", fontSize: 14 }}>→</span>
+                <span className="bebas" style={{ color: "var(--yellow)", fontSize: 20 }}>→</span>
               </div>
             )}
 
-            {/* Progression programme */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 11, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Programme</div>
-                <div className="bebas" style={{ fontSize: 15, color: "var(--yellow)" }}>Semaine {profile.week || 1} / {totalWeeksFromDate(profile.raceDate)}</div>
+            {/* CTA séance — GRAND BOUTON */}
+            <button onClick={() => setTab("today")} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", right: 60, top: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(0,0,0,0.06)", pointerEvents: "none" }} />
+              <div style={{ textAlign: "left" }}>
+                <div className="bebas" style={{ fontSize: 24, color: "#080808", letterSpacing: 1, lineHeight: 1 }}>MA SÉANCE DU JOUR</div>
+                <div style={{ fontSize: 12, color: "rgba(0,0,0,0.45)", marginTop: 3 }}>Coach IA · Programme adaptatif</div>
               </div>
-              {(() => {
-                const tw = totalWeeksFromDate(profile.raceDate);
-                const cw = profile.week || 1;
-                // Afficher max 12 semaines visuellement, regrouper si plus
-                const display = tw <= 16 ? tw : 16;
-                const ratio = tw / display;
-                return (
-                  <div style={{ display: "flex", gap: 3 }}>
-                    {Array.from({ length: display }, (_, i) => {
-                      const wStart = Math.floor(i * ratio) + 1;
-                      const wEnd = Math.floor((i + 1) * ratio);
-                      const isActive = cw >= wStart && cw <= wEnd;
-                      const isPast = cw > wEnd;
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span className="bebas" style={{ fontSize: 22, color: "#080808" }}>→</span>
+              </div>
+            </button>
+
+            {/* Historique — scroll horizontal */}
+            {(profile.sessions || []).length > 0 && (() => {
+              const TYPE_CONF = {
+                running_zone2: { icon: "🏃", color: "var(--green)", bg: "rgba(57,255,128,0.08)", border: "rgba(57,255,128,0.2)", label: "Zone 2" },
+                force_stations: { icon: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.2)", label: "Force" },
+                running_qualite: { icon: "⚡", color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.2)", label: "Qualité" },
+                hybride_compromis: { icon: "🔀", color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)", label: "Hybride" },
+              };
+              const sessions = (profile.sessions || []).slice(-5).reverse();
+              return (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Dernières séances</div>
+                  <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+                    {sessions.map((s, i) => {
+                      const conf = TYPE_CONF[s.type] || { icon: "🏋️", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.15)", label: "Séance" };
+                      const rpe = s.difficulte || 5;
+                      const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
                       return (
-                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                          <div style={{
-                            width: "100%", height: 6, borderRadius: 99,
-                            background: isPast ? "var(--yellow)" : isActive ? "rgba(232,255,71,0.6)" : "rgba(255,255,255,0.06)",
-                            border: isActive ? "1px solid var(--yellow)" : "none",
-                          }} />
-                          {(i === 0 || isActive || i === display - 1) && (
-                            <div style={{ fontSize: 8, color: isActive ? "var(--yellow)" : "#2a2a2a", fontWeight: isActive ? 700 : 400 }}>
-                              S{wStart}
-                            </div>
-                          )}
+                        <div key={i} style={{ flexShrink: 0, width: 140, background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 16, padding: "14px 12px", position: "relative", overflow: "hidden" }}>
+                          {/* type stripe */}
+                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: conf.color, borderRadius: "16px 16px 0 0", opacity: 0.7 }} />
+                          <div style={{ fontSize: 26, marginBottom: 8, marginTop: 4 }}>{conf.icon}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 9, background: `${conf.color}20`, color: conf.color, borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>{conf.label}</span>
+                            <span className="bebas" style={{ fontSize: 20, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 9, color: "#333" }}>/10</span></span>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                );
-              })()}
-            </div>
-
-            {/* CTA séance */}
-            <button onClick={() => setTab("today")} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 14, padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 10 }}>
-              <div style={{ textAlign: "left" }}>
-                <div className="bebas" style={{ fontSize: 20, color: "#0a0a0a", letterSpacing: 1 }}>MA SÉANCE DU JOUR</div>
-                <div style={{ fontSize: 12, color: "rgba(0,0,0,0.5)", marginTop: 2 }}>Générer mon programme</div>
-              </div>
-              <div className="bebas" style={{ fontSize: 24, color: "#0a0a0a" }}>→</div>
-            </button>
-
-            {/* Historique des dernières séances */}
-            {(profile.sessions || []).length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Dernières séances</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {(profile.sessions || []).slice(-4).reverse().map((s, i) => {
-                    const rpeColor = (s.difficulte || 5) <= 4 ? "var(--green)" : (s.difficulte || 5) <= 7 ? "var(--yellow)" : "var(--red)";
-                    const ressentiBg = s.ressenti === "facile" ? "rgba(57,255,128,0.08)" : s.ressenti === "dur" ? "rgba(255,71,71,0.08)" : "rgba(232,255,71,0.06)";
-                    const ressentiBorder = s.ressenti === "facile" ? "rgba(57,255,128,0.2)" : s.ressenti === "dur" ? "rgba(255,71,71,0.2)" : "rgba(232,255,71,0.15)";
-                    return (
-                      <div key={i} style={{ background: i === 0 ? ressentiBg : "rgba(255,255,255,0.02)", border: `1px solid ${i === 0 ? ressentiBorder : "rgba(255,255,255,0.05)"}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                          {s.type === "running_zone2" ? "🏃" : s.type === "force_stations" ? "💪" : s.type === "running_qualite" ? "⚡" : s.type === "hybride_compromis" ? "🔀" : "🏋️"}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: 13, color: "var(--white)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.titre}</div>
-                          <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</div>
-                        </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{s.difficulte || "—"}<span style={{ fontSize: 10, color: "#444" }}>/10</span></div>
-                          <div style={{ fontSize: 10, color: s.ressenti === "facile" ? "var(--green)" : s.ressenti === "dur" ? "var(--red)" : "var(--yellow)", fontWeight: 700 }}>
-                            {s.ressenti === "facile" ? "Facile" : s.ressenti === "dur" ? "Dur" : "OK"}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Bouton Mon Profil */}
-            <button onClick={() => setTab("profil")} style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg, rgba(232,255,71,0.15), rgba(232,255,71,0.05))", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
                 <div style={{ textAlign: "left" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Mon profil</div>
-                  <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>
+                  <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>
                     {profile.tests && Object.keys(profile.tests).length > 0
                       ? `${Object.keys(profile.tests).filter(k => k !== "analyzed").length} tests complétés`
                       : "Batterie de tests à compléter"}
                   </div>
                 </div>
               </div>
-              <div style={{ color: "var(--yellow)", fontSize: 14 }}>→</div>
+              <div style={{ color: "var(--yellow)", fontSize: 16 }}>→</div>
             </button>
           </div>
         )}
@@ -3241,9 +3262,10 @@ JSON:
         {tab === "today" && (
           <div className="fade-in">
             {/* Citation du jour */}
-            <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-              <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Citation du jour</div>
-              <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.6, fontStyle: "italic" }}>"{getCitationDuJour()}"</div>
+            <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.05) 0%, rgba(57,255,128,0.03) 100%)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 16, padding: "16px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 10, right: 14, fontSize: 40, opacity: 0.06, fontFamily: "Georgia, serif" }}>"</div>
+              <div style={{ fontSize: 9, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 8 }}>💬 Citation du jour</div>
+              <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7, fontStyle: "italic", position: "relative" }}>"{getCitationDuJour()}"</div>
             </div>
 
             {/* Séance coach du jour */}
@@ -3293,23 +3315,22 @@ JSON:
               <Card>
                 {/* Fatigue physique */}
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: "#aaa", fontWeight: 600, textTransform: "uppercase", marginBottom: 10 }}>Niveau de fatigue physique</div>
+                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>⚡ Fatigue physique</div>
                   <div style={{ display: "flex", gap: 6 }}>
                     {[
-                      { v: 1, emoji: "🔴", label: "Fatigué" },
-                      { v: 2, emoji: "🟠", label: "Moyen" },
-                      { v: 3, emoji: "🟡", label: "Bien" },
-                      { v: 4, emoji: "🟢", label: "Frais" },
+                      { v: 1, emoji: "😴", label: "Fatigué", color: "var(--red)" },
+                      { v: 2, emoji: "😐", label: "Moyen", color: "var(--orange)" },
+                      { v: 3, emoji: "😊", label: "Bien", color: "var(--yellow)" },
+                      { v: 4, emoji: "🔥", label: "Frais", color: "var(--green)" },
                     ].map(f => (
                       <button key={f.v} onClick={() => setDailyData(d => ({ ...d, fatigue: f.v }))} style={{
-                        flex: 1, padding: "8px 4px", borderRadius: 10, textAlign: "center",
-                        background: dailyData.fatigue === f.v ? "var(--yellow)15" : "var(--bg3)",
-                        border: dailyData.fatigue === f.v ? "2px solid var(--yellow)" : "1.5px solid transparent",
-                        color: "var(--white)", cursor: "pointer",
+                        flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
+                        background: dailyData.fatigue === f.v ? `${f.color}15` : "rgba(255,255,255,0.02)",
+                        border: dailyData.fatigue === f.v ? `2px solid ${f.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                        color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
                       }}>
-                        <div style={{ fontSize: 18 }}>{f.emoji}</div>
-                        <div style={{ fontSize: 9, marginTop: 3, color: dailyData.fatigue === f.v ? "var(--yellow)" : "#555", fontWeight: 600 }}>{f.label}</div>
-                        <div style={{ fontSize: 10, color: dailyData.fatigue === f.v ? "var(--yellow)" : "#444", fontWeight: 700 }}>{f.v}</div>
+                        <div style={{ fontSize: 22 }}>{f.emoji}</div>
+                        <div style={{ fontSize: 9, marginTop: 4, color: dailyData.fatigue === f.v ? f.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</div>
                       </button>
                     ))}
                   </div>
@@ -3317,23 +3338,22 @@ JSON:
 
                 {/* Score de sommeil */}
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: "#aaa", fontWeight: 600, textTransform: "uppercase", marginBottom: 10 }}>Score de sommeil</div>
+                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🌙 Score de sommeil</div>
                   <div style={{ display: "flex", gap: 6 }}>
                     {[
-                      { v: 1, emoji: "😴", label: "Mauvais" },
-                      { v: 2, emoji: "😐", label: "Moyen" },
-                      { v: 3, emoji: "🙂", label: "Bon" },
-                      { v: 4, emoji: "⭐", label: "Excellent" },
+                      { v: 1, emoji: "💤", label: "Mauvais", color: "var(--red)" },
+                      { v: 2, emoji: "😐", label: "Moyen", color: "var(--orange)" },
+                      { v: 3, emoji: "🙂", label: "Bon", color: "var(--yellow)" },
+                      { v: 4, emoji: "⭐", label: "Excellent", color: "var(--green)" },
                     ].map(s => (
                       <button key={s.v} onClick={() => setDailyData(d => ({ ...d, sommeil: s.v }))} style={{
-                        flex: 1, padding: "8px 4px", borderRadius: 10, textAlign: "center",
-                        background: dailyData.sommeil === s.v ? "rgba(57,255,128,0.1)" : "var(--bg3)",
-                        border: dailyData.sommeil === s.v ? "2px solid var(--green)" : "1.5px solid transparent",
-                        color: "var(--white)", cursor: "pointer",
+                        flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
+                        background: dailyData.sommeil === s.v ? `${s.color}15` : "rgba(255,255,255,0.02)",
+                        border: dailyData.sommeil === s.v ? `2px solid ${s.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                        color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
                       }}>
-                        <div style={{ fontSize: 18 }}>{s.emoji}</div>
-                        <div style={{ fontSize: 9, marginTop: 3, color: dailyData.sommeil === s.v ? "var(--green)" : "#555", fontWeight: 600 }}>{s.label}</div>
-                        <div style={{ fontSize: 10, color: dailyData.sommeil === s.v ? "var(--green)" : "#444", fontWeight: 700 }}>{s.v}</div>
+                        <div style={{ fontSize: 22 }}>{s.emoji}</div>
+                        <div style={{ fontSize: 9, marginTop: 4, color: dailyData.sommeil === s.v ? s.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>
                       </button>
                     ))}
                   </div>
@@ -3341,30 +3361,33 @@ JSON:
 
                 {/* Type de séance */}
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: "#aaa", fontWeight: 600, textTransform: "uppercase", marginBottom: 10 }}>Type de séance</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🎯 Type de séance</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {[
-                      { v: "auto", icon: "🏅", label: "Choix du coach", sub: "Le coach décide selon ta semaine" },
-                      { v: "force_stations", icon: "🏋️", label: "Musculation", sub: "Squat, Deadlift, Sled, Farmer Carry…" },
-                      { v: "running_zone2", icon: "🏃", label: "Running / Cardio", sub: "Zone 2, tempo, intervalles…" },
-                      { v: "hybride_compromis", icon: "⚡", label: "Hybride HYROX", sub: "Stations + run enchaînés" },
-                      { v: "running_qualite", icon: "🎯", label: "Running qualité", sub: "Intervalles, seuil, VO2max" },
-                      { v: "perso", icon: "✏️", label: "Séance perso", sub: "Je crée ma propre séance" },
-                    ].map(t => (
-                      <button key={t.v} onClick={() => setDailyData(d => ({ ...d, typeSeance: t.v }))} style={{
-                        display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, textAlign: "left", width: "100%",
-                        background: dailyData.typeSeance === t.v ? "rgba(232,255,71,0.08)" : "var(--bg3)",
-                        border: dailyData.typeSeance === t.v ? "1.5px solid var(--yellow)" : "1px solid transparent",
-                        color: "var(--white)", cursor: "pointer"
-                      }}>
-                        <span style={{ fontSize: 20, flexShrink: 0 }}>{t.icon}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: dailyData.typeSeance === t.v ? "var(--yellow)" : "var(--white)" }}>{t.label}</div>
-                          <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{t.sub}</div>
-                        </div>
-                        {dailyData.typeSeance === t.v && <span style={{ color: "var(--yellow)", fontSize: 16 }}>✓</span>}
-                      </button>
-                    ))}
+                      { v: "auto", icon: "🏅", label: "Choix du coach", sub: "Le coach décide selon ta semaine", color: "var(--yellow)" },
+                      { v: "force_stations", icon: "🏋️", label: "Musculation", sub: "Squat, Deadlift, Sled, Farmer Carry…", color: "var(--yellow)" },
+                      { v: "running_zone2", icon: "🏃", label: "Running / Cardio", sub: "Zone 2, tempo, intervalles…", color: "var(--green)" },
+                      { v: "hybride_compromis", icon: "⚡", label: "Hybride HYROX", sub: "Stations + run enchaînés", color: "var(--purple)" },
+                      { v: "running_qualite", icon: "🎯", label: "Running qualité", sub: "Intervalles, seuil, VO2max", color: "var(--orange)" },
+                      { v: "perso", icon: "✏️", label: "Séance perso", sub: "Je crée ma propre séance", color: "#888" },
+                    ].map(t => {
+                      const active = dailyData.typeSeance === t.v;
+                      return (
+                        <button key={t.v} onClick={() => setDailyData(d => ({ ...d, typeSeance: t.v }))} style={{
+                          display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, textAlign: "left", width: "100%",
+                          background: active ? `${t.color}10` : "rgba(255,255,255,0.02)",
+                          border: active ? `1.5px solid ${t.color}55` : "1px solid rgba(255,255,255,0.05)",
+                          color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
+                        }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 10, background: active ? `${t.color}20` : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{t.icon}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: active ? t.color : "var(--white)" }}>{t.label}</div>
+                            <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{t.sub}</div>
+                          </div>
+                          {active && <div style={{ width: 20, height: 20, borderRadius: "50%", background: t.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#000", fontWeight: 700, flexShrink: 0 }}>✓</div>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
