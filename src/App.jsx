@@ -23,7 +23,10 @@ const GLOBAL_STYLES = `
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--yellow); outline-offset: 2px; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeInFast { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
+  .tab-slide-right { animation: slideInRight 0.28s cubic-bezier(0.25, 1, 0.5, 1) both; }
+  .tab-slide-left { animation: slideInLeft 0.28s cubic-bezier(0.25, 1, 0.5, 1) both; }
   @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
@@ -2082,6 +2085,13 @@ function WeeklySummaryCard({ profile }) {
 // ============================================================
 function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [tab, setTab] = useState("home");
+  const [tabDir, setTabDir] = useState(1); // 1=droite, -1=gauche
+  const TAB_ORDER = ["home","today","progress","race","planning","technique","profil","zones"];
+  const navigateTo = (newTab) => {
+    const cur = TAB_ORDER.indexOf(tab); const nxt = TAB_ORDER.indexOf(newTab);
+    setTabDir(nxt >= cur ? 1 : -1);
+    setTab(newTab);
+  };
   const [dailyData, setDailyData] = useState({ fatigue: 3, sommeil: 3, temps: 60, materiel: "tout", typeSeance: "auto" });
   const [showSeancePerso, setShowSeancePerso] = useState(false);
   const [seancePerso, setSeancePerso] = useState({ titre: "", exercices: [{ nom: "", detail: "", note: "" }] });
@@ -3081,11 +3091,11 @@ JSON:
         );
       })()}
 
-      <div style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
+      <div key={tab} className={tabDir >= 0 ? "tab-slide-right" : "tab-slide-left"} style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
 
         {/* HOME — Accueil glassmorphism */}
         {tab === "home" && (
-          <div className="fade-in">
+          <div>
             {/* Fond halo */}
             <div style={{ position: "absolute", top: 60, right: -40, width: 200, height: 200, background: "radial-gradient(circle, rgba(232,255,71,0.06) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
             <div style={{ position: "absolute", top: 300, left: -60, width: 180, height: 180, background: "radial-gradient(circle, rgba(57,255,128,0.04) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
@@ -3110,6 +3120,53 @@ JSON:
                 </div>
               </div>
             )}
+
+            {/* WIDGET PROCHAINE SÉANCE */}
+            {(() => {
+              const todaySession = session || coachSession;
+              if (!todaySession) return null;
+              const typeConf = {
+                running_zone2: { label: "Running Zone 2", icon: "🏃", color: "var(--green)", bg: "linear-gradient(135deg, rgba(57,255,128,0.08) 0%, rgba(0,0,0,0) 60%)", border: "rgba(57,255,128,0.2)" },
+                force_stations: { label: "Force Stations", icon: "🏋️", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(232,255,71,0.2)" },
+                running_qualite: { label: "Running Qualité", icon: "⚡", color: "var(--orange)", bg: "linear-gradient(135deg, rgba(255,154,60,0.07) 0%, rgba(0,0,0,0) 60%)", border: "rgba(255,154,60,0.2)" },
+                hybride_compromis: { label: "Hybride HYROX", icon: "🔀", color: "var(--purple)", bg: "linear-gradient(135deg, rgba(167,139,250,0.07) 0%, rgba(0,0,0,0) 60%)", border: "rgba(167,139,250,0.2)" },
+              };
+              const conf = typeConf[todaySession.type] || { label: "Séance", icon: "💪", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(232,255,71,0.15)" };
+              const exs = todaySession.exercices || [];
+              return (
+                <div className="float-up card-hover" style={{ background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 20, padding: "18px 18px 16px", marginBottom: 16, position: "relative", overflow: "hidden" }}
+                  onClick={() => setTab("today")}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${conf.color}, transparent)` }} />
+                  <div style={{ position: "absolute", top: -20, right: -10, fontSize: 70, opacity: 0.05 }}>{conf.icon}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: conf.color }} />
+                        <div style={{ fontSize: 10, color: conf.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Séance du jour</div>
+                      </div>
+                      <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1.15 }}>{todaySession.titre}</div>
+                    </div>
+                    <div style={{ background: conf.color, borderRadius: 10, padding: "8px 14px", flexShrink: 0, marginLeft: 10 }}>
+                      <div className="bebas" style={{ fontSize: 16, color: "#000", lineHeight: 1 }}>▶ START</div>
+                    </div>
+                  </div>
+                  {/* Exercices clés */}
+                  {exs.length > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {exs.slice(0, 3).map((ex, i) => (
+                        <div key={i} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#888" }}>
+                          {ex.nom}
+                        </div>
+                      ))}
+                      {exs.length > 3 && <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#444" }}>+{exs.length - 3}</div>}
+                    </div>
+                  )}
+                  {todaySession.duree && (
+                    <div style={{ marginTop: 10, fontSize: 11, color: "#444" }}>⏱ {todaySession.duree} min · {conf.label}</div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* STREAK CARD */}
             {streakData && (() => {
@@ -3167,7 +3224,6 @@ JSON:
               </div>
               );
             })()}
-            )}
 
             {/* MESSAGE IA DU JOUR */}
             <div onClick={() => !loadingMessage && setShowMessageModal(true)}
@@ -4024,6 +4080,69 @@ JSON:
 
             {feedback && (
               <div className="fade-in">
+                {/* 🎉 ÉCRAN DE CÉLÉBRATION */}
+                {(() => {
+                  const sc = calcFitnessScore(profile);
+                  const nbSessions = (profile.sessions||[]).length;
+                  const isMilestone = [1,5,10,25,50].includes(nbSessions);
+                  const milestoneLabel = nbSessions === 1 ? "PREMIÈRE SÉANCE ! 🎯" : `${nbSessions}ÈME SÉANCE ! 🔥`;
+                  const ressentiEmoji = feedbackData.ressenti === "bien" ? "💪" : feedbackData.ressenti === "facile" ? "😪" : "🔥";
+                  return (
+                    <div style={{ background: "linear-gradient(145deg, #001a0a 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(57,255,128,0.25)", borderRadius: 22, padding: "24px 20px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
+                      {/* Confettis CSS */}
+                      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+                        {[...Array(12)].map((_, i) => (
+                          <div key={i} style={{
+                            position: "absolute",
+                            width: 6, height: 6, borderRadius: i % 3 === 0 ? "50%" : 2,
+                            background: ["var(--yellow)","var(--green)","var(--orange)","var(--purple)","var(--red)"][i % 5],
+                            left: `${8 + i * 7.5}%`,
+                            top: `-10px`,
+                            opacity: 0.7,
+                            animation: `floatUp ${0.8 + i * 0.15}s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.07}s both`,
+                            transform: `rotate(${i * 30}deg)`,
+                          }} />
+                        ))}
+                      </div>
+                      <div style={{ position: "absolute", top: -40, right: -40, fontSize: 120, opacity: 0.04 }}>✓</div>
+
+                      {/* Titre */}
+                      <div style={{ textAlign: "center", marginBottom: 18 }}>
+                        <div style={{ fontSize: 36, marginBottom: 8 }}>{ressentiEmoji}</div>
+                        <div className="bebas" style={{ fontSize: 32, color: "var(--green)", letterSpacing: 2, lineHeight: 1 }}>SÉANCE TERMINÉE</div>
+                        {isMilestone && (
+                          <div style={{ marginTop: 8, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.3)", borderRadius: 10, padding: "6px 16px", display: "inline-block" }}>
+                            <span className="bebas" style={{ fontSize: 16, color: "var(--yellow)", letterSpacing: 1 }}>{milestoneLabel}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stats live */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+                        {[
+                          { label: "Séances", value: nbSessions, color: "var(--yellow)" },
+                          { label: "Score", value: sc.global, color: "var(--green)" },
+                          { label: "RPE", value: `${feedbackData.difficulte}/10`, color: feedbackData.difficulte >= 8 ? "var(--red)" : feedbackData.difficulte >= 5 ? "var(--orange)" : "var(--green)" },
+                        ].map(item => (
+                          <div key={item.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
+                            <div className="bebas" style={{ fontSize: 30, color: item.color, lineHeight: 1 }}>{item.value}</div>
+                            <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", marginTop: 3, letterSpacing: "0.1em" }}>{item.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Message motivation */}
+                      <div style={{ background: "rgba(57,255,128,0.06)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 12, padding: "12px 14px", textAlign: "center" }}>
+                        <div style={{ fontSize: 13, color: "#999", lineHeight: 1.6, fontStyle: "italic" }}>
+                          {feedbackData.ressenti === "bien" ? '"Parfaitement calibré. C\'est dans cette zone que tu progresses le plus."'
+                            : feedbackData.ressenti === "dur" ? '"Les séances difficiles sont celles qui te construisent. Récupère bien."'
+                            : '"Ton corps récupère vite. Pense à augmenter l\'intensité."'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Alerte urgente */}
                 {feedback.alerteCoach && (
                   <div style={{ background: feedback.niveauAlerte === "blessure" ? "rgba(255,71,71,0.1)" : "rgba(255,154,60,0.1)", border: `1.5px solid ${feedback.niveauAlerte === "blessure" ? "var(--red)" : "#ff9a3c"}`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
@@ -4099,6 +4218,88 @@ JSON:
         {/* PROGRESSION / FORME */}
         {tab === "progress" && (
           <div className="fade-in">
+            {/* Graphique courbe fitness score SVG */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const sessions = (profile.sessions||[]).slice(-10);
+              const scores = sessions.map((s, i) => {
+                // Simule une progression du score basée sur l'index et le ressenti
+                const base = calcFitnessScore(profile).global;
+                const delta = (i - sessions.length + 1) * 1.2;
+                const ressentiBump = s.ressenti === "bien" ? 1 : s.ressenti === "dur" ? -0.5 : 0.5;
+                return Math.max(10, Math.min(100, Math.round(base + delta + ressentiBump)));
+              });
+              const W = 320; const H = 100; const pad = 16;
+              const minS = Math.max(0, Math.min(...scores) - 10);
+              const maxS = Math.min(100, Math.max(...scores) + 10);
+              const range = maxS - minS || 1;
+              const pts = scores.map((v, i) => {
+                const x = pad + (i / (scores.length - 1)) * (W - 2 * pad);
+                const y = H - pad - ((v - minS) / range) * (H - 2 * pad);
+                return [x, y];
+              });
+              const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+              // Courbe lissée avec cubic bezier
+              const smoothD = pts.reduce((acc, p, i) => {
+                if (i === 0) return `M${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+                const prev = pts[i - 1];
+                const cpx = (prev[0] + p[0]) / 2;
+                return acc + ` C${cpx.toFixed(1)},${prev[1].toFixed(1)} ${cpx.toFixed(1)},${p[1].toFixed(1)} ${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+              }, "");
+              const areaD = smoothD + ` L${pts[pts.length-1][0].toFixed(1)},${H - pad} L${pts[0][0].toFixed(1)},${H - pad} Z`;
+              const lastScore = scores[scores.length - 1];
+              const firstScore = scores[0];
+              const delta = lastScore - firstScore;
+              const scoreColor = delta >= 0 ? "var(--green)" : "var(--red)";
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px 12px", marginBottom: 16, overflow: "hidden", position: "relative" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Score Fitness · {sessions.length} séances</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <div className="bebas" style={{ fontSize: 42, color: scoreColor, lineHeight: 1 }}>{lastScore}</div>
+                        <div style={{ fontSize: 13, color: delta >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>{delta >= 0 ? "+" : ""}{delta}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: "#333", marginBottom: 4 }}>Tendance</div>
+                      <div style={{ fontSize: 22 }}>{delta >= 5 ? "🚀" : delta >= 0 ? "📈" : "📉"}</div>
+                    </div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                    <defs>
+                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={delta >= 0 ? "#39ff80" : "#ff4747"} stopOpacity="0.18" />
+                        <stop offset="100%" stopColor={delta >= 0 ? "#39ff80" : "#ff4747"} stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {/* Grille horizontale */}
+                    {[0.25, 0.5, 0.75].map((p, i) => (
+                      <line key={i} x1={pad} y1={pad + p * (H - 2 * pad)} x2={W - pad} y2={pad + p * (H - 2 * pad)}
+                        stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                    ))}
+                    {/* Zone remplie */}
+                    <path d={areaD} fill="url(#areaGrad)" />
+                    {/* Courbe principale */}
+                    <path d={smoothD} fill="none" stroke={delta >= 0 ? "var(--green)" : "var(--red)"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {/* Points */}
+                    {pts.map((p, i) => (
+                      <circle key={i} cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 5 : 3}
+                        fill={i === pts.length - 1 ? (delta >= 0 ? "var(--green)" : "var(--red)") : "#080808"}
+                        stroke={delta >= 0 ? "var(--green)" : "var(--red)"} strokeWidth="2" />
+                    ))}
+                    {/* Score sur le dernier point */}
+                    <text x={pts[pts.length-1][0]} y={pts[pts.length-1][1] - 10} textAnchor="middle"
+                      fontFamily="'Bebas Neue',sans-serif" fontSize="13" fill={delta >= 0 ? "var(--green)" : "var(--red)"}>{lastScore}</text>
+                  </svg>
+                  {/* Labels séances */}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingLeft: pad, paddingRight: pad }}>
+                    <div style={{ fontSize: 9, color: "#222" }}>S1</div>
+                    <div style={{ fontSize: 9, color: "#222" }}>S{sessions.length}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Résumé hebdo si dimanche */}
             {new Date().getDay() === 0 && <WeeklySummaryCard profile={profile} />}
 
@@ -4374,7 +4575,7 @@ JSON:
         {tabs.map(t => {
           const active = tab === t.id;
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ background: "none", color: active ? "var(--yellow)" : "#444", padding: "6px 10px", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 52, transition: "color 0.2s" }}>
+            <button key={t.id} onClick={() => navigateTo(t.id)} style={{ background: "none", color: active ? "var(--yellow)" : "#444", padding: "6px 10px", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 52, transition: "color 0.2s" }}>
               <div style={{ position: "relative" }}>
                 <span style={{ fontSize: 21, display: "block", transition: "transform 0.2s", transform: active ? "scale(1.1)" : "scale(1)" }}>{t.icon}</span>
                 {active && <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)" }} />}
@@ -4573,6 +4774,68 @@ function ProfilTab({ profile, onUpdateProfile, onLogout }) {
           </a>
         </Card>
       </Section>
+
+      {/* ── BADGES / ACHIEVEMENTS ── */}
+      {(() => {
+        const nbSessions = (profile.sessions||[]).length;
+        const streak = (() => {
+          const sessions = (profile.sessions||[]).slice().sort((a,b) => new Date(b.date)-new Date(a.date));
+          let s = 0; let d = new Date(); d.setHours(0,0,0,0);
+          for (const sess of sessions) {
+            const sd = new Date(sess.date); sd.setHours(0,0,0,0);
+            const diff = Math.round((d - sd) / 86400000);
+            if (diff <= 1) { s++; d = sd; } else break;
+          }
+          return s;
+        })();
+        const BADGES = [
+          { id: "first", icon: "🎯", label: "Première séance", desc: "Tu as lancé l'aventure", unlocked: nbSessions >= 1, color: "var(--yellow)" },
+          { id: "5sessions", icon: "💪", label: "5 séances", desc: "La régularité commence", unlocked: nbSessions >= 5, color: "var(--orange)" },
+          { id: "10sessions", icon: "🔥", label: "10 séances", desc: "Athlète confirmé", unlocked: nbSessions >= 10, color: "var(--red)" },
+          { id: "25sessions", icon: "⚡", label: "25 séances", desc: "Niveau élite", unlocked: nbSessions >= 25, color: "var(--purple)" },
+          { id: "streak3", icon: "📅", label: "Streak 3j", desc: "3 jours consécutifs", unlocked: streak >= 3, color: "var(--green)" },
+          { id: "streak7", icon: "🗓️", label: "Streak 7j", desc: "Une semaine parfaite", unlocked: streak >= 7, color: "var(--yellow)" },
+          { id: "streak14", icon: "🚀", label: "Streak 14j", desc: "Machine de guerre", unlocked: streak >= 14, color: "#ff6b35" },
+          { id: "simulation", icon: "🏁", label: "Simulation HYROX", desc: "Tu as simulé une race", unlocked: !!(profile.lastSimulation), color: "var(--red)" },
+          { id: "vma", icon: "🏃", label: "VMA renseignée", desc: "Profil physique complet", unlocked: !!(profile.vmaKmh), color: "var(--green)" },
+          { id: "race", icon: "🏆", label: "Race programmée", desc: "Objectif fixé", unlocked: !!(profile.raceDate), color: "var(--yellow)" },
+          { id: "technique", icon: "🎓", label: "Technique maîtrisée", desc: "3 exercices HYROX vus", unlocked: Object.keys(JSON.parse(localStorage.getItem("fitrace_technique_viewed")||"{}")).length >= 3, color: "var(--purple)" },
+          { id: "feedback", icon: "📊", label: "Bilan réalisé", desc: "Analyse IA complète", unlocked: (profile.adaptations||[]).length >= 1, color: "var(--green)" },
+        ];
+        const unlocked = BADGES.filter(b => b.unlocked);
+        const locked = BADGES.filter(b => !b.unlocked);
+        return (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Badges</div>
+              <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>{unlocked.length}/{BADGES.length}</div>
+            </div>
+            {/* Barre progression */}
+            <div style={{ height: 4, background: "#111", borderRadius: 99, marginBottom: 14, overflow: "hidden" }}>
+              <div style={{ height: "100%", background: "linear-gradient(90deg, var(--yellow), var(--green))", width: `${(unlocked.length/BADGES.length)*100}%`, borderRadius: 99, transition: "width 0.8s" }} />
+            </div>
+            {/* Grille badges */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {BADGES.map(b => (
+                <div key={b.id} style={{ textAlign: "center", position: "relative" }}>
+                  <div style={{
+                    width: "100%", aspectRatio: "1", borderRadius: 14,
+                    background: b.unlocked ? `${b.color}18` : "rgba(255,255,255,0.02)",
+                    border: b.unlocked ? `1.5px solid ${b.color}44` : "1px solid rgba(255,255,255,0.05)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 26, marginBottom: 5,
+                    filter: b.unlocked ? "none" : "grayscale(1) opacity(0.25)",
+                    transition: "all 0.3s",
+                    boxShadow: b.unlocked ? `0 0 12px ${b.color}20` : "none",
+                  }}>{b.icon}</div>
+                  <div style={{ fontSize: 9, color: b.unlocked ? "#888" : "#333", fontWeight: 600, lineHeight: 1.2 }}>{b.label}</div>
+                  {b.unlocked && <div style={{ position: "absolute", top: 4, right: 4, width: 10, height: 10, borderRadius: "50%", background: b.color, boxShadow: `0 0 6px ${b.color}` }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── DÉCONNEXION ── */}
       <div style={{ marginTop: 8, marginBottom: 32 }}>
