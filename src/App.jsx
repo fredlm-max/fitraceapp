@@ -1541,6 +1541,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [sessionStreamText, setSessionStreamText] = useState("");
+  const [feedbackStreamText, setFeedbackStreamText] = useState("");
   const [showCoachChat, setShowCoachChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -1955,7 +1956,8 @@ Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
     const rpeExcessif = feedbackData.difficulte >= 9 && feedbackData.energie <= 2;
     const deuxFoisDur = allSessionsFb.slice(-2).every(s => s.ressenti === "dur");
 
-    const raw = await callClaude(
+    setFeedbackStreamText("🔍 Analyse de tes performances...");
+    const raw = await callClaudeStream(
       `Tu es un coach HYROX expert et bienveillant. Tu analyses PRÉCISÉMENT chaque donnée du feedback pour individualiser le programme.
 Tu connais la science de l'entraînement : surcompensation, fenêtre anabolique, RPE, périodisation.
 Tu détectes les signaux d'alarme : surmenage, blessure, stagnation, régression.
@@ -2028,8 +2030,17 @@ JSON:
   "alerteCoach": ${douloursGraves || rpeExcessif || deuxFoisDur ? "true" : "false"},
   "niveauAlerte": "${douloursGraves ? "blessure" : rpeExcessif || deuxFoisDur ? "surmenage" : "info"}",
   "raisonAlerte": ""
-}`
-    , 2000);
+}`,
+      2000,
+      (chunk) => {
+        // Extraire des infos de l'analyse en cours pour afficher à l'athlète
+        const analyseMatch = chunk.match(/"analyse"\s*:\s*"([^"]{20,})/);
+        if (analyseMatch) setFeedbackStreamText(`📊 ${analyseMatch[1].slice(0, 60)}...`);
+        else if (chunk.includes('"progressions"')) setFeedbackStreamText("📈 Détection des progressions...");
+        else if (chunk.includes('"adaptation"')) setFeedbackStreamText("⚡ Calcul de la prochaine séance...");
+        else if (chunk.length > 100) setFeedbackStreamText("🤖 Coach IA analyse ta séance...");
+      }
+    );
 
     try {
       const fbCleaned = raw?.replace(/```json|```/g, "").trim() || "{}";
@@ -2084,6 +2095,7 @@ JSON:
       setFeedback(adapt);
       setShowFeedback(false);
     } catch (e) { console.error(e, raw); }
+    setFeedbackStreamText("");
     setLoadingFeedback(false);
   }
 
@@ -2602,6 +2614,37 @@ JSON:
               <div className="bebas" style={{ fontSize: 24, color: "#0a0a0a" }}>→</div>
             </button>
 
+            {/* Historique des dernières séances */}
+            {(profile.sessions || []).length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Dernières séances</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(profile.sessions || []).slice(-4).reverse().map((s, i) => {
+                    const rpeColor = (s.difficulte || 5) <= 4 ? "var(--green)" : (s.difficulte || 5) <= 7 ? "var(--yellow)" : "var(--red)";
+                    const ressentiBg = s.ressenti === "facile" ? "rgba(57,255,128,0.08)" : s.ressenti === "dur" ? "rgba(255,71,71,0.08)" : "rgba(232,255,71,0.06)";
+                    const ressentiBorder = s.ressenti === "facile" ? "rgba(57,255,128,0.2)" : s.ressenti === "dur" ? "rgba(255,71,71,0.2)" : "rgba(232,255,71,0.15)";
+                    return (
+                      <div key={i} style={{ background: i === 0 ? ressentiBg : "rgba(255,255,255,0.02)", border: `1px solid ${i === 0 ? ressentiBorder : "rgba(255,255,255,0.05)"}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                          {s.type === "running_zone2" ? "🏃" : s.type === "force_stations" ? "💪" : s.type === "running_qualite" ? "⚡" : s.type === "hybride_compromis" ? "🔀" : "🏋️"}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: "var(--white)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.titre}</div>
+                          <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{s.difficulte || "—"}<span style={{ fontSize: 10, color: "#444" }}>/10</span></div>
+                          <div style={{ fontSize: 10, color: s.ressenti === "facile" ? "var(--green)" : s.ressenti === "dur" ? "var(--red)" : "var(--yellow)", fontWeight: 700 }}>
+                            {s.ressenti === "facile" ? "Facile" : s.ressenti === "dur" ? "Dur" : "OK"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Bouton Mon Profil */}
             <button onClick={() => setTab("profil")} style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2918,7 +2961,7 @@ JSON:
                       </div>
                     );
                   })}
-                  {/* Barre de progression */}
+                  {/* Barre de progression + bouton auto séance terminée */}
                   {(session.exercices || []).length > 0 && (
                     <div style={{ marginTop: 6 }}>
                       <ProgressBar
@@ -2927,6 +2970,16 @@ JSON:
                         color="var(--green)"
                         height={4}
                       />
+                      {Object.values(checkedExercices).filter(Boolean).length === (session.exercices || []).length &&
+                       (session.exercices || []).length > 0 && (
+                        <div className="fade-in" style={{ marginTop: 14, textAlign: "center" }}>
+                          <div style={{ fontSize: 28, marginBottom: 6 }}>🏆</div>
+                          <div style={{ fontWeight: 700, color: "var(--green)", fontSize: 15, marginBottom: 10 }}>Tous les exercices complétés !</div>
+                          <Btn variant="success" onClick={() => setShowFeedback(true)} style={{ width: "100%" }}>
+                            ✓ Valider ma séance & obtenir l'analyse Coach
+                          </Btn>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -3207,7 +3260,18 @@ JSON:
                     />
                   </div>
 
-                  {loadingFeedback ? <Spinner /> : (
+                  {loadingFeedback ? (
+                    <div className="fade-in" style={{ textAlign: "center", padding: "28px 20px", background: "var(--bg3)", borderRadius: 14 }}>
+                      <div style={{ fontSize: 28, marginBottom: 10 }}>🤖</div>
+                      <div className="bebas" style={{ fontSize: 16, color: "var(--green)", marginBottom: 8 }}>{feedbackStreamText || "Coach IA analyse ta séance..."}</div>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                        {[0,1,2].map(i => (
+                          <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", opacity: 0.6, animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#444", marginTop: 10 }}>Individualisation du programme en cours...</div>
+                    </div>
+                  ) : (
                     <div style={{ display: "flex", gap: 12 }}>
                       <Btn variant="dark" onClick={() => setShowFeedback(false)} style={{ flex: 1 }}>← Retour</Btn>
                       <Btn variant="success" onClick={submitFeedback} style={{ flex: 2 }}>Envoyer au coach 🚀</Btn>
