@@ -318,6 +318,410 @@ function getProgressionPct(data) {
 }
 
 // ============================================================
+// GRAPHIQUE COURBE RPE (Line chart SVG)
+// ============================================================
+function RPELineChart({ profile }) {
+  const [tooltip, setTooltip] = useState(null);
+  const sessions = profile.sessions || [];
+  if (sessions.length < 2) return (
+    <div style={{ textAlign: "center", padding: "24px 16px", color: "#444", fontSize: 13 }}>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>📈</div>
+      Fais au moins 2 séances pour voir ta courbe RPE.
+    </div>
+  );
+
+  const W = 320, H = 120, PAD = { top: 12, right: 12, bottom: 28, left: 28 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const data = sessions.slice(-20).map((s, i) => ({
+    x: i,
+    y: s.difficulte || 5,
+    label: new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
+    ressenti: s.ressenti,
+    titre: s.titre,
+  }));
+
+  const xScale = (i) => (i / (data.length - 1)) * innerW;
+  const yScale = (v) => innerH - ((v - 1) / 9) * innerH;
+
+  // Ligne SVG
+  const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"} ${xScale(d.x)} ${yScale(d.y)}`).join(" ");
+  // Aire de remplissage
+  const areaPath = `${linePath} L ${xScale(data.length - 1)} ${innerH} L ${xScale(0)} ${innerH} Z`;
+
+  // Moyenne
+  const avg = Math.round(data.reduce((a, b) => a + b.y, 0) / data.length * 10) / 10;
+  const trend = data.length >= 4 ? (data.slice(-3).reduce((a,b) => a+b.y,0)/3 - data.slice(0,3).reduce((a,b) => a+b.y,0)/3).toFixed(1) : null;
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>ÉVOLUTION RPE</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ background: "rgba(232,255,71,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>Moy {avg}/10</div>
+          {trend !== null && (
+            <div style={{ background: parseFloat(trend) > 0 ? "rgba(255,71,71,0.1)" : "rgba(57,255,128,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, color: parseFloat(trend) > 0 ? "var(--red)" : "var(--green)" }}>
+              {parseFloat(trend) > 0 ? "▲" : "▼"} {Math.abs(trend)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <svg width={Math.max(W, data.length * 24)} height={H} style={{ overflow: "visible" }}>
+          <g transform={`translate(${PAD.left},${PAD.top})`}>
+            {/* Grille horizontale */}
+            {[2,4,6,8,10].map(v => (
+              <g key={v}>
+                <line x1={0} y1={yScale(v)} x2={innerW} y2={yScale(v)} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+                <text x={-4} y={yScale(v)+4} textAnchor="end" fill="#333" fontSize={8}>{v}</text>
+              </g>
+            ))}
+            {/* Zone couleur RPE */}
+            <rect x={0} y={0} width={innerW} height={yScale(4)} fill="rgba(255,71,71,0.05)" />
+            <rect x={0} y={yScale(7)} width={innerW} height={yScale(4)-yScale(7)} fill="rgba(232,255,71,0.04)" />
+            <rect x={0} y={yScale(10)} width={innerW} height={yScale(7)-yScale(10)} fill="rgba(57,255,128,0.04)" />
+            {/* Ligne de moyenne */}
+            <line x1={0} y1={yScale(avg)} x2={innerW} y2={yScale(avg)} stroke="rgba(232,255,71,0.25)" strokeWidth={1} strokeDasharray="4,4" />
+            {/* Aire */}
+            <path d={areaPath} fill="rgba(232,255,71,0.06)" />
+            {/* Courbe */}
+            <path d={linePath} fill="none" stroke="var(--yellow)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            {/* Points */}
+            {data.map((d, i) => {
+              const cx = xScale(d.x), cy = yScale(d.y);
+              const color = d.ressenti === "dur" ? "var(--red)" : d.ressenti === "facile" ? "var(--green)" : "var(--yellow)";
+              return (
+                <g key={i} onClick={() => setTooltip(tooltip === i ? null : i)} style={{ cursor: "pointer" }}>
+                  <circle cx={cx} cy={cy} r={6} fill="transparent" />
+                  <circle cx={cx} cy={cy} r={i === data.length-1 ? 4 : 3} fill={color} stroke="var(--bg)" strokeWidth={1.5} />
+                  {tooltip === i && (
+                    <g>
+                      <rect x={cx-40} y={cy-46} width={80} height={38} rx={6} fill="var(--bg2)" stroke={color} strokeWidth={1} />
+                      <text x={cx} y={cy-30} textAnchor="middle" fill={color} fontSize={11} fontWeight="700">{d.y}/10</text>
+                      <text x={cx} y={cy-18} textAnchor="middle" fill="#888" fontSize={9}>{d.label}</text>
+                      <text x={cx} y={cy-8} textAnchor="middle" fill="#555" fontSize={8}>{(d.titre||"").slice(0,18)}</text>
+                    </g>
+                  )}
+                  {/* Label date pour premier/dernier */}
+                  {(i === 0 || i === data.length-1) && (
+                    <text x={cx} y={innerH+16} textAnchor="middle" fill="#444" fontSize={8}>{d.label}</text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+        </svg>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+        {[{ c: "var(--green)", l: "Facile (RPE ≤4)" }, { c: "var(--yellow)", l: "Bon (5-7)" }, { c: "var(--red)", l: "Dur (≥8)" }].map(item => (
+          <div key={item.l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#555" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.c }} />{item.l}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ============================================================
+// HEATMAP CALENDRIER (GitHub-style)
+// ============================================================
+function TrainingHeatmap({ profile }) {
+  const sessions = profile.sessions || [];
+  const [hoveredDay, setHoveredDay] = useState(null);
+
+  // Construire un dictionnaire date → séance
+  const byDate = {};
+  sessions.forEach(s => {
+    const d = s.date?.split("T")[0];
+    if (d) byDate[d] = s;
+  });
+
+  // 84 derniers jours (12 semaines)
+  const today = new Date();
+  const days = Array.from({ length: 84 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (83 - i));
+    const key = d.toISOString().split("T")[0];
+    const s = byDate[key];
+    return { date: d, key, session: s || null, dayOfWeek: d.getDay() };
+  });
+
+  // Grouper par semaine
+  const weeks = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
+
+  const getColor = (day) => {
+    if (!day.session) return "var(--bg3)";
+    const rpe = day.session.difficulte || 5;
+    if (rpe >= 8) return "rgba(255,71,71,0.7)";
+    if (rpe >= 6) return "rgba(232,255,71,0.7)";
+    return "rgba(57,255,128,0.7)";
+  };
+
+  const totalSeances = sessions.filter(s => {
+    const d = new Date(s.date);
+    return (today - d) <= 84 * 24 * 60 * 60 * 1000;
+  }).length;
+
+  const JOURS_SHORT = ["L","M","M","J","V","S","D"];
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>RÉGULARITÉ — 12 SEMAINES</div>
+        <div style={{ background: "rgba(232,255,71,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>
+          {totalSeances} séances
+        </div>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ display: "flex", gap: 3, minWidth: "max-content" }}>
+          {/* Labels jours */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginRight: 4 }}>
+            {JOURS_SHORT.map((j, i) => (
+              <div key={i} style={{ height: 12, fontSize: 8, color: "#333", lineHeight: "12px" }}>{i % 2 === 0 ? j : ""}</div>
+            ))}
+          </div>
+          {/* Grille semaines */}
+          {weeks.map((week, wi) => (
+            <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {week.map((day, di) => {
+                const isToday = day.key === today.toISOString().split("T")[0];
+                const isHover = hoveredDay === day.key;
+                return (
+                  <div
+                    key={di}
+                    onMouseEnter={() => setHoveredDay(day.key)}
+                    onMouseLeave={() => setHoveredDay(null)}
+                    onClick={() => setHoveredDay(isHover ? null : day.key)}
+                    title={day.session ? `${day.session.titre} — RPE ${day.session.difficulte}/10` : day.key}
+                    style={{
+                      width: 12, height: 12, borderRadius: 3,
+                      background: getColor(day),
+                      border: isToday ? "1.5px solid var(--yellow)" : isHover && day.session ? "1px solid rgba(255,255,255,0.3)" : "1px solid transparent",
+                      cursor: day.session ? "pointer" : "default",
+                      transition: "transform 0.1s",
+                      transform: isHover && day.session ? "scale(1.3)" : "scale(1)",
+                    }}
+                  />
+                );
+              })}
+              {/* Label mois si 1er du mois dans la semaine */}
+              <div style={{ height: 10, fontSize: 8, color: "#333", textAlign: "center" }}>
+                {week.some(d => d.date.getDate() === 1) ? week.find(d => d.date.getDate() === 1)?.date.toLocaleDateString("fr-FR", { month: "short" }) : ""}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tooltip séance survolée */}
+      {hoveredDay && byDate[hoveredDay] && (
+        <div className="fade-in" style={{ marginTop: 10, background: "var(--bg3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#ccc" }}>
+          <span style={{ fontWeight: 700, color: "var(--yellow)" }}>{byDate[hoveredDay].titre}</span>
+          {" · "}RPE {byDate[hoveredDay].difficulte}/10
+          {" · "}<span style={{ color: byDate[hoveredDay].ressenti === "bien" ? "var(--green)" : byDate[hoveredDay].ressenti === "dur" ? "var(--red)" : "var(--yellow)" }}>
+            {byDate[hoveredDay].ressenti}
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: "#444" }}>Intensité:</span>
+        {[{ c: "rgba(57,255,128,0.7)", l: "Facile" }, { c: "rgba(232,255,71,0.7)", l: "Modérée" }, { c: "rgba(255,71,71,0.7)", l: "Intense" }, { c: "var(--bg3)", l: "Repos" }].map(item => (
+          <div key={item.l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#555" }}>
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: item.c }} />{item.l}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ============================================================
+// RADAR CHART Force / Endurance / Puissance
+// ============================================================
+function RadarChart({ profile }) {
+  const score = calcFitnessScore(profile);
+  const axes = [
+    { label: "Force", value: score.force, color: "var(--yellow)" },
+    { label: "Endurance", value: score.endurance, color: "var(--green)" },
+    { label: "Puissance", value: score.puissance, color: "var(--red)" },
+    { label: "Technique", value: Math.min(100, Math.round((profile.sessions?.length || 0) * 4 + 20)), color: "#a78bfa" },
+    { label: "Régularité", value: Math.min(100, Math.round((profile.streak || 0) * 10 + ((profile.sessions?.length || 0) * 2))), color: "#ff9a3c" },
+  ];
+
+  const CX = 110, CY = 110, R = 80;
+  const n = axes.length;
+  const angleStep = (2 * Math.PI) / n;
+  const startAngle = -Math.PI / 2;
+
+  const getPoint = (angle, r) => ({
+    x: CX + r * Math.cos(angle),
+    y: CY + r * Math.sin(angle),
+  });
+
+  // Points du polygone athlète
+  const athletePoints = axes.map((a, i) => {
+    const angle = startAngle + i * angleStep;
+    const r = (a.value / 100) * R;
+    return getPoint(angle, r);
+  });
+
+  const polygonPath = athletePoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 12 }}>PROFIL ATHLÈTE</div>
+      <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+        <svg width={220} height={220} style={{ flexShrink: 0 }}>
+          {/* Grilles concentriques */}
+          {[20, 40, 60, 80, 100].map(pct => {
+            const pts = axes.map((_, i) => getPoint(startAngle + i * angleStep, (pct / 100) * R));
+            const path = pts.map((p, i) => `${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ") + " Z";
+            return <path key={pct} d={path} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={1} />;
+          })}
+          {/* Axes */}
+          {axes.map((_, i) => {
+            const angle = startAngle + i * angleStep;
+            const outer = getPoint(angle, R);
+            return <line key={i} x1={CX} y1={CY} x2={outer.x} y2={outer.y} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />;
+          })}
+          {/* Polygone athlète */}
+          <path d={polygonPath} fill="rgba(232,255,71,0.12)" stroke="var(--yellow)" strokeWidth={2} />
+          {/* Points sur les axes */}
+          {athletePoints.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r={4} fill={axes[i].color} stroke="var(--bg)" strokeWidth={1.5} />
+          ))}
+          {/* Labels axes */}
+          {axes.map((a, i) => {
+            const angle = startAngle + i * angleStep;
+            const lp = getPoint(angle, R + 18);
+            return (
+              <text key={i} x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle" fill={a.color} fontSize={10} fontWeight="700">
+                {a.label}
+              </text>
+            );
+          })}
+        </svg>
+        {/* Légende avec valeurs */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+          {axes.map(a => (
+            <div key={a.label}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: "#888" }}>{a.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: a.color }}>{a.value}%</span>
+              </div>
+              <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 4 }}>
+                <div style={{ width: `${a.value}%`, height: 4, background: a.color, borderRadius: 99, transition: "width 0.8s" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ============================================================
+// GRAPHIQUE MULTI-CHARGES (Squat + Deadlift ligne)
+// ============================================================
+function MultiChargesChart({ profile }) {
+  const progression = buildProgressionData(profile);
+  const [tooltip, setTooltip] = useState(null);
+
+  const datasets = [
+    { key: "squat", label: "Squat", color: "var(--yellow)", data: progression.squat },
+    { key: "deadlift", label: "Deadlift", color: "var(--green)", data: progression.deadlift },
+  ].filter(d => d.data.length >= 2);
+
+  if (datasets.length === 0) return null;
+
+  // Toutes les valeurs pour l'échelle
+  const allValues = datasets.flatMap(d => d.data.map(p => p.value));
+  const maxVal = Math.max(...allValues);
+  const minVal = Math.min(...allValues) * 0.9;
+  const range = maxVal - minVal || 1;
+
+  const maxLen = Math.max(...datasets.map(d => d.data.length));
+  const W = 320, H = 110, PAD = { top: 12, right: 12, bottom: 24, left: 32 };
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const xScale = (i, len) => len <= 1 ? innerW/2 : (i / (len - 1)) * innerW;
+  const yScale = (v) => innerH - ((v - minVal) / range) * innerH;
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>CHARGES (kg)</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {datasets.map(d => {
+            const pct = getProgressionPct(d.data);
+            return (
+              <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 12, height: 3, background: d.color, borderRadius: 99 }} />
+                <span style={{ fontSize: 11, color: d.color, fontWeight: 700 }}>{d.label}</span>
+                {pct !== null && <span style={{ fontSize: 10, color: "#555" }}>+{pct}%</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <svg width={W} height={H} style={{ overflow: "visible" }}>
+        <g transform={`translate(${PAD.left},${PAD.top})`}>
+          {/* Grille */}
+          {[0, 33, 66, 100].map(pct => {
+            const y = yScale(minVal + (range * pct / 100));
+            return (
+              <g key={pct}>
+                <line x1={0} y1={y} x2={innerW} y2={y} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+                <text x={-4} y={y+4} textAnchor="end" fill="#2a2a2a" fontSize={8}>{Math.round(minVal + range * pct / 100)}</text>
+              </g>
+            );
+          })}
+          {/* Lignes par dataset */}
+          {datasets.map(ds => {
+            const d = ds.data;
+            const linePath = d.map((p, i) => `${i===0?"M":"L"} ${xScale(i, d.length)} ${yScale(p.value)}`).join(" ");
+            const areaPath = `${linePath} L ${xScale(d.length-1, d.length)} ${innerH} L ${xScale(0, d.length)} ${innerH} Z`;
+            return (
+              <g key={ds.key}>
+                <path d={areaPath} fill={ds.color.replace("var(--yellow)", "rgba(232,255,71").replace("var(--green)", "rgba(57,255,128") + ",0.05)"} />
+                <path d={linePath} fill="none" stroke={ds.color} strokeWidth={2} strokeLinecap="round" />
+                {d.map((p, i) => (
+                  <g key={i} onClick={() => setTooltip(tooltip === `${ds.key}-${i}` ? null : `${ds.key}-${i}`)}>
+                    <circle cx={xScale(i, d.length)} cy={yScale(p.value)} r={5} fill="transparent" style={{ cursor: "pointer" }} />
+                    <circle cx={xScale(i, d.length)} cy={yScale(p.value)} r={i===d.length-1?4:2.5} fill={ds.color} stroke="var(--bg)" strokeWidth={1.5} />
+                    {tooltip === `${ds.key}-${i}` && (
+                      <g>
+                        <rect x={xScale(i, d.length)-28} y={yScale(p.value)-34} width={56} height={28} rx={5} fill="var(--bg2)" stroke={ds.color} strokeWidth={1} />
+                        <text x={xScale(i, d.length)} y={yScale(p.value)-20} textAnchor="middle" fill={ds.color} fontSize={11} fontWeight="700">{p.value}kg</text>
+                        <text x={xScale(i, d.length)} y={yScale(p.value)-10} textAnchor="middle" fill="#666" fontSize={9}>{p.label}</text>
+                      </g>
+                    )}
+                    {(i === 0 || i === d.length-1) && (
+                      <text x={xScale(i, d.length)} y={innerH+14} textAnchor="middle" fill="#444" fontSize={8}>{p.label}</text>
+                    )}
+                  </g>
+                ))}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+    </Card>
+  );
+}
+
+// ============================================================
 // RÉSUMÉ HEBDOMADAIRE (généré le dimanche)
 // ============================================================
 function buildWeeklySummary(profile) {
@@ -3361,6 +3765,18 @@ JSON:
             {/* Résumé hebdo si dimanche */}
             {new Date().getDay() === 0 && <WeeklySummaryCard profile={profile} />}
 
+            {/* Heatmap régularité */}
+            <TrainingHeatmap profile={profile} />
+
+            {/* Radar profil athlète */}
+            <RadarChart profile={profile} />
+
+            {/* Courbe RPE */}
+            <RPELineChart profile={profile} />
+
+            {/* Multi-charges Squat + Deadlift */}
+            <MultiChargesChart profile={profile} />
+
             <Section title="Condition physique">
               <FitnessScoreCard profile={profile} />
             </Section>
@@ -3370,7 +3786,7 @@ JSON:
               <NiveauVisuelCard profile={profile} />
             </Section>
 
-            {/* Graphique progression des charges */}
+            {/* Graphique progression des charges (barres) */}
             <Section title="Progression des charges">
               <ProgressionChargesCard profile={profile} />
             </Section>
