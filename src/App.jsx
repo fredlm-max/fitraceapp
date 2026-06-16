@@ -2040,43 +2040,80 @@ function ProgressionChargesCard({ profile }) {
 function WeeklySummaryCard({ profile }) {
   const summary = buildWeeklySummary(profile);
   const week = profile.week || 1;
-  const nextTypes = ["Zone 2 + technique", "Force stations", "Running qualité"];
+  // Calcul des jours de la semaine en cours (lundi → dimanche)
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7; // 0=lundi
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow); weekStart.setHours(0,0,0,0);
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+  const sessionsByDate = {};
+  (profile.sessions||[]).forEach(s => {
+    const d = s.date?.slice(0,10);
+    if (d) sessionsByDate[d] = s;
+  });
+  const dayLabels = ["L","M","M","J","V","S","D"];
+  const totalMinutes = summary.count > 0 ? summary.count * 50 : 0; // estimation 50min/séance
+  const scoreColor = summary.count >= 4 ? "var(--green)" : summary.count >= 2 ? "var(--yellow)" : "var(--orange)";
 
   return (
-    <Card style={{ border: "1.5px solid var(--yellow)55", marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)" }}>RÉSUMÉ SEMAINE {week}</div>
-        <Badge label="📅 Dimanche" color="var(--yellow)" />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
-        <div style={{ background: "var(--bg3)", borderRadius: 8, padding: 10, textAlign: "center" }}>
-          <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)" }}>{summary.count}</div>
-          <div style={{ fontSize: 10, color: "#666" }}>séances</div>
+    <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.04) 0%, rgba(0,0,0,0) 100%)", border: "1.5px solid rgba(232,255,71,0.15)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "rgba(232,255,71,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>📅 Semaine {week} en cours</div>
+          <div className="bebas" style={{ fontSize: 32, color: scoreColor, lineHeight: 1 }}>{summary.count} <span style={{ fontSize: 16, color: "#555" }}>séances</span></div>
         </div>
-        <div style={{ background: "var(--bg3)", borderRadius: 8, padding: 10, textAlign: "center" }}>
-          <div className="bebas" style={{ fontSize: 28, color: "var(--green)" }}>{summary.bien}</div>
-          <div style={{ fontSize: 10, color: "#666" }}>bien calibré</div>
-        </div>
-        <div style={{ background: "var(--bg3)", borderRadius: 8, padding: 10, textAlign: "center" }}>
-          <div className="bebas" style={{ fontSize: 28, color: summary.dur > 1 ? "var(--red)" : "#888" }}>{summary.dur}</div>
-          <div style={{ fontSize: 10, color: "#666" }}>trop dur</div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, color: "#333", marginBottom: 2 }}>Volume</div>
+          <div className="bebas" style={{ fontSize: 22, color: "#555" }}>{totalMinutes}<span style={{ fontSize: 11, color: "#333" }}>min</span></div>
         </div>
       </div>
-      {summary.dur >= 2 && (
-        <div style={{ background: "var(--red)11", border: "1px solid var(--red)33", borderRadius: 8, padding: 10, fontSize: 12, color: "#ff9a9a", marginBottom: 12 }}>
-          ⚠️ 2 séances difficiles cette semaine — ton coach a été alerté. Récupère bien ce soir.
-        </div>
-      )}
-      <div style={{ background: "var(--bg3)", borderRadius: 8, padding: 12 }}>
-        <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Semaine {week + 1} — au programme</div>
-        {nextTypes.map((t, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--yellow)", flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: "#ccc" }}>{t}</span>
+
+      {/* Jours de la semaine */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+        {weekDays.map((d, i) => {
+          const iso = d.toISOString().slice(0,10);
+          const s = sessionsByDate[iso];
+          const isToday = iso === now.toISOString().slice(0,10);
+          const isPast = d < new Date(now.toDateString()) && !isToday;
+          const ressentiColor = s?.ressenti === "bien" ? "var(--green)" : s?.ressenti === "facile" ? "var(--yellow)" : s ? "var(--red)" : null;
+          return (
+            <div key={i} style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: 8, color: isToday ? "var(--yellow)" : "#2a2a2a", fontWeight: isToday ? 700 : 400, marginBottom: 4, textTransform: "uppercase" }}>{dayLabels[i]}</div>
+              <div style={{
+                width: "100%", aspectRatio: "1", borderRadius: 7,
+                background: s ? `${ressentiColor}20` : isPast ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)",
+                border: s ? `1.5px solid ${ressentiColor}66` : isToday ? "1.5px solid rgba(232,255,71,0.4)" : `1px solid rgba(255,255,255,0.04)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12,
+              }}>
+                {s ? <span style={{ color: ressentiColor }}>✓</span> : isToday ? <span style={{ color: "var(--yellow)", fontSize: 8 }}>●</span> : ""}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stats inline */}
+      <div style={{ display: "flex", gap: 8 }}>
+        {[
+          { label: "Calibré", count: summary.bien, color: "var(--green)" },
+          { label: "Facile", count: summary.facile || 0, color: "var(--yellow)" },
+          { label: "Dur", count: summary.dur, color: "var(--red)" },
+        ].map((s, i) => s.count > 0 && (
+          <div key={i} style={{ background: `${s.color}10`, border: `1px solid ${s.color}22`, borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+            <span className="bebas" style={{ fontSize: 16, color: s.color, lineHeight: 1 }}>{s.count}</span>
+            <span style={{ fontSize: 9, color: "#444" }}>{s.label}</span>
           </div>
         ))}
+        {summary.dur >= 2 && (
+          <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.2)", borderRadius: 8, padding: "5px 10px", fontSize: 10, color: "var(--red)" }}>
+            ⚠️ Récup conseillée
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -3521,6 +3558,9 @@ JSON:
               </div>
             </button>
 
+            {/* ── RECAP SEMAINE ── */}
+            {buildWeeklySummary(profile).count > 0 && <WeeklySummaryCard profile={profile} />}
+
             {/* Historique — scroll horizontal */}
             {(profile.sessions || []).length > 0 && (() => {
               const TYPE_CONF = {
@@ -4494,7 +4534,7 @@ JSON:
             })()}
 
             {/* Résumé hebdo si dimanche */}
-            {new Date().getDay() === 0 && <WeeklySummaryCard profile={profile} />}
+            {buildWeeklySummary(profile).count > 0 && <WeeklySummaryCard profile={profile} />}
 
             {/* Heatmap régularité */}
             <TrainingHeatmap profile={profile} />
