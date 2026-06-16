@@ -2304,6 +2304,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [loadingPlanning, setLoadingPlanning] = useState(false);
   const [streak, setStreak] = useState(0);
   const [streakData, setStreakData] = useState(null);
+  const [streakMilestone, setStreakMilestone] = useState(null); // { days, emoji, msg }
   const [messageIA, setMessageIA] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
@@ -2433,6 +2434,19 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
       const updated = { ...profile, streak: current, bestStreak: Math.max(profile.bestStreak || 0, current) };
       await storage.set(`athlete_${profile.name}`, updated);
       onUpdateProfile(updated);
+      // Détecter les jalons de streak
+      const MILESTONES = [
+        { days: 3,  emoji: "🔥", msg: "3 jours d'affilée ! La régularité commence ici." },
+        { days: 7,  emoji: "⚡", msg: "Une semaine complète ! Tu es sur une lancée incroyable !" },
+        { days: 14, emoji: "💪", msg: "Deux semaines non-stop ! Tu construis une vraie habitude !" },
+        { days: 30, emoji: "🏆", msg: "30 jours consécutifs ! Tu es une machine HYROX !" },
+      ];
+      const prevStreak = profile.streak || 0;
+      const milestone = MILESTONES.find(m => current >= m.days && prevStreak < m.days);
+      if (milestone) {
+        haptic([20, 50, 20, 50, 40]);
+        setStreakMilestone({ days: current, emoji: milestone.emoji, msg: milestone.msg });
+      }
     }
   }
 
@@ -2917,6 +2931,24 @@ JSON:
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: 84 }}
       onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <style>{GLOBAL_STYLES}</style>
+
+      {/* ── Streak milestone celebration ── */}
+      {streakMilestone && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setStreakMilestone(null)}>
+          <div onClick={e => e.stopPropagation()} className="bounce-in" style={{ background: "linear-gradient(145deg, #131500, #080808)", border: "2px solid rgba(232,255,71,0.4)", borderRadius: 28, padding: "36px 28px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 0 60px rgba(232,255,71,0.15)" }}>
+            {/* Glow */}
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+            <div style={{ fontSize: 72, marginBottom: 8, animation: "bounceIn 0.5s var(--spring) both 0.1s" }}>{streakMilestone.emoji}</div>
+            <div className="bebas" style={{ fontSize: 52, color: "var(--yellow)", lineHeight: 1, letterSpacing: 2, marginBottom: 4 }}>{streakMilestone.days} JOURS</div>
+            <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 16, opacity: 0.7 }}>🔥 Streak record</div>
+            <div style={{ fontSize: 16, color: "#ddd", lineHeight: 1.65, marginBottom: 28 }}>{streakMilestone.msg}</div>
+            <button onClick={() => setStreakMilestone(null)} style={{ width: "100%", padding: "16px", background: "var(--yellow)", border: "none", borderRadius: 16, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: "#000", cursor: "pointer" }}>
+              CONTINUER SUR MA LANCÉE 🚀
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Toast notifications ── */}
       <div style={{ position: "fixed", bottom: 96, left: 16, right: 16, zIndex: 900, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
