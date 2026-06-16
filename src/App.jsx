@@ -4171,16 +4171,78 @@ JSON:
                   );
                 })()}
 
-                {/* Échauffement */}
-                {session.echauffement && (
-                  <div style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ fontSize: 22, flexShrink: 0 }}>🔥</div>
-                    <div>
-                      <div style={{ fontSize: 10, color: "var(--purple)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Échauffement</div>
-                      <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.6 }}>{session.echauffement}</div>
+                {/* Échauffement interactif */}
+                {(() => {
+                  const WARMUPS = {
+                    running_zone2: [
+                      { icon: "🚶", label: "Marche active", duration: "3 min", desc: "Posture droite, bras actifs" },
+                      { icon: "🔄", label: "Rotations hanches", duration: "30 s", desc: "Cercles lents × 10 chaque sens" },
+                      { icon: "🦵", label: "High knees légers", duration: "45 s", desc: "Genoux montants, rythme facile" },
+                      { icon: "🏃", label: "Foulées progressives", duration: "2 min", desc: "70% → 80% allure zone 2" },
+                    ],
+                    force_stations: [
+                      { icon: "🔄", label: "Mobilité épaules", duration: "1 min", desc: "Rotations bras + cercles poignets" },
+                      { icon: "🦵", label: "Squat léger", duration: "45 s", desc: "15 reps poids du corps, lent" },
+                      { icon: "🏋️", label: "Activation fessiers", duration: "45 s", desc: "Clamshells ou glute bridge × 15" },
+                      { icon: "💪", label: "Bandes élastiques", duration: "1 min", desc: "Pull-apart × 15, face pull × 15" },
+                    ],
+                    running_qualite: [
+                      { icon: "🚶", label: "Jogging léger", duration: "5 min", desc: "Très facile, zone 1, muscles qui chauffent" },
+                      { icon: "⚡", label: "Strides ×4", duration: "2 min", desc: "Accélérations sur 80m, récup. marche" },
+                      { icon: "🦵", label: "Skipping", duration: "30 s", desc: "Montées de genoux rapides, sur place" },
+                      { icon: "🔥", label: "Activation neuro", duration: "30 s", desc: "2-3 accélérations courtes à allure cible" },
+                    ],
+                    hybride_compromis: [
+                      { icon: "🚶", label: "Marche + swings bras", duration: "2 min", desc: "Déverrouiller les épaules" },
+                      { icon: "🦵", label: "Lunge marchés", duration: "45 s", desc: "20 reps alternés, amplitude totale" },
+                      { icon: "🏃", label: "Jogging 2 min", duration: "2 min", desc: "Zone 1, facile" },
+                      { icon: "💪", label: "Push-ups lents", duration: "30 s", desc: "10 reps contrôlés, activation chest" },
+                    ],
+                  };
+                  const steps = WARMUPS[session.type] || WARMUPS.running_zone2;
+                  const [warmupOpen, setWarmupOpen] = React.useState(false);
+                  const [warmupDone, setWarmupDone] = React.useState({});
+                  const doneCount = Object.values(warmupDone).filter(Boolean).length;
+                  const allDone = doneCount === steps.length;
+                  return (
+                    <div style={{ background: allDone ? "rgba(57,255,128,0.04)" : "rgba(167,139,250,0.04)", border: `1px solid ${allDone ? "rgba(57,255,128,0.2)" : "rgba(167,139,250,0.15)"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
+                      {/* Header */}
+                      <div onClick={() => setWarmupOpen(o => !o)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                        <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🔥"}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--purple)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                            Échauffement · {steps.length} étapes
+                          </div>
+                          {/* Mini progress bar */}
+                          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden", width: "100%" }}>
+                            <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: allDone ? "var(--green)" : "var(--purple)", borderRadius: 99, transition: "width 0.3s" }} />
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
+                        <div style={{ color: "#333", fontSize: 14, transform: warmupOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+                      </div>
+                      {/* Steps */}
+                      {warmupOpen && (
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
+                          {steps.map((step, i) => {
+                            const done = warmupDone[i];
+                            return (
+                              <div key={i} onClick={() => setWarmupDone(d => ({ ...d, [i]: !d[i] }))}
+                                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 10, cursor: "pointer", background: done ? "rgba(57,255,128,0.04)" : "transparent", marginBottom: 4, transition: "background 0.2s" }}>
+                                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(167,139,250,0.12)", border: done ? "none" : "2px solid rgba(167,139,250,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: done ? 13 : 16, color: done ? "#000" : "var(--purple)", transition: "all 0.25s" }}>{done ? "✓" : step.icon}</div>
+                                <div style={{ flex: 1, opacity: done ? 0.5 : 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", textDecoration: done ? "line-through" : "none" }}>{step.label} <span style={{ fontSize: 10, color: "var(--purple)", fontWeight: 400 }}>· {step.duration}</span></div>
+                                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{step.desc}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {allDone && <div style={{ textAlign: "center", fontSize: 13, color: "var(--green)", fontWeight: 700, padding: "8px 0 4px" }}>🎯 Parfait ! Tu es prêt pour ta séance.</div>}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Programme */}
                 <div style={{ marginBottom: 10 }}>
