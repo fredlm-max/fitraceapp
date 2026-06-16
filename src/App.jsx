@@ -3710,9 +3710,8 @@ JSON:
 
       <div key={tab} className={tabDir >= 0 ? "tab-slide-right" : "tab-slide-left"} style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
 
-        {/* HOME — Accueil glassmorphism */}
-        {tab === "home" && (
-          <div>
+        {/* HOME — toujours rendu, caché si inactif (fix hooks) */}
+        <div style={{display: tab === "home" ? "block" : "none"}}>
             {/* Fond halo */}
             <div style={{ position: "absolute", top: 60, right: -40, width: 200, height: 200, background: "radial-gradient(circle, rgba(232,255,71,0.06) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
             <div style={{ position: "absolute", top: 300, left: -60, width: 180, height: 180, background: "radial-gradient(circle, rgba(57,255,128,0.04) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
@@ -4897,11 +4896,9 @@ JSON:
               <div style={{ color: "var(--yellow)", fontSize: 16 }}>→</div>
             </button>
           </div>
-        )}
 
-        {/* TODAY */}
-        {tab === "today" && (
-          <div className="fade-in">
+        {/* TODAY — toujours rendu */}
+        <div style={{display: tab === "today" ? "block" : "none"}} className="fade-in">
             {/* Citation du jour */}
             <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.05) 0%, rgba(57,255,128,0.03) 100%)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 16, padding: "16px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 10, right: 14, fontSize: 40, opacity: 0.06, fontFamily: "Georgia, serif" }}>"</div>
@@ -6099,11 +6096,9 @@ JSON:
               </div>
             )}
           </div>
-        )}
 
-        {/* PROGRESSION / FORME */}
-        {tab === "progress" && (
-          <div className="fade-in">
+        {/* PROGRESSION / FORME — toujours rendu */}
+        <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
             {/* Graphique courbe fitness score SVG */}
             {(profile.sessions||[]).length >= 2 && (() => {
               const sessions = (profile.sessions||[]).slice(-10);
@@ -7142,11 +7137,9 @@ JSON:
               )}
             </div>
           </div>
-        )}
 
-        {/* ZONES */}
-        {tab === "zones" && (
-          <div className="fade-in">
+        {/* ZONES — toujours rendu */}
+        <div style={{display: tab === "zones" ? "block" : "none"}} className="fade-in">
             {/* Header */}
             <div style={{ marginBottom: 16 }}>
               <div className="bebas" style={{ fontSize: 28, color: "var(--green)", letterSpacing: 1, marginBottom: 2 }}>ZONES D'ENTRAÎNEMENT</div>
@@ -7290,7 +7283,6 @@ JSON:
               </div>
             )}
           </div>
-        )}
 
         {/* COURSE & TECHNIQUE */}
         {tab === "nutri" && <NutritionTab profile={profile} />}
