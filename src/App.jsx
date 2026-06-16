@@ -5471,6 +5471,69 @@ function TechniqueTab() {
       {filtered.length === 0 && (
         <div style={{ textAlign: "center", padding: "32px 20px", color: "#333", fontSize: 13 }}>Aucune station dans cette catégorie</div>
       )}
+
+      {/* ── COMBOS HYROX RECOMMANDÉS ── */}
+      {filterCat === "all" && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🔀 Combos à entraîner ensemble</div>
+          {[
+            {
+              nom: "Combo Sled",
+              emoji: "🛷",
+              color: "var(--red)",
+              stations: ["Sled Push", "Sled Pull"],
+              reco: "Enchaîne Push → Pull sans pause. Travaille les quadriceps et le dos de manière complémentaire.",
+              tags: ["Force", "Spécificité race"],
+            },
+            {
+              nom: "Combo Cardio Upper",
+              emoji: "⛷️",
+              color: "#a78bfa",
+              stations: ["SkiErg", "Rowing"],
+              reco: "2x5min sur chaque. Développe l'endurance du haut du corps et optimise ta technique de tirage.",
+              tags: ["Technique", "Endurance"],
+            },
+            {
+              nom: "Combo Full Body",
+              emoji: "🔥",
+              color: "var(--orange)",
+              stations: ["Burpee Broad Jump", "Wall Balls", "Sandbag Lunges"],
+              reco: "Circuit 3 rounds. La combinaison la plus représentative de la fatigue en fin de race HYROX.",
+              tags: ["Cardio", "Race-specific"],
+            },
+            {
+              nom: "Combo Portage",
+              emoji: "🧳",
+              color: "var(--green)",
+              stations: ["Farmers Carry", "Sandbag Lunges"],
+              reco: "20-30m Farmers puis 20m Sandbag sans lâcher. Renforce les stabilisateurs du core sous charge.",
+              tags: ["Résistance", "Core"],
+            },
+          ].map((combo, i) => (
+            <div key={i} style={{ background: `${combo.color}06`, border: `1px solid ${combo.color}20`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: `${combo.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{combo.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                    <div className="bebas" style={{ fontSize: 16, color: combo.color, letterSpacing: 0.5 }}>{combo.nom}</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {combo.tags.map((t, j) => (
+                        <div key={j} style={{ fontSize: 8, background: `${combo.color}15`, color: combo.color, borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>{t}</div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                    {combo.stations.map((s, j) => (
+                      <div key={j} style={{ fontSize: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 6, padding: "3px 9px", color: "#888" }}>{s}</div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#555", lineHeight: 1.55 }}>{combo.reco}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
