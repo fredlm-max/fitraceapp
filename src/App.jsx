@@ -5347,72 +5347,175 @@ JSON:
               </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Journal de séances</div>
-                <div style={{ fontSize: 12, color: "#444", fontWeight: 600 }}>{(profile.sessions||[]).length} séances</div>
-              </div>
-              {(profile.sessions || []).length === 0 ? (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>🏋️</div>
-                  <div style={{ fontSize: 14, color: "#555", lineHeight: 1.6 }}>Aucune séance enregistrée.<br/>Lance ta première séance !</div>
-                </div>
-              ) : (
-                <>
-                  {/* Résumé rapide — visuel */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-                    {[
-                      { label: "Facile", emoji: "😪", count: (profile.sessions||[]).filter(s=>s.ressenti==="facile").length, color: "var(--green)", bg: "rgba(57,255,128,0.06)" },
-                      { label: "Calibré", emoji: "💪", count: (profile.sessions||[]).filter(s=>s.ressenti==="bien").length, color: "var(--yellow)", bg: "rgba(232,255,71,0.05)" },
-                      { label: "Dur", emoji: "🔥", count: (profile.sessions||[]).filter(s=>s.ressenti==="dur").length, color: "var(--red)", bg: "rgba(255,71,71,0.06)" },
-                    ].map(item => (
-                      <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.color}22`, borderRadius: 12, padding: "14px 8px", textAlign: "center" }}>
-                        <div style={{ fontSize: 22, marginBottom: 4 }}>{item.emoji}</div>
-                        <div className="bebas" style={{ fontSize: 28, color: item.color, lineHeight: 1 }}>{item.count}</div>
-                        <div style={{ fontSize: 10, color: "#444", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
-                      </div>
-                    ))}
+            {/* ── JOURNAL DE SÉANCES PREMIUM ── */}
+            {(()=>{
+              const TYPE_CONF_J = {
+                running_zone2:     { icon: "🏃", label: "Zone 2",    color: "var(--green)",  bg: "rgba(57,255,128,0.08)",  border: "rgba(57,255,128,0.25)" },
+                force_stations:    { icon: "🏋️", label: "Force",     color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.25)" },
+                running_qualite:   { icon: "⚡",  label: "Qualité",   color: "var(--yellow)", bg: "rgba(232,255,71,0.06)",  border: "rgba(232,255,71,0.2)"  },
+                hybride_compromis: { icon: "🔀",  label: "Hybride",   color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.25)" },
+              };
+              const FILTER_CHIPS = [
+                { id: "all",               label: "Toutes",  icon: "📋" },
+                { id: "running_zone2",     label: "Zone 2",  icon: "🏃" },
+                { id: "force_stations",    label: "Force",   icon: "🏋️" },
+                { id: "running_qualite",   label: "Qualité", icon: "⚡"  },
+                { id: "hybride_compromis", label: "Hybride", icon: "🔀" },
+              ];
+              const [journalFilter, setJournalFilter] = React.useState("all");
+              const [expandedSessions, setExpandedSessions] = React.useState({});
+              const allSessions = (profile.sessions||[]).slice().reverse();
+              const filtered = journalFilter === "all" ? allSessions : allSessions.filter(s => s.type === journalFilter);
+              const total = allSessions.length;
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Journal de séances</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: 12, color: "#444", fontWeight: 600 }}>{total}</div>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase" }}>séances</div>
+                    </div>
                   </div>
-                  {/* Liste séances */}
-                  {(profile.sessions || []).slice().reverse().map((s, i) => {
-                    const num = (profile.sessions||[]).length - i;
-                    const adapt = (profile.adaptations||[])[num - 1];
-                    const ressentiColor = s.ressenti === "bien" ? "var(--green)" : s.ressenti === "facile" ? "var(--yellow)" : "var(--red)";
-                    const typeIco = s.type === "running_zone2" ? "🏃" : s.type === "force_stations" ? "🏋️" : s.type === "running_qualite" ? "⚡" : s.type === "hybride_compromis" ? "🔀" : "💪";
-                    return (
-                      <div key={i} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderLeft: `3px solid ${ressentiColor}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
-                              <span style={{ fontSize: 14 }}>{typeIco}</span>
-                              <span style={{ fontSize: 10, color: "#333", fontWeight: 600 }}>#{num}</span>
-                              <span style={{ fontSize: 9, color: "#333" }}>·</span>
-                              <span style={{ fontSize: 10, color: "#444" }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
-                            </div>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre}</div>
+
+                  {total === 0 ? (
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "36px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>🏋️</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)", marginBottom: 6 }}>Aucune séance encore</div>
+                      <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>Lance ta première séance depuis l'onglet Aujourd'hui !</div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Résumé feeling bars */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                        {[
+                          { label: "Facile",  emoji: "😊", count: allSessions.filter(s=>s.ressenti==="facile").length, color: "var(--green)",  bg: "rgba(57,255,128,0.06)" },
+                          { label: "Calibré", emoji: "💪", count: allSessions.filter(s=>s.ressenti==="bien").length,   color: "var(--yellow)", bg: "rgba(232,255,71,0.05)"  },
+                          { label: "Dur",     emoji: "🔥", count: allSessions.filter(s=>s.ressenti==="dur").length,    color: "var(--red)",    bg: "rgba(255,71,71,0.06)"  },
+                        ].map(item => (
+                          <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.color}22`, borderRadius: 12, padding: "12px 6px", textAlign: "center" }}>
+                            <div style={{ fontSize: 20, marginBottom: 2 }}>{item.emoji}</div>
+                            <div className="bebas" style={{ fontSize: 26, color: item.color, lineHeight: 1 }}>{item.count}</div>
+                            <div style={{ fontSize: 9, color: "#444", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
                           </div>
-                          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 10 }}>
-                            <div className="bebas" style={{ fontSize: 24, color: ressentiColor, lineHeight: 1 }}>{s.difficulte || "—"}<span style={{ fontSize: 10, color: "#333" }}>/10</span></div>
-                            <div style={{ fontSize: 9, color: ressentiColor, fontWeight: 700, textTransform: "uppercase" }}>{s.ressenti === "bien" ? "Calibré" : s.ressenti === "facile" ? "Facile" : "Dur"}</div>
-                          </div>
-                        </div>
-                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                          {s.tempsReel && <span style={{ fontSize: 9, color: "#444", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
-                          {s.energie && <span style={{ fontSize: 9, color: "#444", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
-                          {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 9, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 5, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
-                        </div>
-                        {s.charges && <div style={{ fontSize: 11, color: "#444", marginTop: 6, lineHeight: 1.5 }}>{s.charges.slice(0, 80)}{s.charges.length > 80 ? "…" : ""}</div>}
-                        {adapt && (
-                          <div style={{ marginTop: 8, background: "rgba(232,255,71,0.05)", borderRadius: 8, padding: "6px 10px", fontSize: 11, color: "var(--yellow)", lineHeight: 1.4 }}>
-                            🤖 {adapt.adaptation}
-                          </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
+
+                      {/* Filter chips */}
+                      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 12, scrollbarWidth: "none" }}>
+                        {FILTER_CHIPS.map(chip => {
+                          const active = journalFilter === chip.id;
+                          const conf = TYPE_CONF_J[chip.id];
+                          const chipColor = conf ? conf.color : "var(--yellow)";
+                          return (
+                            <button key={chip.id} onClick={() => { haptic([6]); setJournalFilter(chip.id); }} style={{
+                              flexShrink: 0, border: `1px solid ${active ? chipColor : "rgba(255,255,255,0.08)"}`,
+                              borderRadius: 20, padding: "6px 12px", fontSize: 11, fontWeight: 700,
+                              background: active ? `${chipColor}18` : "rgba(255,255,255,0.03)",
+                              color: active ? chipColor : "#444",
+                              transition: "all 0.18s var(--spring)",
+                              display: "flex", alignItems: "center", gap: 5,
+                            }}>
+                              <span>{chip.icon}</span>
+                              <span>{chip.label}</span>
+                              {chip.id !== "all" && (
+                                <span style={{ fontSize: 9, opacity: 0.7 }}>
+                                  {allSessions.filter(s => s.type === chip.id).length}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Session cards */}
+                      {filtered.length === 0 ? (
+                        <div style={{ textAlign: "center", padding: "24px 16px", color: "#444", fontSize: 13 }}>
+                          Aucune séance de ce type pour l'instant.
+                        </div>
+                      ) : filtered.map((s, i) => {
+                        const origIdx = allSessions.indexOf(s);
+                        const num = total - origIdx;
+                        const adapt = (profile.adaptations||[])[num - 1];
+                        const conf = TYPE_CONF_J[s.type] || { icon: "💪", label: "Séance", color: "var(--white)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.15)" };
+                        const ressentiColor = s.ressenti === "bien" ? "var(--green)" : s.ressenti === "facile" ? "var(--yellow)" : s.ressenti === "dur" ? "var(--red)" : "#555";
+                        const isExpanded = expandedSessions[num];
+                        const rpeBar = (s.difficulte || 0) / 10;
+                        return (
+                          <div key={i} onClick={() => { setExpandedSessions(e => ({ ...e, [num]: !e[num] })); haptic([6]); }}
+                            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${isExpanded ? conf.color + "40" : "rgba(255,255,255,0.06)"}`, borderLeft: `3px solid ${conf.color}`, borderRadius: 16, padding: "14px 16px", marginBottom: 8, cursor: "pointer", transition: "all 0.2s var(--ease-out)" }}>
+                            {/* Card header */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                  <span style={{ fontSize: 15 }}>{conf.icon}</span>
+                                  <span style={{ fontSize: 9, color: conf.color, fontWeight: 700, background: conf.bg, border: `1px solid ${conf.border}`, borderRadius: 8, padding: "1px 7px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{conf.label}</span>
+                                  <span style={{ fontSize: 9, color: "#333" }}>#{num}</span>
+                                  <span style={{ fontSize: 9, color: "#333" }}>·</span>
+                                  <span style={{ fontSize: 9, color: "#444" }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                                </div>
+                                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isExpanded ? "normal" : "nowrap" }}>{s.titre}</div>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 10 }}>
+                                {s.difficulte && (
+                                  <div style={{ textAlign: "center" }}>
+                                    <div className="bebas" style={{ fontSize: 22, color: ressentiColor, lineHeight: 1 }}>{s.difficulte}<span style={{ fontSize: 9, color: "#333" }}>/10</span></div>
+                                  </div>
+                                )}
+                                <div style={{ fontSize: 14, color: "#333", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</div>
+                              </div>
+                            </div>
+
+                            {/* RPE bar */}
+                            {s.difficulte && (
+                              <div style={{ marginTop: 8, height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${rpeBar * 100}%`, background: ressentiColor, borderRadius: 2, transition: "width 0.4s var(--ease-out)" }} />
+                              </div>
+                            )}
+
+                            {/* Pills row */}
+                            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
+                              {s.tempsReel && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
+                              {s.energie && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
+                              {s.ressenti && <span style={{ fontSize: 9, color: ressentiColor, background: `${ressentiColor}12`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{s.ressenti === "bien" ? "Calibré" : s.ressenti === "facile" ? "Facile" : "Dur"}</span>}
+                              {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 9, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 5, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
+                            </div>
+
+                            {/* Expanded details */}
+                            {isExpanded && (
+                              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.05)", animation: "fadeIn 0.2s ease" }}>
+                                {s.charges && (
+                                  <div style={{ fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 8 }}>
+                                    <span style={{ fontSize: 10, color: "#333", fontWeight: 700, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes charges</span>
+                                    {s.charges}
+                                  </div>
+                                )}
+                                {(s.exercices||[]).length > 0 && (
+                                  <div style={{ marginBottom: 8 }}>
+                                    <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Exercices ({s.exercices.length})</div>
+                                    {s.exercices.slice(0,6).map((ex, ei) => (
+                                      <div key={ei} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: conf.color, flexShrink: 0 }} />
+                                        <div style={{ fontSize: 12, color: "#aaa", flex: 1 }}>{typeof ex === "string" ? ex : ex.label || ex.nom || JSON.stringify(ex)}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {adapt && (
+                                  <div style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--yellow)", lineHeight: 1.5 }}>
+                                    🤖 <strong>Adaptation IA :</strong> {adapt.adaptation}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Adaptations IA</div>
