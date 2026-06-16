@@ -2086,6 +2086,73 @@ function WeeklySummaryCard({ profile }) {
 function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [tab, setTab] = useState("home");
   const [tabDir, setTabDir] = useState(1); // 1=droite, -1=gauche
+
+  // ── PWA Install prompt
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    // Détecter si déjà installée
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+      return;
+    }
+    // Capturer le prompt d'installation Chrome/Android
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      // Afficher le banner après 3s si pas encore installé
+      setTimeout(() => setShowInstallBanner(true), 3000);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  async function triggerInstall() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") { setIsInstalled(true); setShowInstallBanner(false); }
+    setInstallPrompt(null);
+  }
+
+  // ── Notifications push locales
+  const [notifGranted, setNotifGranted] = useState(Notification?.permission === "granted");
+
+  async function requestNotifPermission() {
+    if (!("Notification" in window)) return;
+    const perm = await Notification.requestPermission();
+    setNotifGranted(perm === "granted");
+    if (perm === "granted") scheduleLocalNotifications();
+  }
+
+  function scheduleLocalNotifications() {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.ready.then(reg => {
+      // Notification séance — 8h00 le lendemain
+      const now = new Date();
+      const tomorrow8h = new Date(now);
+      tomorrow8h.setDate(tomorrow8h.getDate() + 1);
+      tomorrow8h.setHours(8, 0, 0, 0);
+      const delay8h = tomorrow8h - now;
+      reg.active?.postMessage({ type: "SCHEDULE_NOTIF", delay: delay8h,
+        title: "💪 FitRace — Séance du jour",
+        body: `${profile.name}, ta séance est prête. Lance-toi !`,
+        url: "/?tab=today"
+      });
+      // Notification nutrition — 12h30
+      const midi = new Date(now);
+      midi.setHours(now.getHours() >= 12 ? 24 + 12 : 12, 30, 0, 0);
+      if (now.getHours() >= 12) midi.setDate(midi.getDate() + 1);
+      const delayMidi = midi - now;
+      reg.active?.postMessage({ type: "SCHEDULE_NOTIF", delay: delayMidi,
+        title: "🥗 FitRace — Journal nutrition",
+        body: "As-tu pensé à enregistrer ton repas de midi ?",
+        url: "/?tab=nutri"
+      });
+    });
+  }
   const TAB_ORDER = ["home","today","progress","race","planning","technique","profil","zones"];
   const navigateTo = (newTab) => {
     const cur = TAB_ORDER.indexOf(tab); const nxt = TAB_ORDER.indexOf(newTab);
@@ -2700,6 +2767,23 @@ JSON:
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: 80 }}>
       <style>{GLOBAL_STYLES}</style>
+
+      {/* ── PWA Install Banner ── */}
+      {showInstallBanner && !isInstalled && (
+        <div className="slide-up" style={{ position: "fixed", bottom: 90, left: 16, right: 16, zIndex: 500, maxWidth: 480, margin: "0 auto" }}>
+          <div style={{ background: "linear-gradient(135deg, #131500 0%, #0a0a00 100%)", border: "1.5px solid rgba(232,255,71,0.35)", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(232,255,71,0.12)", border: "1px solid rgba(232,255,71,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📲</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", marginBottom: 2 }}>Installer FitRace</div>
+              <div style={{ fontSize: 11, color: "#555", lineHeight: 1.4 }}>Accès rapide depuis ton écran d'accueil</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button onClick={() => setShowInstallBanner(false)} style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, padding: "7px 10px", color: "#444", fontSize: 12, cursor: "pointer" }}>Plus tard</button>
+              <button onClick={triggerInstall} style={{ background: "var(--yellow)", border: "none", borderRadius: 8, padding: "7px 14px", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Installer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Video Modal */}
       {videoModal && <VideoModal mouvement={videoModal} onClose={() => setVideoModal(null)} />}
@@ -4537,7 +4621,7 @@ JSON:
         {/* COURSE & TECHNIQUE */}
         {tab === "nutri" && <NutritionTab profile={profile} />}
         {tab === "technique" && <TechniqueTab />}
-        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} />}
+        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
         {tab === "planning" && (
           <PlanningTab
             profile={profile}
@@ -4551,7 +4635,7 @@ JSON:
         {tab === "race" && <RaceTab profile={profile} />}
 
         {/* PROFIL */}
-        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} />}
+        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
 
       </div>
 
@@ -4592,7 +4676,7 @@ JSON:
 // ============================================================
 // ONGLET PROFIL (modifiable)
 // ============================================================
-function ProfilTab({ profile, onUpdateProfile, onLogout }) {
+function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstalled, triggerInstall, notifGranted, requestNotifPermission }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     poids: profile.poids || "",
@@ -4836,6 +4920,43 @@ function ProfilTab({ profile, onUpdateProfile, onLogout }) {
           </div>
         );
       })()}
+
+      {/* ── PWA + NOTIFICATIONS ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Application</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
+          {/* Install PWA */}
+          {!isInstalled ? (
+            <button onClick={triggerInstall || (() => {})} style={{ display: "flex", alignItems: "center", gap: 14, background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 14, padding: "14px 16px", cursor: installPrompt ? "pointer" : "default", width: "100%", textAlign: "left" }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📲</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--yellow)", marginBottom: 2 }}>Installer l'app</div>
+                <div style={{ fontSize: 11, color: "#444" }}>{installPrompt ? "Ajouter à l'écran d'accueil" : "Ouvre dans Chrome → ⋮ → Installer l'application"}</div>
+              </div>
+              {installPrompt && <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>INSTALLER →</div>}
+            </button>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 14, padding: "14px 16px" }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(57,255,128,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>✅</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--green)", marginBottom: 2 }}>App installée</div>
+                <div style={{ fontSize: 11, color: "#444" }}>FitRace est sur ton écran d'accueil</div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications */}
+          <button onClick={notifGranted ? null : requestNotifPermission} style={{ display: "flex", alignItems: "center", gap: 14, background: notifGranted ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)", border: `1px solid ${notifGranted ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "14px 16px", cursor: notifGranted ? "default" : "pointer", width: "100%", textAlign: "left" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: notifGranted ? "rgba(57,255,128,0.1)" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{notifGranted ? "🔔" : "🔕"}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: notifGranted ? "var(--green)" : "#888", marginBottom: 2 }}>{notifGranted ? "Notifications actives" : "Activer les notifications"}</div>
+              <div style={{ fontSize: 11, color: "#444" }}>{notifGranted ? "Rappels séance, nutrition & streak" : "Séance du jour · Bilan nutrition · Streak"}</div>
+            </div>
+            {!notifGranted && <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>ACTIVER →</div>}
+          </button>
+        </div>
+      </div>
 
       {/* ── DÉCONNEXION ── */}
       <div style={{ marginTop: 8, marginBottom: 32 }}>
