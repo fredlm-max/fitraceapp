@@ -9246,6 +9246,161 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RÉSULTATS DE COURSES OFFICIELLES ── */}
+      {(()=>{
+        const raceLogKey = `fitrace_race_results_${profile.name}`;
+        const [raceResults, setRaceResults] = React.useState([]);
+        const [showAddRace, setShowAddRace] = React.useState(false);
+        const [newRace, setNewRace] = React.useState({ date: "", location: "", category: profile.hyroxCategorie || "open", timeH: "", timeM: "", timeS: "", rank: "", totalParticipants: "", notes: "" });
+
+        React.useEffect(() => {
+          storage.get(raceLogKey).then(r => { if (r) setRaceResults(r); });
+        }, []);
+
+        const saveRace = async () => {
+          if (!newRace.date || !newRace.timeH) return;
+          const result = {
+            ...newRace,
+            id: Date.now(),
+            totalTime: `${String(newRace.timeH).padStart(1,"0")}:${String(newRace.timeM||"00").padStart(2,"0")}:${String(newRace.timeS||"00").padStart(2,"0")}`,
+            totalSecs: parseInt(newRace.timeH||0)*3600 + parseInt(newRace.timeM||0)*60 + parseInt(newRace.timeS||0),
+          };
+          const updated = [...raceResults, result].sort((a,b) => b.id - a.id);
+          setRaceResults(updated);
+          await storage.set(raceLogKey, updated);
+          setShowAddRace(false);
+          setNewRace({ date: "", location: "", category: profile.hyroxCategorie || "open", timeH: "", timeM: "", timeS: "", rank: "", totalParticipants: "", notes: "" });
+        };
+
+        const bestTime = raceResults.length ? raceResults.reduce((best, r) => r.totalSecs < (best?.totalSecs || Infinity) ? r : best, null) : null;
+
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏅 Mes Résultats de Courses</div>
+              <button onClick={() => setShowAddRace(true)} style={{ background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11, color: "var(--yellow)", cursor: "pointer", fontWeight: 700 }}>+ Ajouter</button>
+            </div>
+
+            {/* Add race modal */}
+            {showAddRace && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 500, display: "flex", alignItems: "flex-end" }}
+                onClick={() => setShowAddRace(false)}>
+                <div className="slide-up" onClick={e => e.stopPropagation()}
+                  style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "80vh", overflowY: "auto" }}>
+                  <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
+                  <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", marginBottom: 20 }}>📝 NOUVELLE COURSE</div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Date</div>
+                      <input type="date" value={newRace.date} onChange={e => setNewRace(r => ({ ...r, date: e.target.value }))}
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, outline: "none" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Ville</div>
+                      <input type="text" value={newRace.location} onChange={e => setNewRace(r => ({ ...r, location: e.target.value }))} placeholder="Paris, Lyon..."
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, outline: "none" }} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Catégorie</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {["Open","Pro","Mixed Relay","Doubles"].map(cat => (
+                        <button key={cat} onClick={() => setNewRace(r => ({ ...r, category: cat.toLowerCase() }))}
+                          style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, background: newRace.category === cat.toLowerCase() ? "rgba(232,255,71,0.15)" : "var(--bg3)", border: `1.5px solid ${newRace.category === cat.toLowerCase() ? "var(--yellow)" : "transparent"}`, color: newRace.category === cat.toLowerCase() ? "var(--yellow)" : "#555", cursor: "pointer" }}>
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Temps total</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {[["timeH","H","0-3"],["timeM","min","00-59"],["timeS","sec","00-59"]].map(([k,lbl,pl]) => (
+                        <div key={k} style={{ flex: 1, textAlign: "center" }}>
+                          <input type="number" value={newRace[k]} onChange={e => setNewRace(r => ({ ...r, [k]: e.target.value }))} placeholder={pl}
+                            style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "14px 4px", color: "var(--white)", fontSize: 24, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                          <div style={{ fontSize: 9, color: "#333", marginTop: 4 }}>{lbl}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Classement</div>
+                      <input type="number" value={newRace.rank} onChange={e => setNewRace(r => ({ ...r, rank: e.target.value }))} placeholder="ex: 42"
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Total participants</div>
+                      <input type="number" value={newRace.totalParticipants} onChange={e => setNewRace(r => ({ ...r, totalParticipants: e.target.value }))} placeholder="ex: 350"
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Bilan / Notes</div>
+                    <textarea value={newRace.notes} onChange={e => setNewRace(r => ({ ...r, notes: e.target.value }))} placeholder="Ce qui a bien marché, ce qui est à améliorer..."
+                      style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, minHeight: 60, resize: "vertical", outline: "none", fontFamily: "'DM Sans',sans-serif" }} />
+                  </div>
+
+                  <button onClick={saveRace} disabled={!newRace.date || !newRace.timeH}
+                    style={{ width: "100%", padding: 16, background: newRace.date && newRace.timeH ? "var(--yellow)" : "rgba(255,255,255,0.05)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: newRace.date && newRace.timeH ? "#000" : "#333", cursor: newRace.date && newRace.timeH ? "pointer" : "default" }}>
+                    🏁 ENREGISTRER MA COURSE
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {raceResults.length === 0 ? (
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,71,71,0.15)", borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>🏅</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)", marginBottom: 6 }}>Aucun résultat encore</div>
+                <div style={{ fontSize: 12, color: "#444" }}>Ajoute ton premier temps de course officiel</div>
+              </div>
+            ) : (
+              <>
+                {bestTime && (
+                  <div style={{ background: "linear-gradient(135deg, rgba(255,71,71,0.08), rgba(232,255,71,0.04))", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ fontSize: 32 }}>🏆</div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Meilleur temps</div>
+                      <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", lineHeight: 1 }}>{bestTime.totalTime}</div>
+                      <div style={{ fontSize: 11, color: "#555" }}>{bestTime.location} · {new Date(bestTime.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
+                    </div>
+                  </div>
+                )}
+                {raceResults.map((r, i) => (
+                  <div key={r.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,71,71,0.12)", borderLeft: "3px solid rgba(255,71,71,0.3)", borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+                          <span style={{ fontSize: 9, color: "#444", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase", fontWeight: 700 }}>{r.category}</span>
+                          <span style={{ fontSize: 10, color: "#444" }}>{r.location || "HYROX"}</span>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 24, color: r.id === bestTime?.id ? "var(--yellow)" : "var(--white)", lineHeight: 1 }}>{r.totalTime}</div>
+                        <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
+                      </div>
+                      {r.rank && r.totalParticipants && (
+                        <div style={{ textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "8px 12px" }}>
+                          <div className="bebas" style={{ fontSize: 22, color: "var(--red)", lineHeight: 1 }}>{r.rank}</div>
+                          <div style={{ fontSize: 9, color: "#444" }}>/ {r.totalParticipants}</div>
+                          <div style={{ fontSize: 9, color: "#444" }}>Top {Math.round((r.rank / r.totalParticipants) * 100)}%</div>
+                        </div>
+                      )}
+                    </div>
+                    {r.notes && <div style={{ fontSize: 11, color: "#555", marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>{r.notes}</div>}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── CALCULATEUR DE SPLITS ── */}
       {(() => {
         const STATIONS_SPLITS = [
