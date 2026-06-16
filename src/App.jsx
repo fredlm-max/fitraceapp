@@ -5569,6 +5569,59 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         </div>
       )}
 
+      {/* ── MINI-CALENDRIER MENSUEL ── */}
+      {(() => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Lun
+        const sessionDates = new Set((profile.sessions||[]).map(s => s.date?.slice(0,10)));
+        const monthName = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+        const cells = [];
+        for (let i = 0; i < firstDow; i++) cells.push(null);
+        for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+        return (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--yellow)", textTransform: "capitalize" }}>{monthName}</div>
+              <div style={{ fontSize: 10, color: "#333" }}>{sessionDates.size} séances ce mois</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 6 }}>
+              {["L","M","M","J","V","S","D"].map((d,i) => (
+                <div key={i} style={{ textAlign: "center", fontSize: 8, color: "#2a2a2a", fontWeight: 700, paddingBottom: 4 }}>{d}</div>
+              ))}
+              {cells.map((d, i) => {
+                if (!d) return <div key={`e${i}`} />;
+                const iso = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                const done = sessionDates.has(iso);
+                const isToday = d === now.getDate();
+                const isPast = new Date(iso) < new Date(now.toDateString());
+                return (
+                  <div key={i} style={{ textAlign: "center", padding: "2px 0" }}>
+                    <div style={{
+                      width: "100%", aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 9, fontWeight: isToday ? 700 : 400,
+                      background: done ? "rgba(57,255,128,0.15)" : isToday ? "rgba(232,255,71,0.12)" : "transparent",
+                      border: done ? "1px solid rgba(57,255,128,0.3)" : isToday ? "1.5px solid var(--yellow)" : "none",
+                      color: done ? "var(--green)" : isToday ? "var(--yellow)" : isPast ? "#2a2a2a" : "#444",
+                    }}>{d}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#333" }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(57,255,128,0.3)", border: "1px solid rgba(57,255,128,0.4)" }} />Séance réalisée
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#333" }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, border: "1.5px solid var(--yellow)" }} />Aujourd'hui
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div>
           <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", letterSpacing: 1 }}>
