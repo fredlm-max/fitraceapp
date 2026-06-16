@@ -8036,6 +8036,98 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           </div>
         );
       })()}
+
+      {/* ── CALCULATEUR DE SPLITS ── */}
+      {(() => {
+        const STATIONS_SPLITS = [
+          { id: "ski", label: "SkiErg", icon: "⛷️", dist: "1000m", refH: 210, refF: 270 },
+          { id: "sledpush", label: "Sled Push", icon: "🛷", dist: "50m", refH: 180, refF: 240 },
+          { id: "sledpull", label: "Sled Pull", icon: "🔗", dist: "50m", refH: 150, refF: 200 },
+          { id: "burpee", label: "Burpee BJ", icon: "🤸", dist: "80m", refH: 300, refF: 360 },
+          { id: "rowing", label: "Rowing", icon: "🚣", dist: "1000m", refH: 210, refF: 270 },
+          { id: "farmers", label: "Farmers Carry", icon: "🧳", dist: "200m", refH: 120, refF: 150 },
+          { id: "sandbag", label: "Sandbag Lunges", icon: "🎒", dist: "100m", refH: 240, refF: 300 },
+          { id: "wallballs", label: "Wall Balls", icon: "🏀", dist: "100 reps", refH: 300, refF: 420 },
+        ];
+        const RUN_DIST_KM = 1; // 1km par segment running × 8 = 8km
+        const gender = profile.genre === "F" ? "F" : "H";
+
+        const [targetH, setTargetH] = React.useState("1");
+        const [targetM, setTargetM] = React.useState("30");
+        const [splitsOpen, setSplitsOpen] = React.useState(false);
+
+        const totalSecs = (parseInt(targetH)||0)*3600 + (parseInt(targetM)||0)*60;
+        const stationsTotal = STATIONS_SPLITS.reduce((a,s) => a + (gender==="H" ? s.refH : s.refF), 0);
+        const transitionsSecs = 8 * 30; // ~30s par transition
+        const runSecs = Math.max(0, totalSecs - stationsTotal - transitionsSecs);
+        const runPacePerKm = runSecs / 8;
+        const paceMin = Math.floor(runPacePerKm / 60);
+        const paceSec = Math.round(runPacePerKm % 60);
+        const fmtSplit = (s) => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`;
+
+        return (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
+            <div onClick={() => setSplitsOpen(o=>!o)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: splitsOpen ? 14 : 0 }}>
+              <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>⏱ Calculateur de splits race</div>
+              <div style={{ color: "#333", fontSize: 14, transform: splitsOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+            </div>
+            {splitsOpen && (
+              <>
+                {/* Saisie temps cible */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, color: "#666" }}>Temps cible :</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input type="number" min="0" max="5" value={targetH} onChange={e => setTargetH(e.target.value)}
+                      style={{ width: 50, background: "#111", border: "1px solid #333", borderRadius: 8, padding: "8px 10px", color: "var(--yellow)", fontSize: 16, fontWeight: 700, textAlign: "center" }} />
+                    <span style={{ color: "#555", fontWeight: 700 }}>h</span>
+                    <input type="number" min="0" max="59" value={targetM} onChange={e => setTargetM(e.target.value)}
+                      style={{ width: 50, background: "#111", border: "1px solid #333", borderRadius: 8, padding: "8px 10px", color: "var(--yellow)", fontSize: 16, fontWeight: 700, textAlign: "center" }} />
+                    <span style={{ color: "#555", fontWeight: 700 }}>min</span>
+                  </div>
+                </div>
+
+                {/* Résumé running */}
+                <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: "#777" }}>🏃 Allure running (8 × 1km)</span>
+                    <span className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>{paceMin}:{String(paceSec).padStart(2,"0")} /km</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 11, color: "#444" }}>Stations estimées</span>
+                    <span style={{ fontSize: 11, color: "#555" }}>{fmtSplit(stationsTotal)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                    <span style={{ fontSize: 11, color: "#444" }}>Running total</span>
+                    <span style={{ fontSize: 11, color: "#555" }}>{fmtSplit(runSecs)}</span>
+                  </div>
+                </div>
+
+                {/* Splits par station */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {STATIONS_SPLITS.map((st, i) => {
+                    const refSecs = gender === "H" ? st.refH : st.refF;
+                    const ratio = refSecs / stationsTotal;
+                    const allocated = Math.round(ratio * (totalSecs - runSecs - transitionsSecs));
+                    return (
+                      <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 28, fontSize: 16, textAlign: "center", flexShrink: 0 }}>{st.icon}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, color: "#777", marginBottom: 2 }}>{st.label} <span style={{ color: "#333" }}>· {st.dist}</span></div>
+                          <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${(refSecs/Math.max(...STATIONS_SPLITS.map(s=>gender==="H"?s.refH:s.refF)))*100}%`, background: "rgba(232,255,71,0.4)", borderRadius: 99 }} />
+                          </div>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", minWidth: 42, textAlign: "right" }}>{fmtSplit(allocated)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 9, color: "#2a2a2a", textAlign: "center", marginTop: 10 }}>Estimations basées sur les temps de référence {gender === "H" ? "masculins" : "féminins"} HYROX</div>
+              </>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
