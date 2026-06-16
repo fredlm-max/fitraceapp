@@ -6273,6 +6273,38 @@ JSON: {
       {/* ══ JOURNAL ══ */}
       {subTab === "journal" && (
         <div>
+          {/* ── SUGGESTIONS RAPIDES ── */}
+          {(() => {
+            const QUICK_FOODS = [
+              { emoji: "🍌", nom: "Banane", kcal: 89, p: 1, g: 23, l: 0 },
+              { emoji: "🥚", nom: "Œufs x2", kcal: 156, p: 12, g: 1, l: 11 },
+              { emoji: "🍗", nom: "Blanc poulet 150g", kcal: 165, p: 31, g: 0, l: 3 },
+              { emoji: "🥛", nom: "Yaourt grec 200g", kcal: 130, p: 10, g: 9, l: 4 },
+              { emoji: "🌾", nom: "Flocons avoine 60g", kcal: 220, p: 7, g: 40, l: 4 },
+              { emoji: "🥜", nom: "Amandes 30g", kcal: 174, p: 6, g: 5, l: 15 },
+              { emoji: "🍚", nom: "Riz cuit 150g", kcal: 195, p: 4, g: 43, l: 0 },
+              { emoji: "🥤", nom: "Whey shake", kcal: 130, p: 25, g: 5, l: 2 },
+            ];
+            return (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "#2a2a2a", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>⚡ Ajout rapide HYROX</div>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+                  {QUICK_FOODS.map((f, i) => (
+                    <button key={i} onClick={() => ajouterAliment(f)} style={{
+                      flexShrink: 0, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                      borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "center", minWidth: 76,
+                    }}>
+                      <div style={{ fontSize: 20, marginBottom: 4 }}>{f.emoji}</div>
+                      <div style={{ fontSize: 9, color: "#888", lineHeight: 1.3, marginBottom: 3 }}>{f.nom.split(" ")[0]}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--yellow)" }}>{f.kcal}</div>
+                      <div style={{ fontSize: 8, color: "#333" }}>kcal</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Liste repas */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
