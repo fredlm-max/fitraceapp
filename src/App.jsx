@@ -2226,6 +2226,10 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [reposRunning, setReposRunning] = useState(false);
   const [lapTimes, setLapTimes] = useState([]);            // historique des laps
   const [showShareCard, setShowShareCard] = useState(false);
+  const [tourStep, setTourStep] = useState(() => {
+    try { return localStorage.getItem("fitrace_tour_done") ? -1 : 0; } catch { return -1; }
+  });
+  const dismissTour = () => { localStorage.setItem("fitrace_tour_done", "1"); setTourStep(-1); };
   const [videoModal, setVideoModal] = useState(null);
   const [planningWeek, setPlanningWeek] = useState(null);
   const [loadingPlanning, setLoadingPlanning] = useState(false);
@@ -3279,6 +3283,47 @@ JSON:
           </div>
         </div>
       )}
+
+      {/* ── TOUR GUIDÉ (premier lancement) ── */}
+      {tourStep >= 0 && (() => {
+        const STEPS = [
+          { icon: "⚡", title: "Séance du jour", body: "Chaque jour, ton coach IA génère une séance personnalisée selon ton profil, ta fatigue et ton historique. Tape sur \"Séance\" pour commencer.", tab: "today" },
+          { icon: "📈", title: "Suis ta progression", body: "L'onglet Stats affiche tes graphiques de progression, ton score de condition, et tes records personnels.", tab: "progress" },
+          { icon: "📅", title: "Plan ta semaine", body: "Génère ton planning hebdomadaire optimisé par l'IA. Coche les séances réalisées au fur et à mesure.", tab: "planning" },
+          { icon: "🤖", title: "Coach IA disponible 24h/24", body: "Le bouton 🤖 en bas à droite ouvre le coach chat. Pose-lui n'importe quelle question sur HYROX, ta nutrition ou ta technique !", tab: null },
+        ];
+        const step = STEPS[tourStep] || STEPS[0];
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 20 }}>
+            <div className="slide-up" style={{ width: "100%", maxWidth: 440, background: "linear-gradient(145deg, #131500 0%, #0a0f00 100%)", border: "1.5px solid rgba(232,255,71,0.4)", borderRadius: 24, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}>
+              {/* Dots de progression */}
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 20 }}>
+                {STEPS.map((_, i) => (
+                  <div key={i} style={{ width: i === tourStep ? 20 : 6, height: 6, borderRadius: 99, background: i === tourStep ? "var(--yellow)" : i < tourStep ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.08)", transition: "all 0.3s" }} />
+                ))}
+              </div>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: 44, marginBottom: 12 }}>{step.icon}</div>
+                <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", letterSpacing: 1, marginBottom: 10 }}>{step.title}</div>
+                <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7 }}>{step.body}</div>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={dismissTour} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, color: "#555", fontSize: 13, cursor: "pointer" }}>
+                  Passer
+                </button>
+                <button onClick={() => {
+                  if (step.tab) navigateTo(step.tab);
+                  if (tourStep < STEPS.length - 1) setTourStep(t => t + 1);
+                  else dismissTour();
+                }} style={{ flex: 2, padding: "12px", background: "var(--yellow)", border: "none", borderRadius: 12, color: "#000", fontSize: 14, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer" }}>
+                  {tourStep < STEPS.length - 1 ? "SUIVANT →" : "C'EST PARTI ! 🚀"}
+                </button>
+              </div>
+              <div style={{ textAlign: "center", fontSize: 11, color: "#333", marginTop: 12 }}>{tourStep + 1} / {STEPS.length}</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Header sticky premium */}
       {(() => {
