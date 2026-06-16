@@ -6119,7 +6119,7 @@ JSON:
                   const ds = d.toISOString().split("T")[0];
                   loads.push(storage.get(getDailyLogKey(profile.name, ds)).then(v => ({ date: ds, ...(v || {}) })));
                 }
-                Promise.all(loads).then(logs => setBodyLogs(logs.filter(l => l.sleepHours || l.poidsJour)));
+                Promise.all(loads).then(logs => setBodyLogs(logs.filter(l => l.sleepHours || l.poidsJour || l.hrv)));
               }, []);
 
               if (bodyLogs.length < 3) return null;
@@ -6210,6 +6210,35 @@ JSON:
                       <div style={{ fontSize: 8, color: "#222", marginTop: 2, textAlign: "right" }}>--- objectif 8h</div>
                     </div>
                   )}
+
+                  {/* HRV chart */}
+                  {(()=>{
+                    const hrvLogs = bodyLogs.filter(l => l.hrv && parseInt(l.hrv) > 0);
+                    if (hrvLogs.length < 2) return null;
+                    const avgHrv = (hrvLogs.reduce((a,l) => a + parseInt(l.hrv), 0) / hrvLogs.length).toFixed(0);
+                    const lastHrv = parseInt(hrvLogs[hrvLogs.length-1].hrv);
+                    const hrvColor = lastHrv>=70?"var(--green)":lastHrv>=55?"var(--yellow)":lastHrv>=40?"var(--orange)":"var(--red)";
+                    return (
+                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                          <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>💓 HRV matin</div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <span className="bebas" style={{ fontSize: 20, color: hrvColor, lineHeight: 1 }}>{lastHrv}</span>
+                            <span style={{ fontSize: 9, color: "#444" }}>moy. {avgHrv}ms</span>
+                          </div>
+                        </div>
+                        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                          {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                          {renderLine(hrvLogs, l => parseInt(l.hrv), hrvColor)}
+                        </svg>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#222", marginTop: 2 }}>
+                          <span>{hrvLogs[0]?.date?.slice(5)}</span>
+                          <span style={{ color: hrvColor }}>{lastHrv>=70?"Excellent":lastHrv>=55?"Bon":lastHrv>=40?"Modéré":"Bas"}</span>
+                          <span>Auj.</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
