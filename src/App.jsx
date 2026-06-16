@@ -3557,6 +3557,82 @@ JSON:
               );
             })()}
 
+            {/* ── NIVEAU HYROX ── */}
+            {(() => {
+              const nbSessions = (profile.sessions||[]).length;
+              const sc = calcFitnessScore(profile);
+              const hasPR = !!(profile.squat1RM_final || profile.vmaKmh || profile.deadlift1RM_final);
+              const hasRace = !!(profile.raceDate);
+              const hasPlanning = !!(profile.planningWeek || profile.lastSimulation);
+              const techViewed = (() => { try { return Object.keys(JSON.parse(localStorage.getItem("fitrace_technique_viewed")||"{}")).length; } catch { return 0; } })();
+              // XP calculation
+              let xp = 0;
+              xp += nbSessions * 50;
+              xp += streak * 30;
+              xp += sc.global * 2;
+              if (hasPR) xp += 100;
+              if (hasRace) xp += 80;
+              if (hasPlanning) xp += 60;
+              xp += techViewed * 20;
+              xp += (profile.adaptations||[]).length * 40;
+
+              const LEVELS = [
+                { min: 0,    max: 200,  name: "Rookie",     icon: "🥉", color: "#cd7f32", gradient: "linear-gradient(135deg,#2a1800,#080808)" },
+                { min: 200,  max: 500,  name: "Challenger", icon: "🥈", color: "#adb5bd", gradient: "linear-gradient(135deg,#141414,#080808)" },
+                { min: 500,  max: 1000, name: "Compétiteur",icon: "🥇", color: "#e8ff47", gradient: "linear-gradient(135deg,#131500,#080808)" },
+                { min: 1000, max: 2000, name: "Athlète",    icon: "⚡", color: "#ff9a3c", gradient: "linear-gradient(135deg,#120800,#080808)" },
+                { min: 2000, max: 4000, name: "Pro",        icon: "🔥", color: "#ff4747", gradient: "linear-gradient(135deg,#1a0000,#080808)" },
+                { min: 4000, max: 9999, name: "ÉLITE",      icon: "🏆", color: "#a78bfa", gradient: "linear-gradient(135deg,#120020,#080808)" },
+              ];
+              const lvl = LEVELS.slice().reverse().find(l => xp >= l.min) || LEVELS[0];
+              const nextLvl = LEVELS[LEVELS.indexOf(lvl) + 1];
+              const progressPct = nextLvl ? Math.min(100, Math.round(((xp - lvl.min) / (nextLvl.min - lvl.min)) * 100)) : 100;
+              const xpToNext = nextLvl ? nextLvl.min - xp : 0;
+
+              return (
+                <div style={{ background: lvl.gradient, border: `1.5px solid ${lvl.color}33`, borderRadius: 18, padding: "16px 18px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                  {/* Glow */}
+                  <div style={{ position: "absolute", top: -40, right: -40, width: 150, height: 150, borderRadius: "50%", background: `radial-gradient(circle, ${lvl.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                    {/* Badge icon */}
+                    <div style={{ width: 56, height: 56, borderRadius: 16, background: `${lvl.color}18`, border: `2px solid ${lvl.color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0, boxShadow: `0 0 20px ${lvl.color}20` }}>
+                      {lvl.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>Niveau HYROX</div>
+                      <div className="bebas" style={{ fontSize: 28, color: lvl.color, lineHeight: 1, letterSpacing: 1 }}>{lvl.name}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>{xp} XP{nextLvl ? ` · encore ${xpToNext} XP` : " · niveau max !"}</div>
+                    </div>
+                    {/* XP badge */}
+                    <div style={{ textAlign: "center", background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "8px 12px", minWidth: 52 }}>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", marginBottom: 2 }}>XP</div>
+                      <div className="bebas" style={{ fontSize: 22, color: lvl.color, lineHeight: 1 }}>{xp}</div>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  {nextLvl && (
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em" }}>→ {nextLvl.name}</span>
+                        <span style={{ fontSize: 10, color: lvl.color, fontWeight: 700 }}>{progressPct}%</span>
+                      </div>
+                      <div style={{ height: 5, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
+                        <div style={{ height: "100%", width: `${progressPct}%`, background: `linear-gradient(90deg, ${lvl.color}aa, ${lvl.color})`, borderRadius: 99, transition: "width 0.8s ease", position: "relative" }}>
+                          <div style={{ position: "absolute", right: 0, top: -2, width: 9, height: 9, borderRadius: "50%", background: lvl.color, boxShadow: `0 0 8px ${lvl.color}` }} />
+                        </div>
+                      </div>
+                      {/* XP hints */}
+                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        {!hasPR && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+100 XP : ajouter un PR</span>}
+                        {!hasRace && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+80 XP : fixer une race</span>}
+                        {nbSessions < 5 && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+50 XP par séance</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* MESSAGE IA DU JOUR */}
             <div onClick={() => !loadingMessage && setShowMessageModal(true)}
               style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, cursor: "pointer" }}>
