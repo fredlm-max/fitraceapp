@@ -2818,15 +2818,56 @@ JSON:
                       <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7 }}>Salut <strong style={{ color: "var(--yellow)" }}>{profile.name}</strong> ! 👋 Je suis ton coach IA HYROX personnel. Connais ton profil, tes forces et tes objectifs. Pose-moi n'importe quelle question.</div>
                     </div>
                   </div>
-                  {/* Questions suggérées */}
+                  {/* Questions suggérées — contextuelles selon le tab */}
                   <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Suggestions</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                    {[
-                      "Comment améliorer mon Sled Push ?",
-                      "Que manger avant une séance de force ?",
-                      `Comment progresser avec ma VMA de ${profile.vmaKmh || "?"}km/h ?`,
-                      "Combien de jours de repos par semaine ?",
-                    ].map((q, i) => (
+                    {((() => {
+                      const lastSession = (profile.sessions||[]).slice(-1)[0];
+                      const byTab = {
+                        today: [
+                          `Quelle intensité pour ma séance aujourd'hui ? (fatigue actuelle: ${dailyData.fatigue}/4)`,
+                          lastSession ? `Comment récupérer après ma séance "${lastSession.titre?.slice(0,30)}" ?` : "Comment s'échauffer efficacement pour HYROX ?",
+                          "Combien de temps de repos entre les séries ?",
+                          "Que faire si je ressens une douleur pendant la séance ?",
+                        ],
+                        race: [
+                          `Comment optimiser mon objectif de course de ${profile.raceDate ? daysUntil(profile.raceDate) + " jours" : "?"} ?`,
+                          "Quelle stratégie adopter pour le Sled Push en course ?",
+                          "Comment gérer le running entre les stations ?",
+                          "Que faire la semaine avant la course ?",
+                        ],
+                        nutri: [
+                          `Quels macros pour mon poids de ${profile.poids || "?"}kg en phase d'entraînement intense ?`,
+                          "Que manger 2h avant une séance de force HYROX ?",
+                          "Comment optimiser ma récupération nutritionnelle ?",
+                          "Quels suppléments sont utiles pour HYROX ?",
+                        ],
+                        planning: [
+                          "Comment répartir mes séances dans la semaine ?",
+                          `Avec ${profile.seancesParSemaine || 4} séances/semaine, quelle périodisation choisir ?`,
+                          "Quand intégrer les sessions de mobilité ?",
+                          "Comment adapter le planning si je suis fatigué ?",
+                        ],
+                        progress: [
+                          profile.vmaKmh ? `Comment progresser au-delà de ma VMA de ${profile.vmaKmh}km/h ?` : "Comment calculer et améliorer ma VMA ?",
+                          profile.squat1RM_final ? `Mon squat est à ${profile.squat1RM_final}kg, comment dépasser ce plateau ?` : "Comment progresser en force pour HYROX ?",
+                          "Pourquoi mon RPE reste élevé même après 3 mois d'entraînement ?",
+                          "Comment lire et interpréter mes stats de progression ?",
+                        ],
+                        technique: [
+                          "Quelle est la technique optimale pour le Wall Ball ?",
+                          "Comment améliorer ma cadence sur le SkiErg ?",
+                          "Quelles erreurs éviter sur le Sandbag Lunge ?",
+                          "Comment respirer pendant le Rowing ergomètre ?",
+                        ],
+                      };
+                      return byTab[tab] || [
+                        "Comment améliorer mon Sled Push ?",
+                        `Comment progresser avec ma VMA de ${profile.vmaKmh || "?"}km/h ?`,
+                        "Combien de jours de repos par semaine ?",
+                        "Quelle est ta recommandation pour ce mois-ci ?",
+                      ];
+                    })()).map((q, i) => (
                       <button key={i} onClick={() => setChatInput(q)} style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "11px 14px", color: "#aaa", fontSize: 13, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 14, flexShrink: 0 }}>💬</span>
                         <span>{q}</span>
