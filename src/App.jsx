@@ -70,6 +70,30 @@ const GLOBAL_STYLES = `
 
   /* ── Safe area ── */
   .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); }
+
+  /* ── Input range (sliders) ── */
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 99px; background: rgba(255,255,255,0.08); outline: none; cursor: pointer; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--yellow); cursor: pointer; box-shadow: 0 2px 8px rgba(232,255,71,0.4); border: 2px solid rgba(255,255,255,0.2); transition: transform 0.15s var(--spring); }
+  input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.3); }
+  input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--yellow); cursor: pointer; border: 2px solid rgba(255,255,255,0.2); }
+
+  /* ── Text inputs premium ── */
+  input[type="text"], input[type="number"], input[type="email"], input[type="date"], textarea, select {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--white);
+    border-radius: 12px; padding: 12px 14px; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="date"]:focus, textarea:focus, select:focus {
+    background: rgba(255,255,255,0.06); border-color: rgba(232,255,71,0.5); box-shadow: 0 0 0 3px rgba(232,255,71,0.08);
+  }
+
+  /* ── Scrollbar slim ── */
+  * { scrollbar-width: thin; scrollbar-color: rgba(232,255,71,0.2) transparent; }
+
+  /* ── Selection color ── */
+  ::selection { background: rgba(232,255,71,0.25); color: var(--white); }
+
+  /* ── Focus ring ── */
+  :focus-visible { outline: 2px solid rgba(232,255,71,0.5); outline-offset: 2px; }
 `;
 
 // ============================================================
@@ -2855,6 +2879,9 @@ JSON:
   // ── Swipe gesture state ──
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchStartY, setTouchStartY] = useState(null);
+  const [showSwipeHint, setShowSwipeHint] = useState(() => {
+    try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
+  });
   const BOTTOM_TABS = ["home","today","progress","planning","profil"];
 
   function handleTouchStart(e) {
@@ -2868,8 +2895,13 @@ JSON:
     // Only horizontal swipes (dx > 55px, not mostly vertical)
     if (Math.abs(dx) > 55 && dy < 80) {
       const idx = BOTTOM_TABS.indexOf(tab);
-      if (dx < 0 && idx < BOTTOM_TABS.length - 1) navigateTo(BOTTOM_TABS[idx + 1]);
-      else if (dx > 0 && idx > 0) navigateTo(BOTTOM_TABS[idx - 1]);
+      if (dx < 0 && idx < BOTTOM_TABS.length - 1) {
+        navigateTo(BOTTOM_TABS[idx + 1]);
+        if (showSwipeHint) { localStorage.setItem("fitrace_swipe_hint_seen","1"); setShowSwipeHint(false); }
+      } else if (dx > 0 && idx > 0) {
+        navigateTo(BOTTOM_TABS[idx - 1]);
+        if (showSwipeHint) { localStorage.setItem("fitrace_swipe_hint_seen","1"); setShowSwipeHint(false); }
+      }
     }
     setTouchStartX(null);
     setTouchStartY(null);
@@ -5581,6 +5613,15 @@ JSON:
           }}
           title="Coach IA"
         >🤖</button>
+      )}
+
+      {/* Swipe hint */}
+      {showSwipeHint && (
+        <div style={{ position: "fixed", bottom: 92, left: "50%", transform: "translateX(-50%)", zIndex: 99, animation: "slideUp 0.4s var(--ease-out) 1.5s both", pointerEvents: "none" }}>
+          <div style={{ background: "rgba(232,255,71,0.9)", borderRadius: 20, padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#000", fontWeight: 700, backdropFilter: "blur(8px)", whiteSpace: "nowrap" }}>
+            <span style={{ animation: "pulse 1.5s ease infinite" }}>←</span> Glisse pour naviguer <span style={{ animation: "pulse 1.5s 0.3s ease infinite" }}>→</span>
+          </div>
+        </div>
       )}
 
       {/* Bottom Nav — Premium */}
