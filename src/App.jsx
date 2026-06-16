@@ -807,6 +807,44 @@ function buildWeeklySummary(profile) {
 }
 
 // ============================================================
+// RECOVERY SCORE — Score composite 0-100 pour le suivi pro
+// ============================================================
+function calcRecoveryScore(dailyData, profile) {
+  const sleepH = parseFloat(dailyData.sleepHours) || 7;
+  const sleepQ = parseInt(dailyData.sommeil) || 3;
+  const fatigue = parseInt(dailyData.fatigue) || 3;
+
+  // Sleep score: optimal 8h, quality 1-4
+  const sleepHScore = Math.min(1, sleepH / 8) * 0.7 + (sleepH >= 7 ? 0.3 : sleepH >= 6 ? 0.15 : 0);
+  const sleepFull = (sleepHScore * 0.55 + (sleepQ / 4) * 0.45) * 100;
+
+  // Fatigue score (frais = 4 = bon)
+  const fatigueScore = (fatigue / 4) * 100;
+
+  // Training load score
+  const lastSession = (profile.sessions || []).slice(-1)[0];
+  const daysSince = lastSession ? Math.max(0, Math.round((Date.now() - new Date(lastSession.date)) / 86400000)) : 7;
+  const lastRPE = lastSession?.difficulte || 5;
+  let loadScore = 80;
+  if (daysSince === 0) loadScore = Math.max(10, 80 - lastRPE * 7);
+  else if (daysSince === 1) loadScore = Math.max(30, 90 - lastRPE * 4);
+  else if (daysSince >= 2) loadScore = Math.min(100, 80 + daysSince * 3);
+
+  const score = Math.round(sleepFull * 0.42 + fatigueScore * 0.35 + loadScore * 0.23);
+  return Math.max(5, Math.min(100, score));
+}
+
+function recoveryLabel(score) {
+  if (score >= 80) return { label: "OPTIMAL", color: "var(--green)",  emoji: "🟢", tip: "Corps reposé — séance intense possible" };
+  if (score >= 65) return { label: "BON",     color: "var(--yellow)", emoji: "🟡", tip: "Bonne forme — séance normale recommandée" };
+  if (score >= 45) return { label: "MODÉRÉ",  color: "var(--orange)", emoji: "🟠", tip: "Fatigue accumulée — réduis le volume" };
+  return               { label: "FAIBLE",  color: "var(--red)",    emoji: "🔴", tip: "Récupère — sortie douce ou repos" };
+}
+
+// Storage clé quotidienne
+const getDailyLogKey = (name, dateStr) => `fitrace_daily_log_${name}_${dateStr}`;
+
+// ============================================================
 // API ANTHROPIC
 // ============================================================
 async function callClaude(systemPrompt, userPrompt, maxTokens = 1000) {
@@ -2265,7 +2303,24 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
     // Scroll to top on tab change
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   };
-  const [dailyData, setDailyData] = useState({ fatigue: 3, sommeil: 3, temps: 60, materiel: "tout", typeSeance: "auto" });
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [dailyData, setDailyData] = useState({ fatigue: 3, sommeil: 3, temps: 60, materiel: "tout", typeSeance: "auto", sleepHours: 7.5, poidsJour: profile.poids || "", hydration: 0 });
+  // Load today's daily log from storage
+  useEffect(() => {
+    const key = getDailyLogKey(profile.name, todayStr);
+    storage.get(key).then(saved => {
+      if (saved) setDailyData(d => ({ ...d, ...saved }));
+    });
+  }, []);
+  // Save daily log whenever dailyData changes (debounced)
+  const saveDailyLog = React.useCallback(async (data) => {
+    const key = getDailyLogKey(profile.name, todayStr);
+    await storage.set(key, { fatigue: data.fatigue, sommeil: data.sommeil, sleepHours: data.sleepHours, poidsJour: data.poidsJour, hydration: data.hydration, date: todayStr });
+  }, [profile.name, todayStr]);
+  useEffect(() => {
+    const t = setTimeout(() => saveDailyLog(dailyData), 600);
+    return () => clearTimeout(t);
+  }, [dailyData.fatigue, dailyData.sommeil, dailyData.sleepHours, dailyData.poidsJour, dailyData.hydration]);
   const [showSeancePerso, setShowSeancePerso] = useState(false);
   const [seancePerso, setSeancePerso] = useState({ titre: "", exercices: [{ nom: "", detail: "", note: "" }] });
   const [session, setSession] = useState(null);
@@ -3532,6 +3587,209 @@ JSON:
             <div style={{ position: "absolute", top: 60, right: -40, width: 200, height: 200, background: "radial-gradient(circle, rgba(232,255,71,0.06) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
             <div style={{ position: "absolute", top: 300, left: -60, width: 180, height: 180, background: "radial-gradient(circle, rgba(57,255,128,0.04) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
 
+            {/* ══════════════════════════════════════════
+                COMMAND CENTER — PRO ATHLETE DASHBOARD
+                ══════════════════════════════════════════ */}
+            {(() => {
+              const recovery = calcRecoveryScore(dailyData, profile);
+              const recov = recoveryLabel(recovery);
+              const todayNutrKey = `nutri_${profile.name}_${todayStr}`;
+              const [todayMacros, setTodayMacros] = React.useState(null);
+              const [last7Logs, setLast7Logs] = React.useState([]);
+
+              React.useEffect(() => {
+                // Load nutrition today
+                storage.get(todayNutrKey).then(repas => {
+                  if (repas && repas.length) {
+                    const tot = repas.reduce((a, r) => ({ kcal: a.kcal + (r.kcal||0), p: a.p + (r.p||0) }), { kcal: 0, p: 0 });
+                    setTodayMacros(tot);
+                  }
+                });
+                // Load last 7 daily logs
+                const loads = [];
+                for (let i = 6; i >= 0; i--) {
+                  const d = new Date(); d.setDate(d.getDate() - i);
+                  const ds = d.toISOString().split("T")[0];
+                  loads.push(storage.get(getDailyLogKey(profile.name, ds)).then(v => ({ date: ds, ...(v || {}) })));
+                }
+                Promise.all(loads).then(setLast7Logs);
+              }, []);
+
+              // SVG ring params
+              const r = 52; const circ = 2 * Math.PI * r;
+              const stroke = circ * (1 - recovery / 100);
+              const objNutrKcal = Math.round((profile.poids || 75) * 35);
+              const kcalPct = todayMacros ? Math.min(100, Math.round((todayMacros.kcal / objNutrKcal) * 100)) : null;
+              const protObj = Math.round((profile.poids || 75) * 2.2);
+              const protPct = todayMacros ? Math.min(100, Math.round((todayMacros.p / protObj) * 100)) : null;
+
+              // Weekly training load
+              const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+              const weekSessions = (profile.sessions||[]).filter(s => new Date(s.date) >= weekAgo);
+              const weekLoadPct = Math.min(100, Math.round((weekSessions.length / (profile.seancesParSemaine || 4)) * 100));
+
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  {/* Recovery Score Hero */}
+                  <div style={{ background: `linear-gradient(145deg, ${recov.color}08 0%, rgba(8,8,8,0) 70%)`, border: `1.5px solid ${recov.color}25`, borderRadius: 22, padding: "18px 18px 16px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: -30, right: -30, width: 160, height: 160, borderRadius: "50%", background: `radial-gradient(circle, ${recov.color}10 0%, transparent 70%)`, pointerEvents: "none" }} />
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                      {/* SVG Ring */}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <svg width="120" height="120" style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="9" />
+                          <circle cx="60" cy="60" r={r} fill="none" stroke={recov.color} strokeWidth="9"
+                            strokeDasharray={circ} strokeDashoffset={stroke}
+                            strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s var(--ease-out)" }} />
+                        </svg>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                          <div className="bebas" style={{ fontSize: 30, color: recov.color, lineHeight: 1 }}>{recovery}</div>
+                          <div style={{ fontSize: 8, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>/ 100</div>
+                        </div>
+                      </div>
+
+                      {/* Recovery details */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>Récupération</div>
+                        <div className="bebas" style={{ fontSize: 24, color: recov.color, letterSpacing: 1, lineHeight: 1, marginBottom: 4 }}>{recov.label}</div>
+                        <div style={{ fontSize: 11, color: "#666", lineHeight: 1.5, marginBottom: 10 }}>{recov.tip}</div>
+
+                        {/* Mini metrics */}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          {[
+                            { icon: "🌙", val: `${dailyData.sleepHours}h`, label: "Sommeil", ok: dailyData.sleepHours >= 7 },
+                            { icon: "⚡", val: ["","😴","😐","😊","🔥"][dailyData.fatigue||3], label: "Énergie", ok: dailyData.fatigue >= 3 },
+                            { icon: "💧", val: `${dailyData.hydration}/8`, label: "Hydrat.", ok: dailyData.hydration >= 6 },
+                          ].map(m => (
+                            <div key={m.label} style={{ flex: 1, background: m.ok ? "rgba(57,255,128,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${m.ok ? "rgba(57,255,128,0.2)" : "rgba(255,255,255,0.06)"}`, borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
+                              <div style={{ fontSize: 13 }}>{m.icon}</div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: m.ok ? "var(--green)" : "#555", marginTop: 1 }}>{m.val}</div>
+                              <div style={{ fontSize: 8, color: "#333", marginTop: 1 }}>{m.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Nutrition progress bar */}
+                    {kcalPct !== null && (
+                      <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                          <span style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>🍽️ Nutrition aujourd'hui</span>
+                          <span style={{ fontSize: 10, color: kcalPct >= 80 ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>{todayMacros.kcal} / {objNutrKcal} kcal</span>
+                        </div>
+                        <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
+                          <div style={{ height: "100%", width: `${kcalPct}%`, background: `linear-gradient(90deg, var(--orange), var(--yellow))`, borderRadius: 99, transition: "width 0.6s var(--ease-out)" }} />
+                        </div>
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <span style={{ fontSize: 10, color: "#555" }}>🥩 {todayMacros.p}g prot <span style={{ color: protPct >= 80 ? "var(--green)" : "var(--orange)" }}>({protPct}%)</span></span>
+                          <button onClick={() => setTab("nutri")} style={{ background: "none", border: "none", fontSize: 10, color: "var(--yellow)", cursor: "pointer", marginLeft: "auto", fontWeight: 700 }}>Log nutrition →</button>
+                        </div>
+                      </div>
+                    )}
+                    {kcalPct === null && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <button onClick={() => setTab("nutri")} style={{ width: "100%", background: "rgba(255,154,60,0.06)", border: "1px dashed rgba(255,154,60,0.2)", borderRadius: 10, padding: "8px", fontSize: 11, color: "#555", cursor: "pointer", fontWeight: 600 }}>
+                          🍽️ Ajouter tes repas du jour →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── 7-DAY METRICS SPARKLINES ── */}
+                  {last7Logs.some(l => l.sleepHours || l.poidsJour) && (() => {
+                    const days = ["L","M","M","J","V","S","D"];
+                    const weekSeries = last7Logs.map(l => ({
+                      sleep: parseFloat(l.sleepHours) || null,
+                      weight: parseFloat(l.poidsJour) || null,
+                      recovery: (l.fatigue && l.sleepHours) ? calcRecoveryScore(l, profile) : null,
+                    }));
+
+                    const renderSparkline = (values, color, minVal, maxVal) => {
+                      const valid = values.filter(Boolean);
+                      if (valid.length < 2) return null;
+                      const W = 100; const H = 28; const pad = 4;
+                      const range = (maxVal - minVal) || 1;
+                      const pts = values.map((v, i) => {
+                        const x = pad + (i / (values.length - 1)) * (W - 2 * pad);
+                        const y = v !== null ? H - pad - ((v - minVal) / range) * (H - 2 * pad) : null;
+                        return { x, y, v };
+                      }).filter(p => p.y !== null);
+                      if (pts.length < 2) return null;
+                      const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+                      const lastPt = pts[pts.length - 1];
+                      return (
+                        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                          <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+                          <circle cx={lastPt.x} cy={lastPt.y} r="3" fill={color} />
+                        </svg>
+                      );
+                    };
+
+                    return (
+                      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>📈 Tendances 7 jours</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                          {[
+                            { label: "Sommeil", values: weekSeries.map(d => d.sleep), color: "#a78bfa", unit: "h", min: 4, max: 10, fmt: v => `${v}h` },
+                            { label: "Poids", values: weekSeries.map(d => d.weight), color: "var(--yellow)", unit: "kg", min: (profile.poids||70)-5, max: (profile.poids||70)+5, fmt: v => `${v}kg` },
+                            { label: "Récupération", values: weekSeries.map(d => d.recovery), color: "var(--green)", unit: "", min: 0, max: 100, fmt: v => `${v}%` },
+                          ].map(serie => {
+                            const valid = serie.values.filter(Boolean);
+                            const last = valid[valid.length - 1];
+                            const sparkline = renderSparkline(serie.values, serie.color, serie.min, serie.max);
+                            return (
+                              <div key={serie.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 10px 8px" }}>
+                                <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{serie.label}</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: serie.color, marginBottom: 4 }}>{last ? serie.fmt(last) : "—"}</div>
+                                <div style={{ height: 28 }}>{sparkline || <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#222" }}>pas de données</div>}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* Day labels */}
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingLeft: 2, paddingRight: 2 }}>
+                          {last7Logs.map((l, i) => {
+                            const d = new Date(l.date + "T12:00:00");
+                            const dow = d.getDay();
+                            const labels = ["D","L","M","M","J","V","S"];
+                            const isToday = l.date === todayStr;
+                            return <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: isToday ? "var(--yellow)" : "#222", fontWeight: isToday ? 700 : 400 }}>{labels[dow]}</div>;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── CHARGE D'ENTRAÎNEMENT ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                    {/* Volume semaine */}
+                    <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 14, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Charge semaine</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
+                        <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{weekSessions.length}</span>
+                        <span style={{ fontSize: 10, color: "#444" }}>/ {profile.seancesParSemaine || 4} séances</span>
+                      </div>
+                      <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${weekLoadPct}%`, background: weekLoadPct >= 100 ? "var(--green)" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
+                      </div>
+                    </div>
+                    {/* Streak */}
+                    <div style={{ background: streak >= 7 ? "rgba(255,154,60,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${streak >= 7 ? "rgba(255,154,60,0.2)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
+                        <span style={{ fontSize: 18 }}>{streak >= 14 ? "🏆" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "📅"}</span>
+                        <span className="bebas" style={{ fontSize: 26, color: streak >= 7 ? "var(--orange)" : "var(--yellow)", lineHeight: 1 }}>{streak}</span>
+                        <span style={{ fontSize: 10, color: "#444" }}>jours</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: "#333" }}>Record : {profile.bestStreak || streak} j</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Message IA Modal */}
             {showMessageModal && messageIA && (
               <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 400, display: "flex", alignItems: "flex-end" }}
@@ -4382,6 +4640,55 @@ JSON:
                       }}>
                         <div style={{ fontSize: 22 }}>{s.emoji}</div>
                         <div style={{ fontSize: 9, marginTop: 4, color: dailyData.sommeil === s.v ? s.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Heures de sommeil */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🌙 Heures de sommeil</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: parseFloat(dailyData.sleepHours) >= 8 ? "var(--green)" : parseFloat(dailyData.sleepHours) >= 7 ? "var(--yellow)" : "var(--orange)" }}>{dailyData.sleepHours}h</div>
+                  </div>
+                  <input type="range" min="4" max="10" step="0.5" value={dailyData.sleepHours}
+                    onChange={e => setDailyData(d => ({ ...d, sleepHours: parseFloat(e.target.value) }))}
+                    style={{ width: "100%", accentColor: "var(--yellow)" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#333", marginTop: 3 }}>
+                    <span>4h</span><span>6h</span><span style={{ color: "var(--yellow)" }}>8h ✓</span><span>10h</span>
+                  </div>
+                </div>
+
+                {/* Poids du jour */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>⚖️ Poids du jour (kg)</div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input type="number" step="0.1" min="40" max="150"
+                      value={dailyData.poidsJour}
+                      onChange={e => setDailyData(d => ({ ...d, poidsJour: e.target.value }))}
+                      placeholder={`${profile.poids || 75} kg`}
+                      style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+                    <div style={{ fontSize: 11, color: "#444" }}>
+                      {dailyData.poidsJour && profile.poids ? (
+                        <span style={{ color: parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "var(--green)" : "var(--orange)" }}>
+                          {parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "↓" : "↑"} {Math.abs(parseFloat(dailyData.poidsJour) - parseFloat(profile.poids)).toFixed(1)}kg
+                        </span>
+                      ) : <span style={{ color: "#333" }}>vs profil</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hydratation */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>💧 Hydratation du jour</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: dailyData.hydration >= 8 ? "var(--green)" : dailyData.hydration >= 5 ? "var(--yellow)" : "#555" }}>{dailyData.hydration}/8 verres</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    {Array.from({ length: 8 }, (_, i) => (
+                      <button key={i} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, hydration: i < d.hydration ? i : i + 1 })); }}
+                        style={{ width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${i < dailyData.hydration ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.08)"}`, background: i < dailyData.hydration ? "rgba(56,189,248,0.15)" : "rgba(255,255,255,0.03)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s var(--spring)" }}>
+                        {i < dailyData.hydration ? "💧" : "○"}
                       </button>
                     ))}
                   </div>
@@ -5495,6 +5802,111 @@ JSON:
                       </div>
                     ))}
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── BODY METRICS 30 JOURS ── */}
+            {(()=>{
+              const [bodyLogs, setBodyLogs] = React.useState([]);
+              React.useEffect(() => {
+                const loads = [];
+                for (let i = 29; i >= 0; i--) {
+                  const d = new Date(); d.setDate(d.getDate() - i);
+                  const ds = d.toISOString().split("T")[0];
+                  loads.push(storage.get(getDailyLogKey(profile.name, ds)).then(v => ({ date: ds, ...(v || {}) })));
+                }
+                Promise.all(loads).then(logs => setBodyLogs(logs.filter(l => l.sleepHours || l.poidsJour)));
+              }, []);
+
+              if (bodyLogs.length < 3) return null;
+
+              const weightLogs = bodyLogs.filter(l => l.poidsJour);
+              const sleepLogs = bodyLogs.filter(l => l.sleepHours);
+              const avgWeight = weightLogs.length ? (weightLogs.reduce((a, l) => a + parseFloat(l.poidsJour), 0) / weightLogs.length).toFixed(1) : null;
+              const avgSleep = sleepLogs.length ? (sleepLogs.reduce((a, l) => a + parseFloat(l.sleepHours), 0) / sleepLogs.length).toFixed(1) : null;
+              const minW = weightLogs.length ? Math.min(...weightLogs.map(l => parseFloat(l.poidsJour))) : 0;
+              const maxW = weightLogs.length ? Math.max(...weightLogs.map(l => parseFloat(l.poidsJour))) : 100;
+
+              const W = 300; const H = 60; const pad = 8;
+
+              const renderLine = (logs, valFn, color) => {
+                if (logs.length < 2) return null;
+                const vals = logs.map(valFn);
+                const mn = Math.min(...vals) - 0.5; const mx = Math.max(...vals) + 0.5;
+                const range = (mx - mn) || 1;
+                const allDates = bodyLogs.map(l => l.date);
+                const pts = logs.map(l => {
+                  const idx = allDates.indexOf(l.date);
+                  const x = pad + (idx / Math.max(allDates.length - 1, 1)) * (W - 2 * pad);
+                  const y = H - pad - ((valFn(l) - mn) / range) * (H - 2 * pad);
+                  return [x, y];
+                });
+                const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+                const lastPt = pts[pts.length - 1];
+                return (
+                  <>
+                    <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.9" />
+                    <circle cx={lastPt[0]} cy={lastPt[1]} r="3.5" fill={color} />
+                  </>
+                );
+              };
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>⚖️ Suivi corporel — {bodyLogs.length} jours de données</div>
+
+                  {/* Weight chart */}
+                  {weightLogs.length >= 2 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>Poids corporel</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                          <span className="bebas" style={{ fontSize: 20, color: "var(--yellow)", lineHeight: 1 }}>{weightLogs[weightLogs.length-1] ? parseFloat(weightLogs[weightLogs.length-1].poidsJour).toFixed(1) : avgWeight}kg</span>
+                          <span style={{ fontSize: 9, color: "#444" }}>moy. {avgWeight}kg</span>
+                        </div>
+                      </div>
+                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                        {/* Grid lines */}
+                        {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                        {renderLine(weightLogs, l => parseFloat(l.poidsJour), "var(--yellow)")}
+                      </svg>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#222", marginTop: 2 }}>
+                        <span>{weightLogs[0]?.date?.slice(5)}</span>
+                        <span>min {minW.toFixed(1)}kg · max {maxW.toFixed(1)}kg · écart {(maxW-minW).toFixed(1)}kg</span>
+                        <span>Auj.</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sleep chart */}
+                  {sleepLogs.length >= 2 && (
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>Sommeil</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                          <span className="bebas" style={{ fontSize: 20, color: "#a78bfa", lineHeight: 1 }}>{sleepLogs[sleepLogs.length-1] ? parseFloat(sleepLogs[sleepLogs.length-1].sleepHours) : avgSleep}h</span>
+                          <span style={{ fontSize: 9, color: "#444" }}>moy. {avgSleep}h</span>
+                        </div>
+                      </div>
+                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                        {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                        {renderLine(sleepLogs, l => parseFloat(l.sleepHours), "#a78bfa")}
+                        {/* 8h reference line */}
+                        {(() => {
+                          const mn = Math.min(...sleepLogs.map(l=>parseFloat(l.sleepHours))) - 0.5;
+                          const mx = Math.max(...sleepLogs.map(l=>parseFloat(l.sleepHours))) + 0.5;
+                          const range = (mx - mn) || 1;
+                          if (8 >= mn && 8 <= mx) {
+                            const y = H - pad - ((8 - mn) / range) * (H - 2 * pad);
+                            return <line x1={pad} y1={y} x2={W-pad} y2={y} stroke="rgba(167,139,250,0.3)" strokeWidth="1" strokeDasharray="4,3" />;
+                          }
+                          return null;
+                        })()}
+                      </svg>
+                      <div style={{ fontSize: 8, color: "#222", marginTop: 2, textAlign: "right" }}>--- objectif 8h</div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
