@@ -3835,6 +3835,33 @@ JSON:
                   })()}
 
                   {/* ── CHARGE D'ENTRAÎNEMENT ── */}
+                  {/* PMC TSB badge */}
+                  {(()=>{
+                    const pmcPts = calcPMC(profile.sessions||[]);
+                    if (pmcPts.length < 3) return null;
+                    const todayPMC = pmcPts[pmcPts.length-1];
+                    const tsb2 = tsbLabel(todayPMC.tsb);
+                    return (
+                      <div style={{ background: `${tsb2.color}08`, border: `1px solid ${tsb2.color}25`, borderRadius: 14, padding: "10px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ textAlign: "center", flexShrink: 0 }}>
+                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em" }}>Forme</div>
+                          <div className="bebas" style={{ fontSize: 24, color: tsb2.color, lineHeight: 1 }}>{todayPMC.tsb > 0 ? "+" : ""}{todayPMC.tsb}</div>
+                        </div>
+                        <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, color: tsb2.color, fontWeight: 700 }}>{tsb2.label}</div>
+                          <div style={{ fontSize: 9, color: "#555", marginTop: 2, lineHeight: 1.4 }}>{tsb2.tip}</div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase" }}>CTL</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--green)" }}>{todayPMC.ctl}</div>
+                          <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase", marginTop: 2 }}>ATL</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--orange)" }}>{todayPMC.atl}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
                     {/* Volume semaine */}
                     <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 14, padding: "12px 14px" }}>
