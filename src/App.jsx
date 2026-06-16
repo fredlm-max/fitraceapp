@@ -5305,7 +5305,34 @@ JSON:
                       {/* Titre */}
                       <div className="bebas" style={{ fontSize: 30, color: "var(--white)", lineHeight: 1, letterSpacing: 0.5, marginBottom: 10 }}>{session.titre}</div>
                       {/* Explication */}
-                      <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6, marginBottom: 14 }}>{session.explication}</div>
+                      <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6, marginBottom: 10 }}>{session.explication}</div>
+                      {/* Pourquoi cette séance ? — beginner guide */}
+                      {(()=>{
+                        const [open, setOpen] = React.useState(false);
+                        const POURQUOI = {
+                          running_zone2: { title: "Cardio Zone 2 — La base de tout", body: "La Zone 2, c'est courir à un rythme où tu peux parler normalement. C'est ennuyeux ? Oui. Mais c'est la fondation de toute progression HYROX. Tu développes ton moteur aérobie — ce qui te permet de tenir les 8 km de running en course. Les champions du monde font 80% de leur entraînement en Zone 2." },
+                          force_stations: { title: "Force & Stations — La puissance", body: "Les 8 stations HYROX exigent force, technique et résistance musculaire. Cette séance simule ces contraintes : charges lourdes, reps élevées, récupération incomplète. Plus tu maîtrises les stations, plus tu gagnes du temps en course." },
+                          running_qualite: { title: "Running qualité — La vitesse", body: "Ici on travaille au-dessus de ta vitesse de course cible. Ces intervalles intenses rendent ton allure de course \"facile\" par comparaison. 1 à 2 séances qualité/semaine suffisent — le reste doit être en Zone 2." },
+                          hybride_compromis: { title: "Séance hybride — La vraie simulation", body: "C'est le format HYROX : tu enchaînes running ET stations sans pause. C'est difficile parce que les jambes fatiguées en running impactent les stations. Entraîne ton cerveau ET tes muscles à changer de mode rapidement." },
+                          coach: { title: "Séance coach personnalisée", body: "Ton coach IA a analysé ton historique, ta fatigue, et ton niveau pour créer cette séance sur mesure. Fais confiance au programme — chaque séance prépare la suivante." },
+                        };
+                        const info = POURQUOI[session.type] || POURQUOI.coach;
+                        return (
+                          <div style={{ marginBottom: 14 }}>
+                            <button onClick={() => setOpen(o => !o)}
+                              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#333", fontSize: 11, cursor: "pointer", padding: "4px 0", fontFamily: "inherit" }}>
+                              <span style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>▶</span>
+                              <span style={{ color: "#555", fontWeight: 600 }}>🎓 Pourquoi cette séance ?</span>
+                            </button>
+                            {open && (
+                              <div style={{ marginTop: 6, padding: "10px 12px", background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 10 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--yellow)", marginBottom: 5 }}>{info.title}</div>
+                                <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7 }}>{info.body}</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {/* Progress ring inline */}
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ flex: 1 }}>
@@ -8088,6 +8115,37 @@ function TechniqueTab({ profile = {} }) {
               <div style={{ fontSize: 11, color: "#444" }}>Tape pour voir les conseils techniques</div>
             </div>
             <span style={{ color: "var(--red)", fontSize: 16 }}>→</span>
+          </div>
+        );
+      })()}
+
+      {/* ── FAQ DÉBUTANT ── */}
+      {(profile.sessions||[]).length < 5 && (() => {
+        const [openFaq, setOpenFaq] = React.useState(null);
+        const FAQ = [
+          { q: "C'est quoi HYROX exactement ?", a: "HYROX est une compétition mondiale de fitness fonctionnel. Le format est toujours identique : 1 km de running + 1 station de force × 8 répétitions. Total : ~8 km de course et 8 stations. Tout le monde fait le même parcours, du débutant au champion du monde." },
+          { q: "Quel niveau faut-il pour commencer ?", a: "Aucun niveau minimum ! Les catégories vont du Rookies (débutant complet) au Pro. En 3 à 6 mois d'entraînement régulier, tu peux finir ta première HYROX. L'important c'est de commencer et d'être régulier." },
+          { q: "Combien de fois par semaine s'entraîner ?", a: "Pour un débutant : 3 séances/semaine suffisent. 2 séances de force/stations + 1 séance de cardio. Ajoute progressivement. La régularité prime sur l'intensité — mieux vaut 3 séances modérées chaque semaine que 6 séances puis rien." },
+          { q: "Zone 2 : c'est quoi ?", a: "La Zone 2 = allure où tu peux tenir une conversation sans être essoufflé. C'est environ 60-70% de ta FC max. C'est la base de l'endurance HYROX — la majorité de tes km de course en compétition seront à cette allure. Construis cette base !" },
+          { q: "Comment éviter les blessures ?", a: "3 règles : 1) N'augmente pas le volume de plus de 10%/semaine. 2) Dors 7-9h — c'est là que tu progresses réellement. 3) Écoute ton corps — une douleur n'est pas de la fatigue normale. Si ça fait mal, on s'arrête, on consulte." },
+        ];
+        return (
+          <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🎓 FAQ Débutant HYROX</div>
+            {FAQ.map((item, i) => (
+              <div key={i} style={{ marginBottom: 6 }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  style={{ width: "100%", background: openFaq === i ? "rgba(232,255,71,0.05)" : "rgba(255,255,255,0.02)", border: `1px solid ${openFaq === i ? "rgba(232,255,71,0.2)" : "rgba(255,255,255,0.05)"}`, borderRadius: 10, padding: "10px 12px", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 12, color: openFaq === i ? "var(--yellow)" : "#888", fontWeight: openFaq === i ? 700 : 500, flex: 1 }}>{item.q}</span>
+                  <span style={{ color: "#444", transition: "transform 0.2s", display: "inline-block", transform: openFaq === i ? "rotate(180deg)" : "none" }}>▼</span>
+                </button>
+                {openFaq === i && (
+                  <div style={{ padding: "10px 12px", background: "rgba(232,255,71,0.03)", borderRadius: "0 0 10px 10px", borderLeft: "2px solid rgba(232,255,71,0.2)", margin: "-2px 0 0 0" }}>
+                    <div style={{ fontSize: 12, color: "#888", lineHeight: 1.7 }}>{item.a}</div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         );
       })()}
