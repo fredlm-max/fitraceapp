@@ -4090,24 +4090,81 @@ JSON:
                 hybride_compromis: { icon: "🔀", color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)", label: "Hybride" },
               };
               const sessions = (profile.sessions || []).slice(-5).reverse();
+              const [selectedSession, setSelectedSession] = React.useState(null);
               return (
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Dernières séances</div>
+                  {/* Session detail modal */}
+                  {selectedSession && (
+                    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 500, display: "flex", alignItems: "flex-end" }}
+                      onClick={() => setSelectedSession(null)}>
+                      <div className="slide-up" onClick={e => e.stopPropagation()}
+                        style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(255,255,255,0.08)", maxHeight: "75vh", overflowY: "auto" }}>
+                        <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
+                        {(() => {
+                          const s = selectedSession;
+                          const conf = TYPE_CONF[s.type] || { icon: "💪", color: "var(--yellow)", label: "Séance" };
+                          const rpe = s.difficulte || 5;
+                          const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
+                          return (
+                            <>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                                <span style={{ fontSize: 28 }}>{conf.icon}</span>
+                                <div>
+                                  <div style={{ fontSize: 10, color: conf.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{conf.label}</div>
+                                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--white)" }}>{s.titre}</div>
+                                </div>
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                                <div style={{ background: `${rpeColor}10`, border: `1px solid ${rpeColor}25`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                                  <div className="bebas" style={{ fontSize: 22, color: rpeColor }}>{rpe}/10</div>
+                                  <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>RPE</div>
+                                </div>
+                                {s.energie && <div style={{ background: "rgba(255,154,60,0.08)", border: "1px solid rgba(255,154,60,0.2)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                                  <div className="bebas" style={{ fontSize: 22, color: "var(--orange)" }}>{s.energie}/5</div>
+                                  <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Énergie</div>
+                                </div>}
+                                {s.tempsReel && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{s.tempsReel}</div>
+                                  <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Durée</div>
+                                </div>}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
+                                📅 {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                              </div>
+                              {s.charges && <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{s.charges}</div>}
+                              {s.douleurs && s.douleurs !== "Aucune douleur" && (
+                                <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--red)" }}>⚠️ {s.douleurs}</div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Dernières séances</div>
+                    <button onClick={() => navigateTo("progress")} style={{ background: "none", border: "none", fontSize: 10, color: "#444", cursor: "pointer", fontWeight: 700, padding: "2px 0" }}>Voir tout →</button>
+                  </div>
                   <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
                     {sessions.map((s, i) => {
                       const conf = TYPE_CONF[s.type] || { icon: "🏋️", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.15)", label: "Séance" };
                       const rpe = s.difficulte || 5;
                       const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
+                      const rpePct = rpe / 10;
                       return (
-                        <div key={i} style={{ flexShrink: 0, width: 140, background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 16, padding: "14px 12px", position: "relative", overflow: "hidden" }}>
+                        <div key={i} onClick={() => { setSelectedSession(s); haptic([6]); }} style={{ flexShrink: 0, width: 140, background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 16, padding: "14px 12px", position: "relative", overflow: "hidden", cursor: "pointer", transition: "transform 0.15s var(--spring)", active: "scale(0.95)" }}>
                           {/* type stripe */}
                           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: conf.color, borderRadius: "16px 16px 0 0", opacity: 0.7 }} />
-                          <div style={{ fontSize: 26, marginBottom: 8, marginTop: 4 }}>{conf.icon}</div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+                          <div style={{ fontSize: 26, marginBottom: 6, marginTop: 4 }}>{conf.icon}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
+                          <div style={{ fontSize: 9, color: "#444", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+                          {/* Mini RPE bar */}
+                          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
+                            <div style={{ height: "100%", width: `${rpePct * 100}%`, background: rpeColor, borderRadius: 99 }} />
+                          </div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontSize: 9, background: `${conf.color}20`, color: conf.color, borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>{conf.label}</span>
-                            <span className="bebas" style={{ fontSize: 20, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 9, color: "#333" }}>/10</span></span>
+                            <span className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 8, color: "#333" }}>/10</span></span>
                           </div>
                         </div>
                       );
