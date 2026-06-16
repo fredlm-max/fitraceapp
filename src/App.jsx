@@ -38,7 +38,8 @@ const GLOBAL_STYLES = `
   /* ── Core animations ── */
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeInFast { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: slideUp 0.32s var(--ease-out) both; }
   @keyframes floatUp { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
@@ -3424,7 +3425,7 @@ JSON:
         };
         const meta = tabMeta[tab] || { label: "FITRACE", color: "var(--yellow)" };
         return (
-          <div style={{ background: "rgba(8,8,8,0.92)", padding: "12px 20px 10px", borderBottom: "1px solid rgba(255,255,255,0.04)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(24px)" }}>
+          <div style={{ background: "rgba(6,6,6,0.95)", padding: "10px 20px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(32px) saturate(1.5)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 2 }}>FIT<span style={{ color: "var(--white)" }}>RACE</span></div>
@@ -3963,13 +3964,15 @@ JSON:
             )}
 
             {/* CTA séance — GRAND BOUTON */}
-            <button onClick={() => setTab("today")} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+            <button onClick={() => { haptic([10]); navigateTo("today"); }} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(232,255,71,0.25)" }}>
+              {/* Shine effect */}
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", right: 60, top: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(0,0,0,0.06)", pointerEvents: "none" }} />
               <div style={{ textAlign: "left" }}>
-                <div className="bebas" style={{ fontSize: 24, color: "#080808", letterSpacing: 1, lineHeight: 1 }}>MA SÉANCE DU JOUR</div>
-                <div style={{ fontSize: 12, color: "rgba(0,0,0,0.45)", marginTop: 3 }}>Coach IA · Programme adaptatif</div>
+                <div style={{ fontSize: 10, color: "rgba(0,0,0,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⚡ Coach IA · Aujourd'hui</div>
+                <div className="bebas" style={{ fontSize: 26, color: "#080808", letterSpacing: 1, lineHeight: 1 }}>MA SÉANCE DU JOUR</div>
               </div>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(0,0,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(0,0,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span className="bebas" style={{ fontSize: 22, color: "#080808" }}>→</span>
               </div>
             </button>
@@ -4506,14 +4509,25 @@ JSON:
                     const accentColor = typeConf2[session.type] || "var(--yellow)";
                     return (
                       <div key={i} className="fade-in-fast"
-                        onClick={() => setCheckedExercices(c => ({ ...c, [i]: !c[i] }))}
+                        onClick={() => {
+                          const wasUndone = !checkedExercices[i];
+                          setCheckedExercices(c => ({ ...c, [i]: !c[i] }));
+                          if (wasUndone) haptic([8]);
+                          // Check if all done after this tick
+                          const newCount = Object.values({...checkedExercices, [i]: true}).filter(Boolean).length;
+                          if (wasUndone && newCount === (session.exercices||[]).length) {
+                            haptic([10, 20, 10, 20, 30]);
+                            showToast("Tous les exercices complétés ! 🎉", "success");
+                          }
+                        }}
                         style={{
                           background: done ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)",
                           border: done ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(255,255,255,0.05)",
                           borderLeft: done ? "3px solid var(--green)" : `3px solid ${accentColor}66`,
                           borderRadius: 14, padding: "14px 14px 12px 16px", marginBottom: 8,
                           animationDelay: `${i * 0.06}s`, cursor: "pointer",
-                          transition: "all 0.2s", opacity: done ? 0.6 : 1,
+                          transition: "background 0.25s, border 0.25s, opacity 0.25s",
+                          opacity: done ? 0.6 : 1,
                         }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
@@ -4524,7 +4538,8 @@ JSON:
                               border: done ? "none" : `2px solid ${accentColor}44`,
                               display: "flex", alignItems: "center", justifyContent: "center",
                               fontSize: done ? 14 : 12, fontWeight: 700,
-                              color: done ? "#000" : accentColor, transition: "all 0.25s",
+                              color: done ? "#000" : accentColor,
+                              animation: done ? "bounceIn 0.35s var(--spring) both" : "none",
                             }}>{done ? "✓" : i + 1}</div>
                             <div style={{ fontWeight: 700, fontSize: 15, color: done ? "#666" : "var(--white)", textDecoration: done ? "line-through" : "none" }}>{ex.nom}</div>
                           </div>
