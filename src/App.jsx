@@ -6716,7 +6716,7 @@ JSON:
 
       {/* ── QUICK LOG FAB ── */}
       <button onClick={() => { haptic([10,20,10]); setShowQuickLog(true); }}
-        style={{ position: "fixed", bottom: "max(calc(env(safe-area-inset-bottom,10px) + 72px), 82px)", right: 18, zIndex: 98, width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, var(--yellow), #b8cc38)", border: "none", boxShadow: "0 4px 20px rgba(232,255,71,0.4), 0 0 0 1px rgba(232,255,71,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, transition: "all 0.2s var(--spring)", transform: showQuickLog ? "scale(0.9) rotate(45deg)" : "scale(1)" }}>
+        style={{ position: "fixed", bottom: 138, right: 16, zIndex: 98, width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, var(--yellow), #b8cc38)", border: "none", boxShadow: "0 4px 16px rgba(232,255,71,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, transition: "all 0.2s var(--spring)", transform: showQuickLog ? "scale(0.9) rotate(45deg)" : "scale(1)" }}>
         {showQuickLog ? "✕" : "⚡"}
       </button>
 
@@ -7960,6 +7960,87 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── PREPARATION PHASES TIMELINE ── */}
+      {profile.raceDate && (() => {
+        const raceDate = new Date(profile.raceDate);
+        const now2 = new Date(); now2.setHours(0,0,0,0);
+        const totalDays = Math.max(1, Math.ceil((raceDate - now2) / 86400000));
+        const totalWeeksLeft = Math.ceil(totalDays / 7);
+
+        // Phase model: Base=40%, Build=30%, Peak=20%, Taper=10%
+        const PHASES = [
+          { id: "base",  label: "BASE",  icon: "🏗️", color: "#38bdf8", pct: 0.40, tip: "Fondations aérobies" },
+          { id: "build", label: "BUILD", icon: "📈", color: "var(--green)", pct: 0.30, tip: "Volume + intensité" },
+          { id: "peak",  label: "PEAK",  icon: "🔥", color: "var(--yellow)", pct: 0.20, tip: "Spécificité course" },
+          { id: "taper", label: "TAPER", icon: "✈️", color: "var(--purple)", pct: 0.10, tip: "Affûtage compétition" },
+        ];
+
+        // Determine current phase
+        const elapsed = Math.ceil((now2 - (new Date(now2.getTime() - totalDays * 86400000))) / 86400000);
+        // Figure out which phase we're in based on weeks left
+        let currentPhase = "base";
+        if (totalWeeksLeft <= 2) currentPhase = "taper";
+        else if (totalWeeksLeft <= Math.ceil(totalWeeksLeft * 0.3)) currentPhase = "peak";
+        else if (totalWeeksLeft <= Math.ceil(totalWeeksLeft * 0.6)) currentPhase = "build";
+
+        // Calculate phase week ranges from now
+        let cursor = 0;
+        const phaseData = PHASES.map(p => {
+          const wks = Math.max(1, Math.round(totalWeeksLeft * p.pct));
+          const start = cursor; cursor += wks;
+          return { ...p, weeks: wks, startWeek: start };
+        });
+
+        const currentPhaseObj = (() => {
+          let rem = totalWeeksLeft;
+          for (const p of phaseData) {
+            if (rem > totalWeeksLeft - p.weeks) return { ...p, weeksLeft: Math.min(rem, p.weeks) };
+            rem -= p.weeks;
+          }
+          return phaseData[phaseData.length - 1];
+        })();
+
+        return (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>📅 Phases de préparation</div>
+              <div style={{ fontSize: 10, color: "#444" }}>{totalWeeksLeft} semaines avant la course</div>
+            </div>
+
+            {/* Phases bar */}
+            <div style={{ display: "flex", gap: 2, height: 8, borderRadius: 6, overflow: "hidden", marginBottom: 10 }}>
+              {phaseData.map(p => (
+                <div key={p.id} style={{ flex: p.pct, background: p.color, opacity: p.id === currentPhaseObj.id ? 1 : 0.3, transition: "opacity 0.3s" }} />
+              ))}
+            </div>
+
+            {/* Phase labels */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {phaseData.map(p => (
+                <div key={p.id} style={{ flex: p.pct, textAlign: "center" }}>
+                  <div style={{ fontSize: 8, color: p.id === currentPhaseObj.id ? p.color : "#333", fontWeight: p.id === currentPhaseObj.id ? 700 : 400, textTransform: "uppercase", letterSpacing: "0.04em" }}>{p.label}</div>
+                  <div style={{ fontSize: 8, color: "#222" }}>{p.weeks}S</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Current phase detail */}
+            <div style={{ background: `${currentPhaseObj.color}10`, border: `1px solid ${currentPhaseObj.color}30`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 22 }}>{currentPhaseObj.icon}</span>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: currentPhaseObj.color }}>Phase {currentPhaseObj.label} · {currentPhaseObj.tip}</div>
+                <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
+                  {currentPhaseObj.id === "base" && "Construis ta base aérobie avec des sorties longues et faciles (Z1-Z2). Volume progressif."}
+                  {currentPhaseObj.id === "build" && "Augmente l'intensité. Inclus des séances seuil + stations. Simule les formats HYROX."}
+                  {currentPhaseObj.id === "peak" && "Séances spécifiques HYROX race-pace. Répétitions des 8 stations à pleine intensité."}
+                  {currentPhaseObj.id === "taper" && "Réduis le volume de 40%. Garde l'intensité. Repos et nutrition race-day. Tu es prêt !"}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
         <div>
           <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", letterSpacing: 1 }}>
@@ -8584,6 +8665,7 @@ JSON: {
       <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "rgba(255,255,255,0.02)", borderRadius: 14, padding: 4 }}>
         {[
           { id: "journal", label: "📋 Journal" },
+          { id: "timing", label: "⏱️ Timing" },
           { id: "recettes", label: "👨‍🍳 Recettes" },
           { id: "bilan", label: "🤖 Bilan IA" },
         ].map(t => (
@@ -8797,6 +8879,190 @@ JSON: {
           )}
         </div>
       )}
+
+      {/* ══ TIMING NUTRITIONNEL ══ */}
+      {subTab === "timing" && (() => {
+        const lastSession = (profile.sessions||[]).slice(-1)[0];
+        const sessionHour = lastSession?.date ? new Date(lastSession.date).getHours() : 10;
+        const now = new Date();
+        const hour = now.getHours();
+
+        const MEAL_TEMPLATES = [
+          {
+            id: "breakfast",
+            icon: "🌅",
+            label: "Petit-déjeuner",
+            timing: "Au réveil · 7h-9h",
+            color: "#fbbf24",
+            goal: "Recharge glycogène + protéines",
+            items: [
+              { name: "Flocons d'avoine 80g", kcal: 300, p: 10, g: 55, l: 6 },
+              { name: "Lait d'amande 200ml", kcal: 30, p: 1, g: 2, l: 2 },
+              { name: "Banane 1 grande", kcal: 100, p: 1, g: 27, l: 0 },
+              { name: "Myrtilles poignée", kcal: 30, p: 0, g: 8, l: 0 },
+              { name: "Beurre de cacahuète 20g", kcal: 120, p: 5, g: 4, l: 10 },
+            ],
+          },
+          {
+            id: "pre_workout",
+            icon: "⚡",
+            label: "Pré-séance",
+            timing: "1h-2h avant la séance",
+            color: "var(--yellow)",
+            goal: "Énergie disponible · facile à digérer",
+            items: [
+              { name: "Pain de seigle 2 tranches", kcal: 160, p: 6, g: 32, l: 2 },
+              { name: "Miel 1 cuillère", kcal: 60, p: 0, g: 17, l: 0 },
+              { name: "Banane 1 moyenne", kcal: 89, p: 1, g: 23, l: 0 },
+              { name: "Café ou thé vert", kcal: 5, p: 0, g: 1, l: 0 },
+            ],
+          },
+          {
+            id: "intra",
+            icon: "🔥",
+            label: "Pendant séance",
+            timing: "Si > 75 min · toutes les 20-30 min",
+            color: "var(--orange)",
+            goal: "Maintenir glycémie · 30-60g glucides/h",
+            items: [
+              { name: "Gel énergétique (ou dattes x3)", kcal: 100, p: 0, g: 25, l: 0 },
+              { name: "Eau 500ml + pincée sel", kcal: 0, p: 0, g: 0, l: 0 },
+              { name: "Barre céréales (si besoin)", kcal: 150, p: 4, g: 30, l: 3 },
+            ],
+          },
+          {
+            id: "post_workout",
+            icon: "💪",
+            label: "Post-séance",
+            timing: "Dans les 30-45 min après",
+            color: "var(--green)",
+            goal: "Resynthèse glycogène + réparation musculaire",
+            items: [
+              { name: "Shake protéiné (25g whey)", kcal: 120, p: 25, g: 5, l: 2 },
+              { name: "Lait 250ml", kcal: 125, p: 8, g: 12, l: 5 },
+              { name: "Banane 1", kcal: 89, p: 1, g: 23, l: 0 },
+              { name: "Blanc de poulet 150g (+ tard)", kcal: 165, p: 31, g: 0, l: 3 },
+              { name: "Riz complet 100g sec (+ tard)", kcal: 360, p: 8, g: 78, l: 2 },
+            ],
+          },
+          {
+            id: "race_day",
+            icon: "🏁",
+            label: "Jour de course",
+            timing: "3h avant départ",
+            color: "var(--purple)",
+            goal: "Glycogène plein · zéro stress digestif",
+            items: [
+              { name: "Riz blanc 150g cuit", kcal: 200, p: 4, g: 44, l: 0 },
+              { name: "Œufs brouillés x2", kcal: 140, p: 12, g: 1, l: 10 },
+              { name: "Pain blanc 2 tranches grillées", kcal: 160, p: 5, g: 30, l: 2 },
+              { name: "Confiture 1 cuillère", kcal: 50, p: 0, g: 13, l: 0 },
+              { name: "Jus d'orange 200ml", kcal: 90, p: 1, g: 21, l: 0 },
+              { name: "Café 1 (si habitué)", kcal: 5, p: 0, g: 1, l: 0 },
+            ],
+          },
+        ];
+
+        const TIMING_ADVICE = [
+          { time: "3h avant", icon: "⏰", tip: "Repas complet riche en glucides complexes. Évite les fibres et les graisses lourdes.", color: "var(--yellow)" },
+          { time: "1h avant", icon: "🍌", tip: "Snack léger : banane, toast miel, ou gel. Glucides simples uniquement.", color: "var(--orange)" },
+          { time: "Pendant", icon: "💧", tip: "250ml eau toutes les 20min. Si > 75min : 30-60g glucides/h (gel ou dattes).", color: "#38bdf8" },
+          { time: "0-30min après", icon: "🥛", tip: "Fenêtre anabolique ! Shake protéiné + glucides simples immédiatement.", color: "var(--green)" },
+          { time: "1-2h après", icon: "🍗", tip: "Repas complet : protéines + glucides complexes + légumes. C'est la reconstruction musculaire.", color: "#a78bfa" },
+        ];
+
+        const [activeTemplate, setActiveTemplate] = React.useState(null);
+        const [addingTemplate, setAddingTemplate] = React.useState(false);
+
+        const totalTemplate = activeTemplate ? activeTemplate.items.reduce((a, i) => ({ kcal: a.kcal+i.kcal, p: a.p+i.p, g: a.g+i.g, l: a.l+i.l }), { kcal:0,p:0,g:0,l:0 }) : null;
+
+        async function addAllToJournal() {
+          if (!activeTemplate) return;
+          haptic([10,20,10]);
+          setAddingTemplate(true);
+          const now2 = new Date().toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+          const newItems = activeTemplate.items.map(item => ({ ...item, id: Date.now() + Math.random(), heure: now2 }));
+          const newRepas = [...repasJour, ...newItems];
+          setRepasJour(newRepas);
+          await storage.set(storageKey, newRepas);
+          setAddingTemplate(false);
+          setSubTab("journal");
+          showToast(`✅ ${activeTemplate.label} ajouté au journal`, "success", 2500);
+        }
+
+        return (
+          <div>
+            {/* Timing advice strip */}
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>⏱️ Timing optimal autour de la séance</div>
+              {TIMING_ADVICE.map((a, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: i < TIMING_ADVICE.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                  <div style={{ fontSize: 16, lineHeight: 1, marginTop: 2 }}>{a.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: a.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{a.time}</div>
+                    <div style={{ fontSize: 11, color: "#666", lineHeight: 1.5 }}>{a.tip}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Meal template picker */}
+            <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🍽️ Templates repas — Ajouter au journal</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: activeTemplate ? 16 : 0 }}>
+              {MEAL_TEMPLATES.map(tmpl => {
+                const isActive = activeTemplate?.id === tmpl.id;
+                return (
+                  <div key={tmpl.id}>
+                    <button onClick={() => { haptic([6]); setActiveTemplate(isActive ? null : tmpl); }}
+                      style={{ width: "100%", background: isActive ? `rgba(255,255,255,0.04)` : "rgba(255,255,255,0.02)", border: `1.5px solid ${isActive ? tmpl.color+"60" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", transition: "all 0.2s var(--spring)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 22 }}>{tmpl.icon}</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? tmpl.color : "var(--white)" }}>{tmpl.label}</div>
+                            <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{tmpl.timing}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase" }}>Objectif</div>
+                          <div style={{ fontSize: 9, color: tmpl.color, fontWeight: 700, maxWidth: 100, lineHeight: 1.3, textAlign: "right" }}>{tmpl.goal}</div>
+                        </div>
+                      </div>
+                    </button>
+                    {isActive && (
+                      <div style={{ background: "rgba(255,255,255,0.01)", border: `1px solid ${tmpl.color}20`, borderTop: "none", borderRadius: "0 0 14px 14px", padding: "10px 14px 14px" }}>
+                        {tmpl.items.map((item, j) => (
+                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: j < tmpl.items.length-1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
+                            <span style={{ fontSize: 12, color: "#888" }}>{item.name}</span>
+                            <span style={{ fontSize: 11, color: "#555" }}>{item.kcal}kcal · {item.p}g P</span>
+                          </div>
+                        ))}
+                        <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                          {totalTemplate && [
+                            { label: "kcal", val: totalTemplate.kcal, color: "var(--yellow)" },
+                            { label: "Prot", val: `${totalTemplate.p}g`, color: "var(--green)" },
+                            { label: "Gluc", val: `${totalTemplate.g}g`, color: "var(--orange)" },
+                            { label: "Lip", val: `${totalTemplate.l}g`, color: "#a78bfa" },
+                          ].map(m => (
+                            <div key={m.label} style={{ flex: 1, textAlign: "center" }}>
+                              <div className="bebas" style={{ fontSize: 16, color: m.color }}>{m.val}</div>
+                              <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase" }}>{m.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <button onClick={addAllToJournal} disabled={addingTemplate}
+                          style={{ width: "100%", marginTop: 10, padding: "12px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${tmpl.color}, ${tmpl.color}aa)`, color: tmpl.id==="race_day"?"#000":"#000", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: addingTemplate ? 0.6 : 1 }}>
+                          {addingTemplate ? "Ajout en cours..." : `✅ Ajouter au journal (${totalTemplate?.kcal} kcal)`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ══ RECETTES ══ */}
       {subTab === "recettes" && (
