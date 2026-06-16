@@ -4799,7 +4799,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout }) {
           { id: "simulation", icon: "🏁", label: "Simulation HYROX", desc: "Tu as simulé une race", unlocked: !!(profile.lastSimulation), color: "var(--red)" },
           { id: "vma", icon: "🏃", label: "VMA renseignée", desc: "Profil physique complet", unlocked: !!(profile.vmaKmh), color: "var(--green)" },
           { id: "race", icon: "🏆", label: "Race programmée", desc: "Objectif fixé", unlocked: !!(profile.raceDate), color: "var(--yellow)" },
-          { id: "technique", icon: "🎓", label: "Technique maîtrisée", desc: "3 exercices HYROX vus", unlocked: Object.keys(JSON.parse(localStorage.getItem("fitrace_technique_viewed")||"{}")).length >= 3, color: "var(--purple)" },
+          { id: "technique", icon: "🎓", label: "Technique maîtrisée", desc: "3 exercices HYROX vus", unlocked: (() => { try { return Object.keys(JSON.parse(localStorage.getItem("fitrace_technique_viewed")||"{}")).length >= 3; } catch { return false; } })(), color: "var(--purple)" },
           { id: "feedback", icon: "📊", label: "Bilan réalisé", desc: "Analyse IA complète", unlocked: (profile.adaptations||[]).length >= 1, color: "var(--green)" },
         ];
         const unlocked = BADGES.filter(b => b.unlocked);
@@ -5903,92 +5903,136 @@ JSON: {
 
   const getColor = (val, obj) => val >= obj ? "var(--green)" : val >= obj * 0.7 ? "var(--yellow)" : "var(--red)";
 
+  const kcalColor = getColor(totaux.kcal, objectifs.kcal);
+  const kcalPct = Math.min(100, Math.round((totaux.kcal / objectifs.kcal) * 100));
+
   return (
     <div className="fade-in">
-      {/* Sub-tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+
+      {/* ── HERO CALORIES ── */}
+      <div style={{ background: "linear-gradient(145deg, #001a00 0%, #080808 60%)", border: `1.5px solid ${kcalColor === "var(--green)" ? "rgba(57,255,128,0.2)" : kcalColor === "var(--yellow)" ? "rgba(232,255,71,0.2)" : "rgba(255,71,71,0.2)"}`, borderRadius: 20, padding: "20px 20px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -30, right: -20, fontSize: 110, opacity: 0.04 }}>🥗</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Calories aujourd'hui</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div className="bebas" style={{ fontSize: 64, color: kcalColor, lineHeight: 1 }}>{totaux.kcal}</div>
+              <div style={{ fontSize: 14, color: "#333" }}>/ {objectifs.kcal}</div>
+            </div>
+            <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>{objectifs.kcal - totaux.kcal > 0 ? `${objectifs.kcal - totaux.kcal} kcal restantes` : "Objectif atteint ✓"}</div>
+          </div>
+          {/* Anneau SVG */}
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="7" />
+            <circle cx="36" cy="36" r="28" fill="none" stroke={kcalColor} strokeWidth="7" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 28} strokeDashoffset={2 * Math.PI * 28 * (1 - kcalPct / 100)}
+              transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.8s" }} />
+            <text x="36" y="40" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="16" fill={kcalColor}>{kcalPct}%</text>
+          </svg>
+        </div>
+        {/* Macros barres */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {[
+            { label: "Protéines", val: totaux.p, obj: objectifs.p, color: "var(--green)" },
+            { label: "Glucides", val: totaux.g, obj: objectifs.g, color: "var(--yellow)" },
+            { label: "Lipides", val: totaux.l, obj: objectifs.l, color: "var(--orange)" },
+          ].map(m => {
+            const pct = Math.min(100, Math.round((m.val / m.obj) * 100));
+            return (
+              <div key={m.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>{m.label}</span>
+                  <span className="bebas" style={{ fontSize: 13, color: m.color }}>{m.val}<span style={{ fontSize: 9, color: "#333" }}>g</span></span>
+                </div>
+                <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: m.color, borderRadius: 99, transition: "width 0.6s" }} />
+                </div>
+                <div style={{ fontSize: 9, color: "#333", marginTop: 3 }}>/ {m.obj}g</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── SUB-TABS ── */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "rgba(255,255,255,0.02)", borderRadius: 14, padding: 4 }}>
         {[
-          { id: "journal", label: "Journal" },
-          { id: "recettes", label: "Recettes" },
-          { id: "bilan", label: "Bilan IA" },
+          { id: "journal", label: "📋 Journal" },
+          { id: "recettes", label: "👨‍🍳 Recettes" },
+          { id: "bilan", label: "🤖 Bilan IA" },
         ].map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{
-            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 13, fontWeight: 600,
-            background: subTab === t.id ? "var(--yellow)" : "var(--bg3)",
-            color: subTab === t.id ? "#000" : "#666", border: "none", cursor: "pointer",
+            flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 12, fontWeight: 700,
+            background: subTab === t.id ? "rgba(232,255,71,0.12)" : "transparent",
+            border: subTab === t.id ? "1.5px solid rgba(232,255,71,0.3)" : "1.5px solid transparent",
+            color: subTab === t.id ? "var(--yellow)" : "#444", cursor: "pointer", transition: "all 0.2s",
           }}>{t.label}</button>
         ))}
       </div>
 
-      {/* JOURNAL */}
+      {/* ══ JOURNAL ══ */}
       {subTab === "journal" && (
         <div>
-          {/* Jauges totaux */}
-          <Card style={{ border: "1px solid rgba(232,255,71,0.15)", marginBottom: 12 }}>
-            {/* Calories en grand */}
-            <div style={{ textAlign: "center", marginBottom: 14 }}>
-              <div className="bebas" style={{ fontSize: 42, color: getColor(totaux.kcal, objectifs.kcal), lineHeight: 1 }}>{totaux.kcal}</div>
-              <div style={{ fontSize: 11, color: "#555" }}>/ {objectifs.kcal} kcal</div>
-            </div>
-            {/* Macros en grille 3 colonnes */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
-              {[
-                { label: "Protéines", val: totaux.p, obj: objectifs.p, unit: "g", color: "var(--green)" },
-                { label: "Glucides", val: totaux.g, obj: objectifs.g, unit: "g", color: "var(--yellow)" },
-                { label: "Lipides", val: totaux.l, obj: objectifs.l, unit: "g", color: "#ff9a3c" },
-              ].map(m => (
-                <div key={m.label} style={{ background: "var(--bg3)", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
-                  <div className="bebas" style={{ fontSize: 22, color: m.color, lineHeight: 1 }}>{m.val}<span style={{ fontSize: 12 }}>{m.unit}</span></div>
-                  <div style={{ fontSize: 9, color: "#444", margin: "3px 0" }}>/ {m.obj}{m.unit}</div>
-                  <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 99, height: 3, overflow: "hidden" }}>
-                    <div style={{ width: `${Math.min(100, Math.round(m.val/m.obj*100))}%`, height: 3, background: m.color, borderRadius: 99 }} />
-                  </div>
-                  <div style={{ fontSize: 9, color: "#444", marginTop: 3 }}>{m.label}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
           {/* Liste repas */}
-          <Section title={`Repas (${repasJour.length})`} action={
-            <Btn size="sm" onClick={() => setShowAdd(true)}>+ Ajouter</Btn>
-          }>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Repas · {repasJour.length} aliments</div>
+              <button onClick={() => setShowAdd(true)} style={{ background: "var(--yellow)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 13, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer" }}>+ AJOUTER</button>
+            </div>
+
             {repasJour.length === 0 ? (
-              <div style={{ color: "#555", textAlign: "center", padding: 24, fontSize: 13 }}>
-                Aucun aliment ajouté.<br />Commence par ton petit-déjeuner !
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🍽️</div>
+                <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7 }}>Aucun aliment aujourd'hui.<br/>Commence par ton petit-déjeuner !</div>
+                <button onClick={() => setShowAdd(true)} style={{ marginTop: 14, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 20px", fontSize: 13, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>
+                  Ajouter un aliment
+                </button>
               </div>
             ) : (
-              repasJour.map((r, i) => (
-                <Card key={r.id || i} style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 22 }}>{r.emoji || "🍽️"}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{r.nom}</div>
-                    <div style={{ fontSize: 11, color: "#666", marginTop: 2 }}>
-                      {r.kcal}kcal · {r.p}g prot · {r.g}g gluc · {r.l}g lip
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {repasJour.map((r, i) => {
+                  const kcalPctItem = Math.round((r.kcal / objectifs.kcal) * 100);
+                  return (
+                    <div key={r.id || i} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.min(100, kcalPctItem * 3)}%`, background: "rgba(57,255,128,0.03)", pointerEvents: "none" }} />
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{r.emoji || "🍽️"}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nom}</div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>{r.kcal} kcal</span>
+                          <span style={{ fontSize: 11, color: "var(--green)" }}>{r.p}g P</span>
+                          <span style={{ fontSize: 11, color: "#aaa" }}>{r.g}g G</span>
+                          <span style={{ fontSize: 11, color: "var(--orange)" }}>{r.l}g L</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                        {r.heure && <div style={{ fontSize: 10, color: "#333" }}>{r.heure}</div>}
+                        <button onClick={() => supprimerAliment(r.id)} style={{ background: "rgba(255,71,71,0.08)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 6, padding: "3px 8px", color: "var(--red)", fontSize: 13, cursor: "pointer" }}>×</button>
+                      </div>
                     </div>
-                    {r.heure && <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{r.heure}</div>}
-                  </div>
-                  <button onClick={() => supprimerAliment(r.id)} style={{ background: "none", color: "#444", fontSize: 16, border: "none", cursor: "pointer" }}>×</button>
-                </Card>
-              ))
+                  );
+                })}
+              </div>
             )}
-          </Section>
+          </div>
 
           {/* Modal ajout aliment */}
           {showAdd && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-              <div className="slide-up" style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "20px 16px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "90vh", overflowY: "auto" }}>
-                {/* Poignée mobile */}
-                <div style={{ width: 36, height: 4, background: "#333", borderRadius: 99, margin: "0 auto 16px" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)" }}>AJOUTER UN ALIMENT</div>
-                  <button onClick={() => { setShowAdd(false); setSearchText(""); setCustomAliment({ nom: "", kcal: "", p: "", g: "", l: "" }); }} style={{ background: "rgba(255,255,255,0.06)", color: "#888", fontSize: 16, border: "none", cursor: "pointer", borderRadius: 8, padding: "5px 10px" }}>✕</button>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
+              <div className="slide-up" style={{ background: "#0d0d0d", borderRadius: "22px 22px 0 0", padding: "0 0 32px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", border: "1px solid rgba(255,255,255,0.06)" }}>
+                {/* Poignée */}
+                <div style={{ padding: "14px 0 0", textAlign: "center" }}>
+                  <div style={{ width: 36, height: 4, background: "#222", borderRadius: 99, margin: "0 auto" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 16px" }}>
+                  <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 1 }}>AJOUTER UN ALIMENT</div>
+                  <button onClick={() => { setShowAdd(false); setSearchText(""); setCustomAliment({ nom: "", kcal: "", p: "", g: "", l: "" }); }}
+                    style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "none", color: "#555", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                 </div>
 
-                {/* PHOTO DE REPAS */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>📸 Analyser une photo</div>
-                  <label style={{ display: "block", background: "var(--bg3)", border: "1.5px dashed rgba(232,255,71,0.3)", borderRadius: 12, padding: 16, textAlign: "center", cursor: "pointer" }}>
+                <div style={{ padding: "0 16px" }}>
+                  {/* PHOTO */}
+                  <label style={{ display: "block", background: "rgba(232,255,71,0.04)", border: "1.5px dashed rgba(232,255,71,0.25)", borderRadius: 14, padding: 16, textAlign: "center", cursor: "pointer", marginBottom: 14 }}>
                     <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
@@ -5998,88 +6042,97 @@ JSON: {
                         reader.onload = async (ev) => {
                           const base64 = ev.target.result.split(",")[1];
                           try {
-                            const response = await fetch("/api/claude", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                model: "claude-sonnet-4-5",
-                                max_tokens: 400,
-                                messages: [{ role: "user", content: [
-                                  { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
-                                  { type: "text", text: 'Analyse cette photo de repas. Estime les valeurs nutritionnelles pour une portion normale. Réponds UNIQUEMENT en JSON sans backticks: {"nom":"nom du plat","kcal":0,"p":0,"g":0,"l":0,"note":"observation courte sur la précision"}' }
-                                ]}]
-                              })
+                            const response = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 400, messages: [{ role: "user", content: [
+                                { type: "image", source: { type: "base64", media_type: file.type, data: base64 } },
+                                { type: "text", text: 'Analyse cette photo de repas. Réponds UNIQUEMENT en JSON sans backticks: {"nom":"nom du plat","kcal":0,"p":0,"g":0,"l":0}' }
+                              ]}]})
                             });
                             const data = await response.json();
-                            const text = data.content?.map(b => b.text || "").join("") || "";
-                            const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-                            setCustomAliment({ nom: parsed.nom || "Repas", kcal: String(parsed.kcal || ""), p: String(parsed.p || ""), g: String(parsed.g || ""), l: String(parsed.l || "") });
-                            if (parsed.note) setSearchText(parsed.note);
-                          } catch (err) { console.error(err); }
+                            const parsed = JSON.parse((data.content?.map(b=>b.text||"").join("")||"").replace(/```json|```/g,"").trim());
+                            setCustomAliment({ nom: parsed.nom||"Repas", kcal: String(parsed.kcal||""), p: String(parsed.p||""), g: String(parsed.g||""), l: String(parsed.l||"") });
+                          } catch(err) { console.error(err); }
                           setLoadingMacros(false);
                         };
                         reader.readAsDataURL(file);
                       }}
                     />
                     {loadingMacros ? (
-                      <div style={{ color: "var(--yellow)", fontSize: 13, padding: 8 }}>🤖 Ton coach analyse la photo…</div>
+                      <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center", padding: 8 }}>
+                        {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+                        <span style={{ fontSize: 13, color: "var(--yellow)", marginLeft: 8 }}>Analyse en cours…</span>
+                      </div>
                     ) : (
-                      <>
-                        <div style={{ fontSize: 28, marginBottom: 6 }}>📸</div>
-                        <div style={{ fontSize: 13, color: "var(--yellow)", fontWeight: 600 }}>Prendre une photo du repas</div>
-                        <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>L'IA estime les macros · ±20% de précision</div>
-                      </>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📸</div>
+                        <div style={{ textAlign: "left" }}>
+                          <div style={{ fontSize: 14, color: "var(--yellow)", fontWeight: 700 }}>Photo du repas</div>
+                          <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>L'IA estime les macros automatiquement</div>
+                        </div>
+                      </div>
                     )}
                   </label>
-                </div>
 
-                {/* Raccourcis rapides */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Ajout rapide</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-                    {ALIMENTS_RAPIDES.map((a, i) => (
-                      <button key={i} onClick={() => ajouterAliment(a)} style={{
-                        background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10,
-                        padding: "10px 6px", fontSize: 11, color: "#ccc", cursor: "pointer",
-                        display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                      }}>
-                        <span style={{ fontSize: 20 }}>{a.emoji}</span>
-                        <span style={{ fontSize: 10, textAlign: "center", lineHeight: 1.2 }}>{a.nom}</span>
-                      </button>
-                    ))}
+                  {/* Ajout rapide */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Ajout rapide</div>
+                    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+                      {ALIMENTS_RAPIDES.map((a, i) => (
+                        <button key={i} onClick={() => ajouterAliment(a)} style={{
+                          flexShrink: 0, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12,
+                          padding: "10px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 70,
+                        }}>
+                          <span style={{ fontSize: 22 }}>{a.emoji}</span>
+                          <span style={{ fontSize: 10, color: "#888", textAlign: "center", lineHeight: 1.2 }}>{a.nom}</span>
+                          <span style={{ fontSize: 9, color: "var(--yellow)" }}>{a.kcal}kcal</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Recherche + estimation IA */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Recherche IA</div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
-                    <input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => e.key === "Enter" && estimer()}
-                      placeholder="ex: salade thon 150g..."
-                      style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "12px 14px", color: "var(--white)", fontSize: 15, minWidth: 0 }} />
-                    <button onClick={estimer} disabled={!searchText.trim() || loadingMacros}
-                      style={{ background: "var(--yellow)", border: "none", borderRadius: 10, padding: "0 16px", fontSize: 14, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer", flexShrink: 0 }}>
-                      {loadingMacros ? "…" : "GO"}
-                    </button>
+                  {/* Recherche IA */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Recherche IA</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => e.key === "Enter" && estimer()}
+                        placeholder="ex: 2 œufs brouillés, tartine beurre..."
+                        style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 14px", color: "var(--white)", fontSize: 14, minWidth: 0, outline: "none" }} />
+                      <button onClick={estimer} disabled={!searchText.trim() || loadingMacros} style={{
+                        background: searchText.trim() && !loadingMacros ? "var(--yellow)" : "rgba(255,255,255,0.04)", border: "none", borderRadius: 12, padding: "0 18px",
+                        fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: searchText.trim() && !loadingMacros ? "#000" : "#333", cursor: "pointer", flexShrink: 0,
+                      }}>{loadingMacros ? "…" : "GO"}</button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Résultat estimation ou saisie manuelle */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#666", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Valeurs nutritionnelles</div>
-                  <div style={{ marginBottom: 8 }}>
-                    <Input label="Nom de l'aliment" value={customAliment.nom} onChange={v => setCustomAliment(a => ({ ...a, nom: v }))} placeholder="ex: Riz blanc cuit" />
+                  {/* Champs manuels */}
+                  <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, padding: "14px", marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 10 }}>Valeurs nutritionnelles</div>
+                    <div style={{ marginBottom: 10 }}>
+                      <Input label="Nom de l'aliment" value={customAliment.nom} onChange={v => setCustomAliment(a => ({ ...a, nom: v }))} placeholder="ex: Riz blanc cuit 200g" />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+                      {[
+                        { key: "kcal", label: "Kcal", color: "var(--yellow)" },
+                        { key: "p", label: "Prot. g", color: "var(--green)" },
+                        { key: "g", label: "Gluc. g", color: "#aaa" },
+                        { key: "l", label: "Lip. g", color: "var(--orange)" },
+                      ].map(f => (
+                        <div key={f.key}>
+                          <div style={{ fontSize: 9, color: f.color, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{f.label}</div>
+                          <input type="number" value={customAliment[f.key]} onChange={e => setCustomAliment(a => ({ ...a, [f.key]: e.target.value }))}
+                            placeholder="0" style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "8px 10px", color: f.color, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", outline: "none", textAlign: "center" }} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
-                    <Input label="Kcal" value={customAliment.kcal} onChange={v => setCustomAliment(a => ({ ...a, kcal: v }))} type="number" placeholder="0" />
-                    <Input label="Prot." value={customAliment.p} onChange={v => setCustomAliment(a => ({ ...a, p: v }))} type="number" placeholder="0" />
-                    <Input label="Gluc." value={customAliment.g} onChange={v => setCustomAliment(a => ({ ...a, g: v }))} type="number" placeholder="0" />
-                    <Input label="Lip." value={customAliment.l} onChange={v => setCustomAliment(a => ({ ...a, l: v }))} type="number" placeholder="0" />
-                  </div>
-                  <Btn onClick={() => ajouterAliment({ ...customAliment, kcal: parseInt(customAliment.kcal) || 0, p: parseInt(customAliment.p) || 0, g: parseInt(customAliment.g) || 0, l: parseInt(customAliment.l) || 0 })}
-                    disabled={!customAliment.nom} style={{ width: "100%" }}>
-                    Ajouter au journal ✓
-                  </Btn>
+
+                  <button onClick={() => ajouterAliment({ ...customAliment, kcal: parseInt(customAliment.kcal)||0, p: parseInt(customAliment.p)||0, g: parseInt(customAliment.g)||0, l: parseInt(customAliment.l)||0 })}
+                    disabled={!customAliment.nom} style={{
+                      width: "100%", padding: 16, borderRadius: 14, border: "none",
+                      background: customAliment.nom ? "var(--yellow)" : "rgba(255,255,255,0.04)",
+                      color: customAliment.nom ? "#000" : "#333",
+                      fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: customAliment.nom ? "pointer" : "default",
+                    }}>AJOUTER AU JOURNAL ✓</button>
                 </div>
               </div>
             </div>
@@ -6087,210 +6140,209 @@ JSON: {
         </div>
       )}
 
-      {/* RECETTES */}
+      {/* ══ RECETTES ══ */}
       {subTab === "recettes" && (
         <div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {/* Sélecteur type */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {[
-              { id: "petitdej", icon: "🌅", label: "Petit-déj", color: "var(--yellow)" },
-              { id: "recup", icon: "💪", label: "Récup", color: "var(--green)" },
-              { id: "snack", icon: "⚡", label: "Snack", color: "#ff9a3c" },
+              { id: "petitdej", icon: "🌅", label: "Petit-déj", color: "var(--yellow)", rgb: "232,255,71" },
+              { id: "recup", icon: "💪", label: "Récup", color: "var(--green)", rgb: "57,255,128" },
+              { id: "snack", icon: "⚡", label: "Snack", color: "var(--orange)", rgb: "255,154,60" },
             ].map(t => (
               <button key={t.id} onClick={() => { setRecetteType(t.id); setRecetteIA(null); }} style={{
-                flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 12, fontWeight: 700,
-                background: recetteType === t.id ? `rgba(${t.color === "var(--yellow)" ? "232,255,71" : t.color === "var(--green)" ? "57,255,128" : "255,154,60"},0.08)` : "var(--bg3)",
-                border: recetteType === t.id ? `1.5px solid ${t.color}` : "1px solid transparent",
-                color: recetteType === t.id ? t.color : "#666", cursor: "pointer",
-              }}>{t.icon} {t.label}</button>
+                flex: 1, padding: "12px 4px", borderRadius: 12, fontSize: 12, fontWeight: 700,
+                background: recetteType === t.id ? `rgba(${t.rgb},0.1)` : "rgba(255,255,255,0.02)",
+                border: recetteType === t.id ? `1.5px solid rgba(${t.rgb},0.4)` : "1px solid rgba(255,255,255,0.05)",
+                color: recetteType === t.id ? t.color : "#444", cursor: "pointer", transition: "all 0.2s",
+              }}><div style={{ fontSize: 18, marginBottom: 4 }}>{t.icon}</div>{t.label}</button>
             ))}
           </div>
 
-          {/* Recette IA — affichée ou CTA */}
           {!recetteIA && !loadingRecette && (
             <div>
-              <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 14, padding: "16px", marginBottom: 12 }}>
-                <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", marginBottom: 4 }}>RECETTE IA PERSONNALISÉE</div>
-                <div style={{ fontSize: 13, color: "#555", marginBottom: 14, lineHeight: 1.5 }}>
-                  Générée selon ta séance, ton poids ({profile.poids}kg) et tes objectifs en macros. Jamais deux fois la même recette.
+              {/* CTA principal */}
+              <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 18, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: -20, right: -10, fontSize: 80, opacity: 0.05 }}>👨‍🍳</div>
+                <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", letterSpacing: 1, marginBottom: 6 }}>RECETTE IA PERSO</div>
+                <div style={{ fontSize: 13, color: "#555", lineHeight: 1.6, marginBottom: 14 }}>
+                  Adaptée à ton profil {profile.poids}kg, ta séance du jour et tes objectifs. Jamais la même deux fois.
                 </div>
-                <Btn onClick={() => genererRecetteIA()} style={{ width: "100%" }}>✨ Générer une recette</Btn>
+                <button onClick={() => genererRecetteIA()} style={{ width: "100%", padding: 14, borderRadius: 12, border: "none", background: "var(--yellow)", color: "#000", fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer" }}>
+                  ✨ GÉNÉRER UNE RECETTE
+                </button>
               </div>
-
-              {/* Catégories rapides */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>Ou choisir un style :</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {(CATEGORIES_RECETTES[recetteType] || []).map((cat, i) => (
-                    <button key={i} onClick={() => genererRecetteIA(cat)} style={{
-                      background: "var(--bg3)", border: "1px solid var(--bg3)", borderRadius: 20,
-                      padding: "6px 12px", fontSize: 12, color: "#888", cursor: "pointer",
-                    }}>
-                      {cat}
-                    </button>
-                  ))}
-                </div>
+              {/* Styles rapides */}
+              <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Choisir un style</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(CATEGORIES_RECETTES[recetteType] || []).map((cat, i) => (
+                  <button key={i} onClick={() => genererRecetteIA(cat)} style={{
+                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20,
+                    padding: "7px 14px", fontSize: 12, color: "#666", cursor: "pointer",
+                  }}>{cat}</button>
+                ))}
               </div>
             </div>
           )}
 
           {loadingRecette && (
-            <div style={{ textAlign: "center", padding: 32 }}>
-              <Spinner />
-              <div style={{ fontSize: 12, color: "#555", marginTop: 8 }}>Ton coach prépare ta recette…</div>
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+              </div>
+              <div style={{ fontSize: 13, color: "#555" }}>Ton coach prépare ta recette…</div>
             </div>
           )}
 
           {recetteIA && !loadingRecette && (
-            <div className="fade-in">
-              <Card style={{ border: "1.5px solid rgba(232,255,71,0.2)", marginBottom: 12 }}>
-                {/* Header recette */}
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 14 }}>
-                  <span style={{ fontSize: 36 }}>{recetteIA.emoji || "🍽️"}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.2 }}>{recetteIA.nom}</div>
-                    <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>⏱ {recetteIA.temps}</div>
-                    {recetteIA.categorie && <div style={{ fontSize: 11, color: "#444", marginTop: 2, fontStyle: "italic" }}>{recetteIA.categorie}</div>}
+            <div className="float-up">
+              {/* Header recette */}
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
+                <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", padding: "18px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>{recetteIA.emoji || "🍽️"}</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{recetteIA.nom}</div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <span style={{ fontSize: 11, color: "#444" }}>⏱ {recetteIA.temps}</span>
+                        {recetteIA.categorie && <span style={{ fontSize: 11, color: "#333" }}>· {recetteIA.categorie}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Macros recette */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginTop: 14 }}>
+                    {[
+                      { l: "Kcal", v: recetteIA.kcal, c: "var(--yellow)", u: "" },
+                      { l: "Prot.", v: recetteIA.p, c: "var(--green)", u: "g" },
+                      { l: "Gluc.", v: recetteIA.g, c: "#ccc", u: "g" },
+                      { l: "Lip.", v: recetteIA.l, c: "var(--orange)", u: "g" },
+                    ].map(m => (
+                      <div key={m.l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 20, color: m.c, lineHeight: 1 }}>{m.v}{m.u}</div>
+                        <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>{m.l}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Macros */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 14 }}>
-                  {[
-                    { l: "Kcal", v: recetteIA.kcal, c: "var(--white)", u: "" },
-                    { l: "Prot.", v: recetteIA.p, c: "var(--green)", u: "g" },
-                    { l: "Gluc.", v: recetteIA.g, c: "var(--yellow)", u: "g" },
-                    { l: "Lip.", v: recetteIA.l, c: "#ff9a3c", u: "g" },
-                  ].map(m => (
-                    <div key={m.l} style={{ background: "var(--bg3)", borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>
-                      <div className="bebas" style={{ fontSize: 18, color: m.c, lineHeight: 1 }}>{m.v}{m.u}</div>
-                      <div style={{ fontSize: 9, color: "#555", marginTop: 2 }}>{m.l}</div>
-                    </div>
-                  ))}
-                </div>
-
                 {/* Ingrédients */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Ingrédients</div>
+                <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Ingrédients</div>
                   {(recetteIA.ingredients || []).map((ing, i) => (
-                    <div key={i} style={{ fontSize: 13, color: "#ccc", marginBottom: 5, paddingLeft: 8, borderLeft: "2px solid rgba(232,255,71,0.2)" }}>
-                      {ing}
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 7 }}>
+                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--yellow)", marginTop: 6, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: "#ccc", lineHeight: 1.4 }}>{ing}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Préparation */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Préparation</div>
-                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.7 }}>{recetteIA.prep}</div>
+                <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Préparation</div>
+                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.75 }}>{recetteIA.prep}</div>
                 </div>
 
                 {/* Pourquoi */}
                 {recetteIA.pourquoi && (
-                  <div style={{ background: "rgba(57,255,128,0.06)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700, marginBottom: 4 }}>💡 Pourquoi cette recette ?</div>
-                    <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6 }}>{recetteIA.pourquoi}</div>
+                  <div style={{ padding: "14px 18px", background: "rgba(57,255,128,0.03)" }}>
+                    <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>💡 Pourquoi cette recette ?</div>
+                    <div style={{ fontSize: 12, color: "#888", lineHeight: 1.7 }}>{recetteIA.pourquoi}</div>
                   </div>
                 )}
-              </Card>
-
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                <Btn variant="dark" onClick={() => { setRecetteIA(null); }} style={{ flex: 1 }}>↺ Autre recette</Btn>
-                <Btn variant="success" onClick={() => ajouterAliment({ nom: recetteIA.nom, emoji: recetteIA.emoji || "🍽️", kcal: recetteIA.kcal, p: recetteIA.p, g: recetteIA.g, l: recetteIA.l })} style={{ flex: 2 }}>
-                  + Ajouter au journal
-                </Btn>
               </div>
 
-              {/* Autres catégories */}
-              <div>
-                <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Essayer un autre style :</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {(CATEGORIES_RECETTES[recetteType] || []).filter(c => c !== recetteIA.categorie).map((cat, i) => (
-                    <button key={i} onClick={() => { setRecetteIA(null); genererRecetteIA(cat); }} style={{
-                      background: "var(--bg3)", border: "1px solid var(--bg3)", borderRadius: 20,
-                      padding: "6px 12px", fontSize: 12, color: "#666", cursor: "pointer",
-                    }}>
-                      {cat}
-                    </button>
-                  ))}
-                </div>
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <button onClick={() => setRecetteIA(null)} style={{ flex: 1, padding: "13px 0", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#888", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", cursor: "pointer" }}>↺ AUTRE</button>
+                <button onClick={() => ajouterAliment({ nom: recetteIA.nom, emoji: recetteIA.emoji || "🍽️", kcal: recetteIA.kcal, p: recetteIA.p, g: recetteIA.g, l: recetteIA.l })} style={{ flex: 2, padding: "13px 0", borderRadius: 12, background: "var(--green)", border: "none", color: "#000", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", fontWeight: 700, cursor: "pointer" }}>
+                  + AJOUTER AU JOURNAL
+                </button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* BILAN IA */}
+      {/* ══ BILAN IA ══ */}
       {subTab === "bilan" && (
         <div>
-          <Card style={{ marginBottom: 16 }}>
-            <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 10 }}>BILAN DU JOUR</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+          {/* Recap macros */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+            {[
+              { label: "Calories", val: totaux.kcal, obj: objectifs.kcal, unit: "kcal", color: kcalColor, bg: "rgba(232,255,71,0.05)", border: "rgba(232,255,71,0.15)" },
+              { label: "Protéines", val: totaux.p, obj: objectifs.p, unit: "g", color: "var(--green)", bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.15)" },
+              { label: "Glucides", val: totaux.g, obj: objectifs.g, unit: "g", color: "#aaa", bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.06)" },
+              { label: "Lipides", val: totaux.l, obj: objectifs.l, unit: "g", color: "var(--orange)", bg: "rgba(255,154,60,0.05)", border: "rgba(255,154,60,0.15)" },
+            ].map(m => {
+              const pct = Math.min(100, Math.round((m.val / m.obj) * 100));
+              return (
+                <div key={m.label} style={{ background: m.bg, border: `1px solid ${m.border}`, borderRadius: 14, padding: "14px 12px" }}>
+                  <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{m.label}</div>
+                  <div className="bebas" style={{ fontSize: 30, color: m.color, lineHeight: 1 }}>{m.val}<span style={{ fontSize: 13, color: "#444" }}>{m.unit}</span></div>
+                  <div style={{ fontSize: 10, color: "#333", marginBottom: 6 }}>obj. {m.obj}{m.unit}</div>
+                  <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: m.color, borderRadius: 99 }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: m.color, marginTop: 4, fontWeight: 700 }}>{pct}%</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Bouton / loading bilan */}
+          {repasJour.length === 0 ? (
+            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 14, padding: "24px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
+              <div style={{ fontSize: 13, color: "#444" }}>Ajoute des aliments dans le journal d'abord.</div>
+            </div>
+          ) : loadingBilan ? (
+            <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "20px 16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(57,255,128,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+                <div className="bebas" style={{ fontSize: 16, color: "var(--green)", letterSpacing: 1 }}>COACH NUTRITIONNEL IA</div>
+              </div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
+                <span style={{ fontSize: 12, color: "#555", marginLeft: 6 }}>{bilanStreamText}</span>
+              </div>
+            </div>
+          ) : !bilanIA ? (
+            <button onClick={genererBilan} style={{ width: "100%", padding: 16, borderRadius: 14, border: "none", background: "linear-gradient(135deg, rgba(57,255,128,0.12), rgba(57,255,128,0.05))", color: "var(--green)", fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer", border: "1.5px solid rgba(57,255,128,0.25)" }}>
+              🤖 GÉNÉRER LE BILAN IA
+            </button>
+          ) : null}
+
+          {/* Résultat bilan */}
+          {bilanIA && (
+            <div className="float-up">
+              {/* Score note */}
+              <div style={{ background: "linear-gradient(135deg, rgba(57,255,128,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(57,255,128,0.2)", borderRadius: 18, padding: "18px", marginBottom: 10, display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 60, height: 60, borderRadius: "50%", background: bilanIA.note >= 7 ? "rgba(57,255,128,0.12)" : bilanIA.note >= 5 ? "rgba(232,255,71,0.1)" : "rgba(255,71,71,0.1)", border: `2px solid ${bilanIA.note >= 7 ? "rgba(57,255,128,0.4)" : bilanIA.note >= 5 ? "rgba(232,255,71,0.3)" : "rgba(255,71,71,0.3)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div className="bebas" style={{ fontSize: 26, color: bilanIA.note >= 7 ? "var(--green)" : bilanIA.note >= 5 ? "var(--yellow)" : "var(--red)", lineHeight: 1 }}>{bilanIA.note}</div>
+                  <div style={{ fontSize: 9, color: "#444" }}>/10</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Analyse du coach</div>
+                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.65 }}>{bilanIA.message}</div>
+                </div>
+              </div>
+
+              {/* Cards feedback */}
               {[
-                { label: "Calories", val: totaux.kcal, obj: objectifs.kcal, unit: "kcal" },
-                { label: "Protéines", val: totaux.p, obj: objectifs.p, unit: "g" },
-                { label: "Glucides", val: totaux.g, obj: objectifs.g, unit: "g" },
-                { label: "Lipides", val: totaux.l, obj: objectifs.l, unit: "g" },
-              ].map(m => (
-                <div key={m.label} style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, textAlign: "center" }}>
-                  <div className="bebas" style={{ fontSize: 22, color: getColor(m.val, m.obj), lineHeight: 1 }}>{m.val}</div>
-                  <div style={{ fontSize: 10, color: "#555" }}>{m.unit}</div>
-                  <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>obj. {m.obj}{m.unit}</div>
-                  <ProgressBar value={m.val} max={m.obj} color={getColor(m.val, m.obj)} height={3} />
+                { key: "top", label: "✅ Point positif", color: "var(--green)", bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.15)" },
+                { key: "manque", label: "⚠️ Ce qui manque", color: "var(--red)", bg: "rgba(255,71,71,0.05)", border: "rgba(255,71,71,0.12)" },
+                { key: "conseil_demain", label: "💡 Demain matin", color: "var(--yellow)", bg: "rgba(232,255,71,0.04)", border: "rgba(232,255,71,0.12)" },
+                { key: "aliment_recommande", label: "🛒 À ajouter maintenant", color: "var(--orange)", bg: "rgba(255,154,60,0.05)", border: "rgba(255,154,60,0.12)" },
+              ].filter(f => bilanIA[f.key]).map(f => (
+                <div key={f.key} style={{ background: f.bg, border: `1px solid ${f.border}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: f.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>{f.label}</div>
+                  <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.6 }}>{bilanIA[f.key]}</div>
                 </div>
               ))}
-            </div>
-            {repasJour.length === 0 ? (
-              <div style={{ color: "#555", textAlign: "center", fontSize: 13, padding: 12 }}>Ajoute des aliments dans ton journal d'abord.</div>
-            ) : loadingBilan ? (
-              <div style={{ background: "rgba(57,255,128,0.05)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 12, padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />)}
-                  <span style={{ fontSize: 13, color: "var(--green)", fontWeight: 600 }}>Coach Nutritionnel IA</span>
-                </div>
-                <div style={{ fontSize: 13, color: "#666", fontStyle: "italic" }}>{bilanStreamText}</div>
-              </div>
-            ) : (
-              <Btn onClick={genererBilan} style={{ width: "100%" }}>🤖 Générer le bilan IA</Btn>
-            )}
-          </Card>
 
-          {bilanIA && (
-            <div className="fade-in">
-              <Card style={{ border: "1.5px solid var(--green)44", marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div className="bebas" style={{ fontSize: 18, color: "var(--green)" }}>ANALYSE DE TON COACH</div>
-                  <div style={{ background: "var(--bg3)", borderRadius: 99, padding: "4px 14px" }}>
-                    <span className="bebas" style={{ fontSize: 22, color: bilanIA.note >= 7 ? "var(--green)" : bilanIA.note >= 5 ? "var(--yellow)" : "var(--red)" }}>{bilanIA.note}</span>
-                    <span style={{ fontSize: 11, color: "#555" }}>/10</span>
-                  </div>
-                </div>
-                <p style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7, marginBottom: 12 }}>{bilanIA.message}</p>
-                {bilanIA.top && (
-                  <div style={{ background: "rgba(57,255,128,0.08)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 8, padding: 10, marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700, marginBottom: 4 }}>✅ Point positif</div>
-                    <div style={{ fontSize: 13, color: "#ccc" }}>{bilanIA.top}</div>
-                  </div>
-                )}
-                {bilanIA.manque && (
-                  <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.2)", borderRadius: 8, padding: 10, marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, color: "var(--red)", fontWeight: 700, marginBottom: 4 }}>⚠️ Ce qui manque</div>
-                    <div style={{ fontSize: 13, color: "#ccc" }}>{bilanIA.manque}</div>
-                  </div>
-                )}
-                {bilanIA.conseil_demain && (
-                  <div style={{ background: "var(--bg3)", borderRadius: 8, padding: 10, marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, marginBottom: 4 }}>💡 Demain matin</div>
-                    <div style={{ fontSize: 13, color: "#ccc" }}>{bilanIA.conseil_demain}</div>
-                  </div>
-                )}
-                {bilanIA.aliment_recommande && (
-                  <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 8, padding: 10 }}>
-                    <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, marginBottom: 4 }}>🛒 À ajouter maintenant</div>
-                    <div style={{ fontSize: 13, color: "#ccc" }}>{bilanIA.aliment_recommande}</div>
-                  </div>
-                )}
-              </Card>
+              <button onClick={genererBilan} style={{ width: "100%", padding: "13px 0", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#555", fontSize: 14, fontFamily: "'Bebas Neue',sans-serif", cursor: "pointer", marginTop: 4 }}>
+                ↺ Relancer l'analyse
+              </button>
             </div>
           )}
         </div>
