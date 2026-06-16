@@ -6999,6 +6999,62 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           </button>
         </div>
       )}
+
+      {/* ── TEMPS DE RÉFÉRENCE HYROX ── */}
+      {(() => {
+        const REFS = [
+          { label: "Elite H", time: "3:45", mins: 225, color: "#ff4747" },
+          { label: "Elite F", time: "4:15", mins: 255, color: "#ff4747" },
+          { label: "Pro H", time: "4:30", mins: 270, color: "#ff9a3c" },
+          { label: "Pro F", time: "5:00", mins: 300, color: "#ff9a3c" },
+          { label: "Semi-Pro H", time: "5:30", mins: 330, color: "#e8ff47" },
+          { label: "Semi-Pro F", time: "6:15", mins: 375, color: "#e8ff47" },
+          { label: "Amateur H", time: "6:00", mins: 360, color: "#39ff80" },
+          { label: "Amateur F", time: "7:00", mins: 420, color: "#39ff80" },
+        ];
+        const gender = profile.genre === "F" ? "F" : "H";
+        const levelRefs = REFS.filter(r => r.label.endsWith(gender));
+        const objStr = strategy?.objectifTemps || "";
+        const objMatch = objStr.match(/(\d+)[h:](\d+)/);
+        const objMins = objMatch ? parseInt(objMatch[1]) * 60 + parseInt(objMatch[2]) : null;
+        const minTime = Math.min(...levelRefs.map(r => r.mins));
+        const maxTime = Math.max(...levelRefs.map(r => r.mins)) + 30;
+        return (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
+            <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>🏆 Temps de référence HYROX ({gender === "H" ? "Homme" : "Femme"})</div>
+            <div style={{ position: "relative", paddingBottom: 8 }}>
+              {levelRefs.map((ref, i) => {
+                const pct = ((ref.mins - minTime) / (maxTime - minTime)) * 80 + 5;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <div style={{ width: 72, fontSize: 10, color: "#444", textAlign: "right", flexShrink: 0 }}>{ref.label.replace(/ [HF]$/,'')}</div>
+                    <div style={{ flex: 1, position: "relative", height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
+                      <div style={{ position: "absolute", left: 0, top: 0, width: `${pct}%`, height: "100%", background: ref.color, borderRadius: 3, opacity: 0.6 }} />
+                      {objMins && Math.abs(objMins - ref.mins) <= 15 && (
+                        <div style={{ position: "absolute", top: -14, left: `${pct}%`, transform: "translateX(-50%)", fontSize: 14, filter: "drop-shadow(0 0 4px #e8ff47)" }}>🎯</div>
+                      )}
+                    </div>
+                    <div style={{ width: 36, fontSize: 11, fontWeight: 700, color: ref.color, flexShrink: 0 }}>{ref.time}</div>
+                  </div>
+                );
+              })}
+              {objMins && (() => {
+                const pct = ((objMins - minTime) / (maxTime - minTime)) * 80 + 5;
+                const closest = levelRefs.reduce((a, b) => Math.abs(b.mins - objMins) < Math.abs(a.mins - objMins) ? b : a);
+                return (
+                  <div style={{ marginTop: 14, background: `${closest.color}10`, border: `1px solid ${closest.color}33`, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontSize: 22, flexShrink: 0 }}>🎯</div>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: closest.color }}>Objectif {strategy.objectifTemps}</div>
+                      <div style={{ fontSize: 11, color: "#555" }}>Niveau {closest.label.replace(/ [HF]$/, '')} · {Math.abs(objMins - closest.mins) <= 5 ? "Dans la cible !" : objMins < closest.mins ? `${closest.mins - objMins} min sous le seuil` : `${objMins - closest.mins} min au-dessus du seuil`}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
