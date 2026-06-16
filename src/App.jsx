@@ -5394,6 +5394,72 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         </div>
       )}
 
+      {/* ── OBJECTIFS HYROX ── */}
+      {(() => {
+        const [editGoals, setEditGoals] = React.useState(false);
+        const [goals, setGoals] = React.useState({
+          targetTime: profile.goalTargetTime || "",
+          weakStation: profile.goalWeakStation || "",
+          targetLevel: profile.goalTargetLevel || "",
+        });
+        const STATIONS = ["SkiErg","Sled Push","Sled Pull","Burpee BJ","Rowing","Farmers Carry","Sandbag Lunges","Wall Balls"];
+        const GOAL_LEVELS = ["Sub 1h00","Sub 1h15","Sub 1h30","Sub 1h45","Sub 2h00","Finisher"];
+        async function saveGoals() {
+          const updated = { ...profile, goalTargetTime: goals.targetTime, goalWeakStation: goals.weakStation, goalTargetLevel: goals.targetLevel };
+          await storage.set(`athlete_${profile.name}`, updated);
+          onUpdateProfile(updated);
+          setEditGoals(false);
+        }
+        const hasGoals = profile.goalTargetTime || profile.goalWeakStation || profile.goalTargetLevel;
+        return (
+          <div style={{ background: "rgba(232,255,71,0.03)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: editGoals || hasGoals ? 14 : 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Mes Objectifs HYROX</div>
+              <button onClick={editGoals ? saveGoals : () => setEditGoals(true)} style={{ background: editGoals ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.04)", border: editGoals ? "1px solid rgba(57,255,128,0.3)" : "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "5px 12px", fontSize: 11, color: editGoals ? "var(--green)" : "#666", cursor: "pointer", fontWeight: 700 }}>{editGoals ? "✓ Sauver" : hasGoals ? "Modifier" : "Définir"}</button>
+            </div>
+            {editGoals ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Temps cible HYROX</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {GOAL_LEVELS.map(l => (
+                      <button key={l} onClick={() => setGoals(g => ({ ...g, targetLevel: l, targetTime: l }))} style={{ padding: "7px 13px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", background: goals.targetLevel === l ? "var(--yellow)" : "rgba(255,255,255,0.04)", border: goals.targetLevel === l ? "none" : "1px solid rgba(255,255,255,0.08)", color: goals.targetLevel === l ? "#000" : "#666" }}>{l}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Station à améliorer en priorité</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {STATIONS.map(s => (
+                      <button key={s} onClick={() => setGoals(g => ({ ...g, weakStation: s }))} style={{ padding: "7px 13px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", background: goals.weakStation === s ? "var(--red)" : "rgba(255,255,255,0.04)", border: goals.weakStation === s ? "none" : "1px solid rgba(255,255,255,0.08)", color: goals.weakStation === s ? "#fff" : "#666" }}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : hasGoals ? (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {profile.goalTargetLevel && (
+                  <div style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 12, padding: "10px 14px", flex: 1, minWidth: 120 }}>
+                    <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Objectif temps</div>
+                    <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", lineHeight: 1 }}>{profile.goalTargetLevel}</div>
+                  </div>
+                )}
+                {profile.goalWeakStation && (
+                  <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.2)", borderRadius: 12, padding: "10px 14px", flex: 1, minWidth: 120 }}>
+                    <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Station à bosser</div>
+                    <div className="bebas" style={{ fontSize: 18, color: "var(--red)", lineHeight: 1 }}>{profile.goalWeakStation}</div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "#333", textAlign: "center", padding: "8px 0 4px", cursor: "pointer" }} onClick={() => setEditGoals(true)}>
+                Définir ton temps cible et ta station à travailler →
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── PR BOARD ── */}
       {(profile.squat1RM_final || profile.deadlift1RM_final || profile.vmaKmh || profile.tests) && (() => {
         const tests = profile.tests || {};
