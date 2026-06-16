@@ -4367,21 +4367,80 @@ JSON:
                 </div>
 
                 {/* Retour au calme + Nutrition */}
-                {(session.retourCalme || session.nutrition) && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                    {session.retourCalme && (
-                      <div style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.12)", borderRadius: 12, padding: "12px 14px" }}>
-                        <div style={{ fontSize: 9, color: "var(--purple)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>🧘 Retour calme</div>
-                        <div style={{ fontSize: 12, color: "#999", lineHeight: 1.5 }}>{session.retourCalme}</div>
+                {/* Retour au calme interactif */}
+                {(() => {
+                  const COOLDOWNS = {
+                    running_zone2: [
+                      { icon: "🚶", label: "Marche 3 min", duration: "3 min", desc: "Baisse progressive du rythme cardiaque" },
+                      { icon: "🦵", label: "Étirement quadriceps", duration: "45 s", desc: "Debout, genou plié, talon vers fesse × 2" },
+                      { icon: "🦵", label: "Étirement ischio", duration: "45 s", desc: "Jambe tendue au sol, penche le buste × 2" },
+                      { icon: "💆", label: "Respiration profonde", duration: "1 min", desc: "4 temps inspire, 6 temps expire × 5" },
+                    ],
+                    force_stations: [
+                      { icon: "💆", label: "Rouleau mousse dos", duration: "1 min", desc: "T4 à T12, 30s par zone douloureuse" },
+                      { icon: "🦵", label: "Fentes + étirement hip", duration: "1 min", desc: "Lunge bas, bras opposé vers le ciel × 2" },
+                      { icon: "💪", label: "Étirement pectoraux", duration: "30 s", desc: "Bras en croix contre un mur, rotation tronc" },
+                      { icon: "🧘", label: "Child pose", duration: "1 min", desc: "Assis sur les talons, bras tendus devant, front au sol" },
+                    ],
+                    running_qualite: [
+                      { icon: "🚶", label: "Trot très léger", duration: "3 min", desc: "Retour progressif, fréquence cardiaque descend" },
+                      { icon: "🦵", label: "Pigeon pose", duration: "1 min", desc: "Ouverture de hanche au sol × 2 côtés" },
+                      { icon: "🦵", label: "Mollets au mur", duration: "45 s", desc: "Pied au mur, genou tendu puis plié × 2" },
+                      { icon: "💆", label: "Relaxation allongé", duration: "2 min", desc: "Jambes surélevées contre un mur, respiration ample" },
+                    ],
+                    hybride_compromis: [
+                      { icon: "🚶", label: "Marche 2 min", duration: "2 min", desc: "Récupération active, bras décontractés" },
+                      { icon: "💆", label: "Rouleau mollets", duration: "45 s", desc: "10 roulages lents, pause sur zones tendues" },
+                      { icon: "🦵", label: "Étirement complet jambes", duration: "1 min", desc: "Quadri + ischio + fesse × chaque côté" },
+                      { icon: "💪", label: "Étirement dos + épaules", duration: "45 s", desc: "Bras croisé devant la poitrine, chin to chest" },
+                    ],
+                  };
+                  const steps = COOLDOWNS[session.type] || COOLDOWNS.running_zone2;
+                  const [cdOpen, setCdOpen] = React.useState(false);
+                  const [cdDone, setCdDone] = React.useState({});
+                  const doneCount = Object.values(cdDone).filter(Boolean).length;
+                  const allDone = doneCount === steps.length;
+                  return (
+                    <div style={{ background: allDone ? "rgba(57,255,128,0.03)" : "rgba(57,255,128,0.03)", border: `1px solid ${allDone ? "rgba(57,255,128,0.2)" : "rgba(57,255,128,0.1)"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
+                      <div onClick={() => setCdOpen(o => !o)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                        <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🧘"}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Retour au calme · {steps.length} étapes</div>
+                          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.3s" }} />
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
+                        <div style={{ color: "#333", fontSize: 14, transform: cdOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
                       </div>
-                    )}
-                    {session.nutrition && (
-                      <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 12, padding: "12px 14px" }}>
-                        <div style={{ fontSize: 9, color: "var(--green)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>🥗 Nutrition</div>
-                        <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5 }}>🍌 {session.nutrition.avant}</div>
-                        <div style={{ fontSize: 11, color: "#888", marginTop: 3 }}>🥤 {session.nutrition.apres}</div>
-                      </div>
-                    )}
+                      {cdOpen && (
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
+                          {steps.map((step, i) => {
+                            const done = cdDone[i];
+                            return (
+                              <div key={i} onClick={() => setCdDone(d => ({ ...d, [i]: !d[i] }))}
+                                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 10, cursor: "pointer", background: done ? "rgba(57,255,128,0.04)" : "transparent", marginBottom: 4, transition: "background 0.2s" }}>
+                                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(57,255,128,0.1)", border: done ? "none" : "2px solid rgba(57,255,128,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: done ? 13 : 16, color: done ? "#000" : "var(--green)", transition: "all 0.25s" }}>{done ? "✓" : step.icon}</div>
+                                <div style={{ flex: 1, opacity: done ? 0.5 : 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", textDecoration: done ? "line-through" : "none" }}>{step.label} <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 400 }}>· {step.duration}</span></div>
+                                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{step.desc}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {allDone && <div style={{ textAlign: "center", fontSize: 13, color: "var(--green)", fontWeight: 700, padding: "8px 0 4px" }}>💚 Excellent ! Récupération complète.</div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Nutrition */}
+                {session.nutrition && (
+                  <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ fontSize: 9, color: "var(--green)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>🥗 Nutrition</div>
+                    <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5 }}>🍌 {session.nutrition.avant}</div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 3 }}>🥤 {session.nutrition.apres}</div>
                   </div>
                 )}
 
