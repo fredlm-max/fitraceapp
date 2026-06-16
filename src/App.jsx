@@ -2313,6 +2313,12 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = React.useRef(null);
+
+  // Auto-scroll chat to bottom on new messages
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const days = daysUntil(profile.raceDate);
 
@@ -3065,6 +3071,7 @@ JSON:
                   )}
                 </div>
               ))}
+              <div ref={chatEndRef} />
             </div>
 
             {/* Input */}
@@ -5212,6 +5219,77 @@ JSON:
 
             {/* Résumé hebdo si dimanche */}
             {buildWeeklySummary(profile).count > 0 && <WeeklySummaryCard profile={profile} />}
+
+            {/* ── COMPARAISON SEMAINE N vs N-1 ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const now = new Date();
+              const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Mon=1 ... Sun=7
+              const startThisWeek = new Date(now); startThisWeek.setDate(now.getDate() - dayOfWeek + 1); startThisWeek.setHours(0,0,0,0);
+              const startLastWeek = new Date(startThisWeek); startLastWeek.setDate(startThisWeek.getDate() - 7);
+              const endLastWeek = new Date(startThisWeek);
+
+              const thisWeekSessions = (profile.sessions||[]).filter(s => new Date(s.date) >= startThisWeek);
+              const lastWeekSessions = (profile.sessions||[]).filter(s => new Date(s.date) >= startLastWeek && new Date(s.date) < endLastWeek);
+
+              if (thisWeekSessions.length === 0 && lastWeekSessions.length === 0) return null;
+
+              const thisAvgRPE = thisWeekSessions.length ? Math.round(thisWeekSessions.reduce((a,s) => a + (s.difficulte||5), 0) / thisWeekSessions.length * 10) / 10 : 0;
+              const lastAvgRPE = lastWeekSessions.length ? Math.round(lastWeekSessions.reduce((a,s) => a + (s.difficulte||5), 0) / lastWeekSessions.length * 10) / 10 : 0;
+
+              const COLS = [
+                { label: "Séances", this: thisWeekSessions.length, last: lastWeekSessions.length, unit: "", icon: "📅", color: "var(--yellow)" },
+                { label: "RPE moy.", this: thisAvgRPE || "—", last: lastAvgRPE || "—", unit: "/10", icon: "🔥", color: "var(--orange)" },
+                { label: "Dures", this: thisWeekSessions.filter(s=>s.ressenti==="dur").length, last: lastWeekSessions.filter(s=>s.ressenti==="dur").length, unit: "", icon: "💀", color: "var(--red)" },
+              ];
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Semaine en cours vs précédente</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    {COLS.map(col => {
+                      const diff = typeof col.this === "number" && typeof col.last === "number" ? col.this - col.last : null;
+                      const improved = diff !== null && diff > 0;
+                      const equal = diff === 0;
+                      return (
+                        <div key={col.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+                          <div style={{ fontSize: 16, marginBottom: 4 }}>{col.icon}</div>
+                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{col.label}</div>
+                          <div className="bebas" style={{ fontSize: 24, color: col.color, lineHeight: 1 }}>{col.this}{col.unit}</div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 4 }}>
+                            <span style={{ fontSize: 9, color: "#333" }}>vs {col.last}{col.unit}</span>
+                            {diff !== null && !equal && (
+                              <span style={{ fontSize: 9, color: improved ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                                {improved ? "▲" : "▼"}{Math.abs(diff)}
+                              </span>
+                            )}
+                            {equal && <span style={{ fontSize: 9, color: "#444" }}>—</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Mini heatmap days of week */}
+                  <div style={{ marginTop: 12, display: "flex", gap: 5, justifyContent: "center" }}>
+                    {["L","M","M","J","V","S","D"].map((d, i) => {
+                      const dayHadSession = thisWeekSessions.some(s => {
+                        const sd = new Date(s.date);
+                        const sdow = sd.getDay() === 0 ? 7 : sd.getDay();
+                        return sdow === i + 1;
+                      });
+                      const isPast = i + 1 <= dayOfWeek;
+                      return (
+                        <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: dayHadSession ? "rgba(232,255,71,0.15)" : isPast ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.015)", border: `1px solid ${dayHadSession ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {dayHadSession && <span style={{ fontSize: 12 }}>✓</span>}
+                          </div>
+                          <div style={{ fontSize: 8, color: i + 1 === dayOfWeek ? "var(--yellow)" : "#333", fontWeight: i + 1 === dayOfWeek ? 700 : 400 }}>{d}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── GRAPHIQUE CHARGE HEBDO ── */}
             {(profile.sessions||[]).length >= 3 && (() => {
