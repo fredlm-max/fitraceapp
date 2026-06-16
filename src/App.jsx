@@ -11,37 +11,64 @@ const GLOBAL_STYLES = `
     --yellow: #e8ff47; --red: #ff4747; --green: #39ff80; --orange: #ff9a3c; --purple: #a78bfa;
     --white: #f0f0f0; --gray: #555; --gray2: #333;
     --font-title: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   }
-  html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; }
+  html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; }
   #root { min-height: 100vh; }
   ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg2); }
-  ::-webkit-scrollbar-thumb { background: var(--yellow); border-radius: 2px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(232,255,71,0.3); border-radius: 2px; }
   .bebas { font-family: var(--font-title); letter-spacing: 0.04em; }
-  button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); transition: all 0.18s; }
-  input, select, textarea { font-family: var(--font-body); }
-  input:focus, select:focus, textarea:focus { outline: 2px solid var(--yellow); outline-offset: 2px; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeInFast { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slideInRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes slideInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
-  .tab-slide-right { animation: slideInRight 0.28s cubic-bezier(0.25, 1, 0.5, 1) both; }
-  .tab-slide-left { animation: slideInLeft 0.28s cubic-bezier(0.25, 1, 0.5, 1) both; }
+
+  /* ── Buttons ── */
+  button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); transition: transform 0.15s var(--spring), opacity 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent; user-select: none; }
+  button:active { transform: scale(0.94) !important; opacity: 0.85; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  input, select, textarea { font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(232,255,71,0.6); outline-offset: 2px; transition: outline 0.15s; }
+
+  /* ── Tab transitions ── */
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideInLeft { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: translateX(0); } }
+  .tab-slide-right { animation: slideInRight 0.24s var(--ease-out) both; }
+  .tab-slide-left { animation: slideInLeft 0.24s var(--ease-out) both; }
+
+  /* ── Core animations ── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeInFast { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes floatUp { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-  @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
-  @keyframes ringFill { from { stroke-dashoffset: 283; } to { stroke-dashoffset: var(--ring-offset); } }
+  @keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
   @keyframes countUp { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
-  @keyframes floatUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-  .fade-in { animation: fadeIn 0.35s ease both; }
-  .fade-in-fast { animation: fadeInFast 0.2s ease both; }
-  .slide-in-right { animation: slideInRight 0.3s ease both; }
-  .float-up { animation: floatUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
-  button:active { transform: scale(0.96); }
-  input, textarea, select { transition: border-color 0.2s; }
-  .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
-  .card-hover:active { transform: scale(0.98); }
+  @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.4); } 60% { transform: scale(1.15); } 80% { transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes toastOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(10px) scale(0.95); } }
+  @keyframes ripple { 0% { transform: scale(0); opacity: 0.5; } 100% { transform: scale(4); opacity: 0; } }
+  @keyframes glow { 0%, 100% { box-shadow: 0 0 8px rgba(232,255,71,0.3); } 50% { box-shadow: 0 0 20px rgba(232,255,71,0.6); } }
+
+  .fade-in { animation: fadeIn 0.3s var(--ease-out) both; }
+  .fade-in-fast { animation: fadeInFast 0.18s var(--ease-out) both; }
+  .slide-in-right { animation: slideInRight 0.28s var(--ease-out) both; }
+  .float-up { animation: floatUp 0.4s var(--ease-out) both; }
+  .bounce-in { animation: bounceIn 0.45s var(--spring) both; }
+
+  /* ── Cards ── */
+  .card-hover { transition: transform 0.18s var(--spring), box-shadow 0.18s; will-change: transform; }
+  .card-hover:active { transform: scale(0.975) !important; }
+
+  /* ── Skeleton loader ── */
+  .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%); background-size: 300px 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
+
+  /* ── Touch feedback ── */
+  * { -webkit-tap-highlight-color: transparent; }
+  [role="button"], a { -webkit-tap-highlight-color: transparent; }
+
+  /* ── Safe area ── */
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); }
 `;
 
 // ============================================================
@@ -2190,11 +2217,28 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
       });
     });
   }
+  // ── Toast system ──
+  const [toasts, setToasts] = useState([]);
+  const showToast = (msg, type = "success", duration = 2400) => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), duration);
+  };
+
+  // ── Haptic feedback ──
+  const haptic = (pattern = [8]) => {
+    try { navigator.vibrate?.(pattern); } catch {}
+  };
+
   const TAB_ORDER = ["home","today","progress","race","planning","technique","profil","zones"];
   const navigateTo = (newTab) => {
+    if (newTab === tab) return;
     const cur = TAB_ORDER.indexOf(tab); const nxt = TAB_ORDER.indexOf(newTab);
     setTabDir(nxt >= cur ? 1 : -1);
     setTab(newTab);
+    haptic([6]);
+    // Scroll to top on tab change
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   };
   const [dailyData, setDailyData] = useState({ fatigue: 3, sommeil: 3, temps: 60, materiel: "tout", typeSeance: "auto" });
   const [showSeancePerso, setShowSeancePerso] = useState(false);
@@ -2792,6 +2836,8 @@ JSON:
       setTimeout(() => calcStreak(), 500);
       setFeedback(adapt);
       setShowFeedback(false);
+      haptic([10, 30, 10]);
+      showToast("Séance enregistrée ! +50 XP 💪", "success");
     } catch (e) { console.error(e, raw); }
     setFeedbackStreamText("");
     setLoadingFeedback(false);
@@ -2805,9 +2851,47 @@ JSON:
     { id: "profil", label: "Profil", icon: "👤" },
   ];
 
+  // ── Swipe gesture state ──
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
+  const BOTTOM_TABS = ["home","today","progress","planning","profil"];
+
+  function handleTouchStart(e) {
+    setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
+  }
+  function handleTouchEnd(e) {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+    // Only horizontal swipes (dx > 55px, not mostly vertical)
+    if (Math.abs(dx) > 55 && dy < 80) {
+      const idx = BOTTOM_TABS.indexOf(tab);
+      if (dx < 0 && idx < BOTTOM_TABS.length - 1) navigateTo(BOTTOM_TABS[idx + 1]);
+      else if (dx > 0 && idx > 0) navigateTo(BOTTOM_TABS[idx - 1]);
+    }
+    setTouchStartX(null);
+    setTouchStartY(null);
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: 80 }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: 84 }}
+      onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <style>{GLOBAL_STYLES}</style>
+
+      {/* ── Toast notifications ── */}
+      <div style={{ position: "fixed", bottom: 96, left: 16, right: 16, zIndex: 900, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        {toasts.map(t => {
+          const colors = { success: { bg: "rgba(57,255,128,0.95)", color: "#000", icon: "✓" }, error: { bg: "rgba(255,71,71,0.95)", color: "#fff", icon: "✕" }, info: { bg: "rgba(232,255,71,0.95)", color: "#000", icon: "ℹ" }, badge: { bg: "rgba(167,139,250,0.95)", color: "#fff", icon: "🏅" } };
+          const c = colors[t.type] || colors.success;
+          return (
+            <div key={t.id} style={{ animation: "toastIn 0.3s var(--spring) both", background: c.bg, color: c.color, borderRadius: 14, padding: "11px 18px", fontSize: 14, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 10, maxWidth: 360, pointerEvents: "auto", backdropFilter: "blur(12px)" }}>
+              <span style={{ fontSize: 16 }}>{c.icon}</span>
+              <span>{t.msg}</span>
+            </div>
+          );
+        })}
+      </div>
 
       {/* ── PWA Install Banner ── */}
       {showInstallBanner && !isInstalled && (
@@ -4257,15 +4341,37 @@ JSON:
               )
             )}
             {loadingSession && (
-              <div className="fade-in" style={{ textAlign: "center", padding: "32px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(232,255,71,0.15)", marginBottom: 20 }}>
-                <div style={{ fontSize: 28, marginBottom: 12 }}>🤖</div>
-                <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 8 }}>{sessionStreamText || "Coach IA réfléchit..."}</div>
-                <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                  {[0,1,2].map(i => (
-                    <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--yellow)", opacity: 0.6, animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
-                  ))}
+              <div className="fade-in">
+                {/* Skeleton hero */}
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "20px 18px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <div className="skeleton" style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
+                    <div className="skeleton" style={{ width: 100, height: 10 }} />
+                  </div>
+                  <div className="skeleton" style={{ width: "75%", height: 22, marginBottom: 8 }} />
+                  <div className="skeleton" style={{ width: "55%", height: 14, marginBottom: 16 }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="skeleton" style={{ width: 80, height: 14 }} />
+                    <div className="skeleton" style={{ width: 60, height: 36, borderRadius: 10 }} />
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: "#555", marginTop: 12 }}>Adapté à ton profil et à tes dernières séances</div>
+                {/* Skeleton exercices */}
+                {[0,1,2,3].map(i => (
+                  <div key={i} style={{ background: "rgba(255,255,255,0.01)", borderRadius: 14, padding: "14px 16px", marginBottom: 8, display: "flex", gap: 12, alignItems: "center", opacity: 1 - i * 0.15 }}>
+                    <div className="skeleton" style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton" style={{ width: `${70 - i * 8}%`, height: 14, marginBottom: 8 }} />
+                      <div className="skeleton" style={{ width: `${50 - i * 5}%`, height: 22 }} />
+                    </div>
+                  </div>
+                ))}
+                {/* Status text */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "14px 0", color: "#555", fontSize: 12 }}>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />)}
+                  </div>
+                  {sessionStreamText || "Coach IA prépare ta séance..."}
+                </div>
               </div>
             )}
 
@@ -5450,21 +5556,28 @@ JSON:
         >🤖</button>
       )}
 
-      {/* Bottom Nav */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(17,17,17,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-around", padding: "6px 0 10px", zIndex: 100 }}>
-        {tabs.map(t => {
-          const active = tab === t.id;
-          return (
-            <button key={t.id} onClick={() => navigateTo(t.id)} style={{ background: "none", color: active ? "var(--yellow)" : "#444", padding: "6px 10px", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 52, transition: "color 0.2s", border: "none", cursor: "pointer" }}>
-              <div style={{ position: "relative" }}>
-                <span style={{ fontSize: 21, display: "block", transition: "transform 0.2s", transform: active ? "scale(1.1)" : "scale(1)" }}>{t.icon}</span>
-                {active && <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)" }} />}
-                {t.badge && !active && <div style={{ position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: "var(--green)", border: "1.5px solid var(--bg)", boxShadow: "0 0 6px rgba(57,255,128,0.6)" }} />}
-              </div>
-              <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: "0.03em" }}>{t.label}</span>
-            </button>
-          );
-        })}
+      {/* Bottom Nav — Premium */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
+        {/* Gradient fade above nav */}
+        <div style={{ height: 20, background: "linear-gradient(to top, rgba(8,8,8,0.98), transparent)", pointerEvents: "none" }} />
+        <div style={{ background: "rgba(10,10,10,0.98)", backdropFilter: "blur(24px) saturate(1.5)", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 8px", paddingBottom: "max(env(safe-area-inset-bottom, 10px), 10px)" }}>
+          {tabs.map(t => {
+            const active = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
+                style={{ background: active ? "rgba(232,255,71,0.08)" : "none", color: active ? "var(--yellow)" : "#3a3a3a", padding: "7px 14px", borderRadius: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 56, border: active ? "1px solid rgba(232,255,71,0.12)" : "1px solid transparent", transition: "all 0.2s var(--spring)", position: "relative" }}>
+                <div style={{ position: "relative" }}>
+                  <span style={{ fontSize: 20, display: "block", filter: active ? "drop-shadow(0 0 6px rgba(232,255,71,0.5))" : "none", transition: "all 0.2s" }}>{t.icon}</span>
+                  {t.badge && !active && (
+                    <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--green)", border: "1.5px solid #0a0a0a", animation: "pulse 2s ease infinite" }} />
+                  )}
+                </div>
+                <span style={{ fontSize: 9, fontWeight: active ? 700 : 400, letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.2s" }}>{t.label}</span>
+                {active && <div style={{ position: "absolute", top: -1, left: "20%", right: "20%", height: 2, background: "var(--yellow)", borderRadius: "0 0 3px 3px", animation: "glow 2s ease infinite" }} />}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
