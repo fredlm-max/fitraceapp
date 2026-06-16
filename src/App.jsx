@@ -3819,6 +3819,53 @@ JSON:
               );
             })()}
 
+            {/* ── ESTIMATEUR TEMPS HYROX ── */}
+            {(profile.vmaKmh || profile.squat1RM_final) && (() => {
+              // Estimation basée sur: VMA → temps running, Force → temps stations
+              const vma = parseFloat(profile.vmaKmh) || 12;
+              const squat = parseFloat(profile.squat1RM_final) || 80;
+              const poids = parseFloat(profile.poids) || 75;
+              const genre = profile.genre || "H";
+              // Running: 8km à une allure fonction de la VMA (% VMA)
+              const runPctVma = genre === "F" ? 0.72 : 0.70;
+              const runSpeedKmh = vma * runPctVma;
+              const runMins = (8 / runSpeedKmh) * 60;
+              // Stations: base selon ratio force/poids (plus c'est élevé, plus vite)
+              const forceRatio = squat / poids;
+              const stationsBase = genre === "F" ? 32 : 28; // minutes
+              const stationsBonus = Math.min(6, Math.max(0, (forceRatio - 0.8) * 5));
+              const stationsMins = Math.max(20, stationsBase - stationsBonus);
+              const totalMins = runMins + stationsMins + 4; // 4 min transitions
+              const h = Math.floor(totalMins / 60);
+              const m = Math.round(totalMins % 60);
+              const timeStr = `${h}h${String(m).padStart(2,"0")}`;
+              // Catégorie
+              const cat = totalMins < 70 ? { label: "Élite", color: "#ff4747" }
+                : totalMins < 85 ? { label: "Pro", color: "#ff9a3c" }
+                : totalMins < 100 ? { label: "Semi-Pro", color: "var(--yellow)" }
+                : totalMins < 120 ? { label: "Amateur+", color: "var(--green)" }
+                : { label: "Finisher", color: "#a78bfa" };
+              const hasGoal = profile.goalTargetLevel;
+              return (
+                <div onClick={() => navigateTo("race")} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <div className="bebas" style={{ fontSize: 36, color: cat.color, lineHeight: 1 }}>{timeStr}</div>
+                      <div style={{ background: `${cat.color}18`, border: `1px solid ${cat.color}33`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: cat.color, fontWeight: 700 }}>{cat.label}</div>
+                    </div>
+                    {hasGoal && (
+                      <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>
+                        Objectif : {profile.goalTargetLevel} · {totalMins < (profile.goalTargetLevel.replace("Sub ","").includes("h") ? parseInt(profile.goalTargetLevel.replace("Sub ",""))*60 : 999) ? "🎯 Dans les clous !" : "💪 À améliorer"}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 3 }}>Basé sur VMA {vma}km/h · Squat {squat}kg</div>
+                  </div>
+                  <div style={{ color: "#333", fontSize: 16, flexShrink: 0 }}>→</div>
+                </div>
+              );
+            })()}
+
             {/* Séance coach dispo */}
             {coachSession && (
               <div onClick={() => setTab("today")} className="card-hover" style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.08) 0%, rgba(232,255,71,0.03) 100%)", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
