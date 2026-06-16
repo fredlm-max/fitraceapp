@@ -3328,6 +3328,39 @@ JSON:
               </div>
             </div>
 
+            {/* ═══ WIDGET FORME DU JOUR ═══ */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const last3 = (profile.sessions||[]).slice(-3);
+              const avgRPE = Math.round(last3.reduce((a,s) => a+(s.difficulte||5),0)/last3.length);
+              const avgEnergie = (last3.reduce((a,s) => a+(s.energie||3),0)/last3.length).toFixed(1);
+              const lastRessenti = last3[last3.length-1]?.ressenti;
+              const forme = avgRPE <= 5 && avgEnergie >= 3.5 ? "top"
+                : avgRPE >= 9 || avgEnergie < 2 ? "fatigue"
+                : avgRPE >= 7 ? "charge" : "normal";
+              const formeConf = {
+                top:     { label: "Forme optimale",    emoji: "🚀", color: "var(--green)",  bg: "rgba(57,255,128,0.06)",  border: "rgba(57,255,128,0.18)",  msg: "Intensité max autorisée." },
+                normal:  { label: "Bonne forme",       emoji: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.04)",  border: "rgba(232,255,71,0.15)",  msg: "Continue sur ta lancée." },
+                charge:  { label: "Charge élevée",     emoji: "⚠️", color: "var(--orange)", bg: "rgba(255,154,60,0.05)",  border: "rgba(255,154,60,0.18)",  msg: "Pense à la récup active." },
+                fatigue: { label: "Récupération",      emoji: "😴", color: "var(--red)",    bg: "rgba(255,71,71,0.05)",   border: "rgba(255,71,71,0.18)",   msg: "Zone 2 ou repos conseillé." },
+              }[forme];
+              return (
+                <div style={{ background: formeConf.bg, border: `1px solid ${formeConf.border}`, borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 26, flexShrink: 0 }}>{formeConf.emoji}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: formeConf.color }}>{formeConf.label}</div>
+                      <div style={{ fontSize: 10, color: "#333" }}>Sur {last3.length} séances</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#555" }}>{formeConf.msg}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div className="bebas" style={{ fontSize: 22, color: formeConf.color, lineHeight: 1 }}>RPE {avgRPE}</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>⚡{avgEnergie}/5</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ═══ HERO SCORE RING ═══ */}
             {(() => {
               const sc = calcFitnessScore(profile);
@@ -5197,58 +5230,87 @@ function TechniqueTab() {
     "Wall Balls": { label: "Cardio", color: "var(--yellow)" },
   };
 
+  const [filterCat, setFilterCat] = useState("all");
+  const cats = ["all", "Technique", "Force", "Cardio", "Résistance"];
+  const filtered = filterCat === "all" ? stations : stations.filter(s => (DIFFICULTY[s.nom]?.label || "Multi") === filterCat);
+  const pct = Math.round((viewedCount / stations.length) * 100);
+
   return (
     <div className="fade-in">
       {activeStation && <VideoModal mouvement={activeStation} onClose={() => setActiveStation(null)} />}
 
-      {/* Header */}
-      <div style={{ marginBottom: 16 }}>
-        <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", marginBottom: 4 }}>TECHNIQUE HYROX</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 13, color: "#555" }}>8 stations · Vidéos + points clés + erreurs</div>
-          <div style={{ fontSize: 12, color: viewedCount === stations.length ? "var(--green)" : "#666", fontWeight: 600 }}>
-            {viewedCount}/{stations.length} vues {viewedCount === stations.length ? "✓" : ""}
+      {/* ── HERO ── */}
+      <div style={{ background: "linear-gradient(145deg, #131500 0%, #080808 55%, #001308 100%)", border: "1.5px solid rgba(232,255,71,0.15)", borderRadius: 20, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -30, right: -20, fontSize: 120, opacity: 0.04 }}>🏋️</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Maîtrise technique</div>
+            <div className="bebas" style={{ fontSize: 52, color: pct === 100 ? "var(--green)" : "var(--yellow)", lineHeight: 1 }}>{pct}<span style={{ fontSize: 22, color: "#555" }}>%</span></div>
+            <div style={{ fontSize: 12, color: "#444", marginTop: 2 }}>{viewedCount}/{stations.length} stations vues</div>
           </div>
+          {/* Mini anneau */}
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/>
+            <circle cx="36" cy="36" r="28" fill="none" stroke={pct === 100 ? "var(--green)" : "var(--yellow)"} strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={2*Math.PI*28} strokeDashoffset={2*Math.PI*28*(1-pct/100)} transform="rotate(-90 36 36)" style={{transition:"stroke-dashoffset 0.8s"}}/>
+            <text x="36" y="40" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="16" fill={pct===100?"#39ff80":"#e8ff47"}>{viewedCount}/{stations.length}</text>
+          </svg>
         </div>
-        {/* Progress bar global */}
-        <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 8, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${(viewedCount / stations.length) * 100}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.4s" }} />
+        {/* Barre progression */}
+        <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: pct === 100 ? "var(--green)" : "linear-gradient(90deg, var(--yellow), #b8cc00)", borderRadius: 99, transition: "width 0.6s" }}/>
         </div>
+        {pct === 100 && (
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }}/>
+            <span style={{ fontSize: 12, color: "var(--green)", fontWeight: 700 }}>Toutes les stations maîtrisées 🏆</span>
+          </div>
+        )}
       </div>
 
+      {/* ── FILTRES ── */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2, scrollbarWidth: "none" }}>
+        {cats.map(c => (
+          <button key={c} onClick={() => setFilterCat(c)} style={{
+            flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            background: filterCat === c ? "rgba(232,255,71,0.12)" : "rgba(255,255,255,0.03)",
+            border: filterCat === c ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid rgba(255,255,255,0.06)",
+            color: filterCat === c ? "var(--yellow)" : "#444", transition: "all 0.2s",
+          }}>{c === "all" ? `Toutes (${stations.length})` : c}</button>
+        ))}
+      </div>
+
+      {/* ── LISTE STATIONS ── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {stations.map((s, i) => {
+        {filtered.map((s, i) => {
           const isViewed = viewed[s.nom];
           const diff = DIFFICULTY[s.nom] || { label: "Multi", color: "#555" };
+          const diffColors = { "Technique": "#a78bfa", "Force": "var(--red)", "Cardio": "var(--yellow)", "Résistance": "var(--orange)", "Multi": "#555" };
+          const dc = diffColors[diff.label] || "#555";
           return (
-            <div key={i} onClick={() => openStation(s)} style={{
-              background: isViewed ? "rgba(57,255,128,0.03)" : "var(--bg2)",
-              border: isViewed ? "1px solid rgba(57,255,128,0.15)" : "1px solid rgba(255,255,255,0.05)",
-              borderRadius: 14, padding: "14px 16px", cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 14,
-              transition: "border-color 0.2s, background 0.2s",
+            <div key={i} onClick={() => openStation(s)} className="card-hover" style={{
+              background: isViewed ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)",
+              border: isViewed ? "1.5px solid rgba(57,255,128,0.2)" : "1px solid rgba(255,255,255,0.05)",
+              borderRadius: 16, padding: "14px 16px", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 14, position: "relative", overflow: "hidden",
             }}>
-              {/* Emoji */}
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: isViewed ? "rgba(57,255,128,0.08)" : "rgba(232,255,71,0.06)", border: `1px solid ${isViewed ? "rgba(57,255,128,0.2)" : "rgba(232,255,71,0.12)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, position: "relative" }}>
-                {s.emoji}
-                {isViewed && (
-                  <div style={{ position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: "50%", background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#000", fontWeight: 700 }}>✓</div>
-                )}
+              {/* Accent left */}
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isViewed ? "var(--green)" : `${dc}55`, borderRadius: "3px 0 0 3px" }}/>
+              {/* Numéro station */}
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: isViewed ? "rgba(57,255,128,0.08)" : `${dc}12`, border: `1px solid ${isViewed ? "rgba(57,255,128,0.25)" : `${dc}30`}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative" }}>
+                <div style={{ fontSize: 20 }}>{s.emoji}</div>
+                <div className="bebas" style={{ fontSize: 9, color: isViewed ? "var(--green)" : dc, letterSpacing: 0.5 }}>S{s.station}</div>
+                {isViewed && <div style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#000", fontWeight: 900 }}>✓</div>}
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{s.nom}</div>
-                  <div style={{ fontSize: 9, background: "rgba(232,255,71,0.1)", color: "var(--yellow)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>S{s.station}</div>
-                  <div style={{ fontSize: 9, background: `${diff.color}18`, color: diff.color, border: `1px solid ${diff.color}40`, borderRadius: 4, padding: "1px 6px", fontWeight: 700 }}>{diff.label}</div>
+                  <div className="bebas" style={{ fontSize: 17, color: isViewed ? "var(--white)" : "#ccc", letterSpacing: 0.5 }}>{s.nom}</div>
+                  <div style={{ fontSize: 9, background: `${dc}18`, color: dc, border: `1px solid ${dc}40`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{diff.label}</div>
                 </div>
-                <div style={{ fontSize: 11, color: "#555" }}>{s.distance} · {s.muscles}</div>
-                <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
-                  {s.videos.slice(0, 3).map((v, vi) => (
-                    <div key={vi} style={{ fontSize: 9, background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "2px 6px", color: "#444" }}>{v.niveau}</div>
-                  ))}
-                </div>
+                <div style={{ fontSize: 11, color: "#444" }}>{s.distance}</div>
+                <div style={{ fontSize: 10, color: "#333", marginTop: 2 }}>{s.muscles}</div>
               </div>
-              <div style={{ background: isViewed ? "rgba(57,255,128,0.15)" : "rgba(232,255,71,0.1)", border: `1px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(232,255,71,0.2)"}`, borderRadius: 99, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: isViewed ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", border: `1.5px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(232,255,71,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
                 {isViewed ? "↺" : "▶"}
               </div>
             </div>
@@ -5256,12 +5318,8 @@ function TechniqueTab() {
         })}
       </div>
 
-      {viewedCount === stations.length && (
-        <div className="fade-in" style={{ marginTop: 16, background: "rgba(57,255,128,0.06)", border: "1.5px solid rgba(57,255,128,0.3)", borderRadius: 14, padding: "14px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 24, marginBottom: 6 }}>🏆</div>
-          <div style={{ fontWeight: 700, color: "var(--green)", marginBottom: 4 }}>Toutes les stations maîtrisées !</div>
-          <div style={{ fontSize: 12, color: "#555" }}>Tu as visionné les 8 modules technique HYROX.</div>
-        </div>
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "32px 20px", color: "#333", fontSize: 13 }}>Aucune station dans cette catégorie</div>
       )}
     </div>
   );
@@ -7457,9 +7515,32 @@ export default function App() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#080808", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
       <style>{GLOBAL_STYLES}</style>
-      <Spinner />
+      <style>{`
+        @keyframes splashRing { from { stroke-dashoffset: 352; } to { stroke-dashoffset: 0; } }
+        @keyframes splashFade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes splashPulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+      `}</style>
+      {/* Logo animé */}
+      <div style={{ position: "relative", marginBottom: 24 }}>
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="rgba(232,255,71,0.06)" />
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(232,255,71,0.08)" strokeWidth="6"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#e8ff47" strokeWidth="6" strokeLinecap="round"
+            strokeDasharray="352" strokeDashoffset="352"
+            transform="rotate(-90 60 60)"
+            style={{ animation: "splashRing 1.4s cubic-bezier(0.16,1,0.3,1) 0.2s forwards" }}/>
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, color: "#e8ff47", letterSpacing: 3, lineHeight: 1, animation: "splashFade 0.6s 0.5s both" }}>FIT<span style={{ color: "#f0f0f0" }}>RACE</span></div>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#39ff80", marginTop: 4, animation: "splashPulse 1.2s 0.8s ease-in-out infinite" }}/>
+        </div>
+      </div>
+      {/* Tagline */}
+      <div style={{ fontSize: 13, color: "#333", letterSpacing: "0.08em", animation: "splashFade 0.6s 0.9s both" }}>
+        Ton coach HYROX IA
+      </div>
     </div>
   );
 
