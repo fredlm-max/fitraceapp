@@ -2400,6 +2400,9 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
     douleurs: "",
     energie: 3,
     notes: "",
+    mentalPre: "",
+    concentration: 0,
+    mentalNote: "",
   });
   const [feedback, setFeedback] = useState(null);
   const [coachSession, setCoachSession] = useState(null);
@@ -2886,6 +2889,11 @@ Douleurs: ${feedbackData.douleurs || "aucune"} ${douloursGraves ? "(⚠️ POTEN
 ${feedbackData.exercicesLog ? feedbackData.exercicesLog.map(e => `${e.nom}: ${e.charge || "-"}kg × ${e.reps || "-"} reps | ${e.sets || "-"} sets | ressenti: ${e.ressenti || "/"}`).join("\n") : ""}
 Photo/montre analysée: ${feedbackData._photoAnalyse || "aucune photo"}
 Données extraites photo: ${feedbackData.charges || "aucune"}
+
+── JOURNAL MENTAL ──
+État pré-séance: ${feedbackData.mentalPre || "non renseigné"}
+Concentration: ${feedbackData.concentration ? feedbackData.concentration + "/5" : "non renseignée"}
+Note mentale: ${feedbackData.mentalNote || "aucune"}
 
 ── NOTES LIBRES ──
 ${feedbackData.notes || "aucune"}
@@ -5450,6 +5458,50 @@ JSON:
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* 6b. Journal mental */}
+                  <div style={{ marginBottom: 18, background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 14, padding: "14px 14px" }}>
+                    <div style={{ fontSize: 10, color: "#a78bfa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>🧠 Journal mental</div>
+                    {/* État mental pré-séance */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 8 }}>Comment tu te sentais AVANT la séance ?</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {[
+                          { v: "motivated", emoji: "🔥", label: "Motivé" },
+                          { v: "neutral", emoji: "😐", label: "Neutre" },
+                          { v: "stressed", emoji: "😰", label: "Stressé" },
+                          { v: "tired", emoji: "😴", label: "Épuisé" },
+                          { v: "confident", emoji: "💪", label: "Confiant" },
+                          { v: "anxious", emoji: "😬", label: "Anxieux" },
+                        ].map(s => {
+                          const val = feedbackData.mentalPre || "";
+                          const active = val === s.v;
+                          return (
+                            <button key={s.v} onClick={() => { haptic([5]); setFeedbackData(d => ({ ...d, mentalPre: s.v })); }}
+                              style={{ padding: "7px 10px", borderRadius: 10, fontSize: 12, cursor: "pointer", border: `1.5px solid ${active ? "rgba(167,139,250,0.5)" : "rgba(255,255,255,0.06)"}`, background: active ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.02)", color: active ? "#a78bfa" : "#444", fontWeight: active ? 700 : 400, transition: "all 0.15s" }}>
+                              {s.emoji} {s.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* Concentration */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 8 }}>Concentration pendant la séance</div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {[1,2,3,4,5].map(v => (
+                          <button key={v} onClick={() => { haptic([5]); setFeedbackData(d => ({ ...d, concentration: v })); }}
+                            style={{ flex: 1, height: 32, borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, background: v <= (feedbackData.concentration||0) ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.04)", color: v <= (feedbackData.concentration||0) ? "#a78bfa" : "#333", transition: "all 0.15s" }}>
+                            {v <= (feedbackData.concentration||0) ? "⭐" : "☆"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Note mentale libre */}
+                    <textarea value={feedbackData.mentalNote||""} onChange={e => setFeedbackData(d => ({ ...d, mentalNote: e.target.value }))}
+                      placeholder="Comment tu t'es senti mentalement ? Flow, blocages, pensées parasites, confiance..."
+                      style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 10, padding: "10px 14px", color: "var(--white)", fontSize: 12, minHeight: 55, resize: "vertical", fontFamily: "var(--font-body)", outline: "none" }} />
                   </div>
 
                   {/* 7. Exercices détaillés */}
