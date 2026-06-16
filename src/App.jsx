@@ -3796,6 +3796,36 @@ JSON:
               );
             })()}
 
+            {/* ── TABLEAU DE BORD PRs ── */}
+            {(profile.vmaKmh || profile.squat1RM_final || profile.deadlift1RM_final) && (() => {
+              const prs = [
+                profile.vmaKmh      && { icon: "🏃", label: "VMA",      value: `${profile.vmaKmh} km/h`,         sub: `Allure Z2 : ${paceFromVMA ? (() => { try { return paceFromVMA(profile.vmaKmh, 72); } catch { return "—"; } })() : "—"}/km`, color: "var(--green)",  bg: "rgba(57,255,128,0.06)",  border: "rgba(57,255,128,0.15)"  },
+                profile.squat1RM_final && { icon: "🏋️", label: "Squat 1RM",  value: `${profile.squat1RM_final} kg`, sub: `Ratio : ${Math.round(profile.squat1RM_final / (profile.poids||75) * 10) / 10}× poids corps`, color: "var(--orange)", bg: "rgba(255,154,60,0.06)", border: "rgba(255,154,60,0.15)" },
+                profile.deadlift1RM_final && { icon: "💀", label: "Deadlift 1RM", value: `${profile.deadlift1RM_final} kg`, sub: `Ratio : ${Math.round(profile.deadlift1RM_final / (profile.poids||75) * 10) / 10}× poids corps`, color: "var(--red)",    bg: "rgba(255,71,71,0.06)",   border: "rgba(255,71,71,0.15)"   },
+              ].filter(Boolean);
+              if (prs.length === 0) return null;
+              return (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>🏅 Tes records personnels</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {prs.map((pr, i) => (
+                      <div key={i} style={{ background: pr.bg, border: `1px solid ${pr.border}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ fontSize: 24, flexShrink: 0 }}>{pr.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{pr.label}</div>
+                          <div className="bebas" style={{ fontSize: 22, color: pr.color, lineHeight: 1 }}>{pr.value}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{pr.sub}</div>
+                        </div>
+                        <div style={{ background: `${pr.color}18`, border: `1px solid ${pr.color}30`, borderRadius: 8, padding: "4px 8px", textAlign: "center", flexShrink: 0 }}>
+                          <div style={{ fontSize: 8, color: pr.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>PR</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* MESSAGE IA DU JOUR */}
             <div onClick={() => !loadingMessage && setShowMessageModal(true)}
               style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, cursor: "pointer" }}>
