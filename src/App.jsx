@@ -5416,7 +5416,7 @@ JSON:
 
         {/* COURSE & TECHNIQUE */}
         {tab === "nutri" && <NutritionTab profile={profile} />}
-        {tab === "technique" && <TechniqueTab />}
+        {tab === "technique" && <TechniqueTab profile={profile} />}
         {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
         {tab === "planning" && (
           <PlanningTab
@@ -6065,12 +6065,23 @@ function VideoModal({ mouvement, onClose }) {
 // ============================================================
 // ONGLET TECHNIQUE — BIBLIOTHÈQUE COMPLÈTE
 // ============================================================
-function TechniqueTab() {
+function TechniqueTab({ profile = {} }) {
   const [activeStation, setActiveStation] = useState(null);
   const [viewed, setViewed] = useState(() => {
     try { return JSON.parse(localStorage.getItem("fitrace_technique_viewed") || "{}"); } catch { return {}; }
   });
+  const [favs, setFavs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("fitrace_technique_favs") || "{}"); } catch { return {}; }
+  });
   const stations = Object.values(VIDEOS_HYROX);
+
+  function toggleFav(nomStation, e) {
+    e.stopPropagation();
+    const newFavs = { ...favs, [nomStation]: !favs[nomStation] };
+    if (!newFavs[nomStation]) delete newFavs[nomStation];
+    setFavs(newFavs);
+    localStorage.setItem("fitrace_technique_favs", JSON.stringify(newFavs));
+  }
 
   function openStation(s) {
     const newViewed = { ...viewed, [s.nom]: true };
@@ -6094,8 +6105,11 @@ function TechniqueTab() {
   };
 
   const [filterCat, setFilterCat] = useState("all");
-  const cats = ["all", "Technique", "Force", "Cardio", "Résistance"];
-  const filtered = filterCat === "all" ? stations : stations.filter(s => (DIFFICULTY[s.nom]?.label || "Multi") === filterCat);
+  const cats = ["all", "⭐ Favoris", "Technique", "Force", "Cardio", "Résistance"];
+  const favsCount = Object.keys(favs).length;
+  const filtered = filterCat === "all" ? stations
+    : filterCat === "⭐ Favoris" ? stations.filter(s => favs[s.nom])
+    : stations.filter(s => (DIFFICULTY[s.nom]?.label || "Multi") === filterCat);
   const pct = Math.round((viewedCount / stations.length) * 100);
 
   return (
@@ -6131,6 +6145,23 @@ function TechniqueTab() {
         )}
       </div>
 
+      {/* ── STATION À TRAVAILLER ── */}
+      {profile.goalWeakStation && (() => {
+        const ws = profile.goalWeakStation;
+        const st = stations.find(s => s.nom?.toLowerCase().includes(ws.toLowerCase()) || ws.toLowerCase().includes(s.nom?.toLowerCase().split(" ")[0]?.toLowerCase()));
+        return (
+          <div onClick={() => st && openStation(st)} style={{ background: "rgba(255,71,71,0.05)", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 14, padding: "12px 16px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: 24, flexShrink: 0 }}>{st?.emoji || "⚡"}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 9, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>🎯 Ta station prioritaire</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{ws}</div>
+              <div style={{ fontSize: 11, color: "#444" }}>Tape pour voir les conseils techniques</div>
+            </div>
+            <span style={{ color: "var(--red)", fontSize: 16 }}>→</span>
+          </div>
+        );
+      })()}
+
       {/* ── FILTRES ── */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2, scrollbarWidth: "none" }}>
         {cats.map(c => (
@@ -6139,7 +6170,7 @@ function TechniqueTab() {
             background: filterCat === c ? "rgba(232,255,71,0.12)" : "rgba(255,255,255,0.03)",
             border: filterCat === c ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid rgba(255,255,255,0.06)",
             color: filterCat === c ? "var(--yellow)" : "#444", transition: "all 0.2s",
-          }}>{c === "all" ? `Toutes (${stations.length})` : c}</button>
+          }}>{c === "all" ? `Toutes (${stations.length})` : c === "⭐ Favoris" ? `⭐ Favoris${favsCount > 0 ? ` (${favsCount})` : ""}` : c}</button>
         ))}
       </div>
 
@@ -6150,13 +6181,16 @@ function TechniqueTab() {
           const diff = DIFFICULTY[s.nom] || { label: "Multi", color: "#555" };
           const diffColors = { "Technique": "#a78bfa", "Force": "var(--red)", "Cardio": "var(--yellow)", "Résistance": "var(--orange)", "Multi": "#555" };
           const dc = diffColors[diff.label] || "#555";
+          const isFav = !!favs[s.nom];
+          const isWeakStation = profile.goalWeakStation && (s.nom?.toLowerCase().includes(profile.goalWeakStation.toLowerCase()) || profile.goalWeakStation.toLowerCase().includes(s.nom?.toLowerCase().split(" ")[0]?.toLowerCase()));
           return (
             <div key={i} onClick={() => openStation(s)} className="card-hover" style={{
               background: isViewed ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)",
-              border: isViewed ? "1.5px solid rgba(57,255,128,0.2)" : "1px solid rgba(255,255,255,0.05)",
+              border: isWeakStation ? "1.5px solid rgba(255,71,71,0.3)" : isViewed ? "1.5px solid rgba(57,255,128,0.2)" : "1px solid rgba(255,255,255,0.05)",
               borderRadius: 16, padding: "14px 16px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 14, position: "relative", overflow: "hidden",
             }}>
+              {isWeakStation && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "var(--red)" }} />}
               {/* Accent left */}
               <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: isViewed ? "var(--green)" : `${dc}55`, borderRadius: "3px 0 0 3px" }}/>
               {/* Numéro station */}
@@ -6169,11 +6203,16 @@ function TechniqueTab() {
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
                   <div className="bebas" style={{ fontSize: 17, color: isViewed ? "var(--white)" : "#ccc", letterSpacing: 0.5 }}>{s.nom}</div>
                   <div style={{ fontSize: 9, background: `${dc}18`, color: dc, border: `1px solid ${dc}40`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{diff.label}</div>
+                  {isWeakStation && <div style={{ fontSize: 9, background: "rgba(255,71,71,0.12)", color: "var(--red)", border: "1px solid rgba(255,71,71,0.3)", borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>🎯 Priorité</div>}
                 </div>
                 <div style={{ fontSize: 11, color: "#444" }}>{s.distance}</div>
                 <div style={{ fontSize: 10, color: "#333", marginTop: 2 }}>{s.muscles}</div>
               </div>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: isViewed ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", border: `1.5px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(232,255,71,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
+              {/* Fav star */}
+              <button onClick={(e) => toggleFav(s.nom, e)} style={{ width: 32, height: 32, borderRadius: "50%", background: isFav ? "rgba(232,255,71,0.1)" : "transparent", border: isFav ? "1px solid rgba(232,255,71,0.3)" : "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isFav ? "var(--yellow)" : "#333", cursor: "pointer", flexShrink: 0 }}>
+                {isFav ? "⭐" : "☆"}
+              </button>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: isViewed ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", border: `1.5px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(232,255,71,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
                 {isViewed ? "↺" : "▶"}
               </div>
             </div>
