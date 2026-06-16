@@ -4536,6 +4536,95 @@ JSON:
             {/* Résumé hebdo si dimanche */}
             {buildWeeklySummary(profile).count > 0 && <WeeklySummaryCard profile={profile} />}
 
+            {/* ── GRAPHIQUE CHARGE HEBDO ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              // Groupe les sessions par semaine (ISO week)
+              const getWeekKey = (date) => {
+                const d = new Date(date); d.setHours(0,0,0,0);
+                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+                const y = d.getFullYear();
+                const w = Math.ceil(((d - new Date(y,0,1)) / 86400000 + 1) / 7);
+                return `${y}-W${String(w).padStart(2,"0")}`;
+              };
+              const weekMap = {};
+              (profile.sessions||[]).forEach(s => {
+                const wk = getWeekKey(s.date);
+                if (!weekMap[wk]) weekMap[wk] = { count: 0, rpeSum: 0, dur: 0 };
+                weekMap[wk].count++;
+                weekMap[wk].rpeSum += s.difficulte || 5;
+                weekMap[wk].dur += parseInt(s.tempsReel?.split(":")[0]||0)*60 + parseInt(s.tempsReel?.split(":")[1]||0) || 50;
+              });
+              const weeks = Object.entries(weekMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-8);
+              if (weeks.length < 2) return null;
+              const maxCount = Math.max(...weeks.map(([,v]) => v.count));
+              const W = 320; const H = 80; const barW = Math.floor((W - 20) / weeks.length) - 4;
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "16px 16px 10px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Charge par semaine</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>{weeks.length} semaines</div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+                    {weeks.map(([wk, v], i) => {
+                      const x = 10 + i * ((W - 20) / weeks.length);
+                      const barH = maxCount > 0 ? Math.max(8, (v.count / maxCount) * (H - 20)) : 8;
+                      const avgRPE = v.rpeSum / v.count;
+                      const col = avgRPE <= 4 ? "#39ff80" : avgRPE <= 7 ? "#e8ff47" : "#ff4747";
+                      const isLast = i === weeks.length - 1;
+                      return (
+                        <g key={i}>
+                          <rect x={x} y={H - barH - 16} width={barW} height={barH}
+                            rx="4" fill={isLast ? col : `${col}55`} />
+                          <text x={x + barW/2} y={H - barH - 20} textAnchor="middle"
+                            fontSize="10" fontFamily="'Bebas Neue',sans-serif" fill={isLast ? col : "#444"}>{v.count}</text>
+                          <text x={x + barW/2} y={H - 2} textAnchor="middle"
+                            fontSize="8" fill={isLast ? "#888" : "#2a2a2a"}>{wk.slice(6)}</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                  <div style={{ display: "flex", gap: 10, marginTop: 4, justifyContent: "center" }}>
+                    {[["#39ff80","RPE ≤4"],["#e8ff47","RPE 5-7"],["#ff4747","RPE ≥8"]].map(([c,l])=>(
+                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#444" }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── RECORDS DE SÉANCE ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const sessions = profile.sessions || [];
+              const bestRPE = sessions.reduce((best, s) => s.difficulte < (best?.difficulte||10) ? s : best, null);
+              const worstRPE = sessions.reduce((best, s) => s.difficulte > (best?.difficulte||0) ? s : best, null);
+              const bestEnergie = sessions.reduce((best, s) => (s.energie||0) > ((best?.energie)||0) ? s : best, null);
+              const records = [
+                { label: "Session la plus facile", s: bestRPE, val: `RPE ${bestRPE?.difficulte}`, color: "var(--green)", icon: "🌟" },
+                { label: "Session la plus dure", s: worstRPE, val: `RPE ${worstRPE?.difficulte}`, color: "var(--red)", icon: "🔥" },
+                { label: "Meilleure énergie", s: bestEnergie, val: `⚡${bestEnergie?.energie}/5`, color: "var(--yellow)", icon: "⚡" },
+              ].filter(r => r.s);
+              if (!records.length) return null;
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🏅 Records de séance</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {records.map((r, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ fontSize: 20, flexShrink: 0 }}>{r.icon}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 10, color: "#444", marginBottom: 1 }}>{r.label}</div>
+                          <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.s?.titre}</div>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 18, color: r.color, flexShrink: 0 }}>{r.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Heatmap régularité */}
             <TrainingHeatmap profile={profile} />
 
