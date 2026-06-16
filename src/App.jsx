@@ -1,4 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component } from "react";
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error("APP CRASH:", error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ minHeight:"100vh", background:"#080808", color:"#f0f0f0", fontFamily:"monospace", padding:"24px", overflowY:"auto" }}>
+          <div style={{ color:"#ff4747", fontSize:18, fontWeight:700, marginBottom:16 }}>💥 Erreur détectée</div>
+          <div style={{ background:"#111", border:"1px solid #333", borderRadius:8, padding:16, fontSize:12, lineHeight:1.6, whiteSpace:"pre-wrap", wordBreak:"break-all" }}>
+            {String(this.state.error)}
+          </div>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop:16, padding:"10px 20px", background:"#e8ff47", color:"#000", border:"none", borderRadius:8, fontWeight:700, cursor:"pointer" }}>
+            Réessayer
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 
 // ============================================================
 // STYLES GLOBAUX
@@ -11244,6 +11267,7 @@ export default function App() {
   if (needTests && !profile.onboardingComplete) return <TestsBattery profile={profile} onComplete={handleTestsComplete} />;
 
   return (
+    <ErrorBoundary>
     <AthleteApp
       profile={profile}
       user={user}
@@ -11254,5 +11278,6 @@ export default function App() {
         await storage.set(key, { ...updated, email: user?.email || updated.email });
       }}
     />
+    </ErrorBoundary>
   );
 }
