@@ -4757,6 +4757,52 @@ JSON:
                     </div>
                   </div>
                 )}
+                {/* Calculateur pace HYROX */}
+                {(profile.vmaKmh || profile.squat1RM_final) && (() => {
+                  const [targetH, setTargetH] = React.useState("1");
+                  const [targetM, setTargetM] = React.useState("00");
+                  const totalMins = parseInt(targetH||0)*60 + parseInt(targetM||0);
+                  // HYROX = 8km running + 8 stations (environ 20-30min stations selon niveau)
+                  const estStationsMins = 22; // estimation moyenne
+                  const runMins = Math.max(1, totalMins - estStationsMins);
+                  const runKm = 8;
+                  const paceSecKm = Math.round((runMins * 60) / runKm);
+                  const paceMin = Math.floor(paceSecKm / 60);
+                  const paceSec = paceSecKm % 60;
+                  const paceStr = totalMins > 0 ? `${paceMin}:${String(paceSec).padStart(2,"0")}/km` : "—";
+                  const stationTimeEach = Math.round((estStationsMins * 60) / 8);
+                  const stationMin = Math.floor(stationTimeEach / 60);
+                  const stationSec = stationTimeEach % 60;
+                  return (
+                    <div style={{ marginTop: 16, background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "16px" }}>
+                      <div className="bebas" style={{ fontSize: 18, color: "var(--green)", marginBottom: 12 }}>🎯 CALCULATEUR PACE HYROX</div>
+                      <div style={{ fontSize: 11, color: "#444", marginBottom: 10 }}>Ton objectif de temps total :</div>
+                      <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+                        <select value={targetH} onChange={e => setTargetH(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
+                          {["1","2","3","4","5"].map(h => <option key={h} value={h}>{h}h</option>)}
+                        </select>
+                        <span style={{ color: "#555", fontWeight: 700 }}>:</span>
+                        <select value={targetM} onChange={e => setTargetM(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
+                          {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => <option key={m} value={m}>{m}min</option>)}
+                        </select>
+                      </div>
+                      {totalMins > 0 && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <div style={{ background: "rgba(57,255,128,0.08)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                            <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", marginBottom: 4 }}>Allure running</div>
+                            <div className="bebas" style={{ fontSize: 26, color: "var(--green)", lineHeight: 1 }}>{paceStr}</div>
+                            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>8 × 1km entre stations</div>
+                          </div>
+                          <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.18)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                            <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", marginBottom: 4 }}>Temps par station</div>
+                            <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{stationMin}:{String(stationSec).padStart(2,"0")}</div>
+                            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>moy. ~{estStationsMins}min total</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             ) : (
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
