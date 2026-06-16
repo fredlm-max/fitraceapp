@@ -3516,6 +3516,41 @@ JSON:
               );
             })()}
 
+            {/* ── TIP DU JOUR HYROX ── */}
+            {(() => {
+              const TIPS = [
+                { icon: "⛷️", cat: "SkiErg", tip: "Garde les épaules basses et tire avec tout le corps, pas seulement les bras. La puissance vient des hanches.", color: "#a78bfa" },
+                { icon: "🛷", cat: "Sled Push", tip: "Incline-toi à 45°, pousse avec les jambes en extension complète. Gardez le dos droit, regardez le sol.", color: "var(--yellow)" },
+                { icon: "🔗", cat: "Sled Pull", tip: "Marche en arrière avec des pas courts et rapides. Bras tendus, cordes bien tendues à chaque traction.", color: "var(--orange)" },
+                { icon: "🤸", cat: "Burpee BJ", tip: "Saut le plus loin possible, pas le plus haut. Atterris en flexion pour absorber et enchaîne immédiatement.", color: "var(--red)" },
+                { icon: "🚣", cat: "Rowing", tip: "Jambes → hanches → bras dans cet ordre. Le drive commence par les jambes. Tire les poignées sous les côtes.", color: "#38bdf8" },
+                { icon: "🧳", cat: "Farmers Carry", tip: "Chest up, abdos gainés, pas réguliers. Évite de balancer les kettlebells — ça coûte de l'énergie.", color: "var(--green)" },
+                { icon: "🎒", cat: "Sandbag Lunges", tip: "Pose le sac sur les épaules, pas dans le cou. Genou avant à 90°, genou arrière effleure le sol.", color: "var(--orange)" },
+                { icon: "🏀", cat: "Wall Balls", tip: "Squatte sous le parallèle à chaque rep. Lance la balle au point le plus haut de ton extension, pas avec les bras.", color: "var(--yellow)" },
+                { icon: "🏃", cat: "Running HYROX", tip: "Entre les stations, trottine à un rythme conversationnel (Zone 2). Le running est ta récupération active.", color: "var(--green)" },
+                { icon: "🧠", cat: "Mental Race", tip: "Divise la race en 2 blocs : km 1-4 et km 5-8. Garde 30% d'énergie pour la seconde moitié.", color: "#ec4899" },
+                { icon: "🍌", cat: "Nutrition J-1", tip: "Charge glucidique la veille (pâtes, riz, pommes de terre). Évite les graisses et les fibres en excès.", color: "var(--yellow)" },
+                { icon: "💤", cat: "Récupération", tip: "48h après une séance intense, priorise le sommeil. C'est pendant le repos que tu progresses, pas pendant l'effort.", color: "#a78bfa" },
+                { icon: "🎯", cat: "Stratégie", tip: "Les 3 premières stations déterminent souvent ta course. Pars 10% en dessous de ton objectif, accélère après.", color: "var(--red)" },
+              ];
+              const dayIdx = Math.floor(Date.now() / 86400000) % TIPS.length;
+              const tip = TIPS[dayIdx];
+              return (
+                <div style={{ background: `${tip.color}06`, border: `1px solid ${tip.color}22`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: `${tip.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{tip.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: tip.color, textTransform: "uppercase", letterSpacing: "0.08em" }}>Tip · {tip.cat}</div>
+                        <div style={{ fontSize: 9, color: "#2a2a2a" }}>J+{dayIdx % 13 + 1}/13</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#888", lineHeight: 1.55 }}>{tip.tip}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Bouton Mon Profil */}
             <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
