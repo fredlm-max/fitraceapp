@@ -6603,6 +6603,62 @@ JSON: {
   return (
     <div className="fade-in">
 
+      {/* ── HYDRATATION TRACKER ── */}
+      {(() => {
+        const waterKey = `water_${profile.name}_${today}`;
+        const [waterMl, setWaterMl] = React.useState(() => {
+          try { return parseInt(localStorage.getItem(waterKey)||"0"); } catch { return 0; }
+        });
+        const target = profile.poids ? Math.round(profile.poids * 35) : 2500; // 35ml/kg
+        const glasses = Math.floor(waterMl / 250);
+        const totalGlasses = Math.ceil(target / 250);
+        const pct = Math.min(100, Math.round((waterMl / target) * 100));
+        const addWater = (ml) => {
+          const newVal = Math.max(0, waterMl + ml);
+          setWaterMl(newVal);
+          localStorage.setItem(waterKey, newVal.toString());
+        };
+        const col = pct >= 80 ? "var(--green)" : pct >= 50 ? "#38bdf8" : "var(--orange)";
+        return (
+          <div style={{ background: "linear-gradient(145deg, #000a1a 0%, #080808 60%)", border: `1.5px solid ${col === "#38bdf8" ? "rgba(56,189,248,0.25)" : col === "var(--green)" ? "rgba(57,255,128,0.2)" : "rgba(255,154,60,0.2)"}`, borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>💧 Hydratation</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                  <div className="bebas" style={{ fontSize: 32, color: col, lineHeight: 1 }}>{waterMl}</div>
+                  <div style={{ fontSize: 12, color: "#333" }}>/ {target} ml</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 10, color: "#333", marginBottom: 4 }}>Objectif</div>
+                <div className="bebas" style={{ fontSize: 18, color: col }}>{pct}%</div>
+              </div>
+            </div>
+            {/* Verres visuels */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
+              {Array.from({ length: Math.min(totalGlasses, 12) }, (_, i) => (
+                <div key={i} onClick={() => addWater(i < glasses ? -250 : 250)} style={{ cursor: "pointer", opacity: i < glasses ? 1 : 0.25, fontSize: 18, filter: i < glasses ? "none" : "grayscale(1)" }}>
+                  💧
+                </div>
+              ))}
+            </div>
+            {/* Barre */}
+            <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+              <div style={{ width: `${pct}%`, height: "100%", background: col, borderRadius: 99, transition: "width 0.5s" }} />
+            </div>
+            {/* Boutons */}
+            <div style={{ display: "flex", gap: 6 }}>
+              {[250, 500, 750].map(ml => (
+                <button key={ml} onClick={() => addWater(ml)} style={{ flex: 1, padding: "8px 4px", background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.2)", borderRadius: 10, color: "#38bdf8", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  +{ml}ml
+                </button>
+              ))}
+              {waterMl > 0 && <button onClick={() => addWater(-250)} style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, color: "#444", fontSize: 12, cursor: "pointer" }}>-</button>}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── HERO CALORIES ── */}
       <div style={{ background: "linear-gradient(145deg, #001a00 0%, #080808 60%)", border: `1.5px solid ${kcalColor === "var(--green)" ? "rgba(57,255,128,0.2)" : kcalColor === "var(--yellow)" ? "rgba(232,255,71,0.2)" : "rgba(255,71,71,0.2)"}`, borderRadius: 20, padding: "20px 20px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -30, right: -20, fontSize: 110, opacity: 0.04 }}>🥗</div>
