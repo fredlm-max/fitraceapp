@@ -3500,6 +3500,45 @@ JSON:
               );
             })()}
 
+            {/* ── COMPLÉTION PROFIL ── */}
+            {(() => {
+              const checks = [
+                { key: "poids", label: "Poids corporel", done: !!profile.poids, tab: "profil", icon: "⚖️" },
+                { key: "vma", label: "VMA renseignée", done: !!profile.vmaKmh, tab: "profil", icon: "🏃" },
+                { key: "race", label: "Date de course", done: !!profile.raceDate, tab: "profil", icon: "🏁" },
+                { key: "squat", label: "Force (squat 1RM)", done: !!profile.squat1RM_final, tab: "profil", icon: "🏋️" },
+                { key: "genre", label: "Sexe renseigné", done: !!profile.genre, tab: "profil", icon: "👤" },
+                { key: "session1", label: "1ère séance faite", done: (profile.sessions||[]).length >= 1, tab: "today", icon: "⚡" },
+              ];
+              const doneCount = checks.filter(c => c.done).length;
+              const pct = Math.round((doneCount / checks.length) * 100);
+              if (pct === 100) return null; // Profil complet, on n'affiche pas
+              const missing = checks.filter(c => !c.done);
+              return (
+                <div style={{ background: "rgba(232,255,71,0.03)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Profil complété</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Plus de données = meilleur coaching</div>
+                    </div>
+                    <div className="bebas" style={{ fontSize: 28, color: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--yellow)" : "var(--orange)" }}>{pct}%</div>
+                  </div>
+                  {/* Barre */}
+                  <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--yellow)" : "var(--orange)", borderRadius: 99, transition: "width 0.6s" }} />
+                  </div>
+                  {/* Actions manquantes */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {missing.slice(0,3).map(c => (
+                      <button key={c.key} onClick={() => navigateTo(c.tab)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, fontSize: 11, color: "#555", cursor: "pointer" }}>
+                        <span>{c.icon}</span><span>{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* STREAK CARD */}
             {streakData && (() => {
               const streakColor = streak >= 14 ? "#ff6b35" : streak >= 7 ? "var(--yellow)" : streak >= 3 ? "var(--orange)" : "#333";
