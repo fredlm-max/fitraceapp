@@ -3153,37 +3153,106 @@ JSON:
 
       {/* Share Card Modal */}
       {showShareCard && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ width: "100%", maxWidth: 340 }}>
-            <div style={{ background: "#0a0a0a", border: "1.5px solid rgba(232,255,71,0.3)", borderRadius: 20, padding: 24, marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: "rgba(232,255,71,0.6)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>FITRACE · HYROX IA</div>
-              <div className="bebas" style={{ fontSize: 42, color: "var(--yellow)", lineHeight: 1, letterSpacing: 2 }}>{profile.name.toUpperCase()}</div>
-              <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>Semaine {profile.week || 1} · Niveau {profile.level} · {days !== null ? `J-${days}` : ""}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 16 }}>
-                {[
-                  { val: calcFitnessScore(profile).global, lbl: "Condition", color: "var(--yellow)" },
-                  { val: profile.sessions?.length || 0, lbl: "Séances", color: "var(--green)" },
-                  { val: `${profile.vmaKmh || "?"}`, lbl: "VMA km/h", color: "#aaa" },
-                ].map((s, i) => (
-                  <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 10, textAlign: "center" }}>
-                    <div className="bebas" style={{ fontSize: 26, color: s.color }}>{s.val}</div>
-                    <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>{s.lbl}</div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+          <div style={{ width: "100%", maxWidth: 360 }}>
+            {/* ── RACE CARD PREMIUM ── */}
+            {(() => {
+              const sc = calcFitnessScore(profile);
+              const streak = (() => {
+                let s = 0; const today = new Date(); today.setHours(0,0,0,0);
+                const dates = (profile.sessions||[]).map(x => x.date?.slice(0,10)).filter(Boolean).sort().reverse();
+                for (let i = 0; i < dates.length; i++) {
+                  const d = new Date(today); d.setDate(d.getDate() - i);
+                  if (dates[i] === d.toISOString().slice(0,10)) s++; else break;
+                }
+                return s;
+              })();
+              // Mini radar SVG
+              const dims = ["Force", "Endurance", "Puissance", "Vitesse"];
+              const vals = [sc.force/100, sc.endurance/100, sc.puissance/100, Math.min(1,(profile.vmaKmh||0)/20)];
+              const cx = 60; const cy = 60; const R = 48;
+              const pts = dims.map((_, i) => {
+                const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
+                return [cx + R * Math.cos(angle) * vals[i], cy + R * Math.sin(angle) * vals[i]];
+              });
+              const polygon = pts.map(p => p.join(",")).join(" ");
+              const gridPts = (r) => dims.map((_, i) => {
+                const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
+                return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)].join(",");
+              }).join(" ");
+              return (
+                <div style={{ background: "linear-gradient(145deg, #0a0a00 0%, #080808 40%, #000a05 100%)", border: "1.5px solid rgba(232,255,71,0.35)", borderRadius: 24, padding: "24px 22px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
+                  {/* Halos */}
+                  <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", bottom: -40, left: -40, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(57,255,128,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+                    <div>
+                      <div style={{ fontSize: 9, color: "rgba(232,255,71,0.5)", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 6 }}>FITRACE · HYROX IA</div>
+                      <div className="bebas" style={{ fontSize: 34, color: "var(--yellow)", letterSpacing: 2, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>
+                        {LEVELS[(profile.level||1)-1]?.label} · S{profile.week||1} · {profile.sessions?.length||0} séances
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div className="bebas" style={{ fontSize: 52, color: sc.global >= 75 ? "var(--green)" : sc.global >= 50 ? "var(--yellow)" : "var(--orange)", lineHeight: 1 }}>{sc.global}</div>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>/ 100</div>
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: 4, marginTop: 14, height: 4 }}>
-                {[
-                  { color: "var(--yellow)", w: calcFitnessScore(profile).force },
-                  { color: "var(--green)", w: calcFitnessScore(profile).endurance },
-                  { color: "var(--red)", w: calcFitnessScore(profile).puissance },
-                ].map((b, i) => <div key={i} style={{ flex: b.w, background: b.color, borderRadius: 99, height: 4 }} />)}
-              </div>
-              <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 10, color: "var(--yellow)" }}>Force {calcFitnessScore(profile).force}%</span>
-                <span style={{ fontSize: 10, color: "var(--green)" }}>Endurance {calcFitnessScore(profile).endurance}%</span>
-                <span style={{ fontSize: 10, color: "var(--red)" }}>Puissance {calcFitnessScore(profile).puissance}%</span>
-              </div>
-            </div>
+
+                  {/* Body */}
+                  <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 18 }}>
+                    {/* Radar */}
+                    <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+                      {[0.25, 0.5, 0.75, 1].map((r, i) => (
+                        <polygon key={i} points={gridPts(R * r)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                      ))}
+                      {dims.map((_, i) => {
+                        const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
+                        return <line key={i} x1={cx} y1={cy} x2={cx + R * Math.cos(angle)} y2={cy + R * Math.sin(angle)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />;
+                      })}
+                      <polygon points={polygon} fill="rgba(232,255,71,0.12)" stroke="var(--yellow)" strokeWidth="1.5" />
+                      {dims.map((d, i) => {
+                        const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
+                        const lx = cx + (R + 10) * Math.cos(angle); const ly = cy + (R + 10) * Math.sin(angle);
+                        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="7" fill="#555" fontFamily="'DM Sans',sans-serif">{d}</text>;
+                      })}
+                    </svg>
+                    {/* Stats */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {[
+                        { icon: "🏃", label: "VMA", val: profile.vmaKmh ? `${profile.vmaKmh} km/h` : "—", color: "var(--green)" },
+                        { icon: "🏋️", label: "Squat 1RM", val: profile.squat1RM_final ? `${profile.squat1RM_final} kg` : "—", color: "var(--yellow)" },
+                        { icon: "🔥", label: "Streak", val: `${streak} j`, color: streak >= 7 ? "var(--orange)" : "#555" },
+                        { icon: "🏁", label: "Course dans", val: days !== null ? `${days} j` : "—", color: "var(--red)" },
+                      ].map((s, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 14 }}>{s.icon}</span>
+                          <span style={{ fontSize: 10, color: "#444", flex: 1 }}>{s.label}</span>
+                          <span className="bebas" style={{ fontSize: 14, color: s.color }}>{s.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Barre tricolore */}
+                  <div style={{ display: "flex", gap: 3, height: 5, borderRadius: 99, overflow: "hidden", marginBottom: 8 }}>
+                    <div style={{ flex: sc.force, background: "var(--yellow)", borderRadius: "99px 0 0 99px" }} />
+                    <div style={{ flex: sc.endurance, background: "var(--green)" }} />
+                    <div style={{ flex: sc.puissance, background: "var(--red)", borderRadius: "0 99px 99px 0" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+                    <span style={{ fontSize: 9, color: "rgba(232,255,71,0.6)" }}>Force {sc.force}%</span>
+                    <span style={{ fontSize: 9, color: "rgba(57,255,128,0.6)" }}>Endurance {sc.endurance}%</span>
+                    <span style={{ fontSize: 9, color: "rgba(255,71,71,0.6)" }}>Puissance {sc.puissance}%</span>
+                  </div>
+
+                  {/* Footer */}
+                  <div style={{ fontSize: 9, color: "#2a2a2a", textAlign: "center" }}>fitrace-lemon.vercel.app · Coach HYROX IA</div>
+                </div>
+              );
+            })()}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button onClick={() => {
                 const score = calcFitnessScore(profile);
