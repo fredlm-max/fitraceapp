@@ -3717,6 +3717,45 @@ JSON:
             <div style={{ position: "absolute", top: 60, right: -40, width: 200, height: 200, background: "radial-gradient(circle, rgba(232,255,71,0.06) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
             <div style={{ position: "absolute", top: 300, left: -60, width: 180, height: 180, background: "radial-gradient(circle, rgba(57,255,128,0.04) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
 
+            {/* ── CHECK-IN RAPIDE 10 SECONDES ── */}
+            {(() => {
+              const checkedIn = dailyData.fatigue > 0 || dailyData.sommeil > 0;
+              if (checkedIn) return null; // Already done
+              const hour = new Date().getHours();
+              if (hour < 5 || hour > 22) return null; // Don't show at night
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(57,255,128,0.08) 0%, rgba(8,8,8,0) 80%)", border: "2px solid rgba(57,255,128,0.3)", borderRadius: 18, padding: "16px 16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", animation: "pulse 2s ease infinite" }} />
+                    <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>⚡ Check-in 10 secondes</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)", marginBottom: 12 }}>Comment tu te sens ce matin ?</div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                    {[
+                      { v: 1, emoji: "😴", label: "Épuisé" },
+                      { v: 2, emoji: "😐", label: "Moyen" },
+                      { v: 3, emoji: "😊", label: "Bien" },
+                      { v: 4, emoji: "🔥", label: "En forme" },
+                    ].map(f => (
+                      <button key={f.v} onClick={() => {
+                        haptic([8, 20, 8]);
+                        setDailyData(d => ({ ...d, fatigue: f.v }));
+                        showToast(`${f.emoji} Noté ! Continue → onglet Séance`, "success", 2500);
+                      }} style={{
+                        flex: 1, padding: "10px 4px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", cursor: "pointer", transition: "all 0.15s var(--spring)",
+                      }}>
+                        <div style={{ fontSize: 24, marginBottom: 3 }}>{f.emoji}</div>
+                        <div style={{ fontSize: 9, color: "#555", fontWeight: 600 }}>{f.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#333", textAlign: "center" }}>
+                    Ce check-in aide ton coach IA à adapter la séance du jour
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── XP LEVEL BAR ── */}
             {(() => {
               const totalXP = calcTotalXP(profile);
