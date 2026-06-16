@@ -6213,6 +6213,159 @@ JSON:
               <ProgressionChargesCard profile={profile} />
             </Section>
 
+            {/* ── SIMULATEUR DE PROGRESSION ── */}
+            {(profile.sessions||[]).length >= 4 && (() => {
+              const sessions = profile.sessions || [];
+              const n = sessions.length;
+              // Taux de progression hebdo basé sur les 8 dernières séances
+              const last8 = sessions.slice(-8);
+              const avgRPE = last8.reduce((a,s) => a + (s.difficulte||5), 0) / last8.length;
+              const avgSessions = n / Math.max(1, Math.ceil((new Date() - new Date(sessions[0].date)) / (7 * 86400000)));
+              const weeklyGain = avgSessions >= 4 ? 1.2 : avgSessions >= 3 ? 0.9 : 0.6; // pts/semaine
+              const currentScore = calcFitnessScore(profile).global;
+
+              const SCENARIOS = [
+                { weeks: 4,  color: "#38bdf8", label: "4 semaines" },
+                { weeks: 8,  color: "var(--green)", label: "8 semaines" },
+                { weeks: 12, color: "var(--yellow)", label: "12 semaines" },
+              ];
+
+              // VMA projections
+              const vma = profile.vmaKmh || 0;
+              const vmaGainPerWeek = avgSessions >= 3 ? 0.08 : 0.05; // km/h par semaine
+              // Squat 1RM projections
+              const squat = parseFloat(profile.squat1RM_final) || 0;
+              const squatGainPerWeek = avgSessions >= 3 ? 0.5 : 0.3; // kg par semaine
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>🔮 Simulateur de progression</div>
+                  <div style={{ fontSize: 10, color: "#333", marginBottom: 14 }}>Si tu maintiens ton rythme de {avgSessions.toFixed(1)} séances/semaine…</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {/* Score condition */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, color: "#666" }}>📊 Score condition</span>
+                        <span style={{ fontSize: 11, color: "#444" }}>Actuel : <strong style={{ color: "var(--yellow)" }}>{currentScore}%</strong></span>
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {SCENARIOS.map(sc => {
+                          const projected = Math.min(100, Math.round(currentScore + weeklyGain * sc.weeks));
+                          const gain = projected - currentScore;
+                          return (
+                            <div key={sc.weeks} style={{ flex: 1, background: `${sc.color}10`, border: `1px solid ${sc.color}30`, borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                              <div style={{ fontSize: 8, color: sc.color, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{sc.label}</div>
+                              <div className="bebas" style={{ fontSize: 20, color: sc.color, lineHeight: 1 }}>{projected}%</div>
+                              <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>+{gain} pts</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Metrics projections */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      {vma > 0 && (
+                        <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 10, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 9, color: "#444", marginBottom: 6 }}>🏃 VMA actuelle : {vma} km/h</div>
+                          {SCENARIOS.slice(0,2).map(sc => (
+                            <div key={sc.weeks} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                              <span style={{ fontSize: 9, color: "#333" }}>{sc.label}</span>
+                              <span style={{ fontSize: 9, color: sc.color, fontWeight: 700 }}>{(vma + vmaGainPerWeek * sc.weeks).toFixed(1)} km/h</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {squat > 0 && (
+                        <div style={{ background: "rgba(255,154,60,0.04)", border: "1px solid rgba(255,154,60,0.12)", borderRadius: 10, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 9, color: "#444", marginBottom: 6 }}>🏋️ Squat actuel : {squat} kg</div>
+                          {SCENARIOS.slice(0,2).map(sc => (
+                            <div key={sc.weeks} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                              <span style={{ fontSize: 9, color: "#333" }}>{sc.label}</span>
+                              <span style={{ fontSize: 9, color: sc.color, fontWeight: 700 }}>{Math.round(squat + squatGainPerWeek * sc.weeks)} kg</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: 9, color: "#333", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)", lineHeight: 1.6 }}>
+                      ⚠️ Estimations basées sur ton historique. Les gains réels dépendent de la qualité du sommeil, de la nutrition et de la récupération.
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── OBJECTIF VS RÉEL ── */}
+            {(profile.sessions||[]).length >= 2 && profile.seancesParSemaine && (() => {
+              const target = parseInt(profile.seancesParSemaine) || 4;
+              // Last 8 weeks
+              const getWeekNum = (date) => {
+                const d = new Date(date); d.setHours(0,0,0,0);
+                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+                const y = d.getFullYear();
+                const w = Math.ceil(((d - new Date(y,0,1)) / 86400000 + 1) / 7);
+                return `${y}-${String(w).padStart(2,"0")}`;
+              };
+              const weekMap = {};
+              (profile.sessions||[]).forEach(s => {
+                const wk = getWeekNum(s.date);
+                weekMap[wk] = (weekMap[wk]||0) + 1;
+              });
+              const weeks = Object.entries(weekMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-8);
+              if (weeks.length < 2) return null;
+
+              const achieved = weeks.map(([,c]) => c);
+              const avgAchieved = (achieved.reduce((a,b) => a+b, 0) / achieved.length).toFixed(1);
+              const compliance = Math.round((achieved.reduce((a,b) => a+b, 0) / (achieved.length * target)) * 100);
+              const complianceColor = compliance >= 85 ? "var(--green)" : compliance >= 65 ? "var(--yellow)" : "var(--orange)";
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Objectif vs réalisé</div>
+                    <div style={{ display: "flex", align: "center", gap: 6 }}>
+                      <span style={{ fontSize: 10, color: "#444" }}>Compliance</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: complianceColor }}>{compliance}%</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 64, marginBottom: 8 }}>
+                    {weeks.map(([wk, count], i) => {
+                      const pct = count / Math.max(target, Math.max(...achieved));
+                      const targetPct = target / Math.max(target, Math.max(...achieved));
+                      const overTarget = count >= target;
+                      return (
+                        <div key={wk} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 2, height: "100%", position: "relative" }}>
+                          {/* Target line indicator */}
+                          <div style={{ position: "absolute", bottom: `${Math.round(targetPct * 60)}px`, left: 0, right: 0, height: 1, background: "rgba(232,255,71,0.3)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
+                          {/* Bar */}
+                          <div style={{ width: "80%", height: `${Math.round(pct * 60)}px`, background: overTarget ? "var(--green)" : "var(--orange)", borderRadius: "3px 3px 0 0", opacity: i === weeks.length - 1 ? 1 : 0.7, minHeight: 3 }} />
+                          <div style={{ fontSize: 7, color: "#333" }}>S{i+1}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#444" }}>
+                        <div style={{ width: 10, height: 3, background: "rgba(232,255,71,0.5)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
+                        Objectif {target} séances
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#444" }}>
+                        <div style={{ width: 10, height: 8, background: "var(--green)", borderRadius: 1 }} />
+                        Réalisé
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#555" }}>Moy. : <span style={{ color: complianceColor, fontWeight: 700 }}>{avgAchieved}/sem</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
