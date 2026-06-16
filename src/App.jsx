@@ -3444,6 +3444,62 @@ JSON:
               );
             })()}
 
+            {/* ── MÉTÉO D'ENTRAÎNEMENT ── */}
+            {(() => {
+              const hour = new Date().getHours();
+              const weekSessions = buildWeeklySummary(profile);
+              const lastSession = (profile.sessions||[]).slice(-1)[0];
+              const lastRPE = lastSession?.difficulte || 5;
+              const daysSinceLastSession = lastSession ? Math.round((Date.now() - new Date(lastSession.date)) / 86400000) : 99;
+
+              // Calcul conditions
+              const isOptimalHour = (hour >= 7 && hour <= 10) || (hour >= 16 && hour <= 20);
+              const isRested = daysSinceLastSession >= 1;
+              const isOverloaded = weekSessions.count >= 5 || weekSessions.dur >= 3;
+              const needsRecovery = lastRPE >= 9 && daysSinceLastSession < 1;
+
+              const meteo = needsRecovery ? {
+                icon: "🌧️", label: "Récupération recommandée", color: "var(--red)",
+                bg: "rgba(255,71,71,0.04)", border: "rgba(255,71,71,0.15)",
+                detail: `RPE ${lastRPE}/10 hier · Laisse tes muscles récupérer`,
+                cta: "Mobilité ou repos actif",
+              } : isOverloaded ? {
+                icon: "⚡", label: "Charge élevée cette semaine", color: "var(--orange)",
+                bg: "rgba(255,154,60,0.04)", border: "rgba(255,154,60,0.15)",
+                detail: `${weekSessions.count} séances · ${weekSessions.dur} dures`,
+                cta: "Séance légère ou repos",
+              } : !isRested ? {
+                icon: "🌤️", label: "Journée de transition", color: "var(--yellow)",
+                bg: "rgba(232,255,71,0.04)", border: "rgba(232,255,71,0.12)",
+                detail: "Séance hier · Corps en récupération",
+                cta: "Zone 2 ou technique",
+              } : isOptimalHour ? {
+                icon: "☀️", label: "Conditions optimales", color: "var(--green)",
+                bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.2)",
+                detail: `${hour < 12 ? "Matin" : "Soir"} · Intensité max autorisée`,
+                cta: "Lance ta séance maintenant !",
+              } : {
+                icon: "🌙", label: "Bonne heure pour s'entraîner", color: "#a78bfa",
+                bg: "rgba(167,139,250,0.04)", border: "rgba(167,139,250,0.15)",
+                detail: "Évite les séances trop intenses tard le soir",
+                cta: "Yoga, mobilité ou Zone 2",
+              };
+
+              return (
+                <div style={{ background: meteo.bg, border: `1px solid ${meteo.border}`, borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }} onClick={() => setTab("today")} className="card-hover">
+                  <div style={{ fontSize: 32, flexShrink: 0 }}>{meteo.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: meteo.color }}>{meteo.label}</div>
+                      <div style={{ fontSize: 9, color: "#2a2a2a" }}>{new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#444", marginBottom: 2 }}>{meteo.detail}</div>
+                    <div style={{ fontSize: 10, color: meteo.color, fontWeight: 600 }}>→ {meteo.cta}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* STREAK CARD */}
             {streakData && (() => {
               const streakColor = streak >= 14 ? "#ff6b35" : streak >= 7 ? "var(--yellow)" : streak >= 3 ? "var(--orange)" : "#333";
