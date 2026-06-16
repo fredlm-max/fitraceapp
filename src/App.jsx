@@ -3878,6 +3878,65 @@ JSON:
               );
             })()}
 
+            {/* ── DÉFI DE LA SEMAINE ── */}
+            {(() => {
+              const DEFIS = [
+                { icon: "⛷️", station: "SkiErg", challenge: "100 coups en 2 min", tip: "Focus sur la synchronisation hanches + bras. Maintiens un rythme constant.", color: "#a78bfa", xp: 80 },
+                { icon: "🤸", station: "Burpee BJ", challenge: "10 reps en moins d'1 min", tip: "Explose sur le saut, atterris en douceur et enchaîne sans pause.", color: "var(--red)", xp: 100 },
+                { icon: "🚣", station: "Rowing", challenge: "500m sous 2:00 min/500m", tip: "Jambes complètes avant de tirer les bras. Drive explosif, retour lent.", color: "#38bdf8", xp: 90 },
+                { icon: "🏋️", station: "Force", challenge: "3×10 squats à 60% du max", tip: "Descends sous le parallèle, genoux dans l'axe, montée explosive.", color: "var(--yellow)", xp: 70 },
+                { icon: "🧳", station: "Farmers Carry", challenge: "50m sans poser les kettlebells", tip: "Abdos actifs, pas réguliers, regarde loin devant toi.", color: "var(--green)", xp: 75 },
+                { icon: "🏀", station: "Wall Balls", challenge: "21-15-9 reps sans pause", tip: "Balle sur les trapèzes, squat complet à chaque rep, souffle en remontant.", color: "var(--orange)", xp: 85 },
+                { icon: "🛷", station: "Sled Push", challenge: "20m × 3 en moins de 45s", tip: "Corps à 45°, pousse du sol avec les jambes, pas avec le dos.", color: "#ff9a3c", xp: 95 },
+                { icon: "🎒", station: "Sandbag", challenge: "20 lunges avec sac sur épaules", tip: "Sac bien haut, genou avant droit, genou arrière effleure le sol.", color: "var(--orange)", xp: 80 },
+                { icon: "🏃", station: "Running", challenge: "10 min à allure HYROX cible", tip: "Rythme conversationnel, technique parfaite, bras décontractés.", color: "var(--green)", xp: 70 },
+                { icon: "🧠", station: "Mental", challenge: "Visualiser ta race complète", tip: "5 min les yeux fermés : tu franchis chaque station, tu gères le souffle.", color: "#ec4899", xp: 60 },
+                { icon: "🔗", station: "Sled Pull", challenge: "20m en marche arrière × 3", tip: "Dos droit, pas courts, tire avec les hanches pas les bras.", color: "var(--yellow)", xp: 85 },
+                { icon: "💪", station: "Full Body", challenge: "5 rounds : 10 KB swings + 100m run", tip: "Donne tout sur le swing, récupère en courant à 70% d'intensité.", color: "var(--purple)", xp: 110 },
+              ];
+              // Semaine ISO
+              const d = new Date(); d.setHours(0,0,0,0);
+              const dayOfWeek = d.getDay() || 7;
+              const monday = new Date(d); monday.setDate(d.getDate() - dayOfWeek + 1);
+              const weekKey = `defi_${monday.toISOString().slice(0,10)}`;
+              const defiIdx = Math.floor(monday.getTime() / (7 * 86400000)) % DEFIS.length;
+              const defi = DEFIS[defiIdx];
+              const [defiDone, setDefiDone] = React.useState(() => {
+                try { return localStorage.getItem(weekKey) === "1"; } catch { return false; }
+              });
+              const daysLeft = 7 - dayOfWeek + 1;
+
+              function complete() {
+                try { localStorage.setItem(weekKey, "1"); } catch {}
+                setDefiDone(true);
+              }
+
+              return (
+                <div style={{ background: defiDone ? "rgba(57,255,128,0.04)" : `${defi.color}06`, border: `1.5px solid ${defiDone ? "rgba(57,255,128,0.25)" : `${defi.color}25`}`, borderRadius: 16, padding: "16px 16px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                  {/* Glow */}
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${defi.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${defi.color}15`, border: `1.5px solid ${defi.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{defiDone ? "✅" : defi.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 9, color: defiDone ? "var(--green)" : defi.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{defiDone ? "✓ Défi accompli" : `Défi semaine · ${defi.station}`}</div>
+                        <div style={{ fontSize: 9, color: "#333" }}>{defiDone ? `+${defi.xp} XP` : `${daysLeft}j restant${daysLeft>1?"s":""}`}</div>
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: defiDone ? "var(--green)" : "var(--white)", marginTop: 4, lineHeight: 1.2 }}>{defi.challenge}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.4 }}>{defi.tip}</div>
+                    </div>
+                  </div>
+                  {!defiDone ? (
+                    <button onClick={complete} style={{ width: "100%", padding: "10px", background: `${defi.color}15`, border: `1px solid ${defi.color}33`, borderRadius: 10, fontSize: 13, fontWeight: 700, color: defi.color, cursor: "pointer" }}>
+                      🏆 Je l'ai fait · +{defi.xp} XP
+                    </button>
+                  ) : (
+                    <div style={{ textAlign: "center", fontSize: 12, color: "var(--green)", fontWeight: 700 }}>🎉 Excellent ! Nouveau défi lundi.</div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Bouton Mon Profil */}
             <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
