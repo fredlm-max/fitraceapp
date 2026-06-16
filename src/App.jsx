@@ -4689,13 +4689,16 @@ JSON:
                       ].map(r => {
                         const active = feedbackData.ressenti === r.v;
                         return (
-                          <button key={r.v} onClick={() => setFeedbackData(d => ({ ...d, ressenti: r.v }))} style={{
+                          <button key={r.v} onClick={() => { haptic([6]); setFeedbackData(d => ({ ...d, ressenti: r.v })); }} style={{
                             flex: 1, padding: "14px 6px", borderRadius: 14, textAlign: "center",
-                            background: active ? `${r.color}12` : "rgba(255,255,255,0.02)",
+                            background: active ? `${r.color}15` : "rgba(255,255,255,0.02)",
                             border: active ? `2px solid ${r.color}` : "1.5px solid rgba(255,255,255,0.06)",
-                            color: "var(--white)", cursor: "pointer", transition: "all 0.2s",
+                            color: "var(--white)", cursor: "pointer",
+                            transform: active ? "scale(1.04)" : "scale(1)",
+                            boxShadow: active ? `0 4px 16px ${r.color}25` : "none",
+                            transition: "all 0.2s var(--spring)",
                           }}>
-                            <div style={{ fontSize: 28 }}>{r.emoji}</div>
+                            <div style={{ fontSize: active ? 32 : 28, transition: "font-size 0.2s var(--spring)" }}>{r.emoji}</div>
                             <div style={{ fontSize: 10, marginTop: 6, color: active ? r.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.label}</div>
                           </button>
                         );
@@ -4711,21 +4714,30 @@ JSON:
                         {feedbackData.difficulte}<span style={{ fontSize: 14, color: "#333" }}>/10</span>
                       </div>
                     </div>
+                    {/* RPE label contextuel */}
+                    <div style={{ textAlign: "center", marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, color: feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)", fontWeight: 600 }}>
+                        {feedbackData.difficulte <= 2 ? "😴 Repos actif" : feedbackData.difficulte <= 4 ? "😊 Facile" : feedbackData.difficulte <= 6 ? "😤 Modéré" : feedbackData.difficulte <= 8 ? "😰 Difficile" : feedbackData.difficulte <= 9 ? "🔥 Très dur" : "💀 Maximum absolu"}
+                      </span>
+                    </div>
                     <div style={{ display: "flex", gap: 4 }}>
                       {[1,2,3,4,5,6,7,8,9,10].map(v => {
-                        const rpeColor = feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)";
+                        const rpeColor = v <= 4 ? "var(--green)" : v <= 7 ? "var(--yellow)" : "var(--red)";
+                        const active = v <= feedbackData.difficulte;
                         return (
-                        <button key={v} onClick={() => setFeedbackData(d => ({ ...d, difficulte: v }))} style={{
-                          flex: 1, height: 36, borderRadius: 8, border: "none", cursor: "pointer",
-                          background: v <= feedbackData.difficulte ? rpeColor : "rgba(255,255,255,0.04)",
-                          fontSize: 11, fontWeight: 700,
-                          color: v <= feedbackData.difficulte ? "#000" : "#2a2a2a",
-                          transition: "all 0.15s",
+                        <button key={v} onClick={() => { haptic([6]); setFeedbackData(d => ({ ...d, difficulte: v })); }} style={{
+                          flex: 1, height: 38, borderRadius: 8, border: "none", cursor: "pointer",
+                          background: active ? rpeColor : "rgba(255,255,255,0.04)",
+                          fontSize: v === feedbackData.difficulte ? 13 : 11, fontWeight: 700,
+                          color: active ? "#000" : "#2a2a2a",
+                          transform: v === feedbackData.difficulte ? "scaleY(1.15)" : "scaleY(1)",
+                          transition: "all 0.15s var(--spring)",
+                          boxShadow: v === feedbackData.difficulte ? `0 2px 8px ${rpeColor}66` : "none",
                         }}>{v}</button>
                       )})}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "#444" }}>
-                      <span>Très facile</span><span>Modéré</span><span>Maximum</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 9, color: "#333" }}>
+                      <span>Facile</span><span>Modéré</span><span>Max</span>
                     </div>
                   </div>
 
@@ -4937,7 +4949,7 @@ JSON:
                   ) : (
                     <div style={{ display: "flex", gap: 12 }}>
                       <Btn variant="dark" onClick={() => setShowFeedback(false)} style={{ flex: 1 }}>← Retour</Btn>
-                      <Btn variant="success" onClick={submitFeedback} style={{ flex: 2 }}>Envoyer au coach 🚀</Btn>
+                      <Btn variant="success" onClick={() => { haptic([10, 20]); submitFeedback(); }} style={{ flex: 2 }}>Envoyer au coach 🚀</Btn>
                     </div>
                   )}
                 </div>
