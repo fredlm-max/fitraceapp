@@ -2758,9 +2758,9 @@ JSON:
 
   const tabs = [
     { id: "home", label: "Accueil", icon: "🏠" },
-    { id: "today", label: "Séance", icon: "⚡" },
-    { id: "planning", label: "Planning", icon: "📅" },
-    { id: "nutri", label: "Nutrition", icon: "🥗" },
+    { id: "today", label: "Séance", icon: "⚡", badge: coachSession && !session },
+    { id: "progress", label: "Stats", icon: "📈" },
+    { id: "planning", label: "Planning", icon: "📅", badge: !planningWeek && !loadingPlanning },
     { id: "profil", label: "Profil", icon: "👤" },
   ];
 
@@ -4727,10 +4727,11 @@ JSON:
         {tabs.map(t => {
           const active = tab === t.id;
           return (
-            <button key={t.id} onClick={() => navigateTo(t.id)} style={{ background: "none", color: active ? "var(--yellow)" : "#444", padding: "6px 10px", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 52, transition: "color 0.2s" }}>
+            <button key={t.id} onClick={() => navigateTo(t.id)} style={{ background: "none", color: active ? "var(--yellow)" : "#444", padding: "6px 10px", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 52, transition: "color 0.2s", border: "none", cursor: "pointer" }}>
               <div style={{ position: "relative" }}>
                 <span style={{ fontSize: 21, display: "block", transition: "transform 0.2s", transform: active ? "scale(1.1)" : "scale(1)" }}>{t.icon}</span>
                 {active && <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)" }} />}
+                {t.badge && !active && <div style={{ position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: "var(--green)", border: "1.5px solid var(--bg)", boxShadow: "0 0 6px rgba(57,255,128,0.6)" }} />}
               </div>
               <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, letterSpacing: "0.03em" }}>{t.label}</span>
             </button>
