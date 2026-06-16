@@ -5936,6 +5936,43 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         )}
       </div>
 
+      {/* ── COMPLÉTION DU PROFIL ── */}
+      {(() => {
+        const checks = [
+          { label: "Poids", done: !!profile.poids, icon: "⚖️", hint: "Modifier le profil" },
+          { label: "Âge", done: !!profile.age, icon: "🎂", hint: "Modifier le profil" },
+          { label: "VMA testée", done: !!profile.vmaKmh, icon: "🏃", hint: "Tests physiques" },
+          { label: "Squat 1RM", done: !!profile.squat1RM_final, icon: "🏋️", hint: "Tests physiques" },
+          { label: "Deadlift 1RM", done: !!profile.deadlift1RM_final, icon: "💀", hint: "Tests physiques" },
+          { label: "Date de course", done: !!profile.raceDate, icon: "📅", hint: "Modifier le profil" },
+          { label: "1ère séance", done: (profile.sessions||[]).length > 0, icon: "✅", hint: "Onglet Aujourd'hui" },
+          { label: "Objectif temps", done: !!profile.goalTargetLevel, icon: "🎯", hint: "Objectifs ci-dessous" },
+        ];
+        const done = checks.filter(c => c.done).length;
+        const pct = Math.round((done / checks.length) * 100);
+        if (pct === 100) return null; // hide when complete
+        const barColor = pct < 40 ? "var(--red)" : pct < 75 ? "var(--orange)" : "var(--green)";
+        return (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Profil complété</div>
+              <div className="bebas" style={{ fontSize: 22, color: barColor, lineHeight: 1 }}>{pct}<span style={{ fontSize: 11, color: "#444" }}>%</span></div>
+            </div>
+            <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+              <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 99, transition: "width 0.6s var(--ease-out)" }} />
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {checks.filter(c => !c.done).map((c, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "4px 10px" }}>
+                  <span style={{ fontSize: 12 }}>{c.icon}</span>
+                  <span style={{ fontSize: 10, color: "#555" }}>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── RACE COUNTDOWN ── */}
       {profile.raceDate && (
         <div style={{ background: "rgba(255,60,60,0.05)", border: "1.5px solid rgba(255,60,60,0.2)", borderRadius: 16, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
