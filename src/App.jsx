@@ -3626,10 +3626,12 @@ JSON:
       {/* ── TOUR GUIDÉ (premier lancement) ── */}
       {tourStep >= 0 && (() => {
         const STEPS = [
-          { icon: "⚡", title: "Séance du jour", body: "Chaque jour, ton coach IA génère une séance personnalisée selon ton profil, ta fatigue et ton historique. Tape sur \"Séance\" pour commencer.", tab: "today" },
-          { icon: "📈", title: "Suis ta progression", body: "L'onglet Stats affiche tes graphiques de progression, ton score de condition, et tes records personnels.", tab: "progress" },
-          { icon: "📅", title: "Plan ta semaine", body: "Génère ton planning hebdomadaire optimisé par l'IA. Coche les séances réalisées au fur et à mesure.", tab: "planning" },
-          { icon: "🤖", title: "Coach IA disponible 24h/24", body: "Le bouton 🤖 en bas à droite ouvre le coach chat. Pose-lui n'importe quelle question sur HYROX, ta nutrition ou ta technique !", tab: null },
+          { icon: "🏁", title: "Bienvenue dans FitRace", body: `Bonjour ${profile.name.split(" ")[0]} ! HYROX = 8 km de course + 8 stations de force. Cette app est ton coach personnel pour y arriver. Chaque jour, elle t'indique quoi faire, comment, et suit ta progression.`, tab: null },
+          { icon: "⚡", title: "Ta séance du jour", body: "L'onglet SÉANCE génère chaque jour une séance personnalisée selon ta forme, ta fatigue et ton niveau. Fais-la, note ton ressenti, et ton coach IA adapte la suivante.", tab: "today" },
+          { icon: "📊", title: "Check-in matinal", body: "Chaque matin, dis-nous comment tu vas (fatigue, sommeil, poids). En 30 secondes, le coach sait s'il faut pousser fort ou récupérer. C'est la clé de la progression.", tab: "today" },
+          { icon: "📅", title: "Ton planning semaine", body: "L'onglet PLANNING génère un programme hebdomadaire sur-mesure. Il alterne intelligemment cardio, force et récupération selon ton objectif.", tab: "planning" },
+          { icon: "🍽️", title: "Mange comme un athlète", body: "L'onglet NUTRITION te guide sur quoi manger, quand, et combien. Templates de repas prêts à l'emploi pour avant/après séance et jour de course.", tab: "nutri" },
+          { icon: "🤖", title: "Coach IA 24h/24", body: "Le bouton 🤖 en bas à droite est ton coach personnel. Pose-lui n'importe quelle question : technique, douleur, nutrition, objectif. Il connaît ton profil !", tab: null },
         ];
         const step = STEPS[tourStep] || STEPS[0];
         return (
@@ -3748,6 +3750,54 @@ JSON:
                       <span style={{ fontSize: 8, color: "#333" }}>{lvl.xpToNext > 0 ? `${lvl.xpToNext} XP → ${lvl.nextName}` : "Niveau max !"}</span>
                     </div>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── HYROX 101 BEGINNER CARD (shows for new users) ── */}
+            {(profile.sessions||[]).length < 3 && (() => {
+              const [showHyrox101, setShowHyrox101] = React.useState(() => {
+                try { return !localStorage.getItem("fitrace_hyrox101_done"); } catch { return true; }
+              });
+              if (!showHyrox101) return null;
+              const STATIONS = [
+                { icon: "⛷️", name: "SkiErg", dist: "1000m" },
+                { icon: "🛷", name: "Sled Push", dist: "50m" },
+                { icon: "🔗", name: "Sled Pull", dist: "50m" },
+                { icon: "💥", name: "Burpee Jump", dist: "80m" },
+                { icon: "🚣", name: "Rowing", dist: "1000m" },
+                { icon: "🧳", name: "Farmers Carry", dist: "200m" },
+                { icon: "🎒", name: "Sandbag Lunges", dist: "100m" },
+                { icon: "🏐", name: "Wall Balls", dist: "75/100 reps" },
+              ];
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(8,8,8,0) 80%)", border: "1.5px solid rgba(56,189,248,0.25)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 9, color: "#38bdf8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>🏁 HYROX — C'est quoi ?</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>1 km de run + 1 station × 8</div>
+                    </div>
+                    <button onClick={() => { localStorage.setItem("fitrace_hyrox101_done","1"); setShowHyrox101(false); }}
+                      style={{ background: "none", border: "none", color: "#333", fontSize: 18, cursor: "pointer", padding: 4 }}>×</button>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7, marginBottom: 12 }}>
+                    HYROX = <strong style={{ color: "#38bdf8" }}>8 km de running total</strong> entrecoupés de <strong style={{ color: "#38bdf8" }}>8 stations fonctionnelles</strong>. Pas de technique d'haltérophilie complexe — juste de l'endurance, de la force, et de la régularité.
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+                    {STATIONS.map((s, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>{s.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#ccc" }}>{s.name}</div>
+                          <div style={{ fontSize: 8, color: "#555" }}>{s.dist}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => { navigateTo("technique"); }}
+                    style={{ width: "100%", padding: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#38bdf8", cursor: "pointer" }}>
+                    📚 Voir la technique station par station →
+                  </button>
                 </div>
               );
             })()}
@@ -4715,6 +4765,46 @@ JSON:
                   ) : (
                     <div style={{ textAlign: "center", fontSize: 12, color: "var(--green)", fontWeight: 700 }}>🎉 Excellent ! Nouveau défi lundi.</div>
                   )}
+                </div>
+              );
+            })()}
+
+            {/* ── SEMAINE 1 ROADMAP (beginners) ── */}
+            {(profile.sessions||[]).length < 5 && (() => {
+              const sessionsDone = (profile.sessions||[]).length;
+              const ROADMAP = [
+                { step: 1, icon: "👤", label: "Profil créé", desc: "Ton point de départ est défini", done: true },
+                { step: 2, icon: "📋", label: "Check-in matinal", desc: "Dis-nous comment tu vas chaque matin", done: dailyData.fatigue > 0 },
+                { step: 3, icon: "🏋️", label: "1ère séance", desc: "Lance ta première séance du coach IA", done: sessionsDone >= 1 },
+                { step: 4, icon: "🍽️", label: "Log nutrition", desc: "Note ce que tu manges aujourd'hui", done: false },
+                { step: 5, icon: "📊", label: "3 séances", desc: "Le graphique de progression s'active", done: sessionsDone >= 3 },
+                { step: 6, icon: "🔥", label: "Streak 3 jours", desc: "3 check-ins consécutifs — l'habitude commence", done: (profile.streak||0) >= 3 },
+              ];
+              const doneCount = ROADMAP.filter(r => r.done).length;
+              const nextStep = ROADMAP.find(r => !r.done);
+              return (
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🚀 Prise en main ({doneCount}/{ROADMAP.length})</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>{Math.round(doneCount/ROADMAP.length*100)}% complété</div>
+                  </div>
+                  <div style={{ height: 3, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
+                    <div style={{ height: "100%", width: `${Math.round(doneCount/ROADMAP.length*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.8s" }} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {ROADMAP.map((r, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, opacity: r.done ? 1 : r === nextStep ? 1 : 0.4 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: r.done ? "rgba(57,255,128,0.12)" : r === nextStep ? "rgba(232,255,71,0.1)" : "rgba(255,255,255,0.02)", border: `1.5px solid ${r.done ? "rgba(57,255,128,0.4)" : r === nextStep ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                          {r.done ? "✅" : r.icon}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: r === nextStep ? 700 : 600, color: r.done ? "var(--green)" : r === nextStep ? "var(--yellow)" : "#555" }}>{r.label}</div>
+                          <div style={{ fontSize: 9, color: "#444" }}>{r.desc}</div>
+                        </div>
+                        {r === nextStep && <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700 }}>← NEXT</div>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })()}
