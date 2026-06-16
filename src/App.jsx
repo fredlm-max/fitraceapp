@@ -6126,6 +6126,160 @@ JSON:
               );
             })()}
 
+            {/* ── BENCHMARK STATIONS HYROX ── */}
+            {(()=>{
+              const BENCH_STATIONS = [
+                { id: "ski",      icon: "⛷️",  label: "SkiErg",          dist: "1000m",   refH: "3:30", refF: "4:30", refEliteH: "3:00", color: "#a78bfa" },
+                { id: "sledpush", icon: "🛷",  label: "Sled Push",       dist: "50m",     refH: "1:45", refF: "2:15", refEliteH: "1:20", color: "var(--yellow)" },
+                { id: "sledpull", icon: "🔗",  label: "Sled Pull",       dist: "50m",     refH: "1:30", refF: "2:00", refEliteH: "1:10", color: "var(--orange)" },
+                { id: "burpee",   icon: "🤸",  label: "Burpee BJ",       dist: "80m",     refH: "2:30", refF: "3:00", refEliteH: "2:00", color: "var(--red)" },
+                { id: "rowing",   icon: "🚣",  label: "Rowing",          dist: "1000m",   refH: "3:40", refF: "4:30", refEliteH: "3:10", color: "#38bdf8" },
+                { id: "farmers",  icon: "🧳",  label: "Farmers Carry",   dist: "200m",    refH: "1:30", refF: "2:00", refEliteH: "1:05", color: "var(--green)" },
+                { id: "sandbag",  icon: "🎒",  label: "Sandbag Lunges",  dist: "100m",    refH: "3:20", refF: "4:10", refEliteH: "2:40", color: "var(--orange)" },
+                { id: "wallball", icon: "🏀",  label: "Wall Balls",      dist: "100 reps",refH: "4:00", refF: "5:00", refEliteH: "3:20", color: "var(--yellow)" },
+              ];
+              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              const [benchmarks, setBenchmarks] = React.useState({});
+              const [editingStation, setEditingStation] = React.useState(null);
+              const [editMin, setEditMin] = React.useState("");
+              const [editSec, setEditSec] = React.useState("");
+
+              React.useEffect(() => {
+                storage.get(benchKey).then(b => { if (b) setBenchmarks(b); });
+              }, []);
+
+              const saveBench = async (id, min, sec) => {
+                const timeStr = `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+                const updated = { ...benchmarks, [id]: { time: timeStr, date: new Date().toISOString().split("T")[0] } };
+                setBenchmarks(updated);
+                await storage.set(benchKey, updated);
+                setEditingStation(null);
+              };
+
+              const timeToSecs = (t) => {
+                if (!t) return null;
+                const [m, s] = t.split(":").map(Number);
+                return m * 60 + (s || 0);
+              };
+
+              const refToSecs = (ref) => timeToSecs(ref);
+
+              const gender = (profile.sexe === "femme" || profile.sexe === "F") ? "F" : "H";
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏁 Benchmarks Stations</div>
+                    <div style={{ fontSize: 9, color: "#333" }}>{Object.keys(benchmarks).length}/8 renseignés</div>
+                  </div>
+
+                  {/* Entry modal */}
+                  {editingStation && (
+                    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.9)", zIndex: 500, display: "flex", alignItems: "flex-end" }}
+                      onClick={() => setEditingStation(null)}>
+                      <div className="slide-up" onClick={e => e.stopPropagation()}
+                        style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 40px", width: "100%", maxWidth: 480, margin: "0 auto" }}>
+                        <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
+                        {(() => {
+                          const st = BENCH_STATIONS.find(s => s.id === editingStation);
+                          return (
+                            <>
+                              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                                <span style={{ fontSize: 28 }}>{st.icon}</span>
+                                <div>
+                                  <div style={{ fontSize: 10, color: st.color, fontWeight: 700, textTransform: "uppercase" }}>{st.dist}</div>
+                                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--white)" }}>{st.label}</div>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
+                                Ref. open {gender === "F" ? "femme" : "homme"}: <strong style={{ color: "#888" }}>{gender === "H" ? st.refH : st.refF}</strong> · Élite: <strong style={{ color: st.color }}>{st.refEliteH}</strong>
+                              </div>
+                              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, color: "#555", marginBottom: 6 }}>Minutes</div>
+                                  <input type="number" min="0" max="30" value={editMin} onChange={e => setEditMin(e.target.value)}
+                                    placeholder="ex: 3" style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px", color: "var(--white)", fontSize: 20, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                                </div>
+                                <div style={{ fontSize: 24, color: "#555", marginTop: 20 }}>:</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, color: "#555", marginBottom: 6 }}>Secondes</div>
+                                  <input type="number" min="0" max="59" value={editSec} onChange={e => setEditSec(String(Math.min(59, parseInt(e.target.value)||0)).padStart(2,"0"))}
+                                    placeholder="ex: 45" style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px", color: "var(--white)", fontSize: 20, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                                </div>
+                              </div>
+                              <button onClick={() => saveBench(editingStation, parseInt(editMin)||0, parseInt(editSec)||0)}
+                                disabled={!editMin}
+                                style={{ width: "100%", padding: 16, background: editMin ? st.color : "rgba(255,255,255,0.05)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, color: editMin ? "#000" : "#333", cursor: editMin ? "pointer" : "default" }}>
+                                💾 ENREGISTRER MON TEMPS
+                              </button>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Station cards */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {BENCH_STATIONS.map(st => {
+                      const bench = benchmarks[st.id];
+                      const mySecs = bench ? timeToSecs(bench.time) : null;
+                      const refSecs = timeToSecs(gender === "H" ? st.refH : st.refF);
+                      const eliteSecs = timeToSecs(st.refEliteH);
+                      const diffVsRef = mySecs !== null && refSecs ? refSecs - mySecs : null; // positive = better than ref
+                      const pctOfElite = mySecs !== null && eliteSecs ? Math.round((eliteSecs / mySecs) * 100) : null;
+                      return (
+                        <div key={st.id} onClick={() => { haptic([6]); setEditingStation(st.id); if (bench) { const [m,s] = bench.time.split(":"); setEditMin(m); setEditSec(s); } else { setEditMin(""); setEditSec(""); } }}
+                          style={{ background: bench ? `${st.color}07` : "rgba(255,255,255,0.02)", border: `1px solid ${bench ? st.color + "30" : "rgba(255,255,255,0.06)"}`, borderLeft: `3px solid ${bench ? st.color : "rgba(255,255,255,0.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.18s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 20, flexShrink: 0 }}>{st.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                <div>
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{st.label}</div>
+                                  <div style={{ fontSize: 9, color: "#444", marginTop: 1 }}>{st.dist}</div>
+                                </div>
+                                <div style={{ textAlign: "right" }}>
+                                  {bench ? (
+                                    <>
+                                      <div className="bebas" style={{ fontSize: 22, color: st.color, lineHeight: 1 }}>{bench.time}</div>
+                                      {diffVsRef !== null && (
+                                        <div style={{ fontSize: 9, color: diffVsRef > 0 ? "var(--green)" : diffVsRef < -5 ? "var(--red)" : "var(--orange)", fontWeight: 700 }}>
+                                          {diffVsRef > 0 ? `−${diffVsRef}s vs ref` : `+${Math.abs(diffVsRef)}s vs ref`}
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <div style={{ fontSize: 10, color: "#333", fontStyle: "italic" }}>Tap pour saisir →</div>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Progress bar vs ref */}
+                              {bench && refSecs && eliteSecs && (
+                                <div style={{ marginTop: 8 }}>
+                                  <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "visible", position: "relative" }}>
+                                    {/* Elite marker */}
+                                    <div style={{ position: "absolute", top: -2, left: `${Math.min(98, (eliteSecs / refSecs) * 100)}%`, width: 2, height: 8, background: st.color, borderRadius: 1 }} />
+                                    {/* My bar */}
+                                    <div style={{ height: "100%", width: `${Math.min(100, (mySecs / refSecs) * 100)}%`, background: mySecs <= eliteSecs ? st.color : mySecs <= refSecs ? "var(--yellow)" : "var(--orange)", borderRadius: 99, transition: "width 0.5s" }} />
+                                  </div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#222", marginTop: 3 }}>
+                                    <span>0:00</span>
+                                    <span style={{ color: st.color }}>Élite {st.refEliteH}</span>
+                                    <span>Ref {gender === "H" ? st.refH : st.refF}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Adaptations IA</div>
               {(profile.adaptations || []).length === 0 ? (
