@@ -907,6 +907,63 @@ function tsbLabel(tsb) {
 }
 
 // ============================================================
+// SYSTÈME XP / GAMIFICATION
+// ============================================================
+const XP_REWARDS = {
+  session_done:    { xp: 100, label: "+100 XP", icon: "🏋️", msg: "Séance complète !" },
+  streak_3:        { xp: 50,  label: "+50 XP",  icon: "🔥", msg: "3 jours consécutifs !" },
+  streak_7:        { xp: 150, label: "+150 XP", icon: "⚡", msg: "1 semaine non-stop !" },
+  streak_14:       { xp: 300, label: "+300 XP", icon: "💪", msg: "2 semaines !" },
+  checkin_done:    { xp: 20,  label: "+20 XP",  icon: "✅", msg: "Check-in matinal !" },
+  nutrition_log:   { xp: 15,  label: "+15 XP",  icon: "🥗", msg: "Nutrition trackée !" },
+  hydration_full:  { xp: 25,  label: "+25 XP",  icon: "💧", msg: "Hydratation complète !" },
+  hrv_logged:      { xp: 10,  label: "+10 XP",  icon: "💓", msg: "HRV enregistré !" },
+  weight_logged:   { xp: 10,  label: "+10 XP",  icon: "⚖️", msg: "Poids enregistré !" },
+  benchmark_set:   { xp: 50,  label: "+50 XP",  icon: "🏅", msg: "Nouveau benchmark !" },
+};
+
+const XP_LEVELS = [
+  { level: 1, name: "Rookie",       min: 0,    max: 300,  color: "#888",     icon: "🌱" },
+  { level: 2, name: "Challenger",   min: 300,  max: 800,  color: "#38bdf8",  icon: "⚡" },
+  { level: 3, name: "Warrior",      min: 800,  max: 1800, color: "var(--green)", icon: "💪" },
+  { level: 4, name: "Elite",        min: 1800, max: 4000, color: "var(--yellow)", icon: "🔥" },
+  { level: 5, name: "HYROX Pro",    min: 4000, max: 10000, color: "var(--orange)", icon: "🏆" },
+  { level: 6, name: "Légende",      min: 10000, max: 999999, color: "var(--purple)", icon: "👑" },
+];
+
+function getXPLevel(totalXP) {
+  const lvl = [...XP_LEVELS].reverse().find(l => totalXP >= l.min) || XP_LEVELS[0];
+  const next = XP_LEVELS[lvl.level] || lvl;
+  const progress = Math.min(100, Math.round(((totalXP - lvl.min) / (next.min - lvl.min || 1)) * 100));
+  return { ...lvl, totalXP, progress, nextName: next.name, xpToNext: Math.max(0, next.min - totalXP) };
+}
+
+function calcTotalXP(profile) {
+  const sessions = profile.sessions || [];
+  let xp = 0;
+  xp += sessions.length * XP_REWARDS.session_done.xp;
+  const streak = profile.streak || 0;
+  if (streak >= 14) xp += XP_REWARDS.streak_14.xp;
+  else if (streak >= 7) xp += XP_REWARDS.streak_7.xp;
+  else if (streak >= 3) xp += XP_REWARDS.streak_3.xp;
+  xp += (profile.xpBonus || 0); // manual XP from actions
+  return xp;
+}
+
+const BADGES = [
+  { id: "first_session",  icon: "🏋️", name: "Première séance",    desc: "Tu as complété ta première séance !",         check: p => (p.sessions||[]).length >= 1 },
+  { id: "week_warrior",   icon: "📅", name: "Semaine complète",    desc: "4+ séances en une semaine",                   check: p => { const w=new Date(); w.setDate(w.getDate()-7); return (p.sessions||[]).filter(s=>new Date(s.date)>=w).length>=4; } },
+  { id: "streak_7",       icon: "🔥", name: "7 jours de feu",     desc: "7 jours d'entraînement consécutifs",           check: p => (p.streak||0) >= 7 },
+  { id: "nutrition_pro",  icon: "🥗", name: "Nutrition consciente", desc: "5 jours de journal nutritionnel rempli",     check: p => (p.nutriDays||0) >= 5 },
+  { id: "early_bird",     icon: "🌅", name: "Lève-tôt",            desc: "Check-in avant 7h du matin",                  check: p => (p.earlyBird||false) },
+  { id: "iron_will",      icon: "💪", name: "Volonté de fer",       desc: "Séance réalisée malgré RPE déclaré 8+",       check: p => (p.sessions||[]).some(s => s.difficulte >= 8) },
+  { id: "data_nerd",      icon: "📊", name: "Data addict",          desc: "HRV + poids + hydratation logués le même jour", check: p => (p.dataNerd||false) },
+  { id: "podium",         icon: "🏆", name: "Podium HYROX",         desc: "Résultat de course enregistré",               check: p => (p.raceResults||[]).length >= 1 },
+  { id: "ten_sessions",   icon: "⚡", name: "10 séances",           desc: "10 séances complètes dans l'app",             check: p => (p.sessions||[]).length >= 10 },
+  { id: "level5",         icon: "👑", name: "Elite",                desc: "Atteindre le niveau Elite (1800 XP)",         check: p => calcTotalXP(p) >= 1800 },
+];
+
+// ============================================================
 // API ANTHROPIC
 // ============================================================
 async function callClaude(systemPrompt, userPrompt, maxTokens = 1000) {
@@ -3658,6 +3715,43 @@ JSON:
             <div style={{ position: "absolute", top: 60, right: -40, width: 200, height: 200, background: "radial-gradient(circle, rgba(232,255,71,0.06) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
             <div style={{ position: "absolute", top: 300, left: -60, width: 180, height: 180, background: "radial-gradient(circle, rgba(57,255,128,0.04) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "50%" }} />
 
+            {/* ── XP LEVEL BAR ── */}
+            {(() => {
+              const totalXP = calcTotalXP(profile);
+              const lvl = getXPLevel(totalXP);
+              const earnedBadges = BADGES.filter(b => b.check(profile));
+              return (
+                <div style={{ background: `linear-gradient(135deg, ${lvl.color}10 0%, rgba(8,8,8,0) 80%)`, border: `1px solid ${lvl.color}25`, borderRadius: 18, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                  {/* Level icon */}
+                  <div style={{ width: 46, height: 46, borderRadius: 14, background: `${lvl.color}18`, border: `1.5px solid ${lvl.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                    {lvl.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                      <div>
+                        <span style={{ fontSize: 10, color: lvl.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Niv.{lvl.level} · </span>
+                        <span className="bebas" style={{ fontSize: 16, color: lvl.color, letterSpacing: 0.5 }}>{lvl.name}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span className="bebas" style={{ fontSize: 18, color: lvl.color }}>{totalXP.toLocaleString()}</span>
+                        <span style={{ fontSize: 9, color: "#333" }}>XP</span>
+                        {earnedBadges.slice(-3).map(b => (
+                          <span key={b.id} style={{ fontSize: 14 }} title={b.name}>{b.icon}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${lvl.progress}%`, background: `linear-gradient(90deg, ${lvl.color}80, ${lvl.color})`, borderRadius: 99, transition: "width 0.8s var(--ease-out)" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                      <span style={{ fontSize: 8, color: "#333" }}>{lvl.name}</span>
+                      <span style={{ fontSize: 8, color: "#333" }}>{lvl.xpToNext > 0 ? `${lvl.xpToNext} XP → ${lvl.nextName}` : "Niveau max !"}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ══════════════════════════════════════════
                 COMMAND CENTER — PRO ATHLETE DASHBOARD
                 ══════════════════════════════════════════ */}
@@ -4625,6 +4719,39 @@ JSON:
               );
             })()}
 
+            {/* ── BADGES SHOWCASE ── */}
+            {(() => {
+              const earnedBadges = BADGES.filter(b => b.check(profile));
+              const unearned = BADGES.filter(b => !b.check(profile));
+              if (earnedBadges.length === 0 && unearned.length === 0) return null;
+              return (
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🏅 Badges ({earnedBadges.length}/{BADGES.length})</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>{BADGES.length - earnedBadges.length} à débloquer</div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {BADGES.map(b => {
+                      const earned = b.check(profile);
+                      return (
+                        <div key={b.id} title={b.desc} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 52, opacity: earned ? 1 : 0.3 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 13, background: earned ? "rgba(232,255,71,0.1)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${earned ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "all 0.2s" }}>
+                            {earned ? b.icon : "🔒"}
+                          </div>
+                          <div style={{ fontSize: 7, color: earned ? "#888" : "#333", textAlign: "center", lineHeight: 1.2, maxWidth: 52 }}>{b.name}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {earnedBadges.length > 0 && (
+                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 10, color: "#444" }}>
+                      Dernier badge : <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{earnedBadges[earnedBadges.length-1].icon} {earnedBadges[earnedBadges.length-1].name}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Bouton Mon Profil */}
             <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -4652,6 +4779,85 @@ JSON:
               <div style={{ fontSize: 9, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 8 }}>💬 Citation du jour</div>
               <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7, fontStyle: "italic", position: "relative" }}>"{getCitationDuJour()}"</div>
             </div>
+
+            {/* ── MISSION DU JOUR (beginner-friendly) ── */}
+            {!session && (() => {
+              const recovery = calcRecoveryScore(dailyData, profile);
+              const sessionsThisWeek = (profile.sessions||[]).filter(s => { const w = new Date(); w.setDate(w.getDate()-7); return new Date(s.date) >= w; }).length;
+              const target = profile.seancesParSemaine || 4;
+              const isRestDay = recovery < 35 || sessionsThisWeek >= target;
+              const hour = new Date().getHours();
+              const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+
+              if (isRestDay && recovery < 35) {
+                // Active rest day
+                return (
+                  <div style={{ background: "linear-gradient(135deg, rgba(167,139,250,0.08) 0%, rgba(8,8,8,0) 100%)", border: "1.5px solid rgba(167,139,250,0.25)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                      <div style={{ fontSize: 28 }}>🧘</div>
+                      <div>
+                        <div style={{ fontSize: 9, color: "#a78bfa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>JOUR DE RÉCUPÉRATION</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)", marginTop: 2 }}>{greeting}, {profile.name.split(" ")[0]} · Ton corps récupère</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#666", lineHeight: 1.7, marginBottom: 14 }}>
+                      Score récup <strong style={{ color: "#a78bfa" }}>{recovery}/100</strong> — C'est pendant le repos que les muscles se renforcent. Aujourd'hui : pas de séance intense.
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {[
+                        { icon: "🚶", label: "Marche 20-30 min", desc: "Maintient la circulation sans fatiguer" },
+                        { icon: "🧘", label: "10 min de mobilité", desc: "Hanches, épaules, dos — video dans Technique" },
+                        { icon: "💧", label: "Hydratation +++ ", desc: "Vise 8 verres — la récup dépend de l'eau" },
+                        { icon: "🥗", label: "Protéines à chaque repas", desc: "2g/kg pour reconstruire les muscles" },
+                      ].map((item, i) => (
+                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 10px", background: "rgba(255,255,255,0.02)", borderRadius: 10 }}>
+                          <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#ccc" }}>{item.label}</div>
+                            <div style={{ fontSize: 10, color: "#555" }}>{item.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Active training day
+              const typeIcon = { running_zone2: "🏃", force_stations: "🏋️", running_qualite: "⚡", hybride_compromis: "🔀" };
+              const typeNames = { running_zone2: "Cardio Zone 2", force_stations: "Force & Stations", running_qualite: "Qualité / Vitesse", hybride_compromis: "Hybride" };
+              const todayType = coachSession?.type || "force_stations";
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.07) 0%, rgba(8,8,8,0) 80%)", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ fontSize: 28 }}>{typeIcon[todayType] || "🎯"}</div>
+                    <div>
+                      <div style={{ fontSize: 9, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>TA MISSION AUJOURD'HUI</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)", marginTop: 2 }}>{greeting}, {profile.name.split(" ")[0]} ! 💪</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    <div style={{ flex: 1, background: "rgba(232,255,71,0.06)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#444", marginBottom: 2 }}>TYPE</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--yellow)" }}>{typeNames[todayType] || "Séance"}</div>
+                    </div>
+                    <div style={{ flex: 1, background: "rgba(57,255,128,0.05)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#444", marginBottom: 2 }}>SEMAINE</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)" }}>{sessionsThisWeek}/{target} séances</div>
+                    </div>
+                    <div style={{ flex: 1, background: "rgba(255,154,60,0.05)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#444", marginBottom: 2 }}>RÉCUP</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: recovery >= 60 ? "var(--green)" : "var(--orange)" }}>{recovery}/100</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#666", lineHeight: 1.6 }}>
+                    {recovery >= 70 ? "🟢 Forme excellente — tu peux pousser fort aujourd'hui !" :
+                     recovery >= 45 ? "🟡 Forme correcte — séance normale recommandée." :
+                     "🟠 Fatigue modérée — écoute ton corps, adapte l'intensité."}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Séance coach du jour */}
             {coachSession && !session && (
