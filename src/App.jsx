@@ -4834,6 +4834,39 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         </div>
       )}
 
+      {/* ── PR BOARD ── */}
+      {(profile.squat1RM_final || profile.deadlift1RM_final || profile.vmaKmh || profile.tests) && (() => {
+        const tests = profile.tests || {};
+        const prs = [
+          { label: "Squat 1RM", value: profile.squat1RM_final, unit: "kg", icon: "🏋️", color: "var(--orange)" },
+          { label: "Deadlift 1RM", value: profile.deadlift1RM_final, unit: "kg", icon: "💀", color: "var(--red)" },
+          { label: "VMA", value: profile.vmaKmh, unit: "km/h", icon: "🏃", color: "var(--green)" },
+          { label: "SkiErg 1km", value: tests.skierg_1000, unit: "", icon: "⛷️", color: "#a78bfa" },
+          { label: "Rowing 1km", value: tests.rowing_1000, unit: "", icon: "🚣", color: "#38bdf8" },
+          { label: "Burpee BJ", value: tests.burpee_broad_jump ? `${tests.burpee_broad_jump}m` : null, unit: "", icon: "🤸", color: "var(--yellow)" },
+        ].filter(p => p.value);
+        if (!prs.length) return null;
+        return (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em" }}>🏆 Personal Records</div>
+              <div style={{ fontSize: 10, color: "#2a2a2a" }}>Mis à jour via les tests</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {prs.map((pr, i) => (
+                <div key={i} style={{ background: `${pr.color}08`, border: `1px solid ${pr.color}22`, borderRadius: 12, padding: "12px 8px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: -10, right: -10, fontSize: 36, opacity: 0.04 }}>{pr.icon}</div>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>{pr.icon}</div>
+                  <div className="bebas" style={{ fontSize: 22, color: pr.color, lineHeight: 1 }}>{pr.value}</div>
+                  {pr.unit && <div style={{ fontSize: 9, color: "#333", marginTop: 1 }}>{pr.unit}</div>}
+                  <div style={{ fontSize: 9, color: "#444", marginTop: 3 }}>{pr.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Bouton batterie de tests */}
       <Section title="Batterie de tests">
         <button onClick={() => setShowTests(true)} style={{ width: "100%", background: "var(--bg2)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
