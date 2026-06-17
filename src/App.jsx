@@ -424,7 +424,7 @@ function RPELineChart({ profile }) {
   const [tooltip, setTooltip] = useState(null);
   const sessions = profile.sessions || [];
   if (sessions.length < 2) return (
-    <div style={{ textAlign: "center", padding: "24px 16px", color: "#444", fontSize: 13 }}>
+    <div style={{ textAlign: "center", padding: "24px 16px", color: "#777", fontSize: 13 }}>
       <div style={{ fontSize: 28, marginBottom: 8 }}>📈</div>
       Fais au moins 2 séances pour voir ta courbe RPE.
     </div>
@@ -585,7 +585,7 @@ function TrainingHeatmap({ profile }) {
           {/* Labels jours */}
           <div style={{ display: "flex", flexDirection: "column", gap: 3, marginRight: 4 }}>
             {JOURS_SHORT.map((j, i) => (
-              <div key={i} style={{ height: 12, fontSize: 8, color: "#333", lineHeight: "12px" }}>{i % 2 === 0 ? j : ""}</div>
+              <div key={i} style={{ height: 12, fontSize: 8, color: "#555", lineHeight: "12px" }}>{i % 2 === 0 ? j : ""}</div>
             ))}
           </div>
           {/* Grille semaines */}
@@ -613,7 +613,7 @@ function TrainingHeatmap({ profile }) {
                 );
               })}
               {/* Label mois si 1er du mois dans la semaine */}
-              <div style={{ height: 10, fontSize: 8, color: "#333", textAlign: "center" }}>
+              <div style={{ height: 10, fontSize: 8, color: "#555", textAlign: "center" }}>
                 {week.some(d => d.date.getDate() === 1) ? week.find(d => d.date.getDate() === 1)?.date.toLocaleDateString("fr-FR", { month: "short" }) : ""}
               </div>
             </div>
@@ -633,7 +633,7 @@ function TrainingHeatmap({ profile }) {
       )}
 
       <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
-        <span style={{ fontSize: 10, color: "#444" }}>Intensité:</span>
+        <span style={{ fontSize: 10, color: "#777" }}>Intensité:</span>
         {[{ c: "rgba(57,255,128,0.7)", l: "Facile" }, { c: "rgba(232,255,71,0.7)", l: "Modérée" }, { c: "rgba(255,71,71,0.7)", l: "Intense" }, { c: "var(--bg3)", l: "Repos" }].map(item => (
           <div key={item.l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#555" }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: item.c }} />{item.l}
@@ -1318,7 +1318,7 @@ function LoginScreen({ onLogin }) {
               </button>
 
               <div style={{ textAlign: "center", marginTop: 4 }}>
-                <span onClick={() => setMode("coach")} style={{ fontSize: 12, color: "#444", cursor: "pointer" }}>🏅 Accès Coach</span>
+                <span onClick={() => setMode("coach")} style={{ fontSize: 12, color: "#777", cursor: "pointer" }}>🏅 Accès Coach</span>
               </div>
             </div>
           )}
@@ -1342,7 +1342,7 @@ function LoginScreen({ onLogin }) {
               <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
                 ← Retour
               </button>
-              <div style={{ textAlign: "center", fontSize: 12, color: "#444" }}>
+              <div style={{ textAlign: "center", fontSize: 12, color: "#777" }}>
                 Pas encore de compte ?{" "}
                 <span onClick={() => { setMode("register"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Créer un compte</span>
               </div>
@@ -1372,7 +1372,7 @@ function LoginScreen({ onLogin }) {
               <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
                 ← Retour
               </button>
-              <div style={{ textAlign: "center", fontSize: 12, color: "#444" }}>
+              <div style={{ textAlign: "center", fontSize: 12, color: "#777" }}>
                 Déjà un compte ?{" "}
                 <span onClick={() => { setMode("login"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Se connecter</span>
               </div>
@@ -1473,7 +1473,7 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
         }}>
           CRÉER MON PROFIL →
         </button>
-        <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, color: "#333" }}>
+        <div style={{ textAlign: "center", marginTop: 14, fontSize: 12, color: "#555" }}>
           Configuration en 2 minutes · Gratuit
         </div>
       </div>
@@ -1770,7 +1770,7 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
               {loading ? (
                 <div>
                   <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.8, minHeight: 80 }}>
-                    {profile.aiProfile || <span style={{ color: "#444", fontStyle: "italic" }}>Ton coach analyse ton profil...</span>}
+                    {profile.aiProfile || <span style={{ color: "#777", fontStyle: "italic" }}>Ton coach analyse ton profil...</span>}
                   </div>
                   {!profile.aiProfile && (
                     <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
@@ -2038,7 +2038,7 @@ function TestModal({ test, onSave, onClose, existing }) {
                         </span>
                       </div>
                     ))}
-                    <div style={{ marginTop: 8, fontSize: 11, color: "#444", fontStyle: "italic" }}>
+                    <div style={{ marginTop: 8, fontSize: 11, color: "#777", fontStyle: "italic" }}>
                       FC max: {fcMax} bpm · FC repos: {fcMin} bpm · Réserve: {parseInt(fcMax) - parseInt(fcMin)} bpm
                     </div>
                   </>
@@ -2181,10 +2181,10 @@ function ProgressionChargesCard({ profile }) {
       </div>
 
       {!hasData ? (
-        <div style={{ textAlign: "center", padding: "28px 16px", color: "#444", fontSize: 13, lineHeight: 1.6 }}>
+        <div style={{ textAlign: "center", padding: "28px 16px", color: "#777", fontSize: 13, lineHeight: 1.6 }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>{currentMetric.icon}</div>
           Pas encore de données pour {currentMetric.label}.<br/>
-          <span style={{ color: "#333" }}>Le graphique se construit séance après séance.</span>
+          <span style={{ color: "#555" }}>Le graphique se construit séance après séance.</span>
         </div>
       ) : (
         <>
@@ -2197,7 +2197,7 @@ function ProgressionChargesCard({ profile }) {
               { label: "Gain", value: pct !== null ? `+${pct}%` : "—", color: "var(--green)" },
             ].map((s, i) => (
               <div key={i} style={{ background: "var(--bg3)", borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>
-                <div style={{ fontSize: 9, color: "#444", marginBottom: 3, textTransform: "uppercase" }}>{s.label}</div>
+                <div style={{ fontSize: 9, color: "#777", marginBottom: 3, textTransform: "uppercase" }}>{s.label}</div>
                 <div className="bebas" style={{ fontSize: 16, color: s.color, lineHeight: 1 }}>
                   {s.value ?? "—"}{i < 3 && s.value ? currentMetric.unit : ""}
                 </div>
@@ -2305,8 +2305,8 @@ function WeeklySummaryCard({ profile }) {
           <div className="bebas" style={{ fontSize: 32, color: scoreColor, lineHeight: 1 }}>{summary.count} <span style={{ fontSize: 16, color: "#555" }}>séances</span></div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 10, color: "#333", marginBottom: 2 }}>Volume</div>
-          <div className="bebas" style={{ fontSize: 22, color: "#555" }}>{totalMinutes}<span style={{ fontSize: 11, color: "#333" }}>min</span></div>
+          <div style={{ fontSize: 10, color: "#555", marginBottom: 2 }}>Volume</div>
+          <div className="bebas" style={{ fontSize: 22, color: "#555" }}>{totalMinutes}<span style={{ fontSize: 11, color: "#555" }}>min</span></div>
         </div>
       </div>
 
@@ -2344,7 +2344,7 @@ function WeeklySummaryCard({ profile }) {
         ].map((s, i) => s.count > 0 && (
           <div key={i} style={{ background: `${s.color}10`, border: `1px solid ${s.color}22`, borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
             <span className="bebas" style={{ fontSize: 16, color: s.color, lineHeight: 1 }}>{s.count}</span>
-            <span style={{ fontSize: 9, color: "#444" }}>{s.label}</span>
+            <span style={{ fontSize: 9, color: "#777" }}>{s.label}</span>
           </div>
         ))}
         {summary.dur >= 2 && (
@@ -2399,7 +2399,7 @@ function WeeklyPerformanceCard({ profile }) {
       {/* Halo couleur */}
       <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: `radial-gradient(circle, ${scoreColor}12 0%, transparent 70%)`, pointerEvents: "none" }} />
 
-      <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>⚡ Score de la semaine</div>
+      <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>⚡ Score de la semaine</div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         {/* Gauge circulaire */}
@@ -2497,7 +2497,7 @@ function TrainingMixChart({ profile }) {
 
   return (
     <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
-      <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🎯 Mix d'entraînement</div>
+      <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🎯 Mix d'entraînement</div>
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         {/* Donut */}
         <div style={{ flexShrink: 0, position: "relative" }}>
@@ -2523,7 +2523,7 @@ function TrainingMixChart({ profile }) {
               </div>
             </div>
           ))}
-          <div style={{ marginTop: 6, fontSize: 10, color: "#333" }}>{total} séances au total</div>
+          <div style={{ marginTop: 6, fontSize: 10, color: "#555" }}>{total} séances au total</div>
         </div>
       </div>
 
@@ -2568,7 +2568,7 @@ function Hyrox101Card({ profile, navigateTo }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>1 km de run + 1 station × 8</div>
         </div>
         <button onClick={() => { localStorage.setItem("fitrace_hyrox101_done","1"); setShowHyrox101(false); }}
-          style={{ background: "none", border: "none", color: "#333", fontSize: 18, cursor: "pointer", padding: 4 }}>×</button>
+          style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: 4 }}>×</button>
       </div>
       <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7, marginBottom: 12 }}>
         HYROX = <strong style={{ color: "#38bdf8" }}>8 km de running total</strong> entrecoupés de <strong style={{ color: "#38bdf8" }}>8 stations fonctionnelles</strong>. Pas de technique d'haltérophilie complexe — juste de l'endurance, de la force, et de la régularité.
@@ -2626,15 +2626,15 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
                     <div style={{ background: `${rpeColor}10`, border: `1px solid ${rpeColor}25`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
                       <div className="bebas" style={{ fontSize: 22, color: rpeColor }}>{rpe}/10</div>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>RPE</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>RPE</div>
                     </div>
                     {s.energie && <div style={{ background: "rgba(255,154,60,0.08)", border: "1px solid rgba(255,154,60,0.2)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--orange)" }}>{s.energie}/5</div>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Énergie</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>Énergie</div>
                     </div>}
                     {s.tempsReel && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{s.tempsReel}</div>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Durée</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>Durée</div>
                     </div>}
                   </div>
                   <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
@@ -2651,8 +2651,8 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Dernières séances</div>
-        <button onClick={() => navigateTo("progress")} style={{ background: "none", border: "none", fontSize: 10, color: "#444", cursor: "pointer", fontWeight: 700, padding: "2px 0" }}>Voir tout →</button>
+        <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Dernières séances</div>
+        <button onClick={() => navigateTo("progress")} style={{ background: "none", border: "none", fontSize: 10, color: "#777", cursor: "pointer", fontWeight: 700, padding: "2px 0" }}>Voir tout →</button>
       </div>
       <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
         {sessions.map((s, i) => {
@@ -2665,13 +2665,13 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
               <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: conf.color, borderRadius: "16px 16px 0 0", opacity: 0.7 }} />
               <div style={{ fontSize: 26, marginBottom: 6, marginTop: 4 }}>{conf.icon}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
-              <div style={{ fontSize: 9, color: "#444", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+              <div style={{ fontSize: 9, color: "#777", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
               <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
                 <div style={{ height: "100%", width: `${rpePct * 100}%`, background: rpeColor, borderRadius: 99 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 9, background: `${conf.color}20`, color: conf.color, borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>{conf.label}</span>
-                <span className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 8, color: "#333" }}>/10</span></span>
+                <span className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 8, color: "#555" }}>/10</span></span>
               </div>
             </div>
           );
@@ -2694,7 +2694,7 @@ function PourquoiCard({ session }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <button onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#333", fontSize: 11, cursor: "pointer", padding: "4px 0", fontFamily: "inherit" }}>
+        style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#555", fontSize: 11, cursor: "pointer", padding: "4px 0", fontFamily: "inherit" }}>
         <span style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>▶</span>
         <span style={{ color: "#555", fontWeight: 600 }}>🎓 Pourquoi cette séance ?</span>
       </button>
@@ -2753,7 +2753,7 @@ function WarmupWidget({ session }) {
           </div>
         </div>
         <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
-        <div style={{ color: "#333", fontSize: 14, transform: warmupOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+        <div style={{ color: "#555", fontSize: 14, transform: warmupOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
       </div>
       {warmupOpen && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
@@ -2820,7 +2820,7 @@ function CooldownWidget({ session }) {
           </div>
         </div>
         <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
-        <div style={{ color: "#333", fontSize: 14, transform: cdOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+        <div style={{ color: "#555", fontSize: 14, transform: cdOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
       </div>
       {cdOpen && (
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
@@ -2861,7 +2861,7 @@ function PaceCalcWidget({ profile }) {
   return (
     <div style={{ marginTop: 16, background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "16px" }}>
       <div className="bebas" style={{ fontSize: 18, color: "var(--green)", marginBottom: 12 }}>🎯 CALCULATEUR PACE HYROX</div>
-      <div style={{ fontSize: 11, color: "#444", marginBottom: 10 }}>Ton objectif de temps total :</div>
+      <div style={{ fontSize: 11, color: "#777", marginBottom: 10 }}>Ton objectif de temps total :</div>
       <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
         <select value={targetH} onChange={e => setTargetH(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
           {["1","2","3","4","5"].map(h => <option key={h} value={h}>{h}h</option>)}
@@ -2876,12 +2876,12 @@ function PaceCalcWidget({ profile }) {
           <div style={{ background: "rgba(57,255,128,0.08)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
             <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", marginBottom: 4 }}>Allure running</div>
             <div className="bebas" style={{ fontSize: 26, color: "var(--green)", lineHeight: 1 }}>{paceStr}</div>
-            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>8 × 1km entre stations</div>
+            <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>8 × 1km entre stations</div>
           </div>
           <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.18)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
             <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", marginBottom: 4 }}>Temps par station</div>
             <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{stationMin}:{String(stationSec).padStart(2,"0")}</div>
-            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>moy. ~{estStationsMins}min total</div>
+            <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>moy. ~{estStationsMins}min total</div>
           </div>
         </div>
       )}
@@ -2903,7 +2903,7 @@ function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, ha
       <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "20px 20px calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>⚡ Log rapide</div>
-          <div style={{ fontSize: 10, color: "#444" }}>Enregistrement auto</div>
+          <div style={{ fontSize: 10, color: "#777" }}>Enregistrement auto</div>
         </div>
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -3817,7 +3817,7 @@ JSON:
               <div style={{ fontSize: 11, color: "#555", lineHeight: 1.4 }}>Accès rapide depuis ton écran d'accueil</div>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button onClick={() => setShowInstallBanner(false)} style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, padding: "7px 10px", color: "#444", fontSize: 12, cursor: "pointer" }}>Plus tard</button>
+              <button onClick={() => setShowInstallBanner(false)} style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, padding: "7px 10px", color: "#777", fontSize: 12, cursor: "pointer" }}>Plus tard</button>
               <button onClick={triggerInstall} style={{ background: "var(--yellow)", border: "none", borderRadius: 8, padding: "7px 14px", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Installer</button>
             </div>
           </div>
@@ -3858,7 +3858,7 @@ JSON:
                     </div>
                   </div>
                   {/* Questions suggérées — contextuelles selon le tab */}
-                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Suggestions</div>
+                  <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Suggestions</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                     {((() => {
                       const lastSession = (profile.sessions||[]).slice(-1)[0];
@@ -3981,7 +3981,7 @@ JSON:
               <div className="bebas" style={{ fontSize: 15, color: "var(--yellow)", letterSpacing: 2 }}>MODE ENTRAÎNEMENT</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize: 12, color: "#444", fontVariantNumeric: "tabular-nums" }}>
+              <div style={{ fontSize: 12, color: "#777", fontVariantNumeric: "tabular-nums" }}>
                 {currentExIdx + 1}/{(session.exercices||[]).length}
               </div>
               <button onClick={() => { setChronoMode(false); setChronoRunning(false); setReposMode(false); setReposRunning(false); setLapTimes([]); }}
@@ -3998,7 +3998,7 @@ JSON:
           {reposMode ? (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", background: reposCountdown <= 10 ? "radial-gradient(circle at 50% 40%, rgba(255,71,71,0.06) 0%, transparent 70%)" : "radial-gradient(circle at 50% 40%, rgba(57,255,128,0.06) 0%, transparent 70%)" }}>
 
-              <div style={{ fontSize: 11, color: "#333", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16 }}>Temps de repos</div>
+              <div style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16 }}>Temps de repos</div>
 
               {/* Grand compteur repos */}
               <div style={{ position: "relative", marginBottom: 20 }}>
@@ -4053,9 +4053,9 @@ JSON:
               {/* Exercice suivant */}
               {(session.exercices||[])[currentExIdx + 1] && (
                 <div style={{ marginTop: 20, background: "rgba(255,255,255,0.02)", border: "1px solid #181818", borderRadius: 12, padding: "12px 16px", width: "100%", maxWidth: 320 }}>
-                  <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Prochain exercice</div>
+                  <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Prochain exercice</div>
                   <div style={{ fontSize: 15, color: "#666", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom}</div>
-                  <div style={{ fontSize: 13, color: "#444" }}>{(session.exercices||[])[currentExIdx + 1].detail}</div>
+                  <div style={{ fontSize: 13, color: "#777" }}>{(session.exercices||[])[currentExIdx + 1].detail}</div>
                 </div>
               )}
             </div>
@@ -4069,7 +4069,7 @@ JSON:
                   <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{(session.exercices||[])[currentExIdx].nom}</div>
                   <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)" }}>{(session.exercices||[])[currentExIdx].detail}</div>
                   {(session.exercices||[])[currentExIdx].note && (
-                    <div style={{ fontSize: 12, color: "#444", marginTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: 8 }}>💬 {(session.exercices||[])[currentExIdx].note}</div>
+                    <div style={{ fontSize: 12, color: "#777", marginTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: 8 }}>💬 {(session.exercices||[])[currentExIdx].note}</div>
                   )}
                 </div>
               )}
@@ -4102,8 +4102,8 @@ JSON:
                 <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.02)", border: "1px solid #151515", borderRadius: 12, padding: "10px 14px", marginBottom: 12 }}>
                   <div style={{ fontSize: 18 }}>→</div>
                   <div>
-                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em" }}>Suivant</div>
-                    <div style={{ fontSize: 14, color: "#555", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom} · <span style={{ color: "#444" }}>{(session.exercices||[])[currentExIdx + 1].detail}</span></div>
+                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Suivant</div>
+                    <div style={{ fontSize: 14, color: "#555", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom} · <span style={{ color: "#777" }}>{(session.exercices||[])[currentExIdx + 1].detail}</span></div>
                   </div>
                 </div>
               )}
@@ -4200,7 +4200,7 @@ JSON:
                     </div>
                     <div style={{ textAlign: "center" }}>
                       <div className="bebas" style={{ fontSize: 52, color: sc.global >= 75 ? "var(--green)" : sc.global >= 50 ? "var(--yellow)" : "var(--orange)", lineHeight: 1 }}>{sc.global}</div>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>/ 100</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>/ 100</div>
                     </div>
                   </div>
 
@@ -4232,7 +4232,7 @@ JSON:
                       ].map((s, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 14 }}>{s.icon}</span>
-                          <span style={{ fontSize: 10, color: "#444", flex: 1 }}>{s.label}</span>
+                          <span style={{ fontSize: 10, color: "#777", flex: 1 }}>{s.label}</span>
                           <span className="bebas" style={{ fontSize: 14, color: s.color }}>{s.val}</span>
                         </div>
                       ))}
@@ -4277,7 +4277,7 @@ JSON:
               }} style={{ width: "100%", padding: 11, background: "rgba(255,255,255,0.04)", border: "1px solid #222", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer" }}>
                 📋 Copier le texte
               </button>
-              <button onClick={() => setShowShareCard(false)} style={{ width: "100%", padding: 8, background: "none", border: "none", color: "#444", fontSize: 12, cursor: "pointer" }}>Fermer</button>
+              <button onClick={() => setShowShareCard(false)} style={{ width: "100%", padding: 8, background: "none", border: "none", color: "#777", fontSize: 12, cursor: "pointer" }}>Fermer</button>
             </div>
           </div>
         </div>
@@ -4320,7 +4320,7 @@ JSON:
                   {tourStep < STEPS.length - 1 ? "SUIVANT →" : "C'EST PARTI ! 🚀"}
                 </button>
               </div>
-              <div style={{ textAlign: "center", fontSize: 11, color: "#333", marginTop: 12 }}>{tourStep + 1} / {STEPS.length}</div>
+              <div style={{ textAlign: "center", fontSize: 11, color: "#555", marginTop: 12 }}>{tourStep + 1} / {STEPS.length}</div>
             </div>
           </div>
         );
@@ -4357,7 +4357,7 @@ JSON:
                 {days !== null && tab !== "race" && (
                   <div onClick={() => setTab("race")} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "4px 10px", textAlign: "center", cursor: "pointer" }}>
                     <div className="bebas" style={{ fontSize: 20, color: "var(--white)", lineHeight: 1 }}>{days}</div>
-                    <div style={{ fontSize: 8, color: "#333", letterSpacing: "0.06em" }}>jours</div>
+                    <div style={{ fontSize: 8, color: "#555", letterSpacing: "0.06em" }}>jours</div>
                   </div>
                 )}
                 <button onClick={() => setShowCoachChat(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#888", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✦</button>
@@ -4381,13 +4381,13 @@ JSON:
               const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
               return (
                 <div style={{ paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.04)", marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: "#444", marginBottom: 4 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
+                  <div style={{ fontSize: 12, color: "#777", marginBottom: 4 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: "var(--white)", lineHeight: 1.1 }}>
                         {greet}, <span style={{ color: "var(--yellow)" }}>{firstName}</span>
                       </div>
-                      <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>
                         {(profile.sessions||[]).length === 0
                           ? "Bienvenue sur FitRace — commence ta première séance !"
                           : streak >= 7 ? `${streak} jours de streak — continue comme ça !`
@@ -4398,7 +4398,7 @@ JSON:
                     {/* Mini fitness score badge */}
                     <div style={{ textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "8px 14px" }}>
                       <div className="bebas number-pop" style={{ fontSize: 32, color: "var(--white)", lineHeight: 1 }}>{sc.global}</div>
-                      <div style={{ fontSize: 8, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>Score</div>
+                      <div style={{ fontSize: 8, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>Score</div>
                     </div>
                   </div>
                 </div>
@@ -4459,15 +4459,15 @@ JSON:
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="bebas" style={{ fontSize: 18, color: "var(--white)" }}>{totalXP.toLocaleString()}</span>
-                        <span style={{ fontSize: 9, color: "#333" }}>XP</span>
+                        <span style={{ fontSize: 9, color: "#555" }}>XP</span>
                       </div>
                     </div>
                     <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${lvl.progress}%`, background: "var(--yellow)", borderRadius: 99, transition: "width 0.8s var(--ease-out)" }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                      <span style={{ fontSize: 8, color: "#333" }}>{lvl.name}</span>
-                      <span style={{ fontSize: 8, color: "#333" }}>{lvl.xpToNext > 0 ? `${lvl.xpToNext} XP → ${lvl.nextName}` : "Niveau max !"}</span>
+                      <span style={{ fontSize: 8, color: "#555" }}>{lvl.name}</span>
+                      <span style={{ fontSize: 8, color: "#555" }}>{lvl.xpToNext > 0 ? `${lvl.xpToNext} XP → ${lvl.nextName}` : "Niveau max !"}</span>
                     </div>
                   </div>
                 </div>
@@ -4534,13 +4534,13 @@ JSON:
                         </svg>
                         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                           <div className="bebas" style={{ fontSize: 30, color: recov.color, lineHeight: 1 }}>{recovery}</div>
-                          <div style={{ fontSize: 8, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>/ 100</div>
+                          <div style={{ fontSize: 8, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>/ 100</div>
                         </div>
                       </div>
 
                       {/* Recovery details */}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>Récupération</div>
+                        <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>Récupération</div>
                         <div className="bebas" style={{ fontSize: 24, color: recov.color, letterSpacing: 1, lineHeight: 1, marginBottom: 4 }}>{recov.label}</div>
                         <div style={{ fontSize: 11, color: "#666", lineHeight: 1.5, marginBottom: 10 }}>{recov.tip}</div>
 
@@ -4554,7 +4554,7 @@ JSON:
                           ].map(m => (
                             <div key={m.label} style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
                               <div style={{ fontSize: 11, fontWeight: 600, color: m.ok ? "var(--white)" : "#444", marginTop: 1 }}>{m.val}</div>
-                              <div style={{ fontSize: 8, color: "#333", marginTop: 2 }}>{m.label}</div>
+                              <div style={{ fontSize: 8, color: "#555", marginTop: 2 }}>{m.label}</div>
                             </div>
                           ))}
                         </div>
@@ -4565,7 +4565,7 @@ JSON:
                     {kcalPct !== null && (
                       <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                          <span style={{ fontSize: 10, color: "#444", fontWeight: 600 }}>Nutrition aujourd'hui</span>
+                          <span style={{ fontSize: 10, color: "#777", fontWeight: 600 }}>Nutrition aujourd'hui</span>
                           <span style={{ fontSize: 10, color: kcalPct >= 80 ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>{todayMacros.kcal} / {objNutrKcal} kcal</span>
                         </div>
                         <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
@@ -4618,7 +4618,7 @@ JSON:
 
                     return (
                       <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 14, marginBottom: 10 }}>
-                        <div style={{ fontSize: 10, color: "#444", fontWeight: 600, marginBottom: 12 }}>Tendances 7 jours</div>
+                        <div style={{ fontSize: 10, color: "#777", fontWeight: 600, marginBottom: 12 }}>Tendances 7 jours</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                           {[
                             { label: "Sommeil", values: weekSeries.map(d => d.sleep), color: "#a78bfa", unit: "h", min: 4, max: 10, fmt: v => `${v}h` },
@@ -4630,7 +4630,7 @@ JSON:
                             const sparkline = renderSparkline(serie.values, serie.color, serie.min, serie.max);
                             return (
                               <div key={serie.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 10px 8px" }}>
-                                <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{serie.label}</div>
+                                <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{serie.label}</div>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: serie.color, marginBottom: 4 }}>{last ? serie.fmt(last) : "—"}</div>
                                 <div style={{ height: 28 }}>{sparkline || <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#222" }}>pas de données</div>}</div>
                               </div>
@@ -4661,7 +4661,7 @@ JSON:
                     return (
                       <div style={{ background: `${tsb2.color}08`, border: `1px solid ${tsb2.color}25`, borderRadius: 14, padding: "10px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ textAlign: "center", flexShrink: 0 }}>
-                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em" }}>Forme</div>
+                          <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em" }}>Forme</div>
                           <div className="bebas" style={{ fontSize: 24, color: tsb2.color, lineHeight: 1 }}>{todayPMC.tsb > 0 ? "+" : ""}{todayPMC.tsb}</div>
                         </div>
                         <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
@@ -4670,9 +4670,9 @@ JSON:
                           <div style={{ fontSize: 9, color: "#555", marginTop: 2, lineHeight: 1.4 }}>{tsb2.tip}</div>
                         </div>
                         <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase" }}>CTL</div>
+                          <div style={{ fontSize: 8, color: "#555", textTransform: "uppercase" }}>Fitness</div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--green)" }}>{todayPMC.ctl}</div>
-                          <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase", marginTop: 2 }}>ATL</div>
+                          <div style={{ fontSize: 8, color: "#555", textTransform: "uppercase", marginTop: 2 }}>Fatigue</div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--orange)" }}>{todayPMC.atl}</div>
                         </div>
                       </div>
@@ -4682,10 +4682,10 @@ JSON:
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
                     {/* Volume semaine */}
                     <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 14, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Charge semaine</div>
+                      <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Charge semaine</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
                         <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{weekSessions.length}</span>
-                        <span style={{ fontSize: 10, color: "#444" }}>/ {profile.seancesParSemaine || 4} séances</span>
+                        <span style={{ fontSize: 10, color: "#777" }}>/ {profile.seancesParSemaine || 4} séances</span>
                       </div>
                       <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${weekLoadPct}%`, background: weekLoadPct >= 100 ? "var(--green)" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
@@ -4693,13 +4693,13 @@ JSON:
                     </div>
                     {/* Streak */}
                     <div style={{ background: streak >= 7 ? "rgba(255,154,60,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${streak >= 7 ? "rgba(255,154,60,0.2)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
+                      <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
                         <span style={{ fontSize: 18 }}>{streak >= 14 ? "🏆" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "📅"}</span>
                         <span className="bebas" style={{ fontSize: 26, color: streak >= 7 ? "var(--orange)" : "var(--yellow)", lineHeight: 1 }}>{streak}</span>
-                        <span style={{ fontSize: 10, color: "#444" }}>jours</span>
+                        <span style={{ fontSize: 10, color: "#777" }}>jours</span>
                       </div>
-                      <div style={{ fontSize: 10, color: "#333" }}>Record : {profile.bestStreak || streak} j</div>
+                      <div style={{ fontSize: 10, color: "#555" }}>Record : {profile.bestStreak || streak} j</div>
                     </div>
                   </div>
                 </div>
@@ -4745,7 +4745,7 @@ JSON:
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                        <div style={{ fontSize: 10, color: "#444", fontWeight: 600 }}>Séance du jour</div>
+                        <div style={{ fontSize: 10, color: "#777", fontWeight: 600 }}>Séance du jour</div>
                       </div>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1.15 }}>{todaySession.titre}</div>
                     </div>
@@ -4761,11 +4761,11 @@ JSON:
                           {ex.nom}
                         </div>
                       ))}
-                      {exs.length > 3 && <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#444" }}>+{exs.length - 3}</div>}
+                      {exs.length > 3 && <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#777" }}>+{exs.length - 3}</div>}
                     </div>
                   )}
                   {todaySession.duree && (
-                    <div style={{ marginTop: 10, fontSize: 11, color: "#444" }}>⏱ {todaySession.duree} min · {conf.label}</div>
+                    <div style={{ marginTop: 10, fontSize: 11, color: "#777" }}>⏱ {todaySession.duree} min · {conf.label}</div>
                   )}
                 </div>
               );
@@ -4816,7 +4816,7 @@ JSON:
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }} onClick={() => setTab("today")} className="card-hover">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)", marginBottom: 2 }}>{meteo.label}</div>
-                    <div style={{ fontSize: 11, color: "#444" }}>{meteo.detail} · {meteo.cta}</div>
+                    <div style={{ fontSize: 11, color: "#777" }}>{meteo.detail} · {meteo.cta}</div>
                   </div>
                   <div style={{ fontSize: 11, color: "#2a2a2a" }}>{new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
@@ -4842,7 +4842,7 @@ JSON:
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div>
                       <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>Profil</div>
-                      <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>Plus de données = meilleur coaching</div>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>Plus de données = meilleur coaching</div>
                     </div>
                     <div className="bebas" style={{ fontSize: 28, color: "var(--white)" }}>{pct}%</div>
                   </div>
@@ -4875,14 +4875,14 @@ JSON:
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 18px", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                   <div>
-                    <div className="bebas" style={{ fontSize: 40, color: "var(--white)", lineHeight: 1, letterSpacing: 1 }}>{streak}<span style={{ fontSize: 16, color: "#444", letterSpacing: 0, marginLeft: 6 }}>jours</span></div>
-                    <div style={{ fontSize: 11, color: "#444", marginTop: 3 }}>
+                    <div className="bebas" style={{ fontSize: 40, color: "var(--white)", lineHeight: 1, letterSpacing: 1 }}>{streak}<span style={{ fontSize: 16, color: "#777", letterSpacing: 0, marginLeft: 6 }}>jours</span></div>
+                    <div style={{ fontSize: 11, color: "#777", marginTop: 3 }}>
                       {streak === 0 ? "Lance ta série aujourd'hui !" : streak === 1 ? "Jour 1 — la séquence commence !" : `Série active · record ${streakData.best}j`}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 9, color: "#2a2a2a", marginBottom: 2 }}>Record</div>
-                    <div className="bebas" style={{ fontSize: 26, color: "#444", lineHeight: 1 }}>{streakData.best}</div>
+                    <div className="bebas" style={{ fontSize: 26, color: "#777", lineHeight: 1 }}>{streakData.best}</div>
                   </div>
                 </div>
                 {/* 7-day visual */}
@@ -4903,7 +4903,7 @@ JSON:
                 {streak > 0 && (
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                      <span style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em" }}>Prochain objectif</span>
+                      <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em" }}>Prochain objectif</span>
                       <span style={{ fontSize: 10, color: streakColor, fontWeight: 700 }}>{nextMilestone} jours</span>
                     </div>
                     <div style={{ height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden" }}>
@@ -4957,13 +4957,13 @@ JSON:
                       {lvl.icon}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>Niveau HYROX</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>Niveau HYROX</div>
                       <div className="bebas" style={{ fontSize: 28, color: lvl.color, lineHeight: 1, letterSpacing: 1 }}>{lvl.name}</div>
                       <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>{xp} XP{nextLvl ? ` · encore ${xpToNext} XP` : " · niveau max !"}</div>
                     </div>
                     {/* XP badge */}
                     <div style={{ textAlign: "center", background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "8px 12px", minWidth: 52 }}>
-                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", marginBottom: 2 }}>XP</div>
+                      <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 2 }}>XP</div>
                       <div className="bebas" style={{ fontSize: 22, color: lvl.color, lineHeight: 1 }}>{xp}</div>
                     </div>
                   </div>
@@ -4971,7 +4971,7 @@ JSON:
                   {nextLvl && (
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em" }}>→ {nextLvl.name}</span>
+                        <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em" }}>→ {nextLvl.name}</span>
                         <span style={{ fontSize: 10, color: lvl.color, fontWeight: 700 }}>{progressPct}%</span>
                       </div>
                       <div style={{ height: 5, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
@@ -4981,9 +4981,9 @@ JSON:
                       </div>
                       {/* XP hints */}
                       <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        {!hasPR && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+100 XP : ajouter un PR</span>}
-                        {!hasRace && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+80 XP : fixer une race</span>}
-                        {nbSessions < 5 && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+50 XP par séance</span>}
+                        {!hasPR && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+100 XP : ajouter un PR</span>}
+                        {!hasRace && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+80 XP : fixer une race</span>}
+                        {nbSessions < 5 && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+50 XP par séance</span>}
                       </div>
                     </div>
                   )}
@@ -5001,15 +5001,15 @@ JSON:
               if (prs.length === 0) return null;
               return (
                 <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>🏅 Tes records personnels</div>
+                  <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>🏅 Tes records personnels</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                     {prs.map((pr, i) => (
                       <div key={i} style={{ background: pr.bg, border: `1px solid ${pr.border}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ fontSize: 24, flexShrink: 0 }}>{pr.icon}</div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{pr.label}</div>
+                          <div style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{pr.label}</div>
                           <div className="bebas" style={{ fontSize: 22, color: pr.color, lineHeight: 1 }}>{pr.value}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{pr.sub}</div>
+                          <div style={{ fontSize: 10, color: "#777", marginTop: 3 }}>{pr.sub}</div>
                         </div>
                         <div style={{ background: `${pr.color}18`, border: `1px solid ${pr.color}30`, borderRadius: 8, padding: "4px 8px", textAlign: "center", flexShrink: 0 }}>
                           <div style={{ fontSize: 8, color: pr.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>PR</div>
@@ -5029,14 +5029,14 @@ JSON:
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Ton coach · Aujourd'hui</div>
                   {loadingMessage ? (
-                    <div style={{ fontSize: 12, color: "#444", fontStyle: "italic" }}>Ton coach prépare ton message du jour…</div>
+                    <div style={{ fontSize: 12, color: "#777", fontStyle: "italic" }}>Ton coach prépare ton message du jour…</div>
                   ) : (
                     <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5 }}>
                       {messageIA ? messageIA.text.slice(0, 80) + (messageIA.text.length > 80 ? "…" : "") : "Charge en cours…"}
                     </div>
                   )}
                 </div>
-                {!loadingMessage && <span style={{ color: "#333", fontSize: 16, flexShrink: 0 }}>→</span>}
+                {!loadingMessage && <span style={{ color: "#555", fontSize: 16, flexShrink: 0 }}>→</span>}
               </div>
             </div>
 
@@ -5061,13 +5061,13 @@ JSON:
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: formeConf.color }}>{formeConf.label}</div>
-                      <div style={{ fontSize: 10, color: "#333" }}>Sur {last3.length} séances</div>
+                      <div style={{ fontSize: 10, color: "#555" }}>Sur {last3.length} séances</div>
                     </div>
                     <div style={{ fontSize: 11, color: "#555" }}>{formeConf.msg}</div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div className="bebas" style={{ fontSize: 22, color: formeConf.color, lineHeight: 1 }}>RPE {avgRPE}</div>
-                    <div style={{ fontSize: 10, color: "#333" }}>⚡{avgEnergie}/5</div>
+                    <div style={{ fontSize: 10, color: "#555" }}>⚡{avgEnergie}/5</div>
                   </div>
                 </div>
               );
@@ -5088,9 +5088,9 @@ JSON:
                   {/* Top row: name + share */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                     <div>
-                      <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Bonjour 👋</div>
+                      <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Bonjour 👋</div>
                       <div className="bebas" style={{ fontSize: 34, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
-                      <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
                     </div>
                     <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                       📤 Partager
@@ -5136,7 +5136,7 @@ JSON:
                         <div key={b.label}>
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                             <span style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 5 }}><span>{b.icon}</span>{b.label}</span>
-                            <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#333" }}>%</span></span>
+                            <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#555" }}>%</span></span>
                           </div>
                           <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
                             <div style={{ width: `${b.val}%`, height: "100%", background: `linear-gradient(90deg, ${b.color}88, ${b.color})`, borderRadius: 99, transition: "width 0.8s ease" }} />
@@ -5150,7 +5150,7 @@ JSON:
                   {tw > 0 && (
                     <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
+                        <span style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
                         <span className="bebas" style={{ fontSize: 13, color: "var(--yellow)" }}>S{cw} / {tw}</span>
                       </div>
                       <div style={{ display: "flex", gap: 2 }}>
@@ -5198,19 +5198,19 @@ JSON:
               return (
                 <div onClick={() => navigateTo("race")} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
+                    <div style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                       <div className="bebas" style={{ fontSize: 36, color: cat.color, lineHeight: 1 }}>{timeStr}</div>
                       <div style={{ background: `${cat.color}18`, border: `1px solid ${cat.color}33`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: cat.color, fontWeight: 700 }}>{cat.label}</div>
                     </div>
                     {hasGoal && (
-                      <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>
+                      <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>
                         Objectif : {profile.goalTargetLevel} · {totalMins < (profile.goalTargetLevel.replace("Sub ","").includes("h") ? parseInt(profile.goalTargetLevel.replace("Sub ",""))*60 : 999) ? "🎯 Dans les clous !" : "💪 À améliorer"}
                       </div>
                     )}
                     <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 3 }}>Basé sur VMA {vma}km/h · Squat {squat}kg</div>
                   </div>
-                  <div style={{ color: "#333", fontSize: 16, flexShrink: 0 }}>→</div>
+                  <div style={{ color: "#555", fontSize: 16, flexShrink: 0 }}>→</div>
                 </div>
               );
             })()}
@@ -5324,7 +5324,7 @@ JSON:
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ fontSize: 9, color: defiDone ? "var(--green)" : defi.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{defiDone ? "✓ Défi accompli" : `Défi semaine · ${defi.station}`}</div>
-                        <div style={{ fontSize: 9, color: "#333" }}>{defiDone ? `+${defi.xp} XP` : `${daysLeft}j restant${daysLeft>1?"s":""}`}</div>
+                        <div style={{ fontSize: 9, color: "#555" }}>{defiDone ? `+${defi.xp} XP` : `${daysLeft}j restant${daysLeft>1?"s":""}`}</div>
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: defiDone ? "var(--green)" : "var(--white)", marginTop: 4, lineHeight: 1.2 }}>{defi.challenge}</div>
                       <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.4 }}>{defi.tip}</div>
@@ -5357,8 +5357,8 @@ JSON:
               return (
                 <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🚀 Prise en main ({doneCount}/{ROADMAP.length})</div>
-                    <div style={{ fontSize: 10, color: "#333" }}>{Math.round(doneCount/ROADMAP.length*100)}% complété</div>
+                    <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🚀 Prise en main ({doneCount}/{ROADMAP.length})</div>
+                    <div style={{ fontSize: 10, color: "#555" }}>{Math.round(doneCount/ROADMAP.length*100)}% complété</div>
                   </div>
                   <div style={{ height: 3, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
                     <div style={{ height: "100%", width: `${Math.round(doneCount/ROADMAP.length*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.8s" }} />
@@ -5371,7 +5371,7 @@ JSON:
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 11, fontWeight: r === nextStep ? 700 : 600, color: r.done ? "var(--green)" : r === nextStep ? "var(--yellow)" : "#555" }}>{r.label}</div>
-                          <div style={{ fontSize: 9, color: "#444" }}>{r.desc}</div>
+                          <div style={{ fontSize: 9, color: "#777" }}>{r.desc}</div>
                         </div>
                         {r === nextStep && <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700 }}>← NEXT</div>}
                       </div>
@@ -5389,8 +5389,8 @@ JSON:
               return (
                 <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🏅 Badges ({earnedBadges.length}/{BADGES.length})</div>
-                    <div style={{ fontSize: 10, color: "#333" }}>{BADGES.length - earnedBadges.length} à débloquer</div>
+                    <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🏅 Badges ({earnedBadges.length}/{BADGES.length})</div>
+                    <div style={{ fontSize: 10, color: "#555" }}>{BADGES.length - earnedBadges.length} à débloquer</div>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {BADGES.map(b => {
@@ -5406,7 +5406,7 @@ JSON:
                     })}
                   </div>
                   {earnedBadges.length > 0 && (
-                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 10, color: "#444" }}>
+                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 10, color: "#777" }}>
                       Dernier badge : <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{earnedBadges[earnedBadges.length-1].icon} {earnedBadges[earnedBadges.length-1].name}</span>
                     </div>
                   )}
@@ -5420,7 +5420,7 @@ JSON:
                 <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg, rgba(232,255,71,0.15), rgba(232,255,71,0.05))", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
                 <div style={{ textAlign: "left" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Mon profil</div>
-                  <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>
+                  <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>
                     {profile.tests && Object.keys(profile.tests).length > 0
                       ? `${Object.keys(profile.tests).filter(k => k !== "analyzed").length} tests complétés`
                       : "Batterie de tests à compléter"}
@@ -5476,7 +5476,7 @@ JSON:
               const days = ["L","M","M","J","V","S","D"];
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px 12px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 9, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>📅 Ma semaine</div>
+                  <div style={{ fontSize: 9, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>📅 Ma semaine</div>
                   <div style={{ display: "flex", gap: 4, justifyContent: "space-between" }}>
                     {days.map((dayLabel, i) => {
                       const d = new Date(monday);
@@ -5550,7 +5550,7 @@ JSON:
                     ].map(l => (
                       <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <div style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px ${l.style || "solid"} ${l.color}`, background: l.bg || "transparent" }} />
-                        <span style={{ fontSize: 9, color: "#333" }}>{l.label}</span>
+                        <span style={{ fontSize: 9, color: "#555" }}>{l.label}</span>
                       </div>
                     ))}
                   </div>
@@ -5609,15 +5609,15 @@ JSON:
                   </div>
                   <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                     <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#444", marginBottom: 2 }}>Type</div>
+                      <div style={{ fontSize: 9, color: "#777", marginBottom: 2 }}>Type</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)" }}>{typeNames[todayType] || "Séance"}</div>
                     </div>
                     <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#444", marginBottom: 2 }}>Semaine</div>
+                      <div style={{ fontSize: 9, color: "#777", marginBottom: 2 }}>Semaine</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)" }}>{sessionsThisWeek}/{target}</div>
                     </div>
                     <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 9, color: "#444", marginBottom: 2 }}>Récup</div>
+                      <div style={{ fontSize: 9, color: "#777", marginBottom: 2 }}>Récup</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)" }}>{recovery}/100</div>
                     </div>
                   </div>
@@ -5659,7 +5659,7 @@ JSON:
                     </button>
                   </div>
                   {/* OU */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#333", fontWeight: 700 }}>OU</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#555", fontWeight: 700 }}>OU</div>
                   {/* Option IA */}
                   <div style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 14px 10px" }}>
                     <div style={{ fontSize: 10, color: "#555", fontWeight: 600, marginBottom: 6 }}>Coach IA</div>
@@ -5685,17 +5685,29 @@ JSON:
                     <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Forme du jour</div>
                     <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Fatigue · Sommeil · Hydratation · Nutrition</div>
                   </div>
-                  <div style={{ fontSize: 16, color: "#333" }}>›</div>
+                  <div style={{ fontSize: 16, color: "#555" }}>›</div>
                 </button>
               );
             })()}
 
             {/* Type de séance */}
+            {/* CTA Générer — visible immédiatement si pas de séance */}
+            {!session && !loadingSession && dailyData.typeSeance !== "perso" && (
+              <button onClick={generateSession} className="fade-in" style={{
+                width: "100%", marginBottom: 14, padding: "16px", borderRadius: 16,
+                background: "var(--yellow)", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              }}>
+                <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 1.5, color: "#000" }}>GÉNÉRER MA SÉANCE</span>
+                <span style={{ fontSize: 18 }}>⚡</span>
+              </button>
+            )}
+
             <Section title="Ma séance">
               <Card>
                 {/* Type de séance */}
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🎯 Type de séance</div>
+                  <div style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🎯 Type de séance</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {[
                       { v: "auto", icon: "🏅", label: "Choix du coach", sub: "Le coach décide selon ta semaine", color: "var(--yellow)" },
@@ -5716,7 +5728,7 @@ JSON:
                           <div style={{ width: 38, height: 38, borderRadius: 10, background: active ? `${t.color}20` : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{t.icon}</div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: active ? t.color : "var(--white)" }}>{t.label}</div>
-                            <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{t.sub}</div>
+                            <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>{t.sub}</div>
                           </div>
                           {active && <div style={{ width: 20, height: 20, borderRadius: "50%", background: t.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#000", fontWeight: 700, flexShrink: 0 }}>✓</div>}
                         </button>
@@ -5866,7 +5878,7 @@ JSON:
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 16 }}>{c0.icon}</span>
                     <span style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>{c0.label}</span>
-                    <span style={{ fontSize: 10, color: "#444", marginLeft: "auto" }}>⏱ {session.duree} min</span>
+                    <span style={{ fontSize: 10, color: "#777", marginLeft: "auto" }}>⏱ {session.duree} min</span>
                   </div>
                   <div className="bebas" style={{ fontSize: 26, color: "var(--white)", lineHeight: 1.1, marginBottom: 6 }}>{session.titre}</div>
                   <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5, marginBottom: 10 }}>{session.explication?.slice(0, 80)}{(session.explication?.length || 0) > 80 ? "…" : ""}</div>
@@ -5880,7 +5892,7 @@ JSON:
                         </div>
                       ))}
                       {(session.exercices || []).length > 4 && (
-                        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#444" }}>
+                        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#777" }}>
                           +{(session.exercices || []).length - 4}
                         </div>
                       )}
@@ -5896,7 +5908,7 @@ JSON:
                     </div>
                   )}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ fontSize: 10, color: "#444" }}>{totalEx0} exercices · Appuie pour voir</div>
+                    <div style={{ fontSize: 10, color: "#777" }}>{totalEx0} exercices · Appuie pour voir</div>
                     <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 16px" }}>
                       <span className="bebas" style={{ fontSize: 14, color: "var(--white)", letterSpacing: 1 }}>DÉMARRER</span>
                     </div>
@@ -5975,7 +5987,7 @@ JSON:
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                         <span style={{ fontSize: 18 }}>{conf.icon}</span>
                         <span style={{ fontSize: 10, color: conf.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{conf.label}</span>
-                        <span style={{ fontSize: 10, color: "#333", marginLeft: "auto" }}>⏱ {session.duree} min</span>
+                        <span style={{ fontSize: 10, color: "#555", marginLeft: "auto" }}>⏱ {session.duree} min</span>
                       </div>
                       {/* Titre */}
                       <div className="bebas" style={{ fontSize: 30, color: "var(--white)", lineHeight: 1, letterSpacing: 0.5, marginBottom: 10 }}>{session.titre}</div>
@@ -5987,7 +5999,7 @@ JSON:
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                            <span style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Exercices</span>
+                            <span style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Exercices</span>
                             <span style={{ fontSize: 11, color: doneCount === totalEx && totalEx > 0 ? "var(--green)" : conf.color, fontWeight: 700 }}>{doneCount}/{totalEx}</span>
                           </div>
                           <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
@@ -6142,13 +6154,13 @@ JSON:
                     <div style={{ width: 46, height: 46, borderRadius: 14, background: "rgba(57,255,128,0.12)", border: "1px solid rgba(57,255,128,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📊</div>
                     <div>
                       <div className="bebas" style={{ fontSize: 26, color: "var(--green)", letterSpacing: 1, lineHeight: 1 }}>BILAN DE SÉANCE</div>
-                      <div style={{ fontSize: 11, color: "#444", marginTop: 3 }}>Aide ton coach IA à adapter la prochaine séance</div>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 3 }}>Aide ton coach IA à adapter la prochaine séance</div>
                     </div>
                   </div>
 
                   {/* 1. Ressenti global */}
                   <div style={{ marginBottom: 18 }}>
-                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Comment c'était ?</div>
+                    <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Comment c'était ?</div>
                     <div style={{ display: "flex", gap: 8 }}>
                       {[
                         { v: "facile", emoji: "😪", label: "Trop facile", color: "var(--green)" },
@@ -6177,9 +6189,9 @@ JSON:
                   {/* 2. Difficulté RPE 1-10 */}
                   <div style={{ marginBottom: 18 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Difficulté (RPE)</div>
+                      <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Difficulté (RPE)</div>
                       <div className="bebas" style={{ fontSize: 28, color: feedbackData.difficulte <= 4 ? "var(--green)" : feedbackData.difficulte <= 7 ? "var(--yellow)" : "var(--red)", lineHeight: 1 }}>
-                        {feedbackData.difficulte}<span style={{ fontSize: 14, color: "#333" }}>/10</span>
+                        {feedbackData.difficulte}<span style={{ fontSize: 14, color: "#555" }}>/10</span>
                       </div>
                     </div>
                     {/* RPE label contextuel */}
@@ -6204,7 +6216,7 @@ JSON:
                         }}>{v}</button>
                       )})}
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 9, color: "#333" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 9, color: "#555" }}>
                       <span>Facile</span><span>Modéré</span><span>Max</span>
                     </div>
                   </div>
@@ -6265,14 +6277,14 @@ JSON:
                         <div style={{ textAlign: "left" }}>
                           <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700, marginBottom: 4 }}>✅ Photo analysée</div>
                           <div style={{ fontSize: 12, color: "#ccc", lineHeight: 1.5 }}>{feedbackData._photoAnalyse}</div>
-                          <div style={{ fontSize: 10, color: "#444", marginTop: 6 }}>Tape pour changer la photo</div>
+                          <div style={{ fontSize: 10, color: "#777", marginTop: 6 }}>Tape pour changer la photo</div>
                         </div>
                       ) : (
                         <>
                           <div style={{ fontSize: 22, marginBottom: 6 }}>⌚</div>
                           <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 600 }}>Photo de ta montre ou séance</div>
-                          <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>Garmin · Apple Watch · Polar · Résumé appli</div>
-                          <div style={{ fontSize: 10, color: "#333", marginTop: 2 }}>L'IA extrait automatiquement temps, FC, allure, calories…</div>
+                          <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>Garmin · Apple Watch · Polar · Résumé appli</div>
+                          <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>L'IA extrait automatiquement temps, FC, allure, calories…</div>
                         </>
                       )}
                     </label>
@@ -6280,7 +6292,7 @@ JSON:
                     <label style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
                       Charges & performances (complète ou corrige)
                     </label>
-                    <div style={{ fontSize: 11, color: "#444", marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, color: "#777", marginBottom: 6 }}>
                       {(session?.exercices || []).slice(0,3).map(ex => ex.nom).join(" · ")}…
                     </div>
                     <textarea
@@ -6401,7 +6413,7 @@ JSON:
                   {(session?.exercices || []).length > 0 && (
                     <div style={{ marginBottom: 18 }}>
                       <div style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Détail exercice par exercice</div>
-                      <div style={{ fontSize: 11, color: "#444", marginBottom: 10 }}>Remplis ce que tu as réellement fait — laisse vide si tu n'as pas fait l'exercice</div>
+                      <div style={{ fontSize: 11, color: "#777", marginBottom: 10 }}>Remplis ce que tu as réellement fait — laisse vide si tu n'as pas fait l'exercice</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                         {(session.exercices || []).map((ex, i) => {
                           const log = feedbackData.exercicesLog[i] || { nom: ex.nom, charge: "", reps: "", sets: "", ressenti: "bien" };
@@ -6456,7 +6468,7 @@ JSON:
                           <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", opacity: 0.6, animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
                         ))}
                       </div>
-                      <div style={{ fontSize: 11, color: "#444", marginTop: 10 }}>Individualisation du programme en cours...</div>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 10 }}>Individualisation du programme en cours...</div>
                     </div>
                   ) : (
                     <div style={{ display: "flex", gap: 12 }}>
@@ -6518,7 +6530,7 @@ JSON:
                         ].map(item => (
                           <div key={item.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
                             <div className="bebas" style={{ fontSize: 30, color: item.color, lineHeight: 1 }}>{item.value}</div>
-                            <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", marginTop: 3, letterSpacing: "0.1em" }}>{item.label}</div>
+                            <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 3, letterSpacing: "0.1em" }}>{item.label}</div>
                           </div>
                         ))}
                       </div>
@@ -6664,14 +6676,14 @@ JSON:
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px 12px", marginBottom: 16, overflow: "hidden", position: "relative" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Score Fitness · {sessions.length} séances</div>
+                      <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Score Fitness · {sessions.length} séances</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                         <div className="bebas" style={{ fontSize: 42, color: scoreColor, lineHeight: 1 }}>{lastScore}</div>
                         <div style={{ fontSize: 13, color: delta >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>{delta >= 0 ? "+" : ""}{delta}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 10, color: "#333", marginBottom: 4 }}>Tendance</div>
+                      <div style={{ fontSize: 10, color: "#555", marginBottom: 4 }}>Tendance</div>
                       <div style={{ fontSize: 22 }}>{delta >= 5 ? "🚀" : delta >= 0 ? "📈" : "📉"}</div>
                     </div>
                   </div>
@@ -6740,22 +6752,22 @@ JSON:
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px 10px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>📊 Performance Management Chart</div>
+                      <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Charge d'entraînement</div>
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         {today && (
                           <>
                             <div style={{ textAlign: "center" }}>
-                              <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", marginBottom: 1 }}>Fitness</div>
+                              <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 1 }}>Fitness</div>
                               <div className="bebas" style={{ fontSize: 20, color: "var(--green)", lineHeight: 1 }}>{today.ctl}</div>
                             </div>
                             <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.06)" }} />
                             <div style={{ textAlign: "center" }}>
-                              <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", marginBottom: 1 }}>Fatigue</div>
+                              <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 1 }}>Fatigue</div>
                               <div className="bebas" style={{ fontSize: 20, color: "var(--orange)", lineHeight: 1 }}>{today.atl}</div>
                             </div>
                             <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.06)" }} />
                             <div style={{ textAlign: "center" }}>
-                              <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", marginBottom: 1 }}>Forme</div>
+                              <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 1 }}>Forme</div>
                               <div className="bebas" style={{ fontSize: 20, color: tsb?.color, lineHeight: 1 }}>{today.tsb > 0 ? "+" : ""}{today.tsb}</div>
                             </div>
                           </>
@@ -6765,7 +6777,7 @@ JSON:
                     {tsb && (
                       <div style={{ background: `${tsb.color}15`, border: `1px solid ${tsb.color}30`, borderRadius: 10, padding: "6px 10px", textAlign: "center" }}>
                         <div style={{ fontSize: 9, color: tsb.color, fontWeight: 700, textTransform: "uppercase" }}>{tsb.label}</div>
-                        <div style={{ fontSize: 9, color: "#444", marginTop: 2, maxWidth: 80, lineHeight: 1.4 }}>{tsb.tip}</div>
+                        <div style={{ fontSize: 9, color: "#777", marginTop: 2, maxWidth: 80, lineHeight: 1.4 }}>{tsb.tip}</div>
                       </div>
                     )}
                   </div>
@@ -6796,21 +6808,21 @@ JSON:
                   {/* Légende */}
                   <div style={{ display: "flex", gap: 14, marginTop: 4, marginBottom: 8 }}>
                     {[
-                      { color: "var(--green)", label: "CTL — Fitness (42j)", dash: false },
-                      { color: "var(--orange)", label: "ATL — Fatigue (7j)", dash: true },
+                      { color: "var(--green)", label: "Fitness long terme (42j)", dash: false },
+                      { color: "var(--orange)", label: "Fatigue récente (7j)", dash: true },
                     ].map(l => (
                       <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <svg width="20" height="3" style={{ flexShrink: 0 }}>
                           <line x1="0" y1="1.5" x2="20" y2="1.5" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash ? "4,2" : "none"} />
                         </svg>
-                        <span style={{ fontSize: 9, color: "#444" }}>{l.label}</span>
+                        <span style={{ fontSize: 9, color: "#777" }}>{l.label}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* TSB mini bars — Form sur 30j */}
                   <div style={{ marginTop: 6, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                    <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>TSB — Forme quotidienne (30j)</div>
+                    <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Forme du jour — 30 derniers jours</div>
                     <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 28 }}>
                       {last30.map((p, i) => {
                         const isPos = p.tsb >= 0;
@@ -6859,7 +6871,7 @@ JSON:
 
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Semaine en cours vs précédente</div>
+                  <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Semaine en cours vs précédente</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                     {COLS.map(col => {
                       const diff = typeof col.this === "number" && typeof col.last === "number" ? col.this - col.last : null;
@@ -6868,16 +6880,16 @@ JSON:
                       return (
                         <div key={col.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
                           <div style={{ fontSize: 16, marginBottom: 4 }}>{col.icon}</div>
-                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{col.label}</div>
+                          <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{col.label}</div>
                           <div className="bebas" style={{ fontSize: 24, color: col.color, lineHeight: 1 }}>{col.this}{col.unit}</div>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 4 }}>
-                            <span style={{ fontSize: 9, color: "#333" }}>vs {col.last}{col.unit}</span>
+                            <span style={{ fontSize: 9, color: "#555" }}>vs {col.last}{col.unit}</span>
                             {diff !== null && !equal && (
                               <span style={{ fontSize: 9, color: improved ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
                                 {improved ? "▲" : "▼"}{Math.abs(diff)}
                               </span>
                             )}
-                            {equal && <span style={{ fontSize: 9, color: "#444" }}>—</span>}
+                            {equal && <span style={{ fontSize: 9, color: "#777" }}>—</span>}
                           </div>
                         </div>
                       );
@@ -6931,8 +6943,8 @@ JSON:
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "16px 16px 10px", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Charge par semaine</div>
-                    <div style={{ fontSize: 10, color: "#333" }}>{weeks.length} semaines</div>
+                    <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Charge par semaine</div>
+                    <div style={{ fontSize: 10, color: "#555" }}>{weeks.length} semaines</div>
                   </div>
                   <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
                     {weeks.map(([wk, v], i) => {
@@ -6955,7 +6967,7 @@ JSON:
                   </svg>
                   <div style={{ display: "flex", gap: 10, marginTop: 4, justifyContent: "center" }}>
                     {[["#39ff80","RPE ≤4"],["#e8ff47","RPE 5-7"],["#ff4747","RPE ≥8"]].map(([c,l])=>(
-                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#444" }}>
+                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
                         <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
                       </div>
                     ))}
@@ -6978,13 +6990,13 @@ JSON:
               if (!records.length) return null;
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🏅 Records de séance</div>
+                  <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🏅 Records de séance</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {records.map((r, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ fontSize: 20, flexShrink: 0 }}>{r.icon}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 10, color: "#444", marginBottom: 1 }}>{r.label}</div>
+                          <div style={{ fontSize: 10, color: "#777", marginBottom: 1 }}>{r.label}</div>
                           <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.s?.titre}</div>
                         </div>
                         <div className="bebas" style={{ fontSize: 18, color: r.color, flexShrink: 0 }}>{r.val}</div>
@@ -7043,7 +7055,7 @@ JSON:
 
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>⚖️ Suivi corporel — {bodyLogs.length} jours de données</div>
+                  <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>⚖️ Suivi corporel — {bodyLogs.length} jours de données</div>
 
                   {/* Weight chart */}
                   {weightLogs.length >= 2 && (
@@ -7052,7 +7064,7 @@ JSON:
                         <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>Poids corporel</div>
                         <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                           <span className="bebas" style={{ fontSize: 20, color: "var(--yellow)", lineHeight: 1 }}>{weightLogs[weightLogs.length-1] ? parseFloat(weightLogs[weightLogs.length-1].poidsJour).toFixed(1) : avgWeight}kg</span>
-                          <span style={{ fontSize: 9, color: "#444" }}>moy. {avgWeight}kg</span>
+                          <span style={{ fontSize: 9, color: "#777" }}>moy. {avgWeight}kg</span>
                         </div>
                       </div>
                       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
@@ -7075,7 +7087,7 @@ JSON:
                         <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>Sommeil</div>
                         <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                           <span className="bebas" style={{ fontSize: 20, color: "#a78bfa", lineHeight: 1 }}>{sleepLogs[sleepLogs.length-1] ? parseFloat(sleepLogs[sleepLogs.length-1].sleepHours) : avgSleep}h</span>
-                          <span style={{ fontSize: 9, color: "#444" }}>moy. {avgSleep}h</span>
+                          <span style={{ fontSize: 9, color: "#777" }}>moy. {avgSleep}h</span>
                         </div>
                       </div>
                       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
@@ -7110,7 +7122,7 @@ JSON:
                           <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>💓 HRV matin</div>
                           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                             <span className="bebas" style={{ fontSize: 20, color: hrvColor, lineHeight: 1 }}>{lastHrv}</span>
-                            <span style={{ fontSize: 9, color: "#444" }}>moy. {avgHrv}ms</span>
+                            <span style={{ fontSize: 9, color: "#777" }}>moy. {avgHrv}ms</span>
                           </div>
                         </div>
                         <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
@@ -7181,15 +7193,15 @@ JSON:
 
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>🔮 Simulateur de progression</div>
-                  <div style={{ fontSize: 10, color: "#333", marginBottom: 14 }}>Si tu maintiens ton rythme de {avgSessions.toFixed(1)} séances/semaine…</div>
+                  <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>🔮 Simulateur de progression</div>
+                  <div style={{ fontSize: 10, color: "#555", marginBottom: 14 }}>Si tu maintiens ton rythme de {avgSessions.toFixed(1)} séances/semaine…</div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {/* Score condition */}
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                         <span style={{ fontSize: 11, color: "#666" }}>📊 Score condition</span>
-                        <span style={{ fontSize: 11, color: "#444" }}>Actuel : <strong style={{ color: "var(--yellow)" }}>{currentScore}%</strong></span>
+                        <span style={{ fontSize: 11, color: "#777" }}>Actuel : <strong style={{ color: "var(--yellow)" }}>{currentScore}%</strong></span>
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         {SCENARIOS.map(sc => {
@@ -7199,7 +7211,7 @@ JSON:
                             <div key={sc.weeks} style={{ flex: 1, background: `${sc.color}10`, border: `1px solid ${sc.color}30`, borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
                               <div style={{ fontSize: 8, color: sc.color, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{sc.label}</div>
                               <div className="bebas" style={{ fontSize: 20, color: sc.color, lineHeight: 1 }}>{projected}%</div>
-                              <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>+{gain} pts</div>
+                              <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>+{gain} pts</div>
                             </div>
                           );
                         })}
@@ -7210,10 +7222,10 @@ JSON:
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       {vma > 0 && (
                         <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 10, padding: "10px 12px" }}>
-                          <div style={{ fontSize: 9, color: "#444", marginBottom: 6 }}>🏃 VMA actuelle : {vma} km/h</div>
+                          <div style={{ fontSize: 9, color: "#777", marginBottom: 6 }}>🏃 VMA actuelle : {vma} km/h</div>
                           {SCENARIOS.slice(0,2).map(sc => (
                             <div key={sc.weeks} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                              <span style={{ fontSize: 9, color: "#333" }}>{sc.label}</span>
+                              <span style={{ fontSize: 9, color: "#555" }}>{sc.label}</span>
                               <span style={{ fontSize: 9, color: sc.color, fontWeight: 700 }}>{(vma + vmaGainPerWeek * sc.weeks).toFixed(1)} km/h</span>
                             </div>
                           ))}
@@ -7221,10 +7233,10 @@ JSON:
                       )}
                       {squat > 0 && (
                         <div style={{ background: "rgba(255,154,60,0.04)", border: "1px solid rgba(255,154,60,0.12)", borderRadius: 10, padding: "10px 12px" }}>
-                          <div style={{ fontSize: 9, color: "#444", marginBottom: 6 }}>🏋️ Squat actuel : {squat} kg</div>
+                          <div style={{ fontSize: 9, color: "#777", marginBottom: 6 }}>🏋️ Squat actuel : {squat} kg</div>
                           {SCENARIOS.slice(0,2).map(sc => (
                             <div key={sc.weeks} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                              <span style={{ fontSize: 9, color: "#333" }}>{sc.label}</span>
+                              <span style={{ fontSize: 9, color: "#555" }}>{sc.label}</span>
                               <span style={{ fontSize: 9, color: sc.color, fontWeight: 700 }}>{Math.round(squat + squatGainPerWeek * sc.weeks)} kg</span>
                             </div>
                           ))}
@@ -7232,7 +7244,7 @@ JSON:
                       )}
                     </div>
 
-                    <div style={{ fontSize: 9, color: "#333", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)", lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 9, color: "#555", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)", lineHeight: 1.6 }}>
                       ⚠️ Estimations basées sur ton historique. Les gains réels dépendent de la qualité du sommeil, de la nutrition et de la récupération.
                     </div>
                   </div>
@@ -7267,9 +7279,9 @@ JSON:
               return (
                 <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Objectif vs réalisé</div>
+                    <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Objectif vs réalisé</div>
                     <div style={{ display: "flex", align: "center", gap: 6 }}>
-                      <span style={{ fontSize: 10, color: "#444" }}>Compliance</span>
+                      <span style={{ fontSize: 10, color: "#777" }}>Compliance</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: complianceColor }}>{compliance}%</span>
                     </div>
                   </div>
@@ -7285,7 +7297,7 @@ JSON:
                           <div style={{ position: "absolute", bottom: `${Math.round(targetPct * 60)}px`, left: 0, right: 0, height: 1, background: "rgba(232,255,71,0.3)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
                           {/* Bar */}
                           <div style={{ width: "80%", height: `${Math.round(pct * 60)}px`, background: overTarget ? "var(--green)" : "var(--orange)", borderRadius: "3px 3px 0 0", opacity: i === weeks.length - 1 ? 1 : 0.7, minHeight: 3 }} />
-                          <div style={{ fontSize: 7, color: "#333" }}>S{i+1}</div>
+                          <div style={{ fontSize: 7, color: "#555" }}>S{i+1}</div>
                         </div>
                       );
                     })}
@@ -7293,11 +7305,11 @@ JSON:
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                     <div style={{ display: "flex", gap: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#444" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
                         <div style={{ width: 10, height: 3, background: "rgba(232,255,71,0.5)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
                         Objectif {target} séances
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#444" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
                         <div style={{ width: 10, height: 8, background: "var(--green)", borderRadius: 1 }} />
                         Réalisé
                       </div>
@@ -7309,7 +7321,7 @@ JSON:
             })()}
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
+              <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {[
                   { label: "Séances", value: profile.sessions?.length || 0, unit: "réalisées", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #0a0a00 100%)", border: "rgba(232,255,71,0.2)", icon: "📅" },
@@ -7319,9 +7331,9 @@ JSON:
                 ].map(item => (
                   <div key={item.label} style={{ background: item.bg, border: `1.5px solid ${item.border}`, borderRadius: 16, padding: "16px 14px", position: "relative", overflow: "hidden" }}>
                     <div style={{ position: "absolute", top: -20, right: -20, fontSize: 50, opacity: 0.06 }}>{item.icon}</div>
-                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{item.label}</div>
+                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{item.label}</div>
                     <div className="bebas" style={{ fontSize: 38, color: item.color, lineHeight: 1 }}>{item.value}</div>
-                    <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>{item.unit}</div>
+                    <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>{item.unit}</div>
                   </div>
                 ))}
               </div>
@@ -7351,10 +7363,10 @@ JSON:
                 <div style={{ marginBottom: 16 }}>
                   {/* Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Journal de séances</div>
+                    <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Journal de séances</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ fontSize: 12, color: "#444", fontWeight: 600 }}>{total}</div>
-                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase" }}>séances</div>
+                      <div style={{ fontSize: 12, color: "#777", fontWeight: 600 }}>{total}</div>
+                      <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase" }}>séances</div>
                     </div>
                   </div>
 
@@ -7362,7 +7374,7 @@ JSON:
                     <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "36px 20px", textAlign: "center" }}>
                       <div style={{ fontSize: 48, marginBottom: 12 }}>🏋️</div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)", marginBottom: 6 }}>Aucune séance encore</div>
-                      <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>Lance ta première séance depuis l'onglet Aujourd'hui !</div>
+                      <div style={{ fontSize: 13, color: "#777", lineHeight: 1.6 }}>Lance ta première séance depuis l'onglet Aujourd'hui !</div>
                     </div>
                   ) : (
                     <>
@@ -7376,7 +7388,7 @@ JSON:
                           <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.color}22`, borderRadius: 12, padding: "12px 6px", textAlign: "center" }}>
                             <div style={{ fontSize: 20, marginBottom: 2 }}>{item.emoji}</div>
                             <div className="bebas" style={{ fontSize: 26, color: item.color, lineHeight: 1 }}>{item.count}</div>
-                            <div style={{ fontSize: 9, color: "#444", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
+                            <div style={{ fontSize: 9, color: "#777", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
                           </div>
                         ))}
                       </div>
@@ -7410,7 +7422,7 @@ JSON:
 
                       {/* Session cards */}
                       {filtered.length === 0 ? (
-                        <div style={{ textAlign: "center", padding: "24px 16px", color: "#444", fontSize: 13 }}>
+                        <div style={{ textAlign: "center", padding: "24px 16px", color: "#777", fontSize: 13 }}>
                           Aucune séance de ce type pour l'instant.
                         </div>
                       ) : filtered.map((s, i) => {
@@ -7430,19 +7442,19 @@ JSON:
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                                   <span style={{ fontSize: 15 }}>{conf.icon}</span>
                                   <span style={{ fontSize: 9, color: conf.color, fontWeight: 700, background: conf.bg, border: `1px solid ${conf.border}`, borderRadius: 8, padding: "1px 7px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{conf.label}</span>
-                                  <span style={{ fontSize: 9, color: "#333" }}>#{num}</span>
-                                  <span style={{ fontSize: 9, color: "#333" }}>·</span>
-                                  <span style={{ fontSize: 9, color: "#444" }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                                  <span style={{ fontSize: 9, color: "#555" }}>#{num}</span>
+                                  <span style={{ fontSize: 9, color: "#555" }}>·</span>
+                                  <span style={{ fontSize: 9, color: "#777" }}>{new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
                                 </div>
                                 <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isExpanded ? "normal" : "nowrap" }}>{s.titre}</div>
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 10 }}>
                                 {s.difficulte && (
                                   <div style={{ textAlign: "center" }}>
-                                    <div className="bebas" style={{ fontSize: 22, color: ressentiColor, lineHeight: 1 }}>{s.difficulte}<span style={{ fontSize: 9, color: "#333" }}>/10</span></div>
+                                    <div className="bebas" style={{ fontSize: 22, color: ressentiColor, lineHeight: 1 }}>{s.difficulte}<span style={{ fontSize: 9, color: "#555" }}>/10</span></div>
                                   </div>
                                 )}
-                                <div style={{ fontSize: 14, color: "#333", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</div>
+                                <div style={{ fontSize: 14, color: "#555", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</div>
                               </div>
                             </div>
 
@@ -7466,13 +7478,13 @@ JSON:
                               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.05)", animation: "fadeIn 0.2s ease" }}>
                                 {s.charges && (
                                   <div style={{ fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 8 }}>
-                                    <span style={{ fontSize: 10, color: "#333", fontWeight: 700, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes charges</span>
+                                    <span style={{ fontSize: 10, color: "#555", fontWeight: 700, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes charges</span>
                                     {s.charges}
                                   </div>
                                 )}
                                 {(s.exercices||[]).length > 0 && (
                                   <div style={{ marginBottom: 8 }}>
-                                    <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Exercices ({s.exercices.length})</div>
+                                    <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Exercices ({s.exercices.length})</div>
                                     {s.exercices.slice(0,6).map((ex, ei) => (
                                       <div key={ei} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                                         <div style={{ width: 5, height: 5, borderRadius: "50%", background: conf.color, flexShrink: 0 }} />
@@ -7540,8 +7552,8 @@ JSON:
               return (
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏁 Benchmarks Stations</div>
-                    <div style={{ fontSize: 9, color: "#333" }}>{Object.keys(benchmarks).length}/8 renseignés</div>
+                    <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏁 Benchmarks Stations</div>
+                    <div style={{ fontSize: 9, color: "#555" }}>{Object.keys(benchmarks).length}/8 renseignés</div>
                   </div>
 
                   {/* Entry modal */}
@@ -7608,7 +7620,7 @@ JSON:
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <div>
                                   <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{st.label}</div>
-                                  <div style={{ fontSize: 9, color: "#444", marginTop: 1 }}>{st.dist}</div>
+                                  <div style={{ fontSize: 9, color: "#777", marginTop: 1 }}>{st.dist}</div>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
                                   {bench ? (
@@ -7621,7 +7633,7 @@ JSON:
                                       )}
                                     </>
                                   ) : (
-                                    <div style={{ fontSize: 10, color: "#333", fontStyle: "italic" }}>Tap pour saisir →</div>
+                                    <div style={{ fontSize: 10, color: "#555", fontStyle: "italic" }}>Tap pour saisir →</div>
                                   )}
                                 </div>
                               </div>
@@ -7690,7 +7702,7 @@ JSON:
               if (insights.length === 0) return null;
               return (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>🤖 Insights de ton coach</div>
+                  <div style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>🤖 Insights de ton coach</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {insights.map((ins, i) => (
                       <div key={i} className="slide-up" style={{ animationDelay: `${i*0.08}s`, background: `${ins.color}08`, border: `1px solid ${ins.color}20`, borderLeft: `3px solid ${ins.color}60`, borderRadius: 14, padding: "12px 14px" }}>
@@ -7707,15 +7719,15 @@ JSON:
             })()}
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Adaptations IA</div>
+              <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Adaptations IA</div>
               {(profile.adaptations || []).length === 0 ? (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 12, padding: "20px", textAlign: "center", fontSize: 13, color: "#444" }}>🤖 Pas encore d'adaptations IA.</div>
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 12, padding: "20px", textAlign: "center", fontSize: 13, color: "#777" }}>🤖 Pas encore d'adaptations IA.</div>
               ) : (
                 (profile.adaptations || []).slice(-5).reverse().map((a, i) => (
                   <div key={i} style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.1)", borderLeft: "3px solid rgba(57,255,128,0.4)", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
                     <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6, marginBottom: 6 }}>{a.message}</div>
                     <div style={{ fontSize: 12, color: "var(--green)", fontWeight: 600 }}>→ {a.adaptation}</div>
-                    <div style={{ fontSize: 10, color: "#333", marginTop: 4 }}>{new Date(a.date).toLocaleDateString("fr-FR")}</div>
+                    <div style={{ fontSize: 10, color: "#555", marginTop: 4 }}>{new Date(a.date).toLocaleDateString("fr-FR")}</div>
                   </div>
                 ))
               )}
@@ -7727,7 +7739,7 @@ JSON:
             {/* Header */}
             <div style={{ marginBottom: 16 }}>
               <div className="bebas" style={{ fontSize: 28, color: "var(--green)", letterSpacing: 1, marginBottom: 2 }}>ZONES D'ENTRAÎNEMENT</div>
-              <div style={{ fontSize: 12, color: "#444" }}>Basé sur ta VMA · {profile.vmaKmh ? `${profile.vmaKmh} km/h` : "VMA non renseignée"}</div>
+              <div style={{ fontSize: 12, color: "#777" }}>Basé sur ta VMA · {profile.vmaKmh ? `${profile.vmaKmh} km/h` : "VMA non renseignée"}</div>
             </div>
 
             {profile.vmaKmh ? (
@@ -7737,15 +7749,15 @@ JSON:
                   <div style={{ background: "rgba(255,71,71,0.05)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 14, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 16 }}>
                     <div style={{ textAlign: "center" }}>
                       <div className="bebas" style={{ fontSize: 24, color: "var(--red)", lineHeight: 1 }}>{profile.fcMax}</div>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", marginTop: 2 }}>FC max</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 2 }}>FC max</div>
                     </div>
                     <div style={{ width: 1, background: "rgba(255,255,255,0.06)" }} />
                     <div style={{ textAlign: "center" }}>
                       <div className="bebas" style={{ fontSize: 24, color: "#888", lineHeight: 1 }}>{profile.fcMin}</div>
-                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", marginTop: 2 }}>FC repos</div>
+                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 2 }}>FC repos</div>
                     </div>
                     <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-                      <div style={{ fontSize: 11, color: "#444" }}>Méthode Karvonen · FC de réserve {parseInt(profile.fcMax) - parseInt(profile.fcMin)} bpm</div>
+                      <div style={{ fontSize: 11, color: "#777" }}>Méthode Karvonen · FC de réserve {parseInt(profile.fcMax) - parseInt(profile.fcMin)} bpm</div>
                     </div>
                   </div>
                 )}
@@ -7771,12 +7783,12 @@ JSON:
                             </div>
                             <div>
                               <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)" }}>{z.label}</div>
-                              <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{zoneDescs[idx]}</div>
+                              <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>{zoneDescs[idx]}</div>
                             </div>
                           </div>
                           <div style={{ textAlign: "right" }}>
                             <div className="bebas" style={{ fontSize: 20, color: col, lineHeight: 1 }}>{paceFromVMA(profile.vmaKmh, midPct)}</div>
-                            <div style={{ fontSize: 10, color: "#444" }}>min/km</div>
+                            <div style={{ fontSize: 10, color: "#777" }}>min/km</div>
                           </div>
                         </div>
                         {/* Barre d'intensité */}
@@ -7784,7 +7796,7 @@ JSON:
                           <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, position: "relative", overflow: "hidden" }}>
                             <div style={{ position: "absolute", left: `${z.pct[0]}%`, width: `${barWidth}%`, height: "100%", background: col, borderRadius: 99 }} />
                           </div>
-                          <div style={{ fontSize: 10, color: "#444", flexShrink: 0 }}>{z.pct[0]}–{z.pct[1]}%</div>
+                          <div style={{ fontSize: 10, color: "#777", flexShrink: 0 }}>{z.pct[0]}–{z.pct[1]}%</div>
                         </div>
                         {hasKarvo && fcLow && (
                           <div style={{ marginTop: 6, fontSize: 11, color: `${col}99` }}>❤️ {fcLow}–{fcHigh} bpm</div>
@@ -7805,8 +7817,8 @@ JSON:
                         return (
                           <div key={pct} style={{ background: `${intensity}08`, border: `1px solid ${intensity}22`, borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
                             <div className="bebas" style={{ fontSize: 22, color: intensity, lineHeight: 1 }}>{kg}</div>
-                            <div style={{ fontSize: 9, color: "#333", marginTop: 3 }}>kg</div>
-                            <div style={{ fontSize: 10, color: "#444", marginTop: 1, fontWeight: 700 }}>{pct}%</div>
+                            <div style={{ fontSize: 9, color: "#555", marginTop: 3 }}>kg</div>
+                            <div style={{ fontSize: 10, color: "#777", marginTop: 1, fontWeight: 700 }}>{pct}%</div>
                           </div>
                         );
                       })}
@@ -7852,7 +7864,7 @@ JSON:
               {/* Header */}
               <div style={{ paddingTop: 20, marginBottom: 20 }}>
                 <div className="bebas" style={{ fontSize: 28, color: "var(--white)", letterSpacing: 1 }}>FORME DU JOUR</div>
-                <div style={{ fontSize: 12, color: "#444", marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: "#777", marginTop: 2 }}>
                   {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                 </div>
               </div>
@@ -7868,11 +7880,11 @@ JSON:
                   </svg>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                     <span className="bebas" style={{ fontSize: 22, color: recov.color, lineHeight: 1 }}>{recovery}</span>
-                    <span style={{ fontSize: 8, color: "#444", fontWeight: 700, textTransform: "uppercase" }}>/ 100</span>
+                    <span style={{ fontSize: 8, color: "#777", fontWeight: 700, textTransform: "uppercase" }}>/ 100</span>
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Score de récupération</div>
+                  <div style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Score de récupération</div>
                   <div className="bebas" style={{ fontSize: 20, color: recov.color, letterSpacing: 1, marginBottom: 2 }}>{recov.label}</div>
                   <div style={{ fontSize: 11, color: "#555", lineHeight: 1.4 }}>{recov.conseil}</div>
                 </div>
@@ -7933,7 +7945,7 @@ JSON:
                 <input type="range" min="4" max="10" step="0.5" value={dailyData.sleepHours}
                   onChange={e => setDailyData(d => ({ ...d, sleepHours: parseFloat(e.target.value) }))}
                   style={{ width: "100%", accentColor: "var(--yellow)" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#333", marginTop: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#555", marginTop: 4 }}>
                   <span>4h</span><span>6h</span><span style={{ color: "var(--yellow)" }}>8h ✓</span><span>10h</span>
                 </div>
               </div>
@@ -7952,7 +7964,7 @@ JSON:
                     </button>
                   ))}
                 </div>
-                <div style={{ fontSize: 10, color: "#333", marginTop: 8 }}>Objectif : 8 verres / 2L par jour</div>
+                <div style={{ fontSize: 10, color: "#555", marginTop: 8 }}>Objectif : 8 verres / 2L par jour</div>
               </div>
 
               {/* Poids du jour */}
@@ -7969,7 +7981,7 @@ JSON:
                       <span style={{ color: parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>
                         {parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "↓" : "↑"} {Math.abs(parseFloat(dailyData.poidsJour) - parseFloat(profile.poids)).toFixed(1)}kg
                       </span>
-                    ) : <span style={{ color: "#333", fontSize: 10 }}>vs profil</span>}
+                    ) : <span style={{ color: "#555", fontSize: 10 }}>vs profil</span>}
                   </div>
                 </div>
               </div>
@@ -7979,7 +7991,7 @@ JSON:
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div>
                     <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>HRV matin (ms)</div>
-                    <div style={{ fontSize: 9, color: "#333", marginTop: 2 }}>Variabilité cardiaque au réveil</div>
+                    <div style={{ fontSize: 9, color: "#555", marginTop: 2 }}>Variabilité cardiaque au réveil</div>
                   </div>
                   {hrv > 0 && <div style={{ textAlign: "right" }}>
                     <div className="bebas" style={{ fontSize: 22, color: hrvColor, lineHeight: 1 }}>{hrv}</div>
@@ -8010,9 +8022,9 @@ JSON:
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,154,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🥗</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Nutrition</div>
-                  <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>Voir mon plan nutritionnel</div>
+                  <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>Voir mon plan nutritionnel</div>
                 </div>
-                <div style={{ fontSize: 16, color: "#333" }}>›</div>
+                <div style={{ fontSize: 16, color: "#555" }}>›</div>
               </button>
 
               {/* Planning */}
@@ -8020,9 +8032,24 @@ JSON:
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(167,139,250,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📅</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Planning de la semaine</div>
-                  <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>Voir mon programme hebdo</div>
+                  <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>Voir mon programme hebdo</div>
                 </div>
-                <div style={{ fontSize: 16, color: "#333" }}>›</div>
+                <div style={{ fontSize: 16, color: "#555" }}>›</div>
+              </button>
+
+              {/* Bouton Enregistrer */}
+              <button onClick={async () => {
+                haptic([10, 30, 10]);
+                const key = getDailyLogKey(profile.name, todayStr);
+                const existing = await storage.get(key) || {};
+                await storage.set(key, { ...existing, ...dailyData, savedAt: new Date().toISOString() });
+                showToast("Forme enregistrée ✓");
+              }} style={{
+                width: "100%", padding: "16px", borderRadius: 16, background: "var(--yellow)",
+                border: "none", cursor: "pointer", fontFamily: "'Bebas Neue',sans-serif",
+                fontSize: 18, letterSpacing: 1.5, color: "#000", marginBottom: 8,
+              }}>
+                ENREGISTRER MA FORME
               </button>
             </div>
           );
@@ -8217,7 +8244,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Profil complété</div>
-              <div className="bebas" style={{ fontSize: 22, color: barColor, lineHeight: 1 }}>{pct}<span style={{ fontSize: 11, color: "#444" }}>%</span></div>
+              <div className="bebas" style={{ fontSize: 22, color: barColor, lineHeight: 1 }}>{pct}<span style={{ fontSize: 11, color: "#777" }}>%</span></div>
             </div>
             <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
               <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 99, transition: "width 0.6s var(--ease-out)" }} />
@@ -8251,7 +8278,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                 <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${Math.min(100, (currentWeek / totalWeeks) * 100)}%`, background: "var(--red)", borderRadius: 99, transition: "width 0.5s" }} />
                 </div>
-                <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>Semaine {currentWeek} / {totalWeeks} de préparation</div>
+                <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>Semaine {currentWeek} / {totalWeeks} de préparation</div>
               </div>
             )}
           </div>
@@ -8304,19 +8331,19 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 {profile.goalTargetLevel && (
                   <div style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 12, padding: "10px 14px", flex: 1, minWidth: 120 }}>
-                    <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Objectif temps</div>
+                    <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Objectif temps</div>
                     <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", lineHeight: 1 }}>{profile.goalTargetLevel}</div>
                   </div>
                 )}
                 {profile.goalWeakStation && (
                   <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.2)", borderRadius: 12, padding: "10px 14px", flex: 1, minWidth: 120 }}>
-                    <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Station à bosser</div>
+                    <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Station à bosser</div>
                     <div className="bebas" style={{ fontSize: 18, color: "var(--red)", lineHeight: 1 }}>{profile.goalWeakStation}</div>
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: "#333", textAlign: "center", padding: "8px 0 4px", cursor: "pointer" }} onClick={() => setEditGoals(true)}>
+              <div style={{ fontSize: 12, color: "#555", textAlign: "center", padding: "8px 0 4px", cursor: "pointer" }} onClick={() => setEditGoals(true)}>
                 Définir ton temps cible et ta station à travailler →
               </div>
             )}
@@ -8348,8 +8375,8 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                   <div style={{ position: "absolute", top: -10, right: -10, fontSize: 36, opacity: 0.04 }}>{pr.icon}</div>
                   <div style={{ fontSize: 18, marginBottom: 4 }}>{pr.icon}</div>
                   <div className="bebas" style={{ fontSize: 22, color: pr.color, lineHeight: 1 }}>{pr.value}</div>
-                  {pr.unit && <div style={{ fontSize: 9, color: "#333", marginTop: 1 }}>{pr.unit}</div>}
-                  <div style={{ fontSize: 9, color: "#444", marginTop: 3 }}>{pr.label}</div>
+                  {pr.unit && <div style={{ fontSize: 9, color: "#555", marginTop: 1 }}>{pr.unit}</div>}
+                  <div style={{ fontSize: 9, color: "#777", marginTop: 3 }}>{pr.label}</div>
                 </div>
               ))}
             </div>
@@ -8447,7 +8474,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         return (
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Badges</div>
+              <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Badges</div>
               <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>{unlocked.length}/{BADGES.length}</div>
             </div>
             {/* Barre progression */}
@@ -8479,7 +8506,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
       {/* ── PWA + NOTIFICATIONS ── */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Application</div>
+        <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Application</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 
           {/* Install PWA */}
@@ -8488,7 +8515,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📲</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--yellow)", marginBottom: 2 }}>Installer l'app</div>
-                <div style={{ fontSize: 11, color: "#444" }}>{installPrompt ? "Ajouter à l'écran d'accueil" : "Ouvre dans Chrome → ⋮ → Installer l'application"}</div>
+                <div style={{ fontSize: 11, color: "#777" }}>{installPrompt ? "Ajouter à l'écran d'accueil" : "Ouvre dans Chrome → ⋮ → Installer l'application"}</div>
               </div>
               {installPrompt && <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>INSTALLER →</div>}
             </button>
@@ -8497,7 +8524,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(57,255,128,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>✅</div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--green)", marginBottom: 2 }}>App installée</div>
-                <div style={{ fontSize: 11, color: "#444" }}>FitRace est sur ton écran d'accueil</div>
+                <div style={{ fontSize: 11, color: "#777" }}>FitRace est sur ton écran d'accueil</div>
               </div>
             </div>
           )}
@@ -8507,7 +8534,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
             <div style={{ width: 38, height: 38, borderRadius: 10, background: notifGranted ? "rgba(57,255,128,0.1)" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{notifGranted ? "🔔" : "🔕"}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: notifGranted ? "var(--green)" : "#888", marginBottom: 2 }}>{notifGranted ? "Notifications actives" : "Activer les notifications"}</div>
-              <div style={{ fontSize: 11, color: "#444" }}>{notifGranted ? "Rappels séance, nutrition & streak" : "Séance du jour · Bilan nutrition · Streak"}</div>
+              <div style={{ fontSize: 11, color: "#777" }}>{notifGranted ? "Rappels séance, nutrition & streak" : "Séance du jour · Bilan nutrition · Streak"}</div>
             </div>
             {!notifGranted && <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>ACTIVER →</div>}
           </button>
@@ -8687,7 +8714,7 @@ function VideoModal({ mouvement, onClose }) {
         {/* Autres vidéos */}
         {mouvement.videos.length > 1 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Autres vidéos</div>
+            <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Autres vidéos</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {mouvement.videos.map((v, i) => i !== activeVideo && (
                 <button key={i} onClick={() => setActiveVideo(i)} style={{
@@ -8781,9 +8808,9 @@ function TechniqueTab({ profile = {} }) {
         <div style={{ position: "absolute", top: -30, right: -20, fontSize: 120, opacity: 0.04 }}>🏋️</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Maîtrise technique</div>
+            <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Maîtrise technique</div>
             <div className="bebas" style={{ fontSize: 52, color: pct === 100 ? "var(--green)" : "var(--yellow)", lineHeight: 1 }}>{pct}<span style={{ fontSize: 22, color: "#555" }}>%</span></div>
-            <div style={{ fontSize: 12, color: "#444", marginTop: 2 }}>{viewedCount}/{stations.length} stations vues</div>
+            <div style={{ fontSize: 12, color: "#777", marginTop: 2 }}>{viewedCount}/{stations.length} stations vues</div>
           </div>
           {/* Mini anneau */}
           <svg width="72" height="72" viewBox="0 0 72 72">
@@ -8815,7 +8842,7 @@ function TechniqueTab({ profile = {} }) {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 9, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>🎯 Ta station prioritaire</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{ws}</div>
-              <div style={{ fontSize: 11, color: "#444" }}>Tape pour voir les conseils techniques</div>
+              <div style={{ fontSize: 11, color: "#777" }}>Tape pour voir les conseils techniques</div>
             </div>
             <span style={{ color: "var(--red)", fontSize: 16 }}>→</span>
           </div>
@@ -8834,13 +8861,13 @@ function TechniqueTab({ profile = {} }) {
         ];
         return (
           <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
-            <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🎓 FAQ Débutant HYROX</div>
+            <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🎓 FAQ Débutant HYROX</div>
             {FAQ.map((item, i) => (
               <div key={i} style={{ marginBottom: 6 }}>
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   style={{ width: "100%", background: openFaq === i ? "rgba(232,255,71,0.05)" : "rgba(255,255,255,0.02)", border: `1px solid ${openFaq === i ? "rgba(232,255,71,0.2)" : "rgba(255,255,255,0.05)"}`, borderRadius: 10, padding: "10px 12px", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 12, color: openFaq === i ? "var(--yellow)" : "#888", fontWeight: openFaq === i ? 700 : 500, flex: 1 }}>{item.q}</span>
-                  <span style={{ color: "#444", transition: "transform 0.2s", display: "inline-block", transform: openFaq === i ? "rotate(180deg)" : "none" }}>▼</span>
+                  <span style={{ color: "#777", transition: "transform 0.2s", display: "inline-block", transform: openFaq === i ? "rotate(180deg)" : "none" }}>▼</span>
                 </button>
                 {openFaq === i && (
                   <div style={{ padding: "10px 12px", background: "rgba(232,255,71,0.03)", borderRadius: "0 0 10px 10px", borderLeft: "2px solid rgba(232,255,71,0.2)", margin: "-2px 0 0 0" }}>
@@ -8896,8 +8923,8 @@ function TechniqueTab({ profile = {} }) {
                   <div style={{ fontSize: 9, background: `${dc}18`, color: dc, border: `1px solid ${dc}40`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{diff.label}</div>
                   {isWeakStation && <div style={{ fontSize: 9, background: "rgba(255,71,71,0.12)", color: "var(--red)", border: "1px solid rgba(255,71,71,0.3)", borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>🎯 Priorité</div>}
                 </div>
-                <div style={{ fontSize: 11, color: "#444" }}>{s.distance}</div>
-                <div style={{ fontSize: 10, color: "#333", marginTop: 2 }}>{s.muscles}</div>
+                <div style={{ fontSize: 11, color: "#777" }}>{s.distance}</div>
+                <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{s.muscles}</div>
               </div>
               {/* Fav star */}
               <button onClick={(e) => toggleFav(s.nom, e)} style={{ width: 32, height: 32, borderRadius: "50%", background: isFav ? "rgba(232,255,71,0.1)" : "transparent", border: isFav ? "1px solid rgba(232,255,71,0.3)" : "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isFav ? "var(--yellow)" : "#333", cursor: "pointer", flexShrink: 0 }}>
@@ -8912,13 +8939,13 @@ function TechniqueTab({ profile = {} }) {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ textAlign: "center", padding: "32px 20px", color: "#333", fontSize: 13 }}>Aucune station dans cette catégorie</div>
+        <div style={{ textAlign: "center", padding: "32px 20px", color: "#555", fontSize: 13 }}>Aucune station dans cette catégorie</div>
       )}
 
       {/* ── COMBOS HYROX RECOMMANDÉS ── */}
       {filterCat === "all" && (
         <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🔀 Combos à entraîner ensemble</div>
+          <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🔀 Combos à entraîner ensemble</div>
           {[
             {
               nom: "Combo Sled",
@@ -8992,7 +9019,7 @@ const TYPE_COLORS = {
   running_zone2: { color: "#39ff80", bg: "rgba(57,255,128,0.08)", label: "Zone 2", icon: "🏃" },
   running_qualite: { color: "#39ff80", bg: "rgba(57,255,128,0.08)", label: "Run", icon: "🎯" },
   hybride_compromis: { color: "#ff9a3c", bg: "rgba(255,154,60,0.08)", label: "Hybride", icon: "⚡" },
-  repos: { color: "#444", bg: "rgba(255,255,255,0.02)", label: "Repos", icon: "😴" },
+  repos: { color: "#777", bg: "rgba(255,255,255,0.02)", label: "Repos", icon: "😴" },
   mobilite: { color: "#a78bfa", bg: "rgba(167,139,250,0.08)", label: "Mobilité", icon: "🧘" },
 };
 
@@ -9241,7 +9268,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--yellow)", textTransform: "capitalize" }}>{monthName}</div>
-              <div style={{ fontSize: 10, color: "#333" }}>{sessionDates.size} séances ce mois</div>
+              <div style={{ fontSize: 10, color: "#555" }}>{sessionDates.size} séances ce mois</div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 6 }}>
               {["L","M","M","J","V","S","D"].map((d,i) => (
@@ -9267,10 +9294,10 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
               })}
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#333" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#555" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(57,255,128,0.3)", border: "1px solid rgba(57,255,128,0.4)" }} />Séance réalisée
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#333" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#555" }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, border: "1.5px solid var(--yellow)" }} />Aujourd'hui
               </div>
             </div>
@@ -9321,8 +9348,8 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         return (
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>📅 Phases de préparation</div>
-              <div style={{ fontSize: 10, color: "#444" }}>{totalWeeksLeft} semaines avant la course</div>
+              <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>📅 Phases de préparation</div>
+              <div style={{ fontSize: 10, color: "#777" }}>{totalWeeksLeft} semaines avant la course</div>
             </div>
 
             {/* Phases bar */}
@@ -9423,7 +9450,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: isDone ? "var(--green)" : isToday ? "var(--yellow)" : t.color, opacity: isDone ? 1 : isToday ? 1 : 0.4, borderRadius: "14px 14px 0 0" }} />
                   <div style={{ fontSize: 9, color: isToday ? "var(--yellow)" : isDone ? "var(--green)" : "#333", fontWeight: isToday ? 700 : 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{j.jour.slice(0, 3)}</div>
                   <div style={{ fontSize: 20, marginBottom: 4 }}>{isDone ? "✅" : t.icon}</div>
-                  {j.duree > 0 && <div style={{ fontSize: 8, color: "#333", letterSpacing: "0.04em" }}>{j.duree}m</div>}
+                  {j.duree > 0 && <div style={{ fontSize: 8, color: "#555", letterSpacing: "0.04em" }}>{j.duree}m</div>}
                 </button>
               );
             })}
@@ -9523,9 +9550,9 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                     </div>
                     <div style={{ fontSize: 12, color: isFait ? "var(--green)" : t.color, fontWeight: 600, marginTop: 2 }}>{j.titre || t.label}</div>
                     {(j.exercices_cles || []).length > 0 && (
-                      <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{j.exercices_cles.slice(0,2).join(" · ")}{j.exercices_cles.length > 2 ? "…" : ""}</div>
+                      <div style={{ fontSize: 10, color: "#777", marginTop: 3 }}>{j.exercices_cles.slice(0,2).join(" · ")}{j.exercices_cles.length > 2 ? "…" : ""}</div>
                     )}
-                    {!(j.exercices_cles?.length) && j.focus && <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>{j.focus}</div>}
+                    {!(j.exercices_cles?.length) && j.focus && <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>{j.focus}</div>}
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                     {j.duree > 0 && <div style={{ fontSize: 12, color: "#666" }}>{j.duree}min</div>}
@@ -9558,7 +9585,7 @@ function PlanningMiniCard({ profile, planningWeek, loadingPlanning, setPlanningW
 
   if (loadingPlanning) return (
     <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: 12, marginBottom: 10 }}>
-      <div style={{ fontSize: 11, color: "#444", textAlign: "center" }}>Chargement du planning…</div>
+      <div style={{ fontSize: 11, color: "#777", textAlign: "center" }}>Chargement du planning…</div>
     </div>
   );
 
@@ -9898,14 +9925,14 @@ JSON: {
           <div style={{ background: "linear-gradient(145deg, #000a1a 0%, #080808 60%)", border: `1.5px solid ${col === "#38bdf8" ? "rgba(56,189,248,0.25)" : col === "var(--green)" ? "rgba(57,255,128,0.2)" : "rgba(255,154,60,0.2)"}`, borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div>
-                <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>💧 Hydratation</div>
+                <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>💧 Hydratation</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                   <div className="bebas" style={{ fontSize: 32, color: col, lineHeight: 1 }}>{waterMl}</div>
-                  <div style={{ fontSize: 12, color: "#333" }}>/ {target} ml</div>
+                  <div style={{ fontSize: 12, color: "#555" }}>/ {target} ml</div>
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 10, color: "#333", marginBottom: 4 }}>Objectif</div>
+                <div style={{ fontSize: 10, color: "#555", marginBottom: 4 }}>Objectif</div>
                 <div className="bebas" style={{ fontSize: 18, color: col }}>{pct}%</div>
               </div>
             </div>
@@ -9928,7 +9955,7 @@ JSON: {
                   +{ml}ml
                 </button>
               ))}
-              {waterMl > 0 && <button onClick={() => addWater(-250)} style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, color: "#444", fontSize: 12, cursor: "pointer" }}>-</button>}
+              {waterMl > 0 && <button onClick={() => addWater(-250)} style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, color: "#777", fontSize: 12, cursor: "pointer" }}>-</button>}
             </div>
           </div>
         );
@@ -9939,12 +9966,12 @@ JSON: {
         <div style={{ position: "absolute", top: -30, right: -20, fontSize: 110, opacity: 0.04 }}>🥗</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Calories aujourd'hui</div>
+            <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 6 }}>Calories aujourd'hui</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
               <div className="bebas" style={{ fontSize: 64, color: kcalColor, lineHeight: 1 }}>{totaux.kcal}</div>
-              <div style={{ fontSize: 14, color: "#333" }}>/ {objectifs.kcal}</div>
+              <div style={{ fontSize: 14, color: "#555" }}>/ {objectifs.kcal}</div>
             </div>
-            <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>{objectifs.kcal - totaux.kcal > 0 ? `${objectifs.kcal - totaux.kcal} kcal restantes` : "Objectif atteint ✓"}</div>
+            <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>{objectifs.kcal - totaux.kcal > 0 ? `${objectifs.kcal - totaux.kcal} kcal restantes` : "Objectif atteint ✓"}</div>
           </div>
           {/* Anneau SVG */}
           <svg width="72" height="72" viewBox="0 0 72 72">
@@ -9966,13 +9993,13 @@ JSON: {
             return (
               <div key={m.label}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>{m.label}</span>
-                  <span className="bebas" style={{ fontSize: 13, color: m.color }}>{m.val}<span style={{ fontSize: 9, color: "#333" }}>g</span></span>
+                  <span style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>{m.label}</span>
+                  <span className="bebas" style={{ fontSize: 13, color: m.color }}>{m.val}<span style={{ fontSize: 9, color: "#555" }}>g</span></span>
                 </div>
                 <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: m.color, borderRadius: 99, transition: "width 0.6s" }} />
                 </div>
-                <div style={{ fontSize: 9, color: "#333", marginTop: 3 }}>/ {m.obj}g</div>
+                <div style={{ fontSize: 9, color: "#555", marginTop: 3 }}>/ {m.obj}g</div>
               </div>
             );
           })}
@@ -10023,7 +10050,7 @@ JSON: {
                       <div style={{ fontSize: 20, marginBottom: 4 }}>{f.emoji}</div>
                       <div style={{ fontSize: 9, color: "#888", lineHeight: 1.3, marginBottom: 3 }}>{f.nom.split(" ")[0]}</div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: "var(--yellow)" }}>{f.kcal}</div>
-                      <div style={{ fontSize: 8, color: "#333" }}>kcal</div>
+                      <div style={{ fontSize: 8, color: "#555" }}>kcal</div>
                     </button>
                   ))}
                 </div>
@@ -10034,14 +10061,14 @@ JSON: {
           {/* Liste repas */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Repas · {repasJour.length} aliments</div>
+              <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Repas · {repasJour.length} aliments</div>
               <button onClick={() => setShowAdd(true)} style={{ background: "var(--yellow)", border: "none", borderRadius: 10, padding: "7px 14px", fontSize: 13, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer" }}>+ AJOUTER</button>
             </div>
 
             {repasJour.length === 0 ? (
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🍽️</div>
-                <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7 }}>Aucun aliment aujourd'hui.<br/>Commence par ton petit-déjeuner !</div>
+                <div style={{ fontSize: 13, color: "#777", lineHeight: 1.7 }}>Aucun aliment aujourd'hui.<br/>Commence par ton petit-déjeuner !</div>
                 <button onClick={() => setShowAdd(true)} style={{ marginTop: 14, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 20px", fontSize: 13, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>
                   Ajouter un aliment
                 </button>
@@ -10064,7 +10091,7 @@ JSON: {
                         </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                        {r.heure && <div style={{ fontSize: 10, color: "#333" }}>{r.heure}</div>}
+                        {r.heure && <div style={{ fontSize: 10, color: "#555" }}>{r.heure}</div>}
                         <button onClick={() => supprimerAliment(r.id)} style={{ background: "rgba(255,71,71,0.08)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 6, padding: "3px 8px", color: "var(--red)", fontSize: 13, cursor: "pointer" }}>×</button>
                       </div>
                     </div>
@@ -10125,7 +10152,7 @@ JSON: {
                         <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📸</div>
                         <div style={{ textAlign: "left" }}>
                           <div style={{ fontSize: 14, color: "var(--yellow)", fontWeight: 700 }}>Photo du repas</div>
-                          <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>L'IA estime les macros automatiquement</div>
+                          <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>L'IA estime les macros automatiquement</div>
                         </div>
                       </div>
                     )}
@@ -10133,7 +10160,7 @@ JSON: {
 
                   {/* Ajout rapide */}
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Ajout rapide</div>
+                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Ajout rapide</div>
                     <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
                       {ALIMENTS_RAPIDES.map((a, i) => (
                         <button key={i} onClick={() => ajouterAliment(a)} style={{
@@ -10150,7 +10177,7 @@ JSON: {
 
                   {/* Recherche IA */}
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Recherche IA</div>
+                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Recherche IA</div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => e.key === "Enter" && estimer()}
                         placeholder="ex: 2 œufs brouillés, tartine beurre..."
@@ -10164,7 +10191,7 @@ JSON: {
 
                   {/* Champs manuels */}
                   <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, padding: "14px", marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 10 }}>Valeurs nutritionnelles</div>
+                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 10 }}>Valeurs nutritionnelles</div>
                     <div style={{ marginBottom: 10 }}>
                       <Input label="Nom de l'aliment" value={customAliment.nom} onChange={v => setCustomAliment(a => ({ ...a, nom: v }))} placeholder="ex: Riz blanc cuit 200g" />
                     </div>
@@ -10312,7 +10339,7 @@ JSON: {
           <div>
             {/* Timing advice strip */}
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>⏱️ Timing optimal autour de la séance</div>
+              <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>⏱️ Timing optimal autour de la séance</div>
               {TIMING_ADVICE.map((a, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: i < TIMING_ADVICE.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
                   <div style={{ fontSize: 16, lineHeight: 1, marginTop: 2 }}>{a.icon}</div>
@@ -10325,7 +10352,7 @@ JSON: {
             </div>
 
             {/* Meal template picker */}
-            <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🍽️ Templates repas — Ajouter au journal</div>
+            <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🍽️ Templates repas — Ajouter au journal</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: activeTemplate ? 16 : 0 }}>
               {MEAL_TEMPLATES.map(tmpl => {
                 const isActive = activeTemplate?.id === tmpl.id;
@@ -10338,11 +10365,11 @@ JSON: {
                           <span style={{ fontSize: 22 }}>{tmpl.icon}</span>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? tmpl.color : "var(--white)" }}>{tmpl.label}</div>
-                            <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{tmpl.timing}</div>
+                            <div style={{ fontSize: 10, color: "#777", marginTop: 2 }}>{tmpl.timing}</div>
                           </div>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase" }}>Objectif</div>
+                          <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase" }}>Objectif</div>
                           <div style={{ fontSize: 9, color: tmpl.color, fontWeight: 700, maxWidth: 100, lineHeight: 1.3, textAlign: "right" }}>{tmpl.goal}</div>
                         </div>
                       </div>
@@ -10364,7 +10391,7 @@ JSON: {
                           ].map(m => (
                             <div key={m.label} style={{ flex: 1, textAlign: "center" }}>
                               <div className="bebas" style={{ fontSize: 16, color: m.color }}>{m.val}</div>
-                              <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase" }}>{m.label}</div>
+                              <div style={{ fontSize: 8, color: "#555", textTransform: "uppercase" }}>{m.label}</div>
                             </div>
                           ))}
                         </div>
@@ -10415,7 +10442,7 @@ JSON: {
                 </button>
               </div>
               {/* Styles rapides */}
-              <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Choisir un style</div>
+              <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Choisir un style</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {(CATEGORIES_RECETTES[recetteType] || []).map((cat, i) => (
                   <button key={i} onClick={() => genererRecetteIA(cat)} style={{
@@ -10446,8 +10473,8 @@ JSON: {
                     <div style={{ flex: 1 }}>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{recetteIA.nom}</div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <span style={{ fontSize: 11, color: "#444" }}>⏱ {recetteIA.temps}</span>
-                        {recetteIA.categorie && <span style={{ fontSize: 11, color: "#333" }}>· {recetteIA.categorie}</span>}
+                        <span style={{ fontSize: 11, color: "#777" }}>⏱ {recetteIA.temps}</span>
+                        {recetteIA.categorie && <span style={{ fontSize: 11, color: "#555" }}>· {recetteIA.categorie}</span>}
                       </div>
                     </div>
                   </div>
@@ -10461,7 +10488,7 @@ JSON: {
                     ].map(m => (
                       <div key={m.l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
                         <div className="bebas" style={{ fontSize: 20, color: m.c, lineHeight: 1 }}>{m.v}{m.u}</div>
-                        <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>{m.l}</div>
+                        <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>{m.l}</div>
                       </div>
                     ))}
                   </div>
@@ -10519,9 +10546,9 @@ JSON: {
               const pct = Math.min(100, Math.round((m.val / m.obj) * 100));
               return (
                 <div key={m.label} style={{ background: m.bg, border: `1px solid ${m.border}`, borderRadius: 14, padding: "14px 12px" }}>
-                  <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{m.label}</div>
-                  <div className="bebas" style={{ fontSize: 30, color: m.color, lineHeight: 1 }}>{m.val}<span style={{ fontSize: 13, color: "#444" }}>{m.unit}</span></div>
-                  <div style={{ fontSize: 10, color: "#333", marginBottom: 6 }}>obj. {m.obj}{m.unit}</div>
+                  <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{m.label}</div>
+                  <div className="bebas" style={{ fontSize: 30, color: m.color, lineHeight: 1 }}>{m.val}<span style={{ fontSize: 13, color: "#777" }}>{m.unit}</span></div>
+                  <div style={{ fontSize: 10, color: "#555", marginBottom: 6 }}>obj. {m.obj}{m.unit}</div>
                   <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: m.color, borderRadius: 99 }} />
                   </div>
@@ -10535,7 +10562,7 @@ JSON: {
           {repasJour.length === 0 ? (
             <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 14, padding: "24px 20px", textAlign: "center" }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
-              <div style={{ fontSize: 13, color: "#444" }}>Ajoute des aliments dans le journal d'abord.</div>
+              <div style={{ fontSize: 13, color: "#777" }}>Ajoute des aliments dans le journal d'abord.</div>
             </div>
           ) : loadingBilan ? (
             <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "20px 16px" }}>
@@ -10561,10 +10588,10 @@ JSON: {
               <div style={{ background: "linear-gradient(135deg, rgba(57,255,128,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(57,255,128,0.2)", borderRadius: 18, padding: "18px", marginBottom: 10, display: "flex", alignItems: "center", gap: 16 }}>
                 <div style={{ width: 60, height: 60, borderRadius: "50%", background: bilanIA.note >= 7 ? "rgba(57,255,128,0.12)" : bilanIA.note >= 5 ? "rgba(232,255,71,0.1)" : "rgba(255,71,71,0.1)", border: `2px solid ${bilanIA.note >= 7 ? "rgba(57,255,128,0.4)" : bilanIA.note >= 5 ? "rgba(232,255,71,0.3)" : "rgba(255,71,71,0.3)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <div className="bebas" style={{ fontSize: 26, color: bilanIA.note >= 7 ? "var(--green)" : bilanIA.note >= 5 ? "var(--yellow)" : "var(--red)", lineHeight: 1 }}>{bilanIA.note}</div>
-                  <div style={{ fontSize: 9, color: "#444" }}>/10</div>
+                  <div style={{ fontSize: 9, color: "#777" }}>/10</div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Analyse du coach</div>
+                  <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Analyse du coach</div>
                   <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.65 }}>{bilanIA.message}</div>
                 </div>
               </div>
@@ -10751,7 +10778,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
                 <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "4px 0" }}>
                   <span style={{ fontSize: 14, width: 24 }}>{s.icon}</span>
                   <span style={{ fontSize: 13, color: s.type === "run" ? "var(--green)" : "var(--yellow)" }}>{s.label}</span>
-                  <span style={{ fontSize: 11, color: "#444", marginLeft: "auto" }}>{s.distance}</span>
+                  <span style={{ fontSize: 11, color: "#777", marginLeft: "auto" }}>{s.distance}</span>
                 </div>
               ))}
             </div>
@@ -10769,7 +10796,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
               <div className="bebas" style={{ fontSize: 30, color: seg.color, letterSpacing: 1, lineHeight: 1 }}>{seg.label}</div>
               <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>{seg.distance}</div>
               <div className="bebas" style={{ fontSize: 60, color: "var(--white)", marginTop: 16, lineHeight: 1, letterSpacing: 2 }}>{fmtTime(elapsed)}</div>
-              <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>sur ce segment</div>
+              <div style={{ fontSize: 12, color: "#777", marginTop: 4 }}>sur ce segment</div>
             </div>
 
             {/* Bouton Terminer segment */}
@@ -10844,11 +10871,11 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
                       <div style={{ width: 26, height: 26, borderRadius: 8, background: isRun ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{s.icon}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, color: col, fontWeight: 700, lineHeight: 1.2 }}>{s.label}</div>
-                        <div style={{ fontSize: 10, color: "#333" }}>{s.distance}</div>
+                        <div style={{ fontSize: 10, color: "#555" }}>{s.distance}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{fmtTime(t)}</div>
-                        <div style={{ fontSize: 10, color: "#333" }}>{pct.toFixed(0)}% total</div>
+                        <div style={{ fontSize: 10, color: "#555" }}>{pct.toFixed(0)}% total</div>
                       </div>
                     </div>
                   </div>
@@ -10951,12 +10978,12 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
               <div className="bebas number-pop" style={{ fontSize: 80, color: phaseLabel?.color || "var(--red)", lineHeight: 0.9, letterSpacing: -1 }}>{days}</div>
               <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 16, color: "#555" }}>jours</div>
-                <div style={{ fontSize: 11, color: "#333" }}>avant le départ</div>
+                <div style={{ fontSize: 11, color: "#555" }}>avant le départ</div>
               </div>
             </div>
           )}
 
-          <div style={{ fontSize: 12, color: "#444", marginBottom: 14 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
+          <div style={{ fontSize: 12, color: "#777", marginBottom: 14 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
 
           {/* Barre de progression vers la course */}
           {profile.sessions && profile.sessions.length > 0 && (() => {
@@ -10967,7 +10994,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
             const pct = Math.min(100, Math.round((elapsed / total) * 100));
             return (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#333", marginBottom: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#555", marginBottom: 4 }}>
                   <span>Début prépa</span>
                   <span style={{ color: "var(--red)" }}>{pct}% du chemin parcouru</span>
                   <span>Course 🏁</span>
@@ -11000,7 +11027,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         <button onClick={generateStrategy} style={{ width: "100%", background: "linear-gradient(135deg, rgba(255,71,71,0.12) 0%, rgba(255,71,71,0.04) 100%)", border: "1.5px solid rgba(255,71,71,0.3)", borderRadius: 16, padding: "18px 20px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
           <div style={{ textAlign: "left" }}>
             <div className="bebas" style={{ fontSize: 22, color: "var(--red)", letterSpacing: 1 }}>MA STRATÉGIE DE COURSE</div>
-            <div style={{ fontSize: 12, color: "#444", marginTop: 3 }}>Objectif temps · Stations · Mental · Checklist</div>
+            <div style={{ fontSize: 12, color: "#777", marginTop: 3 }}>Objectif temps · Stations · Mental · Checklist</div>
           </div>
           <div style={{ width: 42, height: 42, borderRadius: "50%", background: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span className="bebas" style={{ fontSize: 20, color: "#fff" }}>→</span>
@@ -11034,7 +11061,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
           {/* Poids officiels — grid visuelle */}
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Poids de compétition</div>
+            <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Poids de compétition</div>
             <div style={{ fontSize: 11, color: "#2a2a2a", marginBottom: 12 }}>{poidsHyrox.categorie}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {[
@@ -11047,7 +11074,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 20 }}>{s.icon}</span>
                   <div>
-                    <div style={{ fontSize: 10, color: "#444", marginBottom: 1 }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: "#777", marginBottom: 1 }}>{s.label}</div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>{s.val}</div>
                   </div>
                 </div>
@@ -11057,7 +11084,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
           {/* Stations — cartes numérotées */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Station par station</div>
+            <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Station par station</div>
             {(strategy.stations || []).map((s, i) => {
               const isRun = i % 2 === 0;
               const col = isRun ? "var(--green)" : "var(--yellow)";
@@ -11126,13 +11153,13 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const maxTime = Math.max(...levelRefs.map(r => r.mins)) + 30;
         return (
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
-            <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>🏆 Temps de référence HYROX ({gender === "H" ? "Homme" : "Femme"})</div>
+            <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>🏆 Temps de référence HYROX ({gender === "H" ? "Homme" : "Femme"})</div>
             <div style={{ position: "relative", paddingBottom: 8 }}>
               {levelRefs.map((ref, i) => {
                 const pct = ((ref.mins - minTime) / (maxTime - minTime)) * 80 + 5;
                 return (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <div style={{ width: 72, fontSize: 10, color: "#444", textAlign: "right", flexShrink: 0 }}>{ref.label.replace(/ [HF]$/,'')}</div>
+                    <div style={{ width: 72, fontSize: 10, color: "#777", textAlign: "right", flexShrink: 0 }}>{ref.label.replace(/ [HF]$/,'')}</div>
                     <div style={{ flex: 1, position: "relative", height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
                       <div style={{ position: "absolute", left: 0, top: 0, width: `${pct}%`, height: "100%", background: ref.color, borderRadius: 3, opacity: 0.6 }} />
                       {objMins && Math.abs(objMins - ref.mins) <= 15 && (
@@ -11192,7 +11219,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         return (
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏅 Mes Résultats de Courses</div>
+              <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏅 Mes Résultats de Courses</div>
               <button onClick={() => setShowAddRace(true)} style={{ background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11, color: "var(--yellow)", cursor: "pointer", fontWeight: 700 }}>+ Ajouter</button>
             </div>
 
@@ -11237,7 +11264,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                         <div key={k} style={{ flex: 1, textAlign: "center" }}>
                           <input type="number" value={newRace[k]} onChange={e => setNewRace(r => ({ ...r, [k]: e.target.value }))} placeholder={pl}
                             style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "14px 4px", color: "var(--white)", fontSize: 24, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
-                          <div style={{ fontSize: 9, color: "#333", marginTop: 4 }}>{lbl}</div>
+                          <div style={{ fontSize: 9, color: "#555", marginTop: 4 }}>{lbl}</div>
                         </div>
                       ))}
                     </div>
@@ -11274,7 +11301,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,71,71,0.15)", borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 10 }}>🏅</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)", marginBottom: 6 }}>Aucun résultat encore</div>
-                <div style={{ fontSize: 12, color: "#444" }}>Ajoute ton premier temps de course officiel</div>
+                <div style={{ fontSize: 12, color: "#777" }}>Ajoute ton premier temps de course officiel</div>
               </div>
             ) : (
               <>
@@ -11293,8 +11320,8 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                          <span style={{ fontSize: 9, color: "#444", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase", fontWeight: 700 }}>{r.category}</span>
-                          <span style={{ fontSize: 10, color: "#444" }}>{r.location || "HYROX"}</span>
+                          <span style={{ fontSize: 9, color: "#777", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase", fontWeight: 700 }}>{r.category}</span>
+                          <span style={{ fontSize: 10, color: "#777" }}>{r.location || "HYROX"}</span>
                         </div>
                         <div className="bebas" style={{ fontSize: 24, color: r.id === bestTime?.id ? "var(--yellow)" : "var(--white)", lineHeight: 1 }}>{r.totalTime}</div>
                         <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
@@ -11302,8 +11329,8 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                       {r.rank && r.totalParticipants && (
                         <div style={{ textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "8px 12px" }}>
                           <div className="bebas" style={{ fontSize: 22, color: "var(--red)", lineHeight: 1 }}>{r.rank}</div>
-                          <div style={{ fontSize: 9, color: "#444" }}>/ {r.totalParticipants}</div>
-                          <div style={{ fontSize: 9, color: "#444" }}>Top {Math.round((r.rank / r.totalParticipants) * 100)}%</div>
+                          <div style={{ fontSize: 9, color: "#777" }}>/ {r.totalParticipants}</div>
+                          <div style={{ fontSize: 9, color: "#777" }}>Top {Math.round((r.rank / r.totalParticipants) * 100)}%</div>
                         </div>
                       )}
                     </div>
@@ -11347,8 +11374,8 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         return (
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
             <div onClick={() => setSplitsOpen(o=>!o)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: splitsOpen ? 14 : 0 }}>
-              <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>⏱ Calculateur de splits race</div>
-              <div style={{ color: "#333", fontSize: 14, transform: splitsOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+              <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>⏱ Calculateur de splits race</div>
+              <div style={{ color: "#555", fontSize: 14, transform: splitsOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
             </div>
             {splitsOpen && (
               <>
@@ -11372,11 +11399,11 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <span className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>{paceMin}:{String(paceSec).padStart(2,"0")} /km</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 11, color: "#444" }}>Stations estimées</span>
+                    <span style={{ fontSize: 11, color: "#777" }}>Stations estimées</span>
                     <span style={{ fontSize: 11, color: "#555" }}>{fmtSplit(stationsTotal)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                    <span style={{ fontSize: 11, color: "#444" }}>Running total</span>
+                    <span style={{ fontSize: 11, color: "#777" }}>Running total</span>
                     <span style={{ fontSize: 11, color: "#555" }}>{fmtSplit(runSecs)}</span>
                   </div>
                 </div>
@@ -11391,7 +11418,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                       <div key={st.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ width: 28, fontSize: 16, textAlign: "center", flexShrink: 0 }}>{st.icon}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 11, color: "#777", marginBottom: 2 }}>{st.label} <span style={{ color: "#333" }}>· {st.dist}</span></div>
+                          <div style={{ fontSize: 11, color: "#777", marginBottom: 2 }}>{st.label} <span style={{ color: "#555" }}>· {st.dist}</span></div>
                           <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
                             <div style={{ height: "100%", width: `${(refSecs/Math.max(...STATIONS_SPLITS.map(s=>gender==="H"?s.refH:s.refF)))*100}%`, background: "rgba(232,255,71,0.4)", borderRadius: 99 }} />
                           </div>
@@ -11946,7 +11973,7 @@ export default function App() {
         </div>
       </div>
       {/* Tagline */}
-      <div style={{ fontSize: 13, color: "#333", letterSpacing: "0.08em", animation: "splashFade 0.6s 0.9s both" }}>
+      <div style={{ fontSize: 13, color: "#555", letterSpacing: "0.08em", animation: "splashFade 0.6s 0.9s both" }}>
         Ton coach HYROX IA
       </div>
     </div>
