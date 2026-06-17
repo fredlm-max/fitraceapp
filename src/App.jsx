@@ -6059,7 +6059,9 @@ JSON:
               <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end" }}
                 onClick={e => { if (e.target === e.currentTarget) setShowSessionModal(false); }}>
                 <div className="slide-up" style={{ background: "#080808", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", padding: "0 0 40px", border: "1px solid rgba(255,255,255,0.08)" }}
-                  onClick={e => e.stopPropagation()}>
+                  onClick={e => e.stopPropagation()}
+                  onTouchStart={e => { e.currentTarget._ty = e.touches[0].clientY; }}
+                  onTouchEnd={e => { const dy = e.changedTouches[0].clientY - (e.currentTarget._ty || 0); if (dy > 80) setShowSessionModal(false); }}>
                   {/* Handle bar + header */}
                   <div style={{ position: "sticky", top: 0, background: "#080808", zIndex: 10, padding: "14px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                     <div style={{ width: 40, height: 4, background: "#333", borderRadius: 99, margin: "0 auto 14px" }} />
