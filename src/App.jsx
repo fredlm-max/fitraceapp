@@ -3735,7 +3735,7 @@ JSON:
     { id: "home", label: "Accueil", icon: "🏠" },
     { id: "today", label: "Séance", icon: "⚡", badge: coachSession && !session },
     { id: "progress", label: "Stats", icon: "📈" },
-    { id: "planning", label: "Planning", icon: "📅", badge: !planningWeek && !loadingPlanning },
+    { id: "forme", label: "Forme", icon: "◎" },
     { id: "profil", label: "Profil", icon: "👤" },
   ];
 
@@ -3745,7 +3745,7 @@ JSON:
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
     try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
   });
-  const BOTTOM_TABS = ["home","today","progress","planning","profil"];
+  const BOTTOM_TABS = ["home","today","progress","forme","profil"];
 
   function handleTouchStart(e) {
     setTouchStartX(e.touches[0].clientX);
@@ -5672,8 +5672,26 @@ JSON:
               </div>
             )}
 
-            {/* Check-in */}
-            <Section title="Comment tu vas ?">
+            {/* Check-in shortcut → Forme tab */}
+            {(()=>{
+              const recovery = calcRecoveryScore(dailyData, profile);
+              const recov = recoveryLabel(recovery);
+              return (
+                <button onClick={() => setTab("forme")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, cursor: "pointer", textAlign: "left" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${recov.color}15`, border: `2px solid ${recov.color}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: recov.color, fontFamily: "'Bebas Neue',sans-serif" }}>{recovery}</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Forme du jour</div>
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Fatigue · Sommeil · Hydratation · Nutrition</div>
+                  </div>
+                  <div style={{ fontSize: 16, color: "#333" }}>›</div>
+                </button>
+              );
+            })()}
+
+            {/* Check-in inline (kept hidden — moved to Forme tab) */}
+            {false && <Section title="Comment tu vas ?">
               <Card>
                 {/* Fatigue physique */}
                 <div style={{ marginBottom: 14 }}>
@@ -5857,7 +5875,7 @@ JSON:
                   </div>
                 )}
               </Card>
-            </Section>
+            </Section>}
 
             {!session && !loadingSession && (
               dailyData.typeSeance === "perso" ? (
@@ -7954,6 +7972,194 @@ JSON:
           />
         )}
         {tab === "race" && <RaceTab profile={profile} />}
+
+        {/* FORME TAB */}
+        {tab === "forme" && (()=>{
+          const recovery = calcRecoveryScore(dailyData, profile);
+          const recov = recoveryLabel(recovery);
+          const hrv = parseInt(dailyData.hrv)||0;
+          const hrvColor = hrv>=70?"var(--green)":hrv>=55?"var(--yellow)":hrv>=40?"var(--orange)":hrv>0?"var(--red)":"#444";
+          const hrvLabel = hrv>=70?"Excellent":hrv>=55?"Bon":hrv>=40?"Modéré":hrv>0?"Bas":"";
+          return (
+            <div className="fade-in" style={{ padding: "0 16px 100px" }}>
+              {/* Header */}
+              <div style={{ paddingTop: 20, marginBottom: 20 }}>
+                <div className="bebas" style={{ fontSize: 28, color: "var(--white)", letterSpacing: 1 }}>FORME DU JOUR</div>
+                <div style={{ fontSize: 12, color: "#444", marginTop: 2 }}>
+                  {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                </div>
+              </div>
+
+              {/* Recovery ring */}
+              <div style={{ marginBottom: 16, padding: "18px 20px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, display: "flex", alignItems: "center", gap: 18 }}>
+                <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
+                  <svg width="72" height="72" viewBox="0 0 72 72">
+                    <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7"/>
+                    <circle cx="36" cy="36" r="30" fill="none" stroke={recov.color} strokeWidth="7"
+                      strokeDasharray={`${(recovery/100)*188.5} 188.5`} strokeLinecap="round"
+                      transform="rotate(-90 36 36)" style={{ transition: "stroke-dasharray 0.6s ease" }}/>
+                  </svg>
+                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                    <span className="bebas" style={{ fontSize: 22, color: recov.color, lineHeight: 1 }}>{recovery}</span>
+                    <span style={{ fontSize: 8, color: "#444", fontWeight: 700, textTransform: "uppercase" }}>/ 100</span>
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Score de récupération</div>
+                  <div className="bebas" style={{ fontSize: 20, color: recov.color, letterSpacing: 1, marginBottom: 2 }}>{recov.label}</div>
+                  <div style={{ fontSize: 11, color: "#555", lineHeight: 1.4 }}>{recov.conseil}</div>
+                </div>
+              </div>
+
+              {/* Fatigue physique */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Fatigue physique</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { v: 1, emoji: "😴", label: "Fatigué", color: "var(--red)" },
+                    { v: 2, emoji: "😐", label: "Moyen", color: "var(--orange)" },
+                    { v: 3, emoji: "😊", label: "Bien", color: "var(--yellow)" },
+                    { v: 4, emoji: "🔥", label: "Frais", color: "var(--green)" },
+                  ].map(f => (
+                    <button key={f.v} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, fatigue: f.v })); }} style={{
+                      flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
+                      background: dailyData.fatigue === f.v ? `${f.color}15` : "rgba(255,255,255,0.02)",
+                      border: dailyData.fatigue === f.v ? `2px solid ${f.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                      color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
+                    }}>
+                      <div style={{ fontSize: 22 }}>{f.emoji}</div>
+                      <div style={{ fontSize: 9, marginTop: 4, color: dailyData.fatigue === f.v ? f.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Score de sommeil */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Qualité du sommeil</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { v: 1, emoji: "💤", label: "Mauvais", color: "var(--red)" },
+                    { v: 2, emoji: "😐", label: "Moyen", color: "var(--orange)" },
+                    { v: 3, emoji: "🙂", label: "Bon", color: "var(--yellow)" },
+                    { v: 4, emoji: "⭐", label: "Excellent", color: "var(--green)" },
+                  ].map(s => (
+                    <button key={s.v} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, sommeil: s.v })); }} style={{
+                      flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
+                      background: dailyData.sommeil === s.v ? `${s.color}15` : "rgba(255,255,255,0.02)",
+                      border: dailyData.sommeil === s.v ? `2px solid ${s.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                      color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
+                    }}>
+                      <div style={{ fontSize: 22 }}>{s.emoji}</div>
+                      <div style={{ fontSize: 9, marginTop: 4, color: dailyData.sommeil === s.v ? s.color : "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Heures de sommeil */}
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Heures de sommeil</div>
+                  <div className="bebas" style={{ fontSize: 22, color: parseFloat(dailyData.sleepHours) >= 8 ? "var(--green)" : parseFloat(dailyData.sleepHours) >= 7 ? "var(--yellow)" : "var(--orange)" }}>{dailyData.sleepHours}h</div>
+                </div>
+                <input type="range" min="4" max="10" step="0.5" value={dailyData.sleepHours}
+                  onChange={e => setDailyData(d => ({ ...d, sleepHours: parseFloat(e.target.value) }))}
+                  style={{ width: "100%", accentColor: "var(--yellow)" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#333", marginTop: 4 }}>
+                  <span>4h</span><span>6h</span><span style={{ color: "var(--yellow)" }}>8h ✓</span><span>10h</span>
+                </div>
+              </div>
+
+              {/* Hydratation */}
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Hydratation</div>
+                  <div className="bebas" style={{ fontSize: 22, color: dailyData.hydration >= 8 ? "var(--green)" : dailyData.hydration >= 5 ? "var(--yellow)" : "#555" }}>{dailyData.hydration}/8</div>
+                </div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <button key={i} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, hydration: i < d.hydration ? i : i + 1 })); }}
+                      style={{ width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${i < dailyData.hydration ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.08)"}`, background: i < dailyData.hydration ? "rgba(56,189,248,0.15)" : "rgba(255,255,255,0.03)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s var(--spring)" }}>
+                      {i < dailyData.hydration ? "💧" : "○"}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 10, color: "#333", marginTop: 8 }}>Objectif : 8 verres / 2L par jour</div>
+              </div>
+
+              {/* Poids du jour */}
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+                <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Poids du jour (kg)</div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="number" step="0.1" min="40" max="150"
+                    value={dailyData.poidsJour}
+                    onChange={e => setDailyData(d => ({ ...d, poidsJour: e.target.value }))}
+                    placeholder={`${profile.poids || 75} kg`}
+                    style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+                  <div style={{ fontSize: 12, minWidth: 52, textAlign: "right" }}>
+                    {dailyData.poidsJour && profile.poids ? (
+                      <span style={{ color: parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>
+                        {parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "↓" : "↑"} {Math.abs(parseFloat(dailyData.poidsJour) - parseFloat(profile.poids)).toFixed(1)}kg
+                      </span>
+                    ) : <span style={{ color: "#333", fontSize: 10 }}>vs profil</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* HRV */}
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>HRV matin (ms)</div>
+                    <div style={{ fontSize: 9, color: "#333", marginTop: 2 }}>Variabilité cardiaque au réveil</div>
+                  </div>
+                  {hrv > 0 && <div style={{ textAlign: "right" }}>
+                    <div className="bebas" style={{ fontSize: 22, color: hrvColor, lineHeight: 1 }}>{hrv}</div>
+                    <div style={{ fontSize: 9, color: hrvColor, fontWeight: 700, textTransform: "uppercase" }}>{hrvLabel}</div>
+                  </div>}
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="number" min="20" max="120" step="1"
+                    value={dailyData.hrv}
+                    onChange={e => { haptic([4]); setDailyData(d => ({ ...d, hrv: e.target.value })); }}
+                    placeholder="Ex: 65"
+                    style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: `1.5px solid ${hrv>0?hrvColor+"40":"rgba(255,255,255,0.08)"}`, borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {[{r:"<40",l:"Bas",c:"var(--red)"},{r:"40-55",l:"Modéré",c:"var(--orange)"},{r:"55-70",l:"Bon",c:"var(--yellow)"},{r:">70",l:"Top",c:"var(--green)"}].map(z=>(
+                      <div key={z.r} style={{ fontSize: 8, color: z.c, lineHeight: 1.2 }}>{z.r} {z.l}</div>
+                    ))}
+                  </div>
+                </div>
+                {hrv > 0 && (
+                  <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, background: `${hrvColor}10`, border: `1px solid ${hrvColor}20`, fontSize: 10, color: hrvColor }}>
+                    {hrv>=70?"Récupération optimale — séance intense possible":hrv>=55?"Bonne forme — entraînement normal recommandé":hrv>=40?"Fatigue modérée — réduis l'intensité aujourd'hui":"HRV bas — privilégie la récupération active"}
+                  </div>
+                )}
+              </div>
+
+              {/* Nutrition */}
+              <button onClick={() => setTab("nutri")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,154,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🥗</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Nutrition</div>
+                  <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>Voir mon plan nutritionnel</div>
+                </div>
+                <div style={{ fontSize: 16, color: "#333" }}>›</div>
+              </button>
+
+              {/* Planning */}
+              <button onClick={() => setTab("planning")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(167,139,250,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📅</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Planning de la semaine</div>
+                  <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>Voir mon programme hebdo</div>
+                </div>
+                <div style={{ fontSize: 16, color: "#333" }}>›</div>
+              </button>
+            </div>
+          );
+        })()}
 
         {/* PROFIL */}
         {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
