@@ -2789,7 +2789,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   }
 
   // ── Notifications push locales
-  const [notifGranted, setNotifGranted] = useState(Notification?.permission === "granted");
+  const [notifGranted, setNotifGranted] = useState(typeof Notification !== "undefined" && Notification.permission === "granted");
 
   async function requestNotifPermission() {
     if (!("Notification" in window)) return;
