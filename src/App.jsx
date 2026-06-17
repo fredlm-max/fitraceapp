@@ -3111,6 +3111,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [sessionStreamText, setSessionStreamText] = useState("");
   const [feedbackStreamText, setFeedbackStreamText] = useState("");
+  const [miniRestTimer, setMiniRestTimer] = useState(null); // { secs: number, initial: number } | null
   const [showCoachChat, setShowCoachChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -3169,6 +3170,23 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
     }
     return () => clearInterval(interval);
   }, [reposRunning, reposCountdown]);
+
+  // Mini rest timer countdown
+  useEffect(() => {
+    if (!miniRestTimer || miniRestTimer.secs <= 0) return;
+    const t = setTimeout(() => {
+      setMiniRestTimer(r => {
+        if (!r) return null;
+        const next = r.secs - 1;
+        if (next <= 0) {
+          if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+          return null; // timer done, dismiss
+        }
+        return { ...r, secs: next };
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [miniRestTimer]);
 
   // Rappels intelligents — vérifier au chargement
   useEffect(() => {
@@ -6033,6 +6051,37 @@ JSON:
                       <button onClick={() => setShowSessionModal(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 18, cursor: "pointer" }}>×</button>
                     </div>
                   </div>
+                  {/* ── MINI REST TIMER ── */}
+                  {miniRestTimer && (
+                    <div className="slide-up" style={{ margin: "0 18px 0", padding: "12px 16px", background: miniRestTimer.secs <= 10 ? "rgba(255,71,71,0.12)" : "rgba(167,139,250,0.12)", border: `1.5px solid ${miniRestTimer.secs <= 10 ? "rgba(255,71,71,0.4)" : "rgba(167,139,250,0.4)"}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                      {/* Arc progress */}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <svg width="48" height="48" style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+                          <circle cx="24" cy="24" r="20" fill="none"
+                            stroke={miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa"}
+                            strokeWidth="4"
+                            strokeDasharray={`${2 * Math.PI * 20}`}
+                            strokeDashoffset={`${2 * Math.PI * 20 * (1 - miniRestTimer.secs / miniRestTimer.initial)}`}
+                            strokeLinecap="round"
+                            style={{ transition: "stroke-dashoffset 0.9s linear" }}
+                          />
+                        </svg>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span className="bebas" style={{ fontSize: 14, color: miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa", lineHeight: 1 }}>{miniRestTimer.secs}</span>
+                        </div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa", marginBottom: 2 }}>
+                          {miniRestTimer.secs <= 10 ? "⚡ C'est reparti !" : "⏱ Repos"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#666" }}>
+                          {miniRestTimer.secs <= 10 ? "Prépare-toi pour la prochaine série" : `${miniRestTimer.secs}s restantes`}
+                        </div>
+                      </div>
+                      <button onClick={() => setMiniRestTimer(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 28, height: 28, color: "#555", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
+                    </div>
+                  )}
                   <div style={{ padding: "16px 18px 16px" }}>
                 {/* ── HERO SÉANCE ── */}
                 {(() => {
@@ -6099,6 +6148,23 @@ JSON:
                           const wasUndone = !checkedExercices[i];
                           setCheckedExercices(c => ({ ...c, [i]: !c[i] }));
                           if (wasUndone) haptic([8]);
+                          // Auto-launch rest timer if exercise has repos time
+                          if (wasUndone && ex.repos) {
+                            const parseRepos = (str) => {
+                              if (!str) return 0;
+                              const minMatch = str.match(/(\d+)\s*min/i);
+                              if (minMatch) return parseInt(minMatch[1]) * 60;
+                              const secMatch = str.match(/(\d+)\s*s/i);
+                              if (secMatch) return parseInt(secMatch[1]);
+                              const colonMatch = str.match(/(\d+):(\d+)/);
+                              if (colonMatch) return parseInt(colonMatch[1]) * 60 + parseInt(colonMatch[2]);
+                              const numMatch = str.match(/(\d+)/);
+                              if (numMatch) return parseInt(numMatch[1]);
+                              return 0;
+                            };
+                            const secs = parseRepos(ex.repos);
+                            if (secs > 0) setMiniRestTimer({ secs, initial: secs });
+                          }
                           // Check if all done after this tick
                           const newCount = Object.values({...checkedExercices, [i]: true}).filter(Boolean).length;
                           if (wasUndone && newCount === (session.exercices||[]).length) {
