@@ -5439,6 +5439,116 @@ JSON:
               <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7, fontStyle: "italic", position: "relative" }}>"{getCitationDuJour()}"</div>
             </div>
 
+            {/* ── WEEKLY STRIP ── */}
+            {(() => {
+              const today = new Date();
+              const todayStr2 = today.toISOString().split("T")[0];
+              // Get Monday of current week
+              const dow = today.getDay(); // 0=Sun
+              const mondayOffset = dow === 0 ? -6 : 1 - dow;
+              const monday = new Date(today);
+              monday.setDate(today.getDate() + mondayOffset);
+
+              const typeColors = {
+                running_zone2: "var(--green)",
+                force_stations: "var(--yellow)",
+                running_qualite: "var(--orange)",
+                hybride_compromis: "var(--purple)",
+                coach: "var(--yellow)",
+              };
+              const typeIcons = {
+                running_zone2: "🏃",
+                force_stations: "🏋️",
+                running_qualite: "⚡",
+                hybride_compromis: "🔀",
+                coach: "📋",
+              };
+
+              const days = ["L","M","M","J","V","S","D"];
+              return (
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px 12px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 9, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>📅 Ma semaine</div>
+                  <div style={{ display: "flex", gap: 4, justifyContent: "space-between" }}>
+                    {days.map((dayLabel, i) => {
+                      const d = new Date(monday);
+                      d.setDate(monday.getDate() + i);
+                      const ds = d.toISOString().split("T")[0];
+                      const isToday = ds === todayStr2;
+                      const isPast = ds < todayStr2;
+                      const isFuture = ds > todayStr2;
+
+                      // Find session done on this day
+                      const doneSessions = (profile.sessions || []).filter(s => s.date === ds);
+                      const doneSession = doneSessions[doneSessions.length - 1];
+
+                      // Is this a planned training day according to profile plan?
+                      // Simple heuristic: if sessions per week is 4, train M/Tu/Th/Sa (indices 0,1,3,5)
+                      const spw = profile.seancesParSemaine || 4;
+                      const planDays = spw >= 5 ? [0,1,2,3,4] : spw >= 4 ? [0,1,3,5] : spw >= 3 ? [0,2,4] : [0,2];
+                      const isPlannedDay = planDays.includes(i);
+
+                      const color = doneSession
+                        ? (typeColors[doneSession.type] || "var(--yellow)")
+                        : isToday
+                        ? "var(--yellow)"
+                        : "transparent";
+
+                      const borderColor = doneSession
+                        ? (typeColors[doneSession.type] || "var(--yellow)")
+                        : isToday
+                        ? "var(--yellow)"
+                        : isPlannedDay && isFuture
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(255,255,255,0.06)";
+
+                      const borderStyle = isPlannedDay && isFuture && !doneSession ? "dashed" : "solid";
+
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                          <div style={{ fontSize: 8, color: isToday ? "var(--yellow)" : "#333", fontWeight: isToday ? 700 : 400 }}>{dayLabel}</div>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: "50%",
+                            background: doneSession ? `${color}20` : isToday ? "rgba(232,255,71,0.08)" : "transparent",
+                            border: `1.5px ${borderStyle} ${borderColor}`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: doneSession ? 14 : 11,
+                            position: "relative",
+                            boxShadow: isToday ? "0 0 10px rgba(232,255,71,0.2)" : "none",
+                          }}>
+                            {doneSession
+                              ? (typeIcons[doneSession.type] || "✓")
+                              : isToday
+                              ? (session ? (typeIcons[session.type] || "💪") : "•")
+                              : isPlannedDay && isFuture
+                              ? <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "block" }} />
+                              : isPast && isPlannedDay
+                              ? <span style={{ fontSize: 10, color: "var(--red)", opacity: 0.5 }}>×</span>
+                              : null
+                            }
+                          </div>
+                          {isToday && (
+                            <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)" }} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Legend */}
+                  <div style={{ display: "flex", gap: 12, marginTop: 10, justifyContent: "center" }}>
+                    {[
+                      { color: "var(--green)", label: "Fait" },
+                      { style: "dashed", color: "rgba(255,255,255,0.15)", label: "Planifié" },
+                    ].map(l => (
+                      <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px ${l.style || "solid"} ${l.color}`, background: l.bg || "transparent" }} />
+                        <span style={{ fontSize: 9, color: "#333" }}>{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MISSION DU JOUR (beginner-friendly) ── */}
             {!session && (() => {
               const recovery = calcRecoveryScore(dailyData, profile);
