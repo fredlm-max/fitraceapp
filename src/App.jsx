@@ -5983,7 +5983,23 @@ JSON:
                     <span style={{ fontSize: 10, color: "#444", marginLeft: "auto" }}>⏱ {session.duree} min</span>
                   </div>
                   <div className="bebas" style={{ fontSize: 26, color: "var(--white)", lineHeight: 1.1, marginBottom: 6 }}>{session.titre}</div>
-                  <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5, marginBottom: 12 }}>{session.explication?.slice(0, 90)}{(session.explication?.length || 0) > 90 ? "…" : ""}</div>
+                  <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5, marginBottom: 10 }}>{session.explication?.slice(0, 80)}{(session.explication?.length || 0) > 80 ? "…" : ""}</div>
+                  {/* Mini exercice chips */}
+                  {(session.exercices || []).length > 0 && (
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                      {(session.exercices || []).slice(0, 4).map((ex, ei) => (
+                        <div key={ei} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#666", whiteSpace: "nowrap" }}>
+                          {ex.nom?.length > 18 ? ex.nom.slice(0, 18) + "…" : ex.nom}
+                          {ex.series && ex.reps ? <span style={{ color: c0.color, marginLeft: 4 }}>{ex.series}×{ex.reps}</span> : null}
+                        </div>
+                      ))}
+                      {(session.exercices || []).length > 4 && (
+                        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#444" }}>
+                          +{(session.exercices || []).length - 4}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Progress si déjà commencé */}
                   {doneCount0 > 0 && (
                     <div style={{ marginBottom: 10 }}>
