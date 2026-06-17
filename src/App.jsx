@@ -2561,32 +2561,29 @@ function Hyrox101Card({ profile, navigateTo }) {
     { icon: "🏐", name: "Wall Balls", dist: "75/100 reps" },
   ];
   return (
-    <div style={{ background: "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(8,8,8,0) 80%)", border: "1.5px solid rgba(56,189,248,0.25)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 9, color: "#38bdf8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>🏁 HYROX — C'est quoi ?</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>1 km de run + 1 station × 8</div>
+          <div style={{ fontSize: 9, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>HYROX — C'est quoi ?</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>1 km run + 1 station × 8</div>
         </div>
         <button onClick={() => { localStorage.setItem("fitrace_hyrox101_done","1"); setShowHyrox101(false); }}
-          style={{ background: "none", border: "none", color: "#555", fontSize: 18, cursor: "pointer", padding: 4 }}>×</button>
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#666", fontSize: 14, cursor: "pointer", padding: "4px 8px", lineHeight: 1 }}>×</button>
       </div>
-      <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7, marginBottom: 12 }}>
-        HYROX = <strong style={{ color: "#38bdf8" }}>8 km de running total</strong> entrecoupés de <strong style={{ color: "#38bdf8" }}>8 stations fonctionnelles</strong>. Pas de technique d'haltérophilie complexe — juste de l'endurance, de la force, et de la régularité.
+      <div style={{ fontSize: 11, color: "#666", lineHeight: 1.65, marginBottom: 12 }}>
+        <strong style={{ color: "#999" }}>8 km de running</strong> entrecoupés de <strong style={{ color: "#999" }}>8 stations fonctionnelles</strong>. Endurance, force et régularité.
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
         {STATIONS.map((s, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
-            <span style={{ fontSize: 14, flexShrink: 0 }}>{s.icon}</span>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#ccc" }}>{s.name}</div>
-              <div style={{ fontSize: 8, color: "#555" }}>{s.dist}</div>
-            </div>
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 8px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20 }}>
+            <span style={{ fontSize: 12 }}>{s.icon}</span>
+            <span style={{ fontSize: 10, color: "#888" }}>{s.name}</span>
           </div>
         ))}
       </div>
       <button onClick={() => { navigateTo("technique"); }}
-        style={{ width: "100%", padding: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#38bdf8", cursor: "pointer" }}>
-        📚 Voir la technique station par station →
+        style={{ width: "100%", padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#888", cursor: "pointer" }}>
+        Voir la technique →
       </button>
     </div>
   );
@@ -4439,7 +4436,7 @@ JSON:
                       </button>
                     ))}
                   </div>
-                  <div style={{ fontSize: 10, color: "#2a2a2a", textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: "#555", textAlign: "center" }}>
                     Aide ton coach IA à adapter ta séance
                   </div>
                 </div>
@@ -4450,31 +4447,31 @@ JSON:
             {(() => {
               const totalXP = calcTotalXP(profile);
               const lvl = getXPLevel(totalXP);
-              const earnedBadges = BADGES.filter(b => b.check(profile));
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                  {/* Level icon */}
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {lvl.icon}
+                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "12px 16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 11, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                      {lvl.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                          <span className="bebas" style={{ fontSize: 18, color: "var(--yellow)", letterSpacing: 0.5, lineHeight: 1 }}>{lvl.name}</span>
+                          <span style={{ fontSize: 9, color: "#555", fontWeight: 600 }}>Niv. {lvl.level}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                          <span className="bebas" style={{ fontSize: 20, color: "var(--white)", lineHeight: 1 }}>{totalXP.toLocaleString()}</span>
+                          <span style={{ fontSize: 9, color: "#555" }}>XP</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
-                      <div>
-                        <span style={{ fontSize: 10, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Niv.{lvl.level} · </span>
-                        <span className="bebas" style={{ fontSize: 16, color: "var(--white)", letterSpacing: 0.5 }}>{lvl.name}</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span className="bebas" style={{ fontSize: 18, color: "var(--white)" }}>{totalXP.toLocaleString()}</span>
-                        <span style={{ fontSize: 9, color: "#555" }}>XP</span>
-                      </div>
-                    </div>
-                    <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${lvl.progress}%`, background: "var(--yellow)", borderRadius: 99, transition: "width 0.8s var(--ease-out)" }} />
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                      <span style={{ fontSize: 8, color: "#555" }}>{lvl.name}</span>
-                      <span style={{ fontSize: 8, color: "#555" }}>{lvl.xpToNext > 0 ? `${lvl.xpToNext} XP → ${lvl.nextName}` : "Niveau max !"}</span>
-                    </div>
+                  <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${lvl.progress}%`, background: "linear-gradient(90deg, rgba(232,255,71,0.7), var(--yellow))", borderRadius: 99, transition: "width 1s var(--ease-out)", boxShadow: lvl.progress > 0 ? "0 0 8px rgba(232,255,71,0.4)" : "none" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <span style={{ fontSize: 9, color: "#555" }}>{Math.round(lvl.progress)}% vers {lvl.nextName || "Max"}</span>
+                    <span style={{ fontSize: 9, color: "#555" }}>{lvl.xpToNext > 0 ? `encore ${lvl.xpToNext} XP` : "Niveau max !"}</span>
                   </div>
                 </div>
               );
