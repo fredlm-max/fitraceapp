@@ -3069,6 +3069,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [loadingSession, setLoadingSession] = useState(false);
   const [checkedExercices, setCheckedExercices] = useState({});
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [feedbackData, setFeedbackData] = useState({
     ressenti: "bien",
@@ -5852,8 +5853,61 @@ JSON:
               </div>
             )}
 
-            {session && !showFeedback && !feedback && (
-              <div className="slide-up">
+            {session && !showFeedback && !feedback && (() => {
+              const typeConf0 = {
+                running_zone2: { label: "Running Zone 2", color: "var(--green)", icon: "🏃" },
+                force_stations: { label: "Force Stations", color: "var(--yellow)", icon: "🏋️" },
+                running_qualite: { label: "Running Qualité", color: "var(--orange)", icon: "⚡" },
+                hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", icon: "🔀" },
+                perso: { label: "Séance Perso", color: "#888", icon: "✏️" },
+              };
+              const c0 = typeConf0[session.type] || { label: "Séance", color: "var(--yellow)", icon: "💪" };
+              const doneCount0 = Object.values(checkedExercices).filter(Boolean).length;
+              const totalEx0 = (session.exercices || []).length;
+              return (
+                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: `linear-gradient(135deg, ${c0.color}08 0%, rgba(8,8,8,0) 70%)`, border: `1.5px solid ${c0.color}25`, borderRadius: 20, padding: "18px 18px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: `radial-gradient(circle, ${c0.color}15 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 16 }}>{c0.icon}</span>
+                    <span style={{ fontSize: 10, color: c0.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{c0.label}</span>
+                    <span style={{ fontSize: 10, color: "#444", marginLeft: "auto" }}>⏱ {session.duree} min</span>
+                  </div>
+                  <div className="bebas" style={{ fontSize: 26, color: "var(--white)", lineHeight: 1.1, marginBottom: 6 }}>{session.titre}</div>
+                  <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5, marginBottom: 12 }}>{session.explication?.slice(0, 90)}{(session.explication?.length || 0) > 90 ? "…" : ""}</div>
+                  {/* Progress si déjà commencé */}
+                  {doneCount0 > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${Math.round(doneCount0/totalEx0*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.4s" }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--green)", marginTop: 4 }}>{doneCount0}/{totalEx0} exercices faits</div>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 10, color: "#444" }}>{totalEx0} exercices · Appuie pour voir</div>
+                    <div style={{ background: c0.color, borderRadius: 10, padding: "8px 16px" }}>
+                      <span className="bebas" style={{ fontSize: 14, color: "#000", letterSpacing: 1 }}>▶ DÉMARRER</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── MODAL SÉANCE ── */}
+            {showSessionModal && session && !showFeedback && !feedback && (
+              <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end" }}
+                onClick={e => { if (e.target === e.currentTarget) setShowSessionModal(false); }}>
+                <div className="slide-up" style={{ background: "#080808", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", padding: "0 0 40px", border: "1px solid rgba(255,255,255,0.08)" }}
+                  onClick={e => e.stopPropagation()}>
+                  {/* Handle bar + header */}
+                  <div style={{ position: "sticky", top: 0, background: "#080808", zIndex: 10, padding: "14px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div style={{ width: 40, height: 4, background: "#333", borderRadius: 99, margin: "0 auto 14px" }} />
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 0.5 }}>{session.titre}</div>
+                      <button onClick={() => setShowSessionModal(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 18, cursor: "pointer" }}>×</button>
+                    </div>
+                  </div>
+                  <div style={{ padding: "16px 18px 16px" }}>
                 {/* ── HERO SÉANCE ── */}
                 {(() => {
                   const typeConf = {
@@ -6009,9 +6063,11 @@ JSON:
                 )}
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => setSession(null)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "#666", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↺ Refaire</button>
+                  <button onClick={() => { setSession(null); try { localStorage.removeItem(sessionCacheKey); } catch {} setShowSessionModal(false); }} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "#666", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↺ Refaire</button>
                   <button onClick={() => { setChronoMode(true); setChronoRunning(true); setChronoSeconds(0); setCurrentExIdx(0); }} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "var(--white)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>⏱ Chrono</button>
-                  <button onClick={() => setShowFeedback(true)} style={{ flex: 2, background: "var(--green)", border: "none", borderRadius: 12, padding: "13px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 1, cursor: "pointer" }}>✓ TERMINÉE</button>
+                  <button onClick={() => { setShowFeedback(true); setShowSessionModal(false); }} style={{ flex: 2, background: "var(--green)", border: "none", borderRadius: 12, padding: "13px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 1, cursor: "pointer" }}>✓ TERMINÉE</button>
+                </div>
+              </div>
                 </div>
               </div>
             )}
