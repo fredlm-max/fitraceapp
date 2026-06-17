@@ -4331,7 +4331,7 @@ JSON:
         const tabMeta = {
           home: { label: "Accueil", color: "var(--yellow)" },
           today: { label: "Séance", color: "var(--green)" },
-          progress: { label: "Progression", color: "var(--purple)" },
+          progress: { label: "Stats", color: "var(--purple)" },
           forme: { label: "Forme", color: "var(--green)" },
           planning: { label: "Planning", color: "var(--yellow)" },
           race: { label: "Course", color: "var(--red)" },
@@ -4341,27 +4341,32 @@ JSON:
           profil: { label: "Profil", color: "var(--yellow)" },
         };
         const meta = tabMeta[tab] || { label: "FITRACE", color: "var(--yellow)" };
+        const now = new Date();
+        const dayLabel = now.toLocaleDateString("fr-FR", { weekday: "long" });
+        const dateLabel = now.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
         return (
-          <div style={{ background: "rgba(6,6,6,0.95)", padding: "10px 20px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(32px) saturate(1.5)" }}>
+          <div style={{ background: "rgba(6,6,6,0.96)", padding: "10px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(32px) saturate(1.5)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 2 }}>FIT<span style={{ color: "var(--white)" }}>RACE</span></div>
-                <div style={{ width: 1, height: 18, background: "rgba(255,255,255,0.08)" }} />
-                <div className="bebas" style={{ fontSize: 16, color: meta.color, letterSpacing: 1 }}>{meta.label.toUpperCase()}</div>
+                <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 2 }}>FIT<span style={{ color: "var(--white)" }}>RACE</span></div>
+                <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.08)" }} />
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <div className="bebas" style={{ fontSize: 14, color: meta.color, letterSpacing: 1, lineHeight: 1 }}>{meta.label.toUpperCase()}</div>
+                  <div style={{ fontSize: 9, color: "#555", textTransform: "capitalize", lineHeight: 1.2, marginTop: 1 }}>{dayLabel} {dateLabel}</div>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {streak > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "3px 9px" }}>
                     <span className="bebas" style={{ fontSize: 13, color: "#888" }}>{streak}j</span>
                   </div>
                 )}
                 {days !== null && tab !== "race" && (
-                  <div onClick={() => setTab("race")} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "4px 10px", textAlign: "center", cursor: "pointer" }}>
-                    <div className="bebas" style={{ fontSize: 20, color: "var(--white)", lineHeight: 1 }}>{days}</div>
-                    <div style={{ fontSize: 8, color: "#555", letterSpacing: "0.06em" }}>jours</div>
+                  <div onClick={() => setTab("race")} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "3px 9px", textAlign: "center", cursor: "pointer" }}>
+                    <div className="bebas" style={{ fontSize: 18, color: "var(--white)", lineHeight: 1 }}>{days}</div>
+                    <div style={{ fontSize: 7, color: "#555", letterSpacing: "0.06em" }}>jours</div>
                   </div>
                 )}
-                <button onClick={() => setShowCoachChat(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#888", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✦</button>
               </div>
             </div>
           </div>
@@ -8106,11 +8111,12 @@ JSON:
         <button
           onClick={() => setShowCoachChat(true)}
           style={{
-            position: "fixed", bottom: 76, right: 16, zIndex: 99,
-            width: 44, height: 44, borderRadius: "50%",
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-            fontSize: 16, cursor: "pointer", backdropFilter: "blur(10px)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "#888",
+            position: "fixed", bottom: 80, right: 16, zIndex: 99,
+            width: 42, height: 42, borderRadius: "50%",
+            background: "rgba(15,15,15,0.92)", border: "1px solid rgba(255,255,255,0.1)",
+            fontSize: 15, cursor: "pointer", backdropFilter: "blur(16px)",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "#666",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
           }}
           title="Coach IA"
         >✦</button>
@@ -8126,8 +8132,8 @@ JSON:
       )}
 
       {/* ── QUICK LOG FAB ── */}
-      <button onClick={() => { haptic([10,20,10]); setShowQuickLog(true); }}
-        style={{ position: "fixed", bottom: 130, right: 16, zIndex: 98, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#666", backdropFilter: "blur(10px)", transition: "all 0.2s var(--spring)", transform: showQuickLog ? "scale(0.9) rotate(45deg)" : "scale(1)" }}>
+      <button onClick={() => { haptic([10,20,10]); setShowQuickLog(s => !s); }}
+        style={{ position: "fixed", bottom: 80, left: 16, zIndex: 98, width: 42, height: 42, borderRadius: "50%", background: "rgba(15,15,15,0.92)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#666", backdropFilter: "blur(16px)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", transition: "all 0.2s var(--spring)", transform: showQuickLog ? "rotate(45deg)" : "rotate(0)" }}>
         {showQuickLog ? "✕" : "+"}
       </button>
 
@@ -8136,25 +8142,31 @@ JSON:
 
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        {/* Gradient fade above nav */}
-        <div style={{ height: 20, background: "linear-gradient(to top, rgba(8,8,8,0.98), transparent)", pointerEvents: "none" }} />
-        <div style={{ background: "rgba(10,10,10,0.98)", backdropFilter: "blur(24px) saturate(1.5)", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 8px", paddingBottom: "max(env(safe-area-inset-bottom, 10px), 10px)" }}>
-          {tabs.map(t => {
-            const active = tab === t.id;
-            return (
-              <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
-                style={{ background: active ? "rgba(232,255,71,0.08)" : "none", color: active ? "var(--yellow)" : "#3a3a3a", padding: "7px 14px", borderRadius: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 56, border: active ? "1px solid rgba(232,255,71,0.12)" : "1px solid transparent", transition: "all 0.2s var(--spring)", position: "relative" }}>
-                <div style={{ position: "relative" }}>
-                  <span style={{ fontSize: 20, display: "block", filter: active ? "drop-shadow(0 0 6px rgba(232,255,71,0.5))" : "none", transition: "all 0.2s" }}>{t.icon}</span>
-                  {t.badge && !active && (
-                    <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--green)", border: "1.5px solid #0a0a0a", animation: "pulse 2s ease infinite" }} />
-                  )}
-                </div>
-                <span style={{ fontSize: 9, fontWeight: active ? 700 : 400, letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.2s" }}>{t.label}</span>
-                {active && <div style={{ position: "absolute", top: -1, left: "20%", right: "20%", height: 2, background: "var(--yellow)", borderRadius: "0 0 3px 3px", animation: "glow 2s ease infinite" }} />}
-              </button>
-            );
-          })}
+        <div style={{ height: 16, background: "linear-gradient(to top, rgba(8,8,8,1), transparent)", pointerEvents: "none" }} />
+        <div style={{ background: "rgba(10,10,10,0.98)", backdropFilter: "blur(32px) saturate(1.8)", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)" }}>
+          {(() => {
+            const ic = {
+              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            };
+            return tabs.map(t => {
+              const active = tab === t.id;
+              return (
+                <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
+                  style={{ background: "none", border: "none", flex: 1, padding: "4px 2px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative", transition: "all 0.2s var(--spring)", cursor: "pointer" }}>
+                  {active && <div style={{ position: "absolute", top: -8, left: "30%", right: "30%", height: 2, background: "var(--yellow)", borderRadius: "0 0 3px 3px", boxShadow: "0 0 8px rgba(232,255,71,0.6)" }} />}
+                  <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.2s var(--spring)", transform: active ? "scale(1.1)" : "scale(1)" }}>
+                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?"var(--yellow)":"#555" }}>{t.icon}</span>}
+                    {t.badge && !active && <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--green)", border: "1.5px solid #0a0a0a", animation: "pulse 2s ease infinite" }} />}
+                  </div>
+                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? "var(--yellow)" : "#555", letterSpacing: "0.02em", transition: "all 0.2s" }}>{t.label}</span>
+                </button>
+              );
+            });
+          })()}
         </div>
       </div>
     </div>
