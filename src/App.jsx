@@ -2350,6 +2350,407 @@ function WeeklySummaryCard({ profile }) {
 }
 
 // ============================================================
+// EXTRACTED IIFE HOOK COMPONENTS (fix React error #311)
+// ============================================================
+
+function Hyrox101Card({ profile, navigateTo }) {
+  const [showHyrox101, setShowHyrox101] = React.useState(() => {
+    try { return !localStorage.getItem("fitrace_hyrox101_done"); } catch { return true; }
+  });
+  if (!showHyrox101) return null;
+  const STATIONS = [
+    { icon: "⛷️", name: "SkiErg", dist: "1000m" },
+    { icon: "🛷", name: "Sled Push", dist: "50m" },
+    { icon: "🔗", name: "Sled Pull", dist: "50m" },
+    { icon: "💥", name: "Burpee Jump", dist: "80m" },
+    { icon: "🚣", name: "Rowing", dist: "1000m" },
+    { icon: "🧳", name: "Farmers Carry", dist: "200m" },
+    { icon: "🎒", name: "Sandbag Lunges", dist: "100m" },
+    { icon: "🏐", name: "Wall Balls", dist: "75/100 reps" },
+  ];
+  return (
+    <div style={{ background: "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(8,8,8,0) 80%)", border: "1.5px solid rgba(56,189,248,0.25)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 9, color: "#38bdf8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>🏁 HYROX — C'est quoi ?</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>1 km de run + 1 station × 8</div>
+        </div>
+        <button onClick={() => { localStorage.setItem("fitrace_hyrox101_done","1"); setShowHyrox101(false); }}
+          style={{ background: "none", border: "none", color: "#333", fontSize: 18, cursor: "pointer", padding: 4 }}>×</button>
+      </div>
+      <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7, marginBottom: 12 }}>
+        HYROX = <strong style={{ color: "#38bdf8" }}>8 km de running total</strong> entrecoupés de <strong style={{ color: "#38bdf8" }}>8 stations fonctionnelles</strong>. Pas de technique d'haltérophilie complexe — juste de l'endurance, de la force, et de la régularité.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+        {STATIONS.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>{s.icon}</span>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#ccc" }}>{s.name}</div>
+              <div style={{ fontSize: 8, color: "#555" }}>{s.dist}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => { navigateTo("technique"); }}
+        style={{ width: "100%", padding: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#38bdf8", cursor: "pointer" }}>
+        📚 Voir la technique station par station →
+      </button>
+    </div>
+  );
+}
+
+function SessionHistoryCard({ profile, haptic, navigateTo }) {
+  const TYPE_CONF = {
+    running_zone2: { icon: "🏃", color: "var(--green)", bg: "rgba(57,255,128,0.08)", border: "rgba(57,255,128,0.2)", label: "Zone 2" },
+    force_stations: { icon: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.2)", label: "Force" },
+    running_qualite: { icon: "⚡", color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.2)", label: "Qualité" },
+    hybride_compromis: { icon: "🔀", color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)", label: "Hybride" },
+  };
+  const sessions = (profile.sessions || []).slice(-5).reverse();
+  const [selectedSession, setSelectedSession] = React.useState(null);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      {selectedSession && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 500, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setSelectedSession(null)}>
+          <div className="slide-up" onClick={e => e.stopPropagation()}
+            style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(255,255,255,0.08)", maxHeight: "75vh", overflowY: "auto" }}>
+            <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
+            {(() => {
+              const s = selectedSession;
+              const conf = TYPE_CONF[s.type] || { icon: "💪", color: "var(--yellow)", label: "Séance" };
+              const rpe = s.difficulte || 5;
+              const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
+              return (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <span style={{ fontSize: 28 }}>{conf.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 10, color: conf.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{conf.label}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--white)" }}>{s.titre}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                    <div style={{ background: `${rpeColor}10`, border: `1px solid ${rpeColor}25`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                      <div className="bebas" style={{ fontSize: 22, color: rpeColor }}>{rpe}/10</div>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>RPE</div>
+                    </div>
+                    {s.energie && <div style={{ background: "rgba(255,154,60,0.08)", border: "1px solid rgba(255,154,60,0.2)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                      <div className="bebas" style={{ fontSize: 22, color: "var(--orange)" }}>{s.energie}/5</div>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Énergie</div>
+                    </div>}
+                    {s.tempsReel && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{s.tempsReel}</div>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Durée</div>
+                    </div>}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
+                    📅 {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                  </div>
+                  {s.charges && <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{s.charges}</div>}
+                  {s.douleurs && s.douleurs !== "Aucune douleur" && (
+                    <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--red)" }}>⚠️ {s.douleurs}</div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Dernières séances</div>
+        <button onClick={() => navigateTo("progress")} style={{ background: "none", border: "none", fontSize: 10, color: "#444", cursor: "pointer", fontWeight: 700, padding: "2px 0" }}>Voir tout →</button>
+      </div>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+        {sessions.map((s, i) => {
+          const conf = TYPE_CONF[s.type] || { icon: "🏋️", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.15)", label: "Séance" };
+          const rpe = s.difficulte || 5;
+          const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
+          const rpePct = rpe / 10;
+          return (
+            <div key={i} onClick={() => { setSelectedSession(s); haptic([6]); }} style={{ flexShrink: 0, width: 140, background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 16, padding: "14px 12px", position: "relative", overflow: "hidden", cursor: "pointer", transition: "transform 0.15s var(--spring)", active: "scale(0.95)" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: conf.color, borderRadius: "16px 16px 0 0", opacity: 0.7 }} />
+              <div style={{ fontSize: 26, marginBottom: 6, marginTop: 4 }}>{conf.icon}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
+              <div style={{ fontSize: 9, color: "#444", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+              <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
+                <div style={{ height: "100%", width: `${rpePct * 100}%`, background: rpeColor, borderRadius: 99 }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 9, background: `${conf.color}20`, color: conf.color, borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>{conf.label}</span>
+                <span className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 8, color: "#333" }}>/10</span></span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PourquoiCard({ session }) {
+  const [open, setOpen] = React.useState(false);
+  const POURQUOI = {
+    running_zone2: { title: "Cardio Zone 2 — La base de tout", body: "La Zone 2, c'est courir à un rythme où tu peux parler normalement. C'est ennuyeux ? Oui. Mais c'est la fondation de toute progression HYROX. Tu développes ton moteur aérobie — ce qui te permet de tenir les 8 km de running en course. Les champions du monde font 80% de leur entraînement en Zone 2." },
+    force_stations: { title: "Force & Stations — La puissance", body: "Les 8 stations HYROX exigent force, technique et résistance musculaire. Cette séance simule ces contraintes : charges lourdes, reps élevées, récupération incomplète. Plus tu maîtrises les stations, plus tu gagnes du temps en course." },
+    running_qualite: { title: "Running qualité — La vitesse", body: "Ici on travaille au-dessus de ta vitesse de course cible. Ces intervalles intenses rendent ton allure de course \"facile\" par comparaison. 1 à 2 séances qualité/semaine suffisent — le reste doit être en Zone 2." },
+    hybride_compromis: { title: "Séance hybride — La vraie simulation", body: "C'est le format HYROX : tu enchaînes running ET stations sans pause. C'est difficile parce que les jambes fatiguées en running impactent les stations. Entraîne ton cerveau ET tes muscles à changer de mode rapidement." },
+    coach: { title: "Séance coach personnalisée", body: "Ton coach IA a analysé ton historique, ta fatigue, et ton niveau pour créer cette séance sur mesure. Fais confiance au programme — chaque séance prépare la suivante." },
+  };
+  const info = POURQUOI[session.type] || POURQUOI.coach;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#333", fontSize: 11, cursor: "pointer", padding: "4px 0", fontFamily: "inherit" }}>
+        <span style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>▶</span>
+        <span style={{ color: "#555", fontWeight: 600 }}>🎓 Pourquoi cette séance ?</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 6, padding: "10px 12px", background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--yellow)", marginBottom: 5 }}>{info.title}</div>
+          <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7 }}>{info.body}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WarmupWidget({ session }) {
+  const WARMUPS = {
+    running_zone2: [
+      { icon: "🚶", label: "Marche active", duration: "3 min", desc: "Posture droite, bras actifs" },
+      { icon: "🔄", label: "Rotations hanches", duration: "30 s", desc: "Cercles lents × 10 chaque sens" },
+      { icon: "🦵", label: "High knees légers", duration: "45 s", desc: "Genoux montants, rythme facile" },
+      { icon: "🏃", label: "Foulées progressives", duration: "2 min", desc: "70% → 80% allure zone 2" },
+    ],
+    force_stations: [
+      { icon: "🔄", label: "Mobilité épaules", duration: "1 min", desc: "Rotations bras + cercles poignets" },
+      { icon: "🦵", label: "Squat léger", duration: "45 s", desc: "15 reps poids du corps, lent" },
+      { icon: "🏋️", label: "Activation fessiers", duration: "45 s", desc: "Clamshells ou glute bridge × 15" },
+      { icon: "💪", label: "Bandes élastiques", duration: "1 min", desc: "Pull-apart × 15, face pull × 15" },
+    ],
+    running_qualite: [
+      { icon: "🚶", label: "Jogging léger", duration: "5 min", desc: "Très facile, zone 1, muscles qui chauffent" },
+      { icon: "⚡", label: "Strides ×4", duration: "2 min", desc: "Accélérations sur 80m, récup. marche" },
+      { icon: "🦵", label: "Skipping", duration: "30 s", desc: "Montées de genoux rapides, sur place" },
+      { icon: "🔥", label: "Activation neuro", duration: "30 s", desc: "2-3 accélérations courtes à allure cible" },
+    ],
+    hybride_compromis: [
+      { icon: "🚶", label: "Marche + swings bras", duration: "2 min", desc: "Déverrouiller les épaules" },
+      { icon: "🦵", label: "Lunge marchés", duration: "45 s", desc: "20 reps alternés, amplitude totale" },
+      { icon: "🏃", label: "Jogging 2 min", duration: "2 min", desc: "Zone 1, facile" },
+      { icon: "💪", label: "Push-ups lents", duration: "30 s", desc: "10 reps contrôlés, activation chest" },
+    ],
+  };
+  const steps = WARMUPS[session.type] || WARMUPS.running_zone2;
+  const [warmupOpen, setWarmupOpen] = React.useState(false);
+  const [warmupDone, setWarmupDone] = React.useState({});
+  const doneCount = Object.values(warmupDone).filter(Boolean).length;
+  const allDone = doneCount === steps.length;
+  return (
+    <div style={{ background: allDone ? "rgba(57,255,128,0.04)" : "rgba(167,139,250,0.04)", border: `1px solid ${allDone ? "rgba(57,255,128,0.2)" : "rgba(167,139,250,0.15)"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
+      <div onClick={() => setWarmupOpen(o => !o)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+        <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🔥"}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--purple)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Échauffement · {steps.length} étapes
+          </div>
+          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden", width: "100%" }}>
+            <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: allDone ? "var(--green)" : "var(--purple)", borderRadius: 99, transition: "width 0.3s" }} />
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
+        <div style={{ color: "#333", fontSize: 14, transform: warmupOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+      </div>
+      {warmupOpen && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
+          {steps.map((step, i) => {
+            const done = warmupDone[i];
+            return (
+              <div key={i} onClick={() => setWarmupDone(d => ({ ...d, [i]: !d[i] }))}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 10, cursor: "pointer", background: done ? "rgba(57,255,128,0.04)" : "transparent", marginBottom: 4, transition: "background 0.2s" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(167,139,250,0.12)", border: done ? "none" : "2px solid rgba(167,139,250,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: done ? 13 : 16, color: done ? "#000" : "var(--purple)", transition: "all 0.25s" }}>{done ? "✓" : step.icon}</div>
+                <div style={{ flex: 1, opacity: done ? 0.5 : 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", textDecoration: done ? "line-through" : "none" }}>{step.label} <span style={{ fontSize: 10, color: "var(--purple)", fontWeight: 400 }}>· {step.duration}</span></div>
+                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{step.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+          {allDone && <div style={{ textAlign: "center", fontSize: 13, color: "var(--green)", fontWeight: 700, padding: "8px 0 4px" }}>🎯 Parfait ! Tu es prêt pour ta séance.</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CooldownWidget({ session }) {
+  const COOLDOWNS = {
+    running_zone2: [
+      { icon: "🚶", label: "Marche 3 min", duration: "3 min", desc: "Baisse progressive du rythme cardiaque" },
+      { icon: "🦵", label: "Étirement quadriceps", duration: "45 s", desc: "Debout, genou plié, talon vers fesse × 2" },
+      { icon: "🦵", label: "Étirement ischio", duration: "45 s", desc: "Jambe tendue au sol, penche le buste × 2" },
+      { icon: "💆", label: "Respiration profonde", duration: "1 min", desc: "4 temps inspire, 6 temps expire × 5" },
+    ],
+    force_stations: [
+      { icon: "💆", label: "Rouleau mousse dos", duration: "1 min", desc: "T4 à T12, 30s par zone douloureuse" },
+      { icon: "🦵", label: "Fentes + étirement hip", duration: "1 min", desc: "Lunge bas, bras opposé vers le ciel × 2" },
+      { icon: "💪", label: "Étirement pectoraux", duration: "30 s", desc: "Bras en croix contre un mur, rotation tronc" },
+      { icon: "🧘", label: "Child pose", duration: "1 min", desc: "Assis sur les talons, bras tendus devant, front au sol" },
+    ],
+    running_qualite: [
+      { icon: "🚶", label: "Trot très léger", duration: "3 min", desc: "Retour progressif, fréquence cardiaque descend" },
+      { icon: "🦵", label: "Pigeon pose", duration: "1 min", desc: "Ouverture de hanche au sol × 2 côtés" },
+      { icon: "🦵", label: "Mollets au mur", duration: "45 s", desc: "Pied au mur, genou tendu puis plié × 2" },
+      { icon: "💆", label: "Relaxation allongé", duration: "2 min", desc: "Jambes surélevées contre un mur, respiration ample" },
+    ],
+    hybride_compromis: [
+      { icon: "🚶", label: "Marche 2 min", duration: "2 min", desc: "Récupération active, bras décontractés" },
+      { icon: "💆", label: "Rouleau mollets", duration: "45 s", desc: "10 roulages lents, pause sur zones tendues" },
+      { icon: "🦵", label: "Étirement complet jambes", duration: "1 min", desc: "Quadri + ischio + fesse × chaque côté" },
+      { icon: "💪", label: "Étirement dos + épaules", duration: "45 s", desc: "Bras croisé devant la poitrine, chin to chest" },
+    ],
+  };
+  const steps = COOLDOWNS[session.type] || COOLDOWNS.running_zone2;
+  const [cdOpen, setCdOpen] = React.useState(false);
+  const [cdDone, setCdDone] = React.useState({});
+  const doneCount = Object.values(cdDone).filter(Boolean).length;
+  const allDone = doneCount === steps.length;
+  return (
+    <div style={{ background: allDone ? "rgba(57,255,128,0.03)" : "rgba(57,255,128,0.03)", border: `1px solid ${allDone ? "rgba(57,255,128,0.2)" : "rgba(57,255,128,0.1)"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
+      <div onClick={() => setCdOpen(o => !o)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+        <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🧘"}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Retour au calme · {steps.length} étapes</div>
+          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.3s" }} />
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
+        <div style={{ color: "#333", fontSize: 14, transform: cdOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
+      </div>
+      {cdOpen && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
+          {steps.map((step, i) => {
+            const done = cdDone[i];
+            return (
+              <div key={i} onClick={() => setCdDone(d => ({ ...d, [i]: !d[i] }))}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 10, cursor: "pointer", background: done ? "rgba(57,255,128,0.04)" : "transparent", marginBottom: 4, transition: "background 0.2s" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(57,255,128,0.1)", border: done ? "none" : "2px solid rgba(57,255,128,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: done ? 13 : 16, color: done ? "#000" : "var(--green)", transition: "all 0.25s" }}>{done ? "✓" : step.icon}</div>
+                <div style={{ flex: 1, opacity: done ? 0.5 : 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", textDecoration: done ? "line-through" : "none" }}>{step.label} <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 400 }}>· {step.duration}</span></div>
+                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{step.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+          {allDone && <div style={{ textAlign: "center", fontSize: 13, color: "var(--green)", fontWeight: 700, padding: "8px 0 4px" }}>💚 Excellent ! Récupération complète.</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaceCalcWidget({ profile }) {
+  const [targetH, setTargetH] = React.useState("1");
+  const [targetM, setTargetM] = React.useState("00");
+  const totalMins = parseInt(targetH||0)*60 + parseInt(targetM||0);
+  const estStationsMins = 22;
+  const runMins = Math.max(1, totalMins - estStationsMins);
+  const runKm = 8;
+  const paceSecKm = Math.round((runMins * 60) / runKm);
+  const paceMin = Math.floor(paceSecKm / 60);
+  const paceSec = paceSecKm % 60;
+  const paceStr = totalMins > 0 ? `${paceMin}:${String(paceSec).padStart(2,"0")}/km` : "—";
+  const stationTimeEach = Math.round((estStationsMins * 60) / 8);
+  const stationMin = Math.floor(stationTimeEach / 60);
+  const stationSec = stationTimeEach % 60;
+  return (
+    <div style={{ marginTop: 16, background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "16px" }}>
+      <div className="bebas" style={{ fontSize: 18, color: "var(--green)", marginBottom: 12 }}>🎯 CALCULATEUR PACE HYROX</div>
+      <div style={{ fontSize: 11, color: "#444", marginBottom: 10 }}>Ton objectif de temps total :</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+        <select value={targetH} onChange={e => setTargetH(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
+          {["1","2","3","4","5"].map(h => <option key={h} value={h}>{h}h</option>)}
+        </select>
+        <span style={{ color: "#555", fontWeight: 700 }}>:</span>
+        <select value={targetM} onChange={e => setTargetM(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
+          {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => <option key={m} value={m}>{m}min</option>)}
+        </select>
+      </div>
+      {totalMins > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ background: "rgba(57,255,128,0.08)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", marginBottom: 4 }}>Allure running</div>
+            <div className="bebas" style={{ fontSize: 26, color: "var(--green)", lineHeight: 1 }}>{paceStr}</div>
+            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>8 × 1km entre stations</div>
+          </div>
+          <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.18)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", marginBottom: 4 }}>Temps par station</div>
+            <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{stationMin}:{String(stationSec).padStart(2,"0")}</div>
+            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>moy. ~{estStationsMins}min total</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, haptic, profile }) {
+  const [ql, setQl] = React.useState({ water: dailyData.hydration, weight: dailyData.poidsJour, hrv: dailyData.hrv });
+  const save = async () => {
+    haptic([10,30,10]);
+    setDailyData(d => ({ ...d, hydration: ql.water, poidsJour: ql.weight, hrv: ql.hrv }));
+    setShowQuickLog(false);
+    showToast("✅ Données enregistrées", "success", 2000);
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 97, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }} onClick={() => setShowQuickLog(false)} />
+      <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "20px 20px calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>⚡ Log rapide</div>
+          <div style={{ fontSize: 10, color: "#444" }}>Enregistrement auto</div>
+        </div>
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>💧 Eau</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: ql.water >= 8 ? "var(--green)" : "var(--yellow)" }}>{ql.water}/8 verres</span>
+          </div>
+          <div style={{ display: "flex", gap: 5 }}>
+            {Array.from({ length: 8 }, (_, i) => (
+              <button key={i} onClick={() => { haptic([5]); setQl(q => ({ ...q, water: i < q.water ? i : i + 1 })); }}
+                style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${i < ql.water ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.08)"}`, background: i < ql.water ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.03)", cursor: "pointer", fontSize: 12 }}>
+                {i < ql.water ? "💧" : "○"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>⚖️ Poids (kg)</div>
+            <input type="number" step="0.1" min="40" max="150" value={ql.weight} onChange={e => setQl(q => ({ ...q, weight: e.target.value }))}
+              placeholder={`${profile.poids||75}`}
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>💓 HRV (ms)</div>
+            <input type="number" min="20" max="120" step="1" value={ql.hrv} onChange={e => setQl(q => ({ ...q, hrv: e.target.value }))}
+              placeholder="Ex: 65"
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
+          </div>
+        </div>
+        <button onClick={save}
+          style={{ width: "100%", padding: "15px", borderRadius: 16, border: "none", background: "linear-gradient(135deg, var(--yellow), #b8cc38)", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+          ✅ Enregistrer
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // APP ATHLÈTE
 // ============================================================
 function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
@@ -3816,52 +4217,7 @@ JSON:
             })()}
 
             {/* ── HYROX 101 BEGINNER CARD (shows for new users) ── */}
-            {(profile.sessions||[]).length < 3 && (() => {
-              const [showHyrox101, setShowHyrox101] = React.useState(() => {
-                try { return !localStorage.getItem("fitrace_hyrox101_done"); } catch { return true; }
-              });
-              if (!showHyrox101) return null;
-              const STATIONS = [
-                { icon: "⛷️", name: "SkiErg", dist: "1000m" },
-                { icon: "🛷", name: "Sled Push", dist: "50m" },
-                { icon: "🔗", name: "Sled Pull", dist: "50m" },
-                { icon: "💥", name: "Burpee Jump", dist: "80m" },
-                { icon: "🚣", name: "Rowing", dist: "1000m" },
-                { icon: "🧳", name: "Farmers Carry", dist: "200m" },
-                { icon: "🎒", name: "Sandbag Lunges", dist: "100m" },
-                { icon: "🏐", name: "Wall Balls", dist: "75/100 reps" },
-              ];
-              return (
-                <div style={{ background: "linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(8,8,8,0) 80%)", border: "1.5px solid rgba(56,189,248,0.25)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 9, color: "#38bdf8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>🏁 HYROX — C'est quoi ?</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>1 km de run + 1 station × 8</div>
-                    </div>
-                    <button onClick={() => { localStorage.setItem("fitrace_hyrox101_done","1"); setShowHyrox101(false); }}
-                      style={{ background: "none", border: "none", color: "#333", fontSize: 18, cursor: "pointer", padding: 4 }}>×</button>
-                  </div>
-                  <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7, marginBottom: 12 }}>
-                    HYROX = <strong style={{ color: "#38bdf8" }}>8 km de running total</strong> entrecoupés de <strong style={{ color: "#38bdf8" }}>8 stations fonctionnelles</strong>. Pas de technique d'haltérophilie complexe — juste de l'endurance, de la force, et de la régularité.
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
-                    {STATIONS.map((s, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
-                        <span style={{ fontSize: 14, flexShrink: 0 }}>{s.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#ccc" }}>{s.name}</div>
-                          <div style={{ fontSize: 8, color: "#555" }}>{s.dist}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={() => { navigateTo("technique"); }}
-                    style={{ width: "100%", padding: "10px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#38bdf8", cursor: "pointer" }}>
-                    📚 Voir la technique station par station →
-                  </button>
-                </div>
-              );
-            })()}
+            {(profile.sessions||[]).length < 3 && <Hyrox101Card profile={profile} navigateTo={navigateTo} />}
 
             {/* ══════════════════════════════════════════
                 COMMAND CENTER — PRO ATHLETE DASHBOARD
@@ -4644,97 +5000,7 @@ JSON:
             {buildWeeklySummary(profile).count > 0 && <WeeklySummaryCard profile={profile} />}
 
             {/* Historique — scroll horizontal */}
-            {(profile.sessions || []).length > 0 && (() => {
-              const TYPE_CONF = {
-                running_zone2: { icon: "🏃", color: "var(--green)", bg: "rgba(57,255,128,0.08)", border: "rgba(57,255,128,0.2)", label: "Zone 2" },
-                force_stations: { icon: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.2)", label: "Force" },
-                running_qualite: { icon: "⚡", color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.2)", label: "Qualité" },
-                hybride_compromis: { icon: "🔀", color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)", label: "Hybride" },
-              };
-              const sessions = (profile.sessions || []).slice(-5).reverse();
-              const [selectedSession, setSelectedSession] = React.useState(null);
-              return (
-                <div style={{ marginBottom: 12 }}>
-                  {/* Session detail modal */}
-                  {selectedSession && (
-                    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 500, display: "flex", alignItems: "flex-end" }}
-                      onClick={() => setSelectedSession(null)}>
-                      <div className="slide-up" onClick={e => e.stopPropagation()}
-                        style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(255,255,255,0.08)", maxHeight: "75vh", overflowY: "auto" }}>
-                        <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
-                        {(() => {
-                          const s = selectedSession;
-                          const conf = TYPE_CONF[s.type] || { icon: "💪", color: "var(--yellow)", label: "Séance" };
-                          const rpe = s.difficulte || 5;
-                          const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
-                          return (
-                            <>
-                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                                <span style={{ fontSize: 28 }}>{conf.icon}</span>
-                                <div>
-                                  <div style={{ fontSize: 10, color: conf.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{conf.label}</div>
-                                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--white)" }}>{s.titre}</div>
-                                </div>
-                              </div>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
-                                <div style={{ background: `${rpeColor}10`, border: `1px solid ${rpeColor}25`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
-                                  <div className="bebas" style={{ fontSize: 22, color: rpeColor }}>{rpe}/10</div>
-                                  <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>RPE</div>
-                                </div>
-                                {s.energie && <div style={{ background: "rgba(255,154,60,0.08)", border: "1px solid rgba(255,154,60,0.2)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
-                                  <div className="bebas" style={{ fontSize: 22, color: "var(--orange)" }}>{s.energie}/5</div>
-                                  <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Énergie</div>
-                                </div>}
-                                {s.tempsReel && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
-                                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{s.tempsReel}</div>
-                                  <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase" }}>Durée</div>
-                                </div>}
-                              </div>
-                              <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
-                                📅 {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-                              </div>
-                              {s.charges && <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{s.charges}</div>}
-                              {s.douleurs && s.douleurs !== "Aucune douleur" && (
-                                <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--red)" }}>⚠️ {s.douleurs}</div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Dernières séances</div>
-                    <button onClick={() => navigateTo("progress")} style={{ background: "none", border: "none", fontSize: 10, color: "#444", cursor: "pointer", fontWeight: 700, padding: "2px 0" }}>Voir tout →</button>
-                  </div>
-                  <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
-                    {sessions.map((s, i) => {
-                      const conf = TYPE_CONF[s.type] || { icon: "🏋️", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.15)", label: "Séance" };
-                      const rpe = s.difficulte || 5;
-                      const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
-                      const rpePct = rpe / 10;
-                      return (
-                        <div key={i} onClick={() => { setSelectedSession(s); haptic([6]); }} style={{ flexShrink: 0, width: 140, background: conf.bg, border: `1.5px solid ${conf.border}`, borderRadius: 16, padding: "14px 12px", position: "relative", overflow: "hidden", cursor: "pointer", transition: "transform 0.15s var(--spring)", active: "scale(0.95)" }}>
-                          {/* type stripe */}
-                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: conf.color, borderRadius: "16px 16px 0 0", opacity: 0.7 }} />
-                          <div style={{ fontSize: 26, marginBottom: 6, marginTop: 4 }}>{conf.icon}</div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
-                          <div style={{ fontSize: 9, color: "#444", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
-                          {/* Mini RPE bar */}
-                          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
-                            <div style={{ height: "100%", width: `${rpePct * 100}%`, background: rpeColor, borderRadius: 99 }} />
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 9, background: `${conf.color}20`, color: conf.color, borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>{conf.label}</span>
-                            <span className="bebas" style={{ fontSize: 18, color: rpeColor, lineHeight: 1 }}>{rpe}<span style={{ fontSize: 8, color: "#333" }}>/10</span></span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
+            {(profile.sessions || []).length > 0 && <SessionHistoryCard profile={profile} haptic={haptic} navigateTo={navigateTo} />}
 
             {/* ── TIP DU JOUR HYROX ── */}
             {(() => {
@@ -5366,32 +5632,7 @@ JSON:
                       {/* Explication */}
                       <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6, marginBottom: 10 }}>{session.explication}</div>
                       {/* Pourquoi cette séance ? — beginner guide */}
-                      {(()=>{
-                        const [open, setOpen] = React.useState(false);
-                        const POURQUOI = {
-                          running_zone2: { title: "Cardio Zone 2 — La base de tout", body: "La Zone 2, c'est courir à un rythme où tu peux parler normalement. C'est ennuyeux ? Oui. Mais c'est la fondation de toute progression HYROX. Tu développes ton moteur aérobie — ce qui te permet de tenir les 8 km de running en course. Les champions du monde font 80% de leur entraînement en Zone 2." },
-                          force_stations: { title: "Force & Stations — La puissance", body: "Les 8 stations HYROX exigent force, technique et résistance musculaire. Cette séance simule ces contraintes : charges lourdes, reps élevées, récupération incomplète. Plus tu maîtrises les stations, plus tu gagnes du temps en course." },
-                          running_qualite: { title: "Running qualité — La vitesse", body: "Ici on travaille au-dessus de ta vitesse de course cible. Ces intervalles intenses rendent ton allure de course \"facile\" par comparaison. 1 à 2 séances qualité/semaine suffisent — le reste doit être en Zone 2." },
-                          hybride_compromis: { title: "Séance hybride — La vraie simulation", body: "C'est le format HYROX : tu enchaînes running ET stations sans pause. C'est difficile parce que les jambes fatiguées en running impactent les stations. Entraîne ton cerveau ET tes muscles à changer de mode rapidement." },
-                          coach: { title: "Séance coach personnalisée", body: "Ton coach IA a analysé ton historique, ta fatigue, et ton niveau pour créer cette séance sur mesure. Fais confiance au programme — chaque séance prépare la suivante." },
-                        };
-                        const info = POURQUOI[session.type] || POURQUOI.coach;
-                        return (
-                          <div style={{ marginBottom: 14 }}>
-                            <button onClick={() => setOpen(o => !o)}
-                              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#333", fontSize: 11, cursor: "pointer", padding: "4px 0", fontFamily: "inherit" }}>
-                              <span style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "inline-block" }}>▶</span>
-                              <span style={{ color: "#555", fontWeight: 600 }}>🎓 Pourquoi cette séance ?</span>
-                            </button>
-                            {open && (
-                              <div style={{ marginTop: 6, padding: "10px 12px", background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 10 }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--yellow)", marginBottom: 5 }}>{info.title}</div>
-                                <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7 }}>{info.body}</div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                      <PourquoiCard session={session} />
                       {/* Progress ring inline */}
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{ flex: 1 }}>
@@ -5410,77 +5651,7 @@ JSON:
                 })()}
 
                 {/* Échauffement interactif */}
-                {(() => {
-                  const WARMUPS = {
-                    running_zone2: [
-                      { icon: "🚶", label: "Marche active", duration: "3 min", desc: "Posture droite, bras actifs" },
-                      { icon: "🔄", label: "Rotations hanches", duration: "30 s", desc: "Cercles lents × 10 chaque sens" },
-                      { icon: "🦵", label: "High knees légers", duration: "45 s", desc: "Genoux montants, rythme facile" },
-                      { icon: "🏃", label: "Foulées progressives", duration: "2 min", desc: "70% → 80% allure zone 2" },
-                    ],
-                    force_stations: [
-                      { icon: "🔄", label: "Mobilité épaules", duration: "1 min", desc: "Rotations bras + cercles poignets" },
-                      { icon: "🦵", label: "Squat léger", duration: "45 s", desc: "15 reps poids du corps, lent" },
-                      { icon: "🏋️", label: "Activation fessiers", duration: "45 s", desc: "Clamshells ou glute bridge × 15" },
-                      { icon: "💪", label: "Bandes élastiques", duration: "1 min", desc: "Pull-apart × 15, face pull × 15" },
-                    ],
-                    running_qualite: [
-                      { icon: "🚶", label: "Jogging léger", duration: "5 min", desc: "Très facile, zone 1, muscles qui chauffent" },
-                      { icon: "⚡", label: "Strides ×4", duration: "2 min", desc: "Accélérations sur 80m, récup. marche" },
-                      { icon: "🦵", label: "Skipping", duration: "30 s", desc: "Montées de genoux rapides, sur place" },
-                      { icon: "🔥", label: "Activation neuro", duration: "30 s", desc: "2-3 accélérations courtes à allure cible" },
-                    ],
-                    hybride_compromis: [
-                      { icon: "🚶", label: "Marche + swings bras", duration: "2 min", desc: "Déverrouiller les épaules" },
-                      { icon: "🦵", label: "Lunge marchés", duration: "45 s", desc: "20 reps alternés, amplitude totale" },
-                      { icon: "🏃", label: "Jogging 2 min", duration: "2 min", desc: "Zone 1, facile" },
-                      { icon: "💪", label: "Push-ups lents", duration: "30 s", desc: "10 reps contrôlés, activation chest" },
-                    ],
-                  };
-                  const steps = WARMUPS[session.type] || WARMUPS.running_zone2;
-                  const [warmupOpen, setWarmupOpen] = React.useState(false);
-                  const [warmupDone, setWarmupDone] = React.useState({});
-                  const doneCount = Object.values(warmupDone).filter(Boolean).length;
-                  const allDone = doneCount === steps.length;
-                  return (
-                    <div style={{ background: allDone ? "rgba(57,255,128,0.04)" : "rgba(167,139,250,0.04)", border: `1px solid ${allDone ? "rgba(57,255,128,0.2)" : "rgba(167,139,250,0.15)"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
-                      {/* Header */}
-                      <div onClick={() => setWarmupOpen(o => !o)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                        <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🔥"}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--purple)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                            Échauffement · {steps.length} étapes
-                          </div>
-                          {/* Mini progress bar */}
-                          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden", width: "100%" }}>
-                            <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: allDone ? "var(--green)" : "var(--purple)", borderRadius: 99, transition: "width 0.3s" }} />
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
-                        <div style={{ color: "#333", fontSize: 14, transform: warmupOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
-                      </div>
-                      {/* Steps */}
-                      {warmupOpen && (
-                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
-                          {steps.map((step, i) => {
-                            const done = warmupDone[i];
-                            return (
-                              <div key={i} onClick={() => setWarmupDone(d => ({ ...d, [i]: !d[i] }))}
-                                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 10, cursor: "pointer", background: done ? "rgba(57,255,128,0.04)" : "transparent", marginBottom: 4, transition: "background 0.2s" }}>
-                                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(167,139,250,0.12)", border: done ? "none" : "2px solid rgba(167,139,250,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: done ? 13 : 16, color: done ? "#000" : "var(--purple)", transition: "all 0.25s" }}>{done ? "✓" : step.icon}</div>
-                                <div style={{ flex: 1, opacity: done ? 0.5 : 1 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", textDecoration: done ? "line-through" : "none" }}>{step.label} <span style={{ fontSize: 10, color: "var(--purple)", fontWeight: 400 }}>· {step.duration}</span></div>
-                                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{step.desc}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {allDone && <div style={{ textAlign: "center", fontSize: 13, color: "var(--green)", fontWeight: 700, padding: "8px 0 4px" }}>🎯 Parfait ! Tu es prêt pour ta séance.</div>}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <WarmupWidget session={session} />
 
                 {/* Programme */}
                 <div style={{ marginBottom: 10 }}>
@@ -5559,72 +5730,7 @@ JSON:
 
                 {/* Retour au calme + Nutrition */}
                 {/* Retour au calme interactif */}
-                {(() => {
-                  const COOLDOWNS = {
-                    running_zone2: [
-                      { icon: "🚶", label: "Marche 3 min", duration: "3 min", desc: "Baisse progressive du rythme cardiaque" },
-                      { icon: "🦵", label: "Étirement quadriceps", duration: "45 s", desc: "Debout, genou plié, talon vers fesse × 2" },
-                      { icon: "🦵", label: "Étirement ischio", duration: "45 s", desc: "Jambe tendue au sol, penche le buste × 2" },
-                      { icon: "💆", label: "Respiration profonde", duration: "1 min", desc: "4 temps inspire, 6 temps expire × 5" },
-                    ],
-                    force_stations: [
-                      { icon: "💆", label: "Rouleau mousse dos", duration: "1 min", desc: "T4 à T12, 30s par zone douloureuse" },
-                      { icon: "🦵", label: "Fentes + étirement hip", duration: "1 min", desc: "Lunge bas, bras opposé vers le ciel × 2" },
-                      { icon: "💪", label: "Étirement pectoraux", duration: "30 s", desc: "Bras en croix contre un mur, rotation tronc" },
-                      { icon: "🧘", label: "Child pose", duration: "1 min", desc: "Assis sur les talons, bras tendus devant, front au sol" },
-                    ],
-                    running_qualite: [
-                      { icon: "🚶", label: "Trot très léger", duration: "3 min", desc: "Retour progressif, fréquence cardiaque descend" },
-                      { icon: "🦵", label: "Pigeon pose", duration: "1 min", desc: "Ouverture de hanche au sol × 2 côtés" },
-                      { icon: "🦵", label: "Mollets au mur", duration: "45 s", desc: "Pied au mur, genou tendu puis plié × 2" },
-                      { icon: "💆", label: "Relaxation allongé", duration: "2 min", desc: "Jambes surélevées contre un mur, respiration ample" },
-                    ],
-                    hybride_compromis: [
-                      { icon: "🚶", label: "Marche 2 min", duration: "2 min", desc: "Récupération active, bras décontractés" },
-                      { icon: "💆", label: "Rouleau mollets", duration: "45 s", desc: "10 roulages lents, pause sur zones tendues" },
-                      { icon: "🦵", label: "Étirement complet jambes", duration: "1 min", desc: "Quadri + ischio + fesse × chaque côté" },
-                      { icon: "💪", label: "Étirement dos + épaules", duration: "45 s", desc: "Bras croisé devant la poitrine, chin to chest" },
-                    ],
-                  };
-                  const steps = COOLDOWNS[session.type] || COOLDOWNS.running_zone2;
-                  const [cdOpen, setCdOpen] = React.useState(false);
-                  const [cdDone, setCdDone] = React.useState({});
-                  const doneCount = Object.values(cdDone).filter(Boolean).length;
-                  const allDone = doneCount === steps.length;
-                  return (
-                    <div style={{ background: allDone ? "rgba(57,255,128,0.03)" : "rgba(57,255,128,0.03)", border: `1px solid ${allDone ? "rgba(57,255,128,0.2)" : "rgba(57,255,128,0.1)"}`, borderRadius: 14, marginBottom: 10, overflow: "hidden" }}>
-                      <div onClick={() => setCdOpen(o => !o)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                        <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🧘"}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Retour au calme · {steps.length} étapes</div>
-                          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.3s" }} />
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 12, color: allDone ? "var(--green)" : "#555", fontWeight: 700 }}>{doneCount}/{steps.length}</div>
-                        <div style={{ color: "#333", fontSize: 14, transform: cdOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
-                      </div>
-                      {cdOpen && (
-                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
-                          {steps.map((step, i) => {
-                            const done = cdDone[i];
-                            return (
-                              <div key={i} onClick={() => setCdDone(d => ({ ...d, [i]: !d[i] }))}
-                                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 10, cursor: "pointer", background: done ? "rgba(57,255,128,0.04)" : "transparent", marginBottom: 4, transition: "background 0.2s" }}>
-                                <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0, background: done ? "var(--green)" : "rgba(57,255,128,0.1)", border: done ? "none" : "2px solid rgba(57,255,128,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: done ? 13 : 16, color: done ? "#000" : "var(--green)", transition: "all 0.25s" }}>{done ? "✓" : step.icon}</div>
-                                <div style={{ flex: 1, opacity: done ? 0.5 : 1 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", textDecoration: done ? "line-through" : "none" }}>{step.label} <span style={{ fontSize: 10, color: "var(--green)", fontWeight: 400 }}>· {step.duration}</span></div>
-                                  <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{step.desc}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {allDone && <div style={{ textAlign: "center", fontSize: 13, color: "var(--green)", fontWeight: 700, padding: "8px 0 4px" }}>💚 Excellent ! Récupération complète.</div>}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <CooldownWidget session={session} />
 
                 {/* Nutrition */}
                 {session.nutrition && (
@@ -7253,51 +7359,7 @@ JSON:
                   </div>
                 )}
                 {/* Calculateur pace HYROX */}
-                {(profile.vmaKmh || profile.squat1RM_final) && (() => {
-                  const [targetH, setTargetH] = React.useState("1");
-                  const [targetM, setTargetM] = React.useState("00");
-                  const totalMins = parseInt(targetH||0)*60 + parseInt(targetM||0);
-                  // HYROX = 8km running + 8 stations (environ 20-30min stations selon niveau)
-                  const estStationsMins = 22; // estimation moyenne
-                  const runMins = Math.max(1, totalMins - estStationsMins);
-                  const runKm = 8;
-                  const paceSecKm = Math.round((runMins * 60) / runKm);
-                  const paceMin = Math.floor(paceSecKm / 60);
-                  const paceSec = paceSecKm % 60;
-                  const paceStr = totalMins > 0 ? `${paceMin}:${String(paceSec).padStart(2,"0")}/km` : "—";
-                  const stationTimeEach = Math.round((estStationsMins * 60) / 8);
-                  const stationMin = Math.floor(stationTimeEach / 60);
-                  const stationSec = stationTimeEach % 60;
-                  return (
-                    <div style={{ marginTop: 16, background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 16, padding: "16px" }}>
-                      <div className="bebas" style={{ fontSize: 18, color: "var(--green)", marginBottom: 12 }}>🎯 CALCULATEUR PACE HYROX</div>
-                      <div style={{ fontSize: 11, color: "#444", marginBottom: 10 }}>Ton objectif de temps total :</div>
-                      <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
-                        <select value={targetH} onChange={e => setTargetH(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
-                          {["1","2","3","4","5"].map(h => <option key={h} value={h}>{h}h</option>)}
-                        </select>
-                        <span style={{ color: "#555", fontWeight: 700 }}>:</span>
-                        <select value={targetM} onChange={e => setTargetM(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
-                          {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => <option key={m} value={m}>{m}min</option>)}
-                        </select>
-                      </div>
-                      {totalMins > 0 && (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                          <div style={{ background: "rgba(57,255,128,0.08)", border: "1px solid rgba(57,255,128,0.2)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
-                            <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", marginBottom: 4 }}>Allure running</div>
-                            <div className="bebas" style={{ fontSize: 26, color: "var(--green)", lineHeight: 1 }}>{paceStr}</div>
-                            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>8 × 1km entre stations</div>
-                          </div>
-                          <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.18)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
-                            <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", marginBottom: 4 }}>Temps par station</div>
-                            <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{stationMin}:{String(stationSec).padStart(2,"0")}</div>
-                            <div style={{ fontSize: 9, color: "#444", marginTop: 2 }}>moy. ~{estStationsMins}min total</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                {(profile.vmaKmh || profile.squat1RM_final) && <PaceCalcWidget profile={profile} />}
               </>
             ) : (
               <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
@@ -7359,63 +7421,7 @@ JSON:
       </button>
 
       {/* Quick Log Modal */}
-      {showQuickLog && (()=>{
-        const [ql, setQl] = React.useState({ water: dailyData.hydration, weight: dailyData.poidsJour, hrv: dailyData.hrv });
-        const save = async () => {
-          haptic([10,30,10]);
-          setDailyData(d => ({ ...d, hydration: ql.water, poidsJour: ql.weight, hrv: ql.hrv }));
-          setShowQuickLog(false);
-          showToast("✅ Données enregistrées", "success", 2000);
-        };
-        return (
-          <div style={{ position: "fixed", inset: 0, zIndex: 97, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }} onClick={() => setShowQuickLog(false)} />
-            <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "20px 20px calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>⚡ Log rapide</div>
-                <div style={{ fontSize: 10, color: "#444" }}>Enregistrement auto</div>
-              </div>
-
-              {/* Water */}
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>💧 Eau</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: ql.water >= 8 ? "var(--green)" : "var(--yellow)" }}>{ql.water}/8 verres</span>
-                </div>
-                <div style={{ display: "flex", gap: 5 }}>
-                  {Array.from({ length: 8 }, (_, i) => (
-                    <button key={i} onClick={() => { haptic([5]); setQl(q => ({ ...q, water: i < q.water ? i : i + 1 })); }}
-                      style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${i < ql.water ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.08)"}`, background: i < ql.water ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.03)", cursor: "pointer", fontSize: 12 }}>
-                      {i < ql.water ? "💧" : "○"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Weight + HRV */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>⚖️ Poids (kg)</div>
-                  <input type="number" step="0.1" min="40" max="150" value={ql.weight} onChange={e => setQl(q => ({ ...q, weight: e.target.value }))}
-                    placeholder={`${profile.poids||75}`}
-                    style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>💓 HRV (ms)</div>
-                  <input type="number" min="20" max="120" step="1" value={ql.hrv} onChange={e => setQl(q => ({ ...q, hrv: e.target.value }))}
-                    placeholder="Ex: 65"
-                    style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
-                </div>
-              </div>
-
-              <button onClick={save}
-                style={{ width: "100%", padding: "15px", borderRadius: 16, border: "none", background: "linear-gradient(135deg, var(--yellow), #b8cc38)", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                ✅ Enregistrer
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {showQuickLog && <QuickLogModal dailyData={dailyData} setDailyData={setDailyData} setShowQuickLog={setShowQuickLog} showToast={showToast} haptic={haptic} profile={profile} />}
 
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
