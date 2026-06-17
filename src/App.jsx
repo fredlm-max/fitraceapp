@@ -3110,6 +3110,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [loadingMessage, setLoadingMessage] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [sessionStreamText, setSessionStreamText] = useState("");
+  const [generatingSilently, setGeneratingSilently] = useState(false);
   const [feedbackStreamText, setFeedbackStreamText] = useState("");
   const [miniRestTimer, setMiniRestTimer] = useState(null); // { secs: number, initial: number } | null
   const [showCoachChat, setShowCoachChat] = useState(false);
@@ -3138,6 +3139,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
     if (!alreadyCached && !session && (profile.sessions || []).length >= 0) {
       // Petite temporisation pour ne pas bloquer le rendu initial
       const t = setTimeout(() => {
+        setGeneratingSilently(true);
         generateSession(true); // true = mode silencieux
       }, 2000);
       return () => clearTimeout(t);
@@ -3530,9 +3532,14 @@ IMPORTANT: series=nombre de séries (ex:"4"), reps=répétitions ou durée (ex:"
       try { localStorage.setItem(sessionCacheKey, JSON.stringify(parsed)); } catch {}
       setFeedback(null); setShowFeedback(false);
       setCheckedExercices({});
+      if (silent) {
+        setGeneratingSilently(false);
+        showToast(`⚡ Séance prête : ${parsed.titre}`, "success", 3500);
+      }
     } catch (e) {
       console.error("Erreur parse séance:", e.message, "Raw:", raw?.slice(0, 500));
-      setSession({
+      if (silent) setGeneratingSilently(false);
+      if (!silent) setSession({
         titre: "Erreur — Réessaie",
         explication: e.message || "Erreur inconnue. Réessaie.",
         exercices: [],
@@ -5456,6 +5463,16 @@ JSON:
               <div style={{ fontSize: 9, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 8 }}>💬 Citation du jour</div>
               <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7, fontStyle: "italic", position: "relative" }}>"{getCitationDuJour()}"</div>
             </div>
+
+            {/* ── BACKGROUND GENERATION INDICATOR ── */}
+            {generatingSilently && !session && (
+              <div className="fade-in" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 12, marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 3 }}>
+                  {[0,1,2].map(j => <div key={j} style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1s ${j*0.2}s ease infinite` }} />)}
+                </div>
+                <span style={{ fontSize: 11, color: "#555" }}>Ton coach IA prépare ta séance…</span>
+              </div>
+            )}
 
             {/* ── WEEKLY STRIP ── */}
             {(() => {
