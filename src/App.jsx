@@ -1082,7 +1082,7 @@ async function callClaudeStream(systemPrompt, userPrompt, maxTokens = 1200, onCh
           const parsed = JSON.parse(data);
           if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
             fullText += parsed.delta.text;
-            onChunk(fullText);
+            if (onChunk) onChunk(fullText);
           }
         } catch {}
       }
@@ -3059,7 +3059,13 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   }, [dailyData.fatigue, dailyData.sommeil, dailyData.sleepHours, dailyData.poidsJour, dailyData.hydration, dailyData.hrv]);
   const [showSeancePerso, setShowSeancePerso] = useState(false);
   const [seancePerso, setSeancePerso] = useState({ titre: "", exercices: [{ nom: "", detail: "", note: "" }] });
-  const [session, setSession] = useState(null);
+  const sessionCacheKey = `session_today_${profile.name}_${new Date().toISOString().split("T")[0]}`;
+  const [session, setSession] = useState(() => {
+    try {
+      const cached = localStorage.getItem(sessionCacheKey);
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
   const [loadingSession, setLoadingSession] = useState(false);
   const [checkedExercices, setCheckedExercices] = useState({});
   const [showFeedback, setShowFeedback] = useState(false);
@@ -3122,6 +3128,18 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
     storage.get("coach_session_today").then(s => {
       if (s && s.date === new Date().toISOString().split("T")[0]) setCoachSession(s);
     });
+  }, []);
+
+  // Auto-génération en arrière-plan si pas encore de séance aujourd'hui
+  useEffect(() => {
+    const alreadyCached = (() => { try { return !!localStorage.getItem(sessionCacheKey); } catch { return false; } })();
+    if (!alreadyCached && !session && (profile.sessions || []).length >= 0) {
+      // Petite temporisation pour ne pas bloquer le rendu initial
+      const t = setTimeout(() => {
+        generateSession(true); // true = mode silencieux
+      }, 2000);
+      return () => clearTimeout(t);
+    }
   }, []);
 
   // Chrono séance
@@ -3360,8 +3378,8 @@ Réponds de façon conversationnelle, précise et personnalisée. Utilise le pr�
   const lastAdaptation = (profile.adaptations || []).slice(-1)[0];
   const lastSession = (profile.sessions || []).slice(-1)[0];
 
-  async function generateSession() {
-    setLoadingSession(true);
+  async function generateSession(silent = false) {
+    if (!silent) setLoadingSession(true);
     const week = profile.week || 1;
     const totalWeeksP = totalWeeksFromDate(profile.raceDate);
     const phase = getPhase(week, totalWeeksP);
@@ -3461,18 +3479,18 @@ ADAPTATION À APPLIQUER OBLIGATOIREMENT AUJOURD'HUI: ${allAdaptations.slice(-1)[
     const lastSessions3 = allSessions.slice(-3).map(s => `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti})`).join(" | ");
     const poidsComp = getPoidsHyrox(profile);
 
-    setSessionStreamText("🤖 Coach IA analyse ton profil...");
+    if (!silent) setSessionStreamText("🤖 Coach IA analyse ton profil...");
     const raw = await callClaudeStream(
       "Coach HYROX expert. Réponds UNIQUEMENT en JSON valide, sans texte autour, sans backticks.",
       `Génère une séance ${sessionType} en JSON pour: ${profile.name}, ${profile.poids}kg, Niv.${profile.level}, VMA ${profile.vmaKmh||"?"}km/h, Squat ${profile.squat1RM_final||"?"}kg, Fatigue ${dailyData.fatigue}/4, ${dailyData.temps}min, phase ${phase}.
 ${adaptationContext}
 TYPE DE SÉANCE À GÉNÉRER:
 ${sessionTypeDescriptions[sessionType] || "Séance générale HYROX"}
-Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
-{"titre":"","type":"${sessionType}","duree":${dailyData.temps},"explication":"","echauffement":"","exercices":[{"nom":"","detail":"","rpe":"","note":""}],"retourCalme":"","nutrition":{"avant":"","apres":""},"metrique":""}`,
+Retourne UNIQUEMENT ce JSON (4-6 exercices avec charges précises et détails complets):
+{"titre":"","type":"${sessionType}","duree":${dailyData.temps},"explication":"","echauffement":"","exercices":[{"nom":"","series":"","reps":"","charge":"","repos":"","rpe":"","note":""}],"retourCalme":"","nutrition":{"avant":"","apres":""},"metrique":""}
+IMPORTANT: series=nombre de séries (ex:"4"), reps=répétitions ou durée (ex:"8" ou "30s"), charge=charge ou distance (ex:"82kg" ou "20m"), repos=temps de récupération (ex:"90s" ou "2min")`,
       1400,
-      (chunk) => {
-        // Extraire le titre en cours de streaming pour affichage
+      silent ? undefined : (chunk) => {
         const titreMatch = chunk.match(/"titre"\s*:\s*"([^"]{3,})"/);
         if (titreMatch) setSessionStreamText(`📋 ${titreMatch[1]}...`);
         else if (chunk.length > 50) setSessionStreamText("🤖 Génération en cours...");
@@ -3490,6 +3508,7 @@ Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
       const parsed = JSON.parse(jsonMatch[0]);
       if (!parsed.titre) throw new Error("JSON incomplet");
       setSession(parsed);
+      try { localStorage.setItem(sessionCacheKey, JSON.stringify(parsed)); } catch {}
       setFeedback(null); setShowFeedback(false);
       setCheckedExercices({});
     } catch (e) {
@@ -3501,8 +3520,7 @@ Retourne UNIQUEMENT ce JSON complété (4-5 exercices avec charges précises):
         type: "erreur",
       });
     }
-    setSessionStreamText("");
-    setLoadingSession(false);
+    if (!silent) { setSessionStreamText(""); setLoadingSession(false); }
   }
 
   async function submitFeedback() {
@@ -5942,8 +5960,17 @@ JSON:
                             )}
                           </div>
                         </div>
-                        {ex.detail && <div className="bebas" style={{ fontSize: 24, color: done ? "#555" : accentColor, marginTop: 6, letterSpacing: "0.04em", paddingLeft: 38 }}>{ex.detail}</div>}
-                        {ex.note && <div style={{ fontSize: 11, color: "#555", marginTop: 5, lineHeight: 1.5, paddingLeft: 38, borderLeft: "2px solid rgba(255,255,255,0.04)", marginLeft: 38 }}>💬 {ex.note}</div>}
+                        {/* Chips séries / reps / charge / repos */}
+                        {(ex.series || ex.reps || ex.charge || ex.repos || ex.detail) && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingLeft: 38 }}>
+                            {ex.series && <div style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}30`, borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : accentColor }}>{ex.series} séries</div>}
+                            {ex.reps && <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--white)" }}>× {ex.reps}</div>}
+                            {ex.charge && <div style={{ background: "rgba(255,154,60,0.1)", border: "1px solid rgba(255,154,60,0.25)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--orange)" }}>⚖️ {ex.charge}</div>}
+                            {ex.repos && <div style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 600, color: done ? "#555" : "#a78bfa" }}>⏱ {ex.repos}</div>}
+                            {!ex.series && !ex.reps && !ex.charge && ex.detail && <div className="bebas" style={{ fontSize: 20, color: done ? "#555" : accentColor, letterSpacing: "0.04em" }}>{ex.detail}</div>}
+                          </div>
+                        )}
+                        {ex.note && <div style={{ fontSize: 11, color: "#555", marginTop: 6, lineHeight: 1.5, paddingLeft: 38, borderLeft: "2px solid rgba(255,255,255,0.04)", marginLeft: 38 }}>💬 {ex.note}</div>}
                       </div>
                     );
                   })}
