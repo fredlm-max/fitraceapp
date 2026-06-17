@@ -4332,6 +4332,7 @@ JSON:
           home: { label: "Accueil", color: "var(--yellow)" },
           today: { label: "Séance", color: "var(--green)" },
           progress: { label: "Progression", color: "var(--purple)" },
+          forme: { label: "Forme", color: "var(--green)" },
           planning: { label: "Planning", color: "var(--yellow)" },
           race: { label: "Course", color: "var(--red)" },
           technique: { label: "Technique", color: "var(--yellow)" },
@@ -5815,9 +5816,7 @@ JSON:
                     </div>
                   )}
                 </div>
-              ) : (
-                <Btn size="lg" onClick={generateSession} style={{ width: "100%", marginBottom: 20 }}>⚡ Générer ma séance du jour</Btn>
-              )
+              ) : null
             )}
             {loadingSession && (
               <div className="fade-in">
@@ -5907,10 +5906,10 @@ JSON:
                       <div style={{ fontSize: 10, color: "var(--green)", marginTop: 4 }}>{doneCount0}/{totalEx0} exercices faits</div>
                     </div>
                   )}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ fontSize: 10, color: "#777" }}>{totalEx0} exercices · Appuie pour voir</div>
-                    <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 16px" }}>
-                      <span className="bebas" style={{ fontSize: 14, color: "var(--white)", letterSpacing: 1 }}>DÉMARRER</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontSize: 10, color: "#777", flex: 1 }}>{totalEx0} exercices</div>
+                    <div style={{ background: "var(--yellow)", borderRadius: 12, padding: "10px 22px" }}>
+                      <span className="bebas" style={{ fontSize: 16, color: "#000", letterSpacing: 1.5 }}>DÉMARRER ⚡</span>
                     </div>
                   </div>
                 </div>
@@ -6620,6 +6619,42 @@ JSON:
 
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
+
+            {/* ── DERNIÈRES SÉANCES ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const last5 = (profile.sessions||[]).slice(-5).reverse();
+              const typeConf = {
+                running_zone2: { icon: "🏃", color: "var(--green)", label: "Cardio" },
+                force_stations: { icon: "🏋️", color: "var(--yellow)", label: "Force" },
+                running_qualite: { icon: "⚡", color: "var(--orange)", label: "Qualité" },
+                hybride_compromis: { icon: "🔀", color: "var(--purple)", label: "Hybride" },
+                coach: { icon: "📋", color: "var(--yellow)", label: "Coach" },
+                perso: { icon: "✏️", color: "#888", label: "Perso" },
+              };
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Dernières séances</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {last5.map((s, i) => {
+                      const conf = typeConf[s.type] || { icon: "💪", color: "var(--yellow)", label: "Séance" };
+                      const d = new Date(s.date);
+                      const dateLabel = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 11, background: `${conf.color}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{conf.icon}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre || conf.label}</div>
+                            <div style={{ fontSize: 10, color: "#555", marginTop: 1 }}>{dateLabel} · {s.duree || 60} min</div>
+                          </div>
+                          {s.rpe && <div style={{ fontSize: 11, fontWeight: 700, color: s.rpe >= 8 ? "var(--red)" : s.rpe >= 6 ? "var(--orange)" : "var(--green)" }}>RPE {s.rpe}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── EMPTY STATE — moins de 2 séances ── */}
             {(profile.sessions||[]).length < 2 && (
               <div style={{ textAlign: "center", padding: "48px 24px" }}>
@@ -7862,10 +7897,16 @@ JSON:
           return (
             <div className="fade-in" style={{ padding: "0 16px 100px" }}>
               {/* Header */}
-              <div style={{ paddingTop: 20, marginBottom: 20 }}>
-                <div className="bebas" style={{ fontSize: 28, color: "var(--white)", letterSpacing: 1 }}>FORME DU JOUR</div>
-                <div style={{ fontSize: 12, color: "#777", marginTop: 2 }}>
-                  {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+              <div style={{ paddingTop: 20, marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div>
+                  <div className="bebas" style={{ fontSize: 28, color: "var(--white)", letterSpacing: 1 }}>FORME DU JOUR</div>
+                  <div style={{ fontSize: 12, color: "#777", marginTop: 2 }}>
+                    {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, opacity: 0.8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />
+                  Sync auto
                 </div>
               </div>
 
