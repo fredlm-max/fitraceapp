@@ -6336,16 +6336,18 @@ JSON:
                     <div style={{ background: "linear-gradient(145deg, #001a0a 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(57,255,128,0.25)", borderRadius: 22, padding: "24px 20px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
                       {/* Confettis CSS */}
                       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-                        {[...Array(12)].map((_, i) => (
+                        {[...Array(20)].map((_, i) => (
                           <div key={i} style={{
                             position: "absolute",
-                            width: 6, height: 6, borderRadius: i % 3 === 0 ? "50%" : 2,
-                            background: ["var(--yellow)","var(--green)","var(--orange)","var(--purple)","var(--red)"][i % 5],
-                            left: `${8 + i * 7.5}%`,
-                            top: `-10px`,
-                            opacity: 0.7,
-                            animation: `floatUp ${0.8 + i * 0.15}s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.07}s both`,
-                            transform: `rotate(${i * 30}deg)`,
+                            width: i % 4 === 0 ? 8 : i % 3 === 0 ? 5 : 6,
+                            height: i % 4 === 0 ? 8 : i % 2 === 0 ? 10 : 6,
+                            borderRadius: i % 3 === 0 ? "50%" : i % 2 === 0 ? 1 : 2,
+                            background: ["var(--yellow)","var(--green)","var(--orange)","var(--purple)","#38bdf8","var(--red)","#fff","var(--yellow)"][i % 8],
+                            left: `${Math.round(5 + (i * 4.7) % 90)}%`,
+                            top: `${Math.round((i * 13) % 40)}%`,
+                            opacity: 0,
+                            animation: `confetti ${0.7 + (i % 5)*0.2}s ease-out ${i * 0.05}s forwards`,
+                            transform: `rotate(${i * 37}deg)`,
                           }} />
                         ))}
                       </div>
@@ -10592,22 +10594,64 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
       {/* ── HERO RACE COUNTDOWN ── */}
       {profile.raceDate ? (
         <div style={{ background: phaseLabel?.bg || "linear-gradient(135deg, #150000 0%, #080808 60%)", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 22, padding: "22px 20px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,71,71,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <div style={{ fontSize: 10, color: "rgba(255,71,71,0.7)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 12 }}>🏁 {phaseLabel?.text}</div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 14 }}>
-            <div className="bebas" style={{ fontSize: 80, color: phaseLabel?.color || "var(--red)", lineHeight: 0.9, letterSpacing: -1 }}>{days}</div>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 16, color: "#555" }}>jours</div>
-              <div style={{ fontSize: 11, color: "#333" }}>avant le départ</div>
+          <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,71,71,0.1) 0%, transparent 70%)", pointerEvents: "none", animation: days <= 7 ? "pulse 2s ease infinite" : "none" }} />
+
+          <div style={{ fontSize: 10, color: "rgba(255,71,71,0.7)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 14 }}>🏁 {phaseLabel?.text}</div>
+
+          {days !== null && days <= 7 ? (
+            /* Mode compte à rebours précis — dernière semaine */
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 14 }}>
+              {[
+                { val: days, label: "JOURS" },
+                { val: new Date().getHours(), label: "HEURES" },
+                { val: new Date().getMinutes(), label: "MINUTES" },
+              ].map(({ val, label }) => (
+                <div key={label} style={{ textAlign: "center", background: "rgba(0,0,0,0.4)", borderRadius: 14, padding: "12px 6px", border: "1px solid rgba(255,71,71,0.2)" }}>
+                  <div className="bebas" style={{ fontSize: 44, color: "var(--red)", lineHeight: 1, animation: "numberPop 0.5s var(--spring) both" }}>{String(val).padStart(2,"0")}</div>
+                  <div style={{ fontSize: 8, color: "rgba(255,71,71,0.5)", fontWeight: 700, letterSpacing: "0.15em" }}>{label}</div>
+                </div>
+              ))}
             </div>
-          </div>
-          <div style={{ fontSize: 12, color: "#444", marginBottom: 16 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
+          ) : (
+            /* Mode standard */
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 14 }}>
+              <div className="bebas number-pop" style={{ fontSize: 80, color: phaseLabel?.color || "var(--red)", lineHeight: 0.9, letterSpacing: -1 }}>{days}</div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 16, color: "#555" }}>jours</div>
+                <div style={{ fontSize: 11, color: "#333" }}>avant le départ</div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: 12, color: "#444", marginBottom: 14 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
+
+          {/* Barre de progression vers la course */}
+          {profile.sessions && profile.sessions.length > 0 && (() => {
+            const firstSession = new Date(profile.sessions[0].date);
+            const raceDate = new Date(profile.raceDate);
+            const total = Math.max(1, raceDate - firstSession);
+            const elapsed = Math.max(0, Date.now() - firstSession);
+            const pct = Math.min(100, Math.round((elapsed / total) * 100));
+            return (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#333", marginBottom: 4 }}>
+                  <span>Début prépa</span>
+                  <span style={{ color: "var(--red)" }}>{pct}% du chemin parcouru</span>
+                  <span>Course 🏁</span>
+                </div>
+                <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--green), var(--yellow), var(--red))", borderRadius: 99, transition: "width 1s ease" }} />
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Message contextuel */}
-          <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#888", lineHeight: 1.6 }}>
+          <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 14 }}>
             {days <= 1 ? "🔥 Hydrate-toi, mange tes glucides, fais confiance à ton entraînement." : days <= 7 ? "⚡ Réduis le volume de 50%, maintiens 2 sessions d'activation courtes. Dors bien." : days <= 30 ? "🎯 Maximise la spécificité — simulations, allures de course, transitions enchaînées." : "📈 Construis ta base aérobie. Chaque séance compte."}
           </div>
           {/* Bouton simulation intégré */}
-          <button onClick={() => setShowSim(true)} style={{ width: "100%", marginTop: 14, background: "var(--red)", border: "none", borderRadius: 14, padding: "14px", color: "#fff", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <button onClick={() => setShowSim(true)} style={{ width: "100%", background: "var(--red)", border: "none", borderRadius: 14, padding: "14px", color: "#fff", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <span>🏁</span> LANCER LA SIMULATION RACE
           </button>
         </div>
