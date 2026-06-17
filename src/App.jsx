@@ -6461,8 +6461,22 @@ JSON:
 
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
+            {/* ── EMPTY STATE — moins de 2 séances ── */}
+            {(profile.sessions||[]).length < 2 && (
+              <div style={{ textAlign: "center", padding: "48px 24px" }}>
+                <div style={{ fontSize: 64, marginBottom: 16, animation: "bounceIn 0.6s var(--spring) both" }}>📊</div>
+                <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", letterSpacing: 1, marginBottom: 8 }}>Ta progression t'attend</div>
+                <div style={{ fontSize: 13, color: "#555", lineHeight: 1.7, marginBottom: 28 }}>
+                  Fais ta première séance pour voir tes graphiques de progression, ton score de forme, et les analyses de ton coach IA.
+                </div>
+                <button onClick={() => navigateTo("today")} style={{ padding: "14px 32px", background: "var(--yellow)", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 700, color: "#000", cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                  ⚡ Générer ma première séance
+                </button>
+              </div>
+            )}
+
             {/* ── SCORE SEMAINE ── */}
-            <WeeklyPerformanceCard profile={profile} />
+            {(profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
             {/* ── MIX ENTRAÎNEMENT ── */}
             <TrainingMixChart profile={profile} />
@@ -7485,6 +7499,61 @@ JSON:
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── INSIGHTS IA — observations intelligentes ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const sessions = profile.sessions || [];
+              const last5 = sessions.slice(-5);
+              const insights = [];
+
+              // Insight 1: tendance RPE
+              const last3RPE = last5.slice(-3).map(s => s.difficulte||5);
+              const avgLast3 = last3RPE.reduce((a,b)=>a+b,0)/last3RPE.length;
+              const first3 = sessions.slice(0,3).map(s=>s.difficulte||5);
+              const avgFirst3 = first3.reduce((a,b)=>a+b,0)/first3.length;
+              if (avgFirst3 - avgLast3 >= 1.5) insights.push({ icon: "📈", color: "var(--green)", title: "Tu progresses en endurance", body: `Tes dernières séances sont à RPE ${avgLast3.toFixed(1)} vs ${avgFirst3.toFixed(1)} au début. L'entraînement porte ses fruits.` });
+              else if (avgLast3 - avgFirst3 >= 1.5) insights.push({ icon: "⚠️", color: "var(--orange)", title: "Fatigue accumulée détectée", body: `RPE moyen en hausse : ${avgFirst3.toFixed(1)} → ${avgLast3.toFixed(1)}. Pense à intégrer une semaine de récupération.` });
+
+              // Insight 2: mix de séances
+              const types = sessions.reduce((a,s)=>({...a,[s.type]:(a[s.type]||0)+1}),{});
+              const zone2Pct = (types.running_zone2||0)/sessions.length;
+              if (zone2Pct < 0.3 && sessions.length >= 5) insights.push({ icon: "🏃", color: "#38bdf8", title: "Manque de cardio Zone 2", body: "Seulement " + Math.round(zone2Pct*100) + "% de tes séances sont en Zone 2. Les pros visent 70-80%. C'est la base de ta progression HYROX." });
+
+              // Insight 3: régularité
+              const weekDates = [...new Set(sessions.map(s=>{ const d=new Date(s.date); d.setDate(d.getDate()-((d.getDay()||7)-1)); return d.toISOString().slice(0,10); }))];
+              if (weekDates.length >= 3) {
+                const goal = profile.seancesParSemaine || 4;
+                const perWeek = sessions.length / weekDates.length;
+                if (perWeek >= goal * 0.9) insights.push({ icon: "🔥", color: "var(--yellow)", title: "Régularité exemplaire !", body: `Moyenne de ${perWeek.toFixed(1)} séances/semaine sur ${weekDates.length} semaines. C'est exactement ce qu'il faut pour progresser.` });
+                else if (perWeek < goal * 0.6) insights.push({ icon: "📅", color: "var(--orange)", title: "Augmente la fréquence", body: `Tu fais ${perWeek.toFixed(1)} séances/semaine sur ${weekDates.length} semaines (objectif: ${goal}). La régularité est + importante que l'intensité.` });
+              }
+
+              // Insight 4: dernière session
+              const last = sessions[sessions.length-1];
+              if (last) {
+                const daysSince = Math.round((Date.now()-new Date(last.date))/86400000);
+                if (daysSince >= 5) insights.push({ icon: "⏰", color: "var(--red)", title: "Longue pause détectée", body: `${daysSince} jours depuis ta dernière séance. Une interruption > 5j impacte la condition physique. Reprends avec une séance légère.` });
+                else if (daysSince === 0) insights.push({ icon: "💪", color: "var(--green)", title: "Séance faite aujourd'hui !", body: `${last.titre || "Séance"} terminée (RPE ${last.difficulte||"?"}). Hydrate-toi bien et dors 8h pour maximiser la récupération.` });
+              }
+
+              if (insights.length === 0) return null;
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>🤖 Insights de ton coach</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {insights.map((ins, i) => (
+                      <div key={i} className="slide-up" style={{ animationDelay: `${i*0.08}s`, background: `${ins.color}08`, border: `1px solid ${ins.color}20`, borderLeft: `3px solid ${ins.color}60`, borderRadius: 14, padding: "12px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 16 }}>{ins.icon}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: ins.color }}>{ins.title}</span>
+                        </div>
+                        <p style={{ fontSize: 11, color: "#888", lineHeight: 1.6, margin: 0 }}>{ins.body}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
