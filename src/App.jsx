@@ -4355,6 +4355,11 @@ JSON:
                           : `${(profile.sessions||[]).length} séances au total`}
                       </div>
                     </div>
+                    {/* Mini fitness score badge */}
+                    <div style={{ textAlign: "center", background: `${sc.global >= 75 ? "rgba(57,255,128,0.1)" : sc.global >= 50 ? "rgba(232,255,71,0.08)" : "rgba(255,154,60,0.08)"}`, border: `1px solid ${sc.global >= 75 ? "rgba(57,255,128,0.25)" : sc.global >= 50 ? "rgba(232,255,71,0.2)" : "rgba(255,154,60,0.2)"}`, borderRadius: 14, padding: "8px 14px" }}>
+                      <div className="bebas number-pop" style={{ fontSize: 32, color: sc.global >= 75 ? "var(--green)" : sc.global >= 50 ? "var(--yellow)" : "var(--orange)", lineHeight: 1 }}>{sc.global}</div>
+                      <div style={{ fontSize: 8, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>Score</div>
+                    </div>
                   </div>
                 </div>
               );
@@ -4399,18 +4404,86 @@ JSON:
               );
             })()}
 
+            {/* ── XP LEVEL BAR ── */}
+            {(() => {
+              const totalXP = calcTotalXP(profile);
+              const lvl = getXPLevel(totalXP);
+              const earnedBadges = BADGES.filter(b => b.check(profile));
+              return (
+                <div style={{ background: `linear-gradient(135deg, ${lvl.color}10 0%, rgba(8,8,8,0) 80%)`, border: `1px solid ${lvl.color}25`, borderRadius: 18, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                  {/* Level icon */}
+                  <div style={{ width: 46, height: 46, borderRadius: 14, background: `${lvl.color}18`, border: `1.5px solid ${lvl.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                    {lvl.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                      <div>
+                        <span style={{ fontSize: 10, color: lvl.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Niv.{lvl.level} · </span>
+                        <span className="bebas" style={{ fontSize: 16, color: lvl.color, letterSpacing: 0.5 }}>{lvl.name}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span className="bebas" style={{ fontSize: 18, color: lvl.color }}>{totalXP.toLocaleString()}</span>
+                        <span style={{ fontSize: 9, color: "#333" }}>XP</span>
+                        {earnedBadges.slice(-3).map(b => (
+                          <span key={b.id} style={{ fontSize: 14 }} title={b.name}>{b.icon}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${lvl.progress}%`, background: `linear-gradient(90deg, ${lvl.color}80, ${lvl.color})`, borderRadius: 99, transition: "width 0.8s var(--ease-out)" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                      <span style={{ fontSize: 8, color: "#333" }}>{lvl.name}</span>
+                      <span style={{ fontSize: 8, color: "#333" }}>{lvl.xpToNext > 0 ? `${lvl.xpToNext} XP → ${lvl.nextName}` : "Niveau max !"}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── HYROX 101 BEGINNER CARD (shows for new users) ── */}
             {(profile.sessions||[]).length < 3 && <Hyrox101Card profile={profile} navigateTo={navigateTo} />}
 
-            {/* ── RÉCUPÉRATION DU JOUR ── */}
+            {/* ══════════════════════════════════════════
+                COMMAND CENTER — PRO ATHLETE DASHBOARD
+                ══════════════════════════════════════════ */}
             {(() => {
               const recovery = calcRecoveryScore(dailyData, profile);
               const recov = recoveryLabel(recovery);
+              const todayNutrKey = `nutri_${profile.name}_${todayStr}`;
+              const [todayMacros, setTodayMacros] = React.useState(null);
+              const [last7Logs, setLast7Logs] = React.useState([]);
+
+              React.useEffect(() => {
+                // Load nutrition today
+                storage.get(todayNutrKey).then(repas => {
+                  if (repas && repas.length) {
+                    const tot = repas.reduce((a, r) => ({ kcal: a.kcal + (r.kcal||0), p: a.p + (r.p||0) }), { kcal: 0, p: 0 });
+                    setTodayMacros(tot);
+                  }
+                });
+                // Load last 7 daily logs
+                const loads = [];
+                for (let i = 6; i >= 0; i--) {
+                  const d = new Date(); d.setDate(d.getDate() - i);
+                  const ds = d.toISOString().split("T")[0];
+                  loads.push(storage.get(getDailyLogKey(profile.name, ds)).then(v => ({ date: ds, ...(v || {}) })));
+                }
+                Promise.all(loads).then(setLast7Logs);
+              }, []);
 
               // SVG ring params
               const r = 52; const circ = 2 * Math.PI * r;
               const stroke = circ * (1 - recovery / 100);
+              const objNutrKcal = Math.round((profile.poids || 75) * 35);
+              const kcalPct = todayMacros ? Math.min(100, Math.round((todayMacros.kcal / objNutrKcal) * 100)) : null;
+              const protObj = Math.round((profile.poids || 75) * 2.2);
+              const protPct = todayMacros ? Math.min(100, Math.round((todayMacros.p / protObj) * 100)) : null;
+
+              // Weekly training load
+              const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+              const weekSessions = (profile.sessions||[]).filter(s => new Date(s.date) >= weekAgo);
+              const weekLoadPct = Math.min(100, Math.round((weekSessions.length / (profile.seancesParSemaine || 4)) * 100));
 
               return (
                 <div style={{ marginBottom: 14 }}>
@@ -4457,6 +4530,146 @@ JSON:
                       </div>
                     </div>
 
+                    {/* Nutrition progress bar */}
+                    {kcalPct !== null && (
+                      <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                          <span style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>🍽️ Nutrition aujourd'hui</span>
+                          <span style={{ fontSize: 10, color: kcalPct >= 80 ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>{todayMacros.kcal} / {objNutrKcal} kcal</span>
+                        </div>
+                        <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
+                          <div style={{ height: "100%", width: `${kcalPct}%`, background: `linear-gradient(90deg, var(--orange), var(--yellow))`, borderRadius: 99, transition: "width 0.6s var(--ease-out)" }} />
+                        </div>
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <span style={{ fontSize: 10, color: "#555" }}>🥩 {todayMacros.p}g prot <span style={{ color: protPct >= 80 ? "var(--green)" : "var(--orange)" }}>({protPct}%)</span></span>
+                          <button onClick={() => setTab("nutri")} style={{ background: "none", border: "none", fontSize: 10, color: "var(--yellow)", cursor: "pointer", marginLeft: "auto", fontWeight: 700 }}>Log nutrition →</button>
+                        </div>
+                      </div>
+                    )}
+                    {kcalPct === null && (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <button onClick={() => setTab("nutri")} style={{ width: "100%", background: "rgba(255,154,60,0.06)", border: "1px dashed rgba(255,154,60,0.2)", borderRadius: 10, padding: "8px", fontSize: 11, color: "#555", cursor: "pointer", fontWeight: 600 }}>
+                          🍽️ Ajouter tes repas du jour →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── 7-DAY METRICS SPARKLINES ── */}
+                  {last7Logs.some(l => l.sleepHours || l.poidsJour) && (() => {
+                    const days = ["L","M","M","J","V","S","D"];
+                    const weekSeries = last7Logs.map(l => ({
+                      sleep: parseFloat(l.sleepHours) || null,
+                      weight: parseFloat(l.poidsJour) || null,
+                      recovery: (l.fatigue && l.sleepHours) ? calcRecoveryScore(l, profile) : null,
+                    }));
+
+                    const renderSparkline = (values, color, minVal, maxVal) => {
+                      const valid = values.filter(Boolean);
+                      if (valid.length < 2) return null;
+                      const W = 100; const H = 28; const pad = 4;
+                      const range = (maxVal - minVal) || 1;
+                      const pts = values.map((v, i) => {
+                        const x = pad + (i / (values.length - 1)) * (W - 2 * pad);
+                        const y = v !== null ? H - pad - ((v - minVal) / range) * (H - 2 * pad) : null;
+                        return { x, y, v };
+                      }).filter(p => p.y !== null);
+                      if (pts.length < 2) return null;
+                      const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+                      const lastPt = pts[pts.length - 1];
+                      return (
+                        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                          <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+                          <circle cx={lastPt.x} cy={lastPt.y} r="3" fill={color} />
+                        </svg>
+                      );
+                    };
+
+                    return (
+                      <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>📈 Tendances 7 jours</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                          {[
+                            { label: "Sommeil", values: weekSeries.map(d => d.sleep), color: "#a78bfa", unit: "h", min: 4, max: 10, fmt: v => `${v}h` },
+                            { label: "Poids", values: weekSeries.map(d => d.weight), color: "var(--yellow)", unit: "kg", min: (profile.poids||70)-5, max: (profile.poids||70)+5, fmt: v => `${v}kg` },
+                            { label: "Récupération", values: weekSeries.map(d => d.recovery), color: "var(--green)", unit: "", min: 0, max: 100, fmt: v => `${v}%` },
+                          ].map(serie => {
+                            const valid = serie.values.filter(Boolean);
+                            const last = valid[valid.length - 1];
+                            const sparkline = renderSparkline(serie.values, serie.color, serie.min, serie.max);
+                            return (
+                              <div key={serie.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 10px 8px" }}>
+                                <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{serie.label}</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: serie.color, marginBottom: 4 }}>{last ? serie.fmt(last) : "—"}</div>
+                                <div style={{ height: 28 }}>{sparkline || <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#222" }}>pas de données</div>}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* Day labels */}
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingLeft: 2, paddingRight: 2 }}>
+                          {last7Logs.map((l, i) => {
+                            const d = new Date(l.date + "T12:00:00");
+                            const dow = d.getDay();
+                            const labels = ["D","L","M","M","J","V","S"];
+                            const isToday = l.date === todayStr;
+                            return <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: isToday ? "var(--yellow)" : "#222", fontWeight: isToday ? 700 : 400 }}>{labels[dow]}</div>;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── CHARGE D'ENTRAÎNEMENT ── */}
+                  {/* PMC TSB badge */}
+                  {(()=>{
+                    const pmcPts = calcPMC(profile.sessions||[]);
+                    if (pmcPts.length < 3) return null;
+                    const todayPMC = pmcPts[pmcPts.length-1];
+                    const tsb2 = tsbLabel(todayPMC.tsb);
+                    return (
+                      <div style={{ background: `${tsb2.color}08`, border: `1px solid ${tsb2.color}25`, borderRadius: 14, padding: "10px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ textAlign: "center", flexShrink: 0 }}>
+                          <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.06em" }}>Forme</div>
+                          <div className="bebas" style={{ fontSize: 24, color: tsb2.color, lineHeight: 1 }}>{todayPMC.tsb > 0 ? "+" : ""}{todayPMC.tsb}</div>
+                        </div>
+                        <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, color: tsb2.color, fontWeight: 700 }}>{tsb2.label}</div>
+                          <div style={{ fontSize: 9, color: "#555", marginTop: 2, lineHeight: 1.4 }}>{tsb2.tip}</div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase" }}>CTL</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--green)" }}>{todayPMC.ctl}</div>
+                          <div style={{ fontSize: 8, color: "#333", textTransform: "uppercase", marginTop: 2 }}>ATL</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--orange)" }}>{todayPMC.atl}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                    {/* Volume semaine */}
+                    <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 14, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Charge semaine</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
+                        <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{weekSessions.length}</span>
+                        <span style={{ fontSize: 10, color: "#444" }}>/ {profile.seancesParSemaine || 4} séances</span>
+                      </div>
+                      <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${weekLoadPct}%`, background: weekLoadPct >= 100 ? "var(--green)" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
+                      </div>
+                    </div>
+                    {/* Streak */}
+                    <div style={{ background: streak >= 7 ? "rgba(255,154,60,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${streak >= 7 ? "rgba(255,154,60,0.2)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
+                        <span style={{ fontSize: 18 }}>{streak >= 14 ? "🏆" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "📅"}</span>
+                        <span className="bebas" style={{ fontSize: 26, color: streak >= 7 ? "var(--orange)" : "var(--yellow)", lineHeight: 1 }}>{streak}</span>
+                        <span style={{ fontSize: 10, color: "#444" }}>jours</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: "#333" }}>Record : {profile.bestStreak || streak} j</div>
+                    </div>
                   </div>
                 </div>
               );
@@ -4530,6 +4743,264 @@ JSON:
               );
             })()}
 
+            {/* ── MÉTÉO D'ENTRAÎNEMENT ── */}
+            {(() => {
+              const hour = new Date().getHours();
+              const weekSessions = buildWeeklySummary(profile);
+              const lastSession = (profile.sessions||[]).slice(-1)[0];
+              const lastRPE = lastSession?.difficulte || 5;
+              const daysSinceLastSession = lastSession ? Math.round((Date.now() - new Date(lastSession.date)) / 86400000) : 99;
+
+              // Calcul conditions
+              const isOptimalHour = (hour >= 7 && hour <= 10) || (hour >= 16 && hour <= 20);
+              const isRested = daysSinceLastSession >= 1;
+              const isOverloaded = weekSessions.count >= 5 || weekSessions.dur >= 3;
+              const needsRecovery = lastRPE >= 9 && daysSinceLastSession < 1;
+
+              const meteo = needsRecovery ? {
+                icon: "🌧️", label: "Récupération recommandée", color: "var(--red)",
+                bg: "rgba(255,71,71,0.04)", border: "rgba(255,71,71,0.15)",
+                detail: `RPE ${lastRPE}/10 hier · Laisse tes muscles récupérer`,
+                cta: "Mobilité ou repos actif",
+              } : isOverloaded ? {
+                icon: "⚡", label: "Charge élevée cette semaine", color: "var(--orange)",
+                bg: "rgba(255,154,60,0.04)", border: "rgba(255,154,60,0.15)",
+                detail: `${weekSessions.count} séances · ${weekSessions.dur} dures`,
+                cta: "Séance légère ou repos",
+              } : !isRested ? {
+                icon: "🌤️", label: "Journée de transition", color: "var(--yellow)",
+                bg: "rgba(232,255,71,0.04)", border: "rgba(232,255,71,0.12)",
+                detail: "Séance hier · Corps en récupération",
+                cta: "Zone 2 ou technique",
+              } : isOptimalHour ? {
+                icon: "☀️", label: "Conditions optimales", color: "var(--green)",
+                bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.2)",
+                detail: `${hour < 12 ? "Matin" : "Soir"} · Intensité max autorisée`,
+                cta: "Lance ta séance maintenant !",
+              } : {
+                icon: "🌙", label: "Bonne heure pour s'entraîner", color: "#a78bfa",
+                bg: "rgba(167,139,250,0.04)", border: "rgba(167,139,250,0.15)",
+                detail: "Évite les séances trop intenses tard le soir",
+                cta: "Yoga, mobilité ou Zone 2",
+              };
+
+              return (
+                <div style={{ background: meteo.bg, border: `1px solid ${meteo.border}`, borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }} onClick={() => setTab("today")} className="card-hover">
+                  <div style={{ fontSize: 32, flexShrink: 0 }}>{meteo.icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: meteo.color }}>{meteo.label}</div>
+                      <div style={{ fontSize: 9, color: "#2a2a2a" }}>{new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#444", marginBottom: 2 }}>{meteo.detail}</div>
+                    <div style={{ fontSize: 10, color: meteo.color, fontWeight: 600 }}>→ {meteo.cta}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── COMPLÉTION PROFIL ── */}
+            {(() => {
+              const checks = [
+                { key: "poids", label: "Poids corporel", done: !!profile.poids, tab: "profil", icon: "⚖️" },
+                { key: "vma", label: "VMA renseignée", done: !!profile.vmaKmh, tab: "profil", icon: "🏃" },
+                { key: "race", label: "Date de course", done: !!profile.raceDate, tab: "profil", icon: "🏁" },
+                { key: "squat", label: "Force (squat 1RM)", done: !!profile.squat1RM_final, tab: "profil", icon: "🏋️" },
+                { key: "genre", label: "Sexe renseigné", done: !!profile.genre, tab: "profil", icon: "👤" },
+                { key: "session1", label: "1ère séance faite", done: (profile.sessions||[]).length >= 1, tab: "today", icon: "⚡" },
+              ];
+              const doneCount = checks.filter(c => c.done).length;
+              const pct = Math.round((doneCount / checks.length) * 100);
+              if (pct === 100) return null; // Profil complet, on n'affiche pas
+              const missing = checks.filter(c => !c.done);
+              return (
+                <div style={{ background: "rgba(232,255,71,0.03)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Profil complété</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Plus de données = meilleur coaching</div>
+                    </div>
+                    <div className="bebas" style={{ fontSize: 28, color: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--yellow)" : "var(--orange)" }}>{pct}%</div>
+                  </div>
+                  {/* Barre */}
+                  <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--yellow)" : "var(--orange)", borderRadius: 99, transition: "width 0.6s" }} />
+                  </div>
+                  {/* Actions manquantes */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {missing.slice(0,3).map(c => (
+                      <button key={c.key} onClick={() => navigateTo(c.tab)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, fontSize: 11, color: "#555", cursor: "pointer" }}>
+                        <span>{c.icon}</span><span>{c.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* STREAK CARD */}
+            {streakData && (() => {
+              const streakColor = streak >= 14 ? "#ff6b35" : streak >= 7 ? "var(--yellow)" : streak >= 3 ? "var(--orange)" : "#333";
+              const streakBg = streak >= 14 ? "linear-gradient(135deg, #1a0800 0%, #080808 60%)" : streak >= 7 ? "linear-gradient(135deg, #131500 0%, #080808 60%)" : streak >= 3 ? "linear-gradient(135deg, #120800 0%, #080808 60%)" : "rgba(255,255,255,0.01)";
+              const streakBorder = streak >= 7 ? `${streakColor}44` : "rgba(255,255,255,0.05)";
+              const milestones = [3, 7, 14, 30];
+              const nextMilestone = milestones.find(m => m > streak) || 30;
+              const prevMilestone = milestones.filter(m => m <= streak).pop() || 0;
+              const milestoneProgress = ((streak - prevMilestone) / (nextMilestone - prevMilestone)) * 100;
+              return (
+              <div style={{ background: streakBg, border: `1.5px solid ${streakBorder}`, borderRadius: 18, padding: "16px 18px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                {streak >= 7 && <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${streakColor}15 0%, transparent 70%)`, pointerEvents: "none" }} />}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 30 }}>{streak >= 14 ? "🔥" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "💤"}</span>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 40, color: streakColor, lineHeight: 1, letterSpacing: 1 }}>{streak}<span style={{ fontSize: 18, color: "#444", letterSpacing: 0, marginLeft: 4 }}>JOURS</span></div>
+                      <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>
+                        {streak === 0 ? "Lance ta série aujourd'hui !" : streak === 1 ? "Jour 1 — la séquence commence !" : `Série active · record ${streakData.best}j`}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center", background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "8px 14px" }}>
+                    <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Record</div>
+                    <div className="bebas" style={{ fontSize: 26, color: "#555", lineHeight: 1 }}>{streakData.best}</div>
+                  </div>
+                </div>
+                {/* 7-day visual */}
+                <div style={{ display: "flex", gap: 5, marginBottom: streak > 0 ? 12 : 0 }}>
+                  {(streakData.lastDays || []).map((d, i) => {
+                    const dayLabel = ["L","M","M","J","V","S","D"][d.date.getDay() === 0 ? 6 : d.date.getDay() - 1];
+                    return (
+                      <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: d.isToday ? streakColor : "#2a2a2a", marginBottom: 5, fontWeight: d.isToday ? 700 : 400, textTransform: "uppercase" }}>{dayLabel}</div>
+                        <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: d.done ? (d.isToday ? streakColor : `${streakColor}55`) : "rgba(255,255,255,0.03)", border: d.isToday ? `2px solid ${streakColor}` : "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: d.done ? "#000" : "#111", fontWeight: 700 }}>
+                          {d.done ? "✓" : ""}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Milestone progress */}
+                {streak > 0 && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                      <span style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em" }}>Prochain objectif</span>
+                      <span style={{ fontSize: 10, color: streakColor, fontWeight: 700 }}>{nextMilestone} jours</span>
+                    </div>
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${milestoneProgress}%`, background: streakColor, borderRadius: 99, transition: "width 0.6s ease" }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+              );
+            })()}
+
+            {/* ── NIVEAU HYROX ── */}
+            {(() => {
+              const nbSessions = (profile.sessions||[]).length;
+              const sc = calcFitnessScore(profile);
+              const hasPR = !!(profile.squat1RM_final || profile.vmaKmh || profile.deadlift1RM_final);
+              const hasRace = !!(profile.raceDate);
+              const hasPlanning = !!(profile.planningWeek || profile.lastSimulation);
+              const techViewed = (() => { try { return Object.keys(JSON.parse(localStorage.getItem("fitrace_technique_viewed")||"{}")).length; } catch { return 0; } })();
+              // XP calculation
+              let xp = 0;
+              xp += nbSessions * 50;
+              xp += streak * 30;
+              xp += sc.global * 2;
+              if (hasPR) xp += 100;
+              if (hasRace) xp += 80;
+              if (hasPlanning) xp += 60;
+              xp += techViewed * 20;
+              xp += (profile.adaptations||[]).length * 40;
+
+              const LEVELS = [
+                { min: 0,    max: 200,  name: "Rookie",     icon: "🥉", color: "#cd7f32", gradient: "linear-gradient(135deg,#2a1800,#080808)" },
+                { min: 200,  max: 500,  name: "Challenger", icon: "🥈", color: "#adb5bd", gradient: "linear-gradient(135deg,#141414,#080808)" },
+                { min: 500,  max: 1000, name: "Compétiteur",icon: "🥇", color: "#e8ff47", gradient: "linear-gradient(135deg,#131500,#080808)" },
+                { min: 1000, max: 2000, name: "Athlète",    icon: "⚡", color: "#ff9a3c", gradient: "linear-gradient(135deg,#120800,#080808)" },
+                { min: 2000, max: 4000, name: "Pro",        icon: "🔥", color: "#ff4747", gradient: "linear-gradient(135deg,#1a0000,#080808)" },
+                { min: 4000, max: 9999, name: "ÉLITE",      icon: "🏆", color: "#a78bfa", gradient: "linear-gradient(135deg,#120020,#080808)" },
+              ];
+              const lvl = LEVELS.slice().reverse().find(l => xp >= l.min) || LEVELS[0];
+              const nextLvl = LEVELS[LEVELS.indexOf(lvl) + 1];
+              const progressPct = nextLvl ? Math.min(100, Math.round(((xp - lvl.min) / (nextLvl.min - lvl.min)) * 100)) : 100;
+              const xpToNext = nextLvl ? nextLvl.min - xp : 0;
+
+              return (
+                <div style={{ background: lvl.gradient, border: `1.5px solid ${lvl.color}33`, borderRadius: 18, padding: "16px 18px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                  {/* Glow */}
+                  <div style={{ position: "absolute", top: -40, right: -40, width: 150, height: 150, borderRadius: "50%", background: `radial-gradient(circle, ${lvl.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                    {/* Badge icon */}
+                    <div style={{ width: 56, height: 56, borderRadius: 16, background: `${lvl.color}18`, border: `2px solid ${lvl.color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0, boxShadow: `0 0 20px ${lvl.color}20` }}>
+                      {lvl.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 9, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>Niveau HYROX</div>
+                      <div className="bebas" style={{ fontSize: 28, color: lvl.color, lineHeight: 1, letterSpacing: 1 }}>{lvl.name}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 1 }}>{xp} XP{nextLvl ? ` · encore ${xpToNext} XP` : " · niveau max !"}</div>
+                    </div>
+                    {/* XP badge */}
+                    <div style={{ textAlign: "center", background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "8px 12px", minWidth: 52 }}>
+                      <div style={{ fontSize: 9, color: "#333", textTransform: "uppercase", marginBottom: 2 }}>XP</div>
+                      <div className="bebas" style={{ fontSize: 22, color: lvl.color, lineHeight: 1 }}>{xp}</div>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  {nextLvl && (
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, color: "#333", textTransform: "uppercase", letterSpacing: "0.08em" }}>→ {nextLvl.name}</span>
+                        <span style={{ fontSize: 10, color: lvl.color, fontWeight: 700 }}>{progressPct}%</span>
+                      </div>
+                      <div style={{ height: 5, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
+                        <div style={{ height: "100%", width: `${progressPct}%`, background: `linear-gradient(90deg, ${lvl.color}aa, ${lvl.color})`, borderRadius: 99, transition: "width 0.8s ease", position: "relative" }}>
+                          <div style={{ position: "absolute", right: 0, top: -2, width: 9, height: 9, borderRadius: "50%", background: lvl.color, boxShadow: `0 0 8px ${lvl.color}` }} />
+                        </div>
+                      </div>
+                      {/* XP hints */}
+                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        {!hasPR && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+100 XP : ajouter un PR</span>}
+                        {!hasRace && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+80 XP : fixer une race</span>}
+                        {nbSessions < 5 && <span style={{ fontSize: 9, color: "#333", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+50 XP par séance</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── TABLEAU DE BORD PRs ── */}
+            {(profile.vmaKmh || profile.squat1RM_final || profile.deadlift1RM_final) && (() => {
+              const prs = [
+                profile.vmaKmh      && { icon: "🏃", label: "VMA",      value: `${profile.vmaKmh} km/h`,         sub: `Allure Z2 : ${paceFromVMA ? (() => { try { return paceFromVMA(profile.vmaKmh, 72); } catch { return "—"; } })() : "—"}/km`, color: "var(--green)",  bg: "rgba(57,255,128,0.06)",  border: "rgba(57,255,128,0.15)"  },
+                profile.squat1RM_final && { icon: "🏋️", label: "Squat 1RM",  value: `${profile.squat1RM_final} kg`, sub: `Ratio : ${Math.round(profile.squat1RM_final / (profile.poids||75) * 10) / 10}× poids corps`, color: "var(--orange)", bg: "rgba(255,154,60,0.06)", border: "rgba(255,154,60,0.15)" },
+                profile.deadlift1RM_final && { icon: "💀", label: "Deadlift 1RM", value: `${profile.deadlift1RM_final} kg`, sub: `Ratio : ${Math.round(profile.deadlift1RM_final / (profile.poids||75) * 10) / 10}× poids corps`, color: "var(--red)",    bg: "rgba(255,71,71,0.06)",   border: "rgba(255,71,71,0.15)"   },
+              ].filter(Boolean);
+              if (prs.length === 0) return null;
+              return (
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: "#333", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>🏅 Tes records personnels</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    {prs.map((pr, i) => (
+                      <div key={i} style={{ background: pr.bg, border: `1px solid ${pr.border}`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ fontSize: 24, flexShrink: 0 }}>{pr.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{pr.label}</div>
+                          <div className="bebas" style={{ fontSize: 22, color: pr.color, lineHeight: 1 }}>{pr.value}</div>
+                          <div style={{ fontSize: 10, color: "#444", marginTop: 3 }}>{pr.sub}</div>
+                        </div>
+                        <div style={{ background: `${pr.color}18`, border: `1px solid ${pr.color}30`, borderRadius: 8, padding: "4px 8px", textAlign: "center", flexShrink: 0 }}>
+                          <div style={{ fontSize: 8, color: pr.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>PR</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* MESSAGE IA DU JOUR */}
             <div onClick={() => !loadingMessage && setShowMessageModal(true)}
               style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, cursor: "pointer" }}>
@@ -4548,6 +5019,181 @@ JSON:
                 {!loadingMessage && <span style={{ color: "#333", fontSize: 16, flexShrink: 0 }}>→</span>}
               </div>
             </div>
+
+            {/* ═══ WIDGET FORME DU JOUR ═══ */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const last3 = (profile.sessions||[]).slice(-3);
+              const avgRPE = Math.round(last3.reduce((a,s) => a+(s.difficulte||5),0)/last3.length);
+              const avgEnergie = (last3.reduce((a,s) => a+(s.energie||3),0)/last3.length).toFixed(1);
+              const lastRessenti = last3[last3.length-1]?.ressenti;
+              const forme = avgRPE <= 5 && avgEnergie >= 3.5 ? "top"
+                : avgRPE >= 9 || avgEnergie < 2 ? "fatigue"
+                : avgRPE >= 7 ? "charge" : "normal";
+              const formeConf = {
+                top:     { label: "Forme optimale",    emoji: "🚀", color: "var(--green)",  bg: "rgba(57,255,128,0.06)",  border: "rgba(57,255,128,0.18)",  msg: "Intensité max autorisée." },
+                normal:  { label: "Bonne forme",       emoji: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.04)",  border: "rgba(232,255,71,0.15)",  msg: "Continue sur ta lancée." },
+                charge:  { label: "Charge élevée",     emoji: "⚠️", color: "var(--orange)", bg: "rgba(255,154,60,0.05)",  border: "rgba(255,154,60,0.18)",  msg: "Pense à la récup active." },
+                fatigue: { label: "Récupération",      emoji: "😴", color: "var(--red)",    bg: "rgba(255,71,71,0.05)",   border: "rgba(255,71,71,0.18)",   msg: "Zone 2 ou repos conseillé." },
+              }[forme];
+              return (
+                <div style={{ background: formeConf.bg, border: `1px solid ${formeConf.border}`, borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 26, flexShrink: 0 }}>{formeConf.emoji}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: formeConf.color }}>{formeConf.label}</div>
+                      <div style={{ fontSize: 10, color: "#333" }}>Sur {last3.length} séances</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#555" }}>{formeConf.msg}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div className="bebas" style={{ fontSize: 22, color: formeConf.color, lineHeight: 1 }}>RPE {avgRPE}</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>⚡{avgEnergie}/5</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ═══ HERO SCORE RING ═══ */}
+            {(() => {
+              const sc = calcFitnessScore(profile);
+              const r = 54; const circ = 2 * Math.PI * r;
+              const offset = circ - (sc.global / 100) * circ;
+              const tw = totalWeeksFromDate(profile.raceDate);
+              const cw = profile.week || 1;
+              return (
+                <div className="float-up" style={{ background: "linear-gradient(145deg, #0f1200 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(232,255,71,0.12)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  {/* Halo */}
+                  <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(232,255,71,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+                  {/* Top row: name + share */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "#444", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Bonjour 👋</div>
+                      <div className="bebas" style={{ fontSize: 34, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
+                      <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
+                    </div>
+                    <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                      📤 Partager
+                    </button>
+                  </div>
+
+                  {/* Score ring + stats */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    {/* SVG Ring */}
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                      <svg width="140" height="140" viewBox="0 0 140 140">
+                        {/* bg ring */}
+                        <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
+                        {/* colored ring */}
+                        <circle cx="70" cy="70" r={r} fill="none"
+                          stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}
+                          strokeWidth="10" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          transform="rotate(-90 70 70)"
+                          style={{ transition: "stroke-dashoffset 1s ease, stroke 0.5s" }}
+                        />
+                        {/* inner glow ring */}
+                        <circle cx="70" cy="70" r={r} fill="none"
+                          stroke={sc.global >= 75 ? "rgba(57,255,128,0.15)" : sc.global >= 50 ? "rgba(232,255,71,0.15)" : "rgba(255,154,60,0.15)"}
+                          strokeWidth="18" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          transform="rotate(-90 70 70)"
+                        />
+                        {/* Score text */}
+                        <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}>{sc.global}</text>
+                        <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#444" letterSpacing="2">/ 100</text>
+                        <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#333" letterSpacing="1">SCORE FITNESS</text>
+                      </svg>
+                    </div>
+
+                    {/* Bars */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[
+                        { label: "Force", val: sc.force, color: "var(--yellow)", icon: "🏋️" },
+                        { label: "Endurance", val: sc.endurance, color: "var(--green)", icon: "🏃" },
+                        { label: "Puissance", val: sc.puissance, color: "var(--red)", icon: "⚡" },
+                      ].map(b => (
+                        <div key={b.label}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 5 }}><span>{b.icon}</span>{b.label}</span>
+                            <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#333" }}>%</span></span>
+                          </div>
+                          <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                            <div style={{ width: `${b.val}%`, height: "100%", background: `linear-gradient(90deg, ${b.color}88, ${b.color})`, borderRadius: 99, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Programme week bar */}
+                  {tw > 0 && (
+                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
+                        <span className="bebas" style={{ fontSize: 13, color: "var(--yellow)" }}>S{cw} / {tw}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 2 }}>
+                        {Array.from({ length: Math.min(tw, 20) }, (_, i) => {
+                          const ratio = tw / Math.min(tw, 20);
+                          const w = Math.floor(i * ratio) + 1;
+                          const isPast = cw > Math.floor((i + 1) * ratio);
+                          const isActive = !isPast && cw >= w;
+                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(232,255,71,0.5)" : "rgba(255,255,255,0.05)", border: isActive ? "1px solid rgba(232,255,71,0.6)" : "none" }} />;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── ESTIMATEUR TEMPS HYROX ── */}
+            {(profile.vmaKmh || profile.squat1RM_final) && (() => {
+              // Estimation basée sur: VMA → temps running, Force → temps stations
+              const vma = parseFloat(profile.vmaKmh) || 12;
+              const squat = parseFloat(profile.squat1RM_final) || 80;
+              const poids = parseFloat(profile.poids) || 75;
+              const genre = profile.genre || "H";
+              // Running: 8km à une allure fonction de la VMA (% VMA)
+              const runPctVma = genre === "F" ? 0.72 : 0.70;
+              const runSpeedKmh = vma * runPctVma;
+              const runMins = (8 / runSpeedKmh) * 60;
+              // Stations: base selon ratio force/poids (plus c'est élevé, plus vite)
+              const forceRatio = squat / poids;
+              const stationsBase = genre === "F" ? 32 : 28; // minutes
+              const stationsBonus = Math.min(6, Math.max(0, (forceRatio - 0.8) * 5));
+              const stationsMins = Math.max(20, stationsBase - stationsBonus);
+              const totalMins = runMins + stationsMins + 4; // 4 min transitions
+              const h = Math.floor(totalMins / 60);
+              const m = Math.round(totalMins % 60);
+              const timeStr = `${h}h${String(m).padStart(2,"0")}`;
+              // Catégorie
+              const cat = totalMins < 70 ? { label: "Élite", color: "#ff4747" }
+                : totalMins < 85 ? { label: "Pro", color: "#ff9a3c" }
+                : totalMins < 100 ? { label: "Semi-Pro", color: "var(--yellow)" }
+                : totalMins < 120 ? { label: "Amateur+", color: "var(--green)" }
+                : { label: "Finisher", color: "#a78bfa" };
+              const hasGoal = profile.goalTargetLevel;
+              return (
+                <div onClick={() => navigateTo("race")} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "#444", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <div className="bebas" style={{ fontSize: 36, color: cat.color, lineHeight: 1 }}>{timeStr}</div>
+                      <div style={{ background: `${cat.color}18`, border: `1px solid ${cat.color}33`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: cat.color, fontWeight: 700 }}>{cat.label}</div>
+                    </div>
+                    {hasGoal && (
+                      <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>
+                        Objectif : {profile.goalTargetLevel} · {totalMins < (profile.goalTargetLevel.replace("Sub ","").includes("h") ? parseInt(profile.goalTargetLevel.replace("Sub ",""))*60 : 999) ? "🎯 Dans les clous !" : "💪 À améliorer"}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 3 }}>Basé sur VMA {vma}km/h · Squat {squat}kg</div>
+                  </div>
+                  <div style={{ color: "#333", fontSize: 16, flexShrink: 0 }}>→</div>
+                </div>
+              );
+            })()}
 
             {/* Séance coach dispo */}
             {coachSession && (
@@ -4612,6 +5258,138 @@ JSON:
                       <div style={{ fontSize: 12, color: "#888", lineHeight: 1.55 }}>{tip.tip}</div>
                     </div>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── DÉFI DE LA SEMAINE ── */}
+            {(() => {
+              const DEFIS = [
+                { icon: "⛷️", station: "SkiErg", challenge: "100 coups en 2 min", tip: "Focus sur la synchronisation hanches + bras. Maintiens un rythme constant.", color: "#a78bfa", xp: 80 },
+                { icon: "🤸", station: "Burpee BJ", challenge: "10 reps en moins d'1 min", tip: "Explose sur le saut, atterris en douceur et enchaîne sans pause.", color: "var(--red)", xp: 100 },
+                { icon: "🚣", station: "Rowing", challenge: "500m sous 2:00 min/500m", tip: "Jambes complètes avant de tirer les bras. Drive explosif, retour lent.", color: "#38bdf8", xp: 90 },
+                { icon: "🏋️", station: "Force", challenge: "3×10 squats à 60% du max", tip: "Descends sous le parallèle, genoux dans l'axe, montée explosive.", color: "var(--yellow)", xp: 70 },
+                { icon: "🧳", station: "Farmers Carry", challenge: "50m sans poser les kettlebells", tip: "Abdos actifs, pas réguliers, regarde loin devant toi.", color: "var(--green)", xp: 75 },
+                { icon: "🏀", station: "Wall Balls", challenge: "21-15-9 reps sans pause", tip: "Balle sur les trapèzes, squat complet à chaque rep, souffle en remontant.", color: "var(--orange)", xp: 85 },
+                { icon: "🛷", station: "Sled Push", challenge: "20m × 3 en moins de 45s", tip: "Corps à 45°, pousse du sol avec les jambes, pas avec le dos.", color: "#ff9a3c", xp: 95 },
+                { icon: "🎒", station: "Sandbag", challenge: "20 lunges avec sac sur épaules", tip: "Sac bien haut, genou avant droit, genou arrière effleure le sol.", color: "var(--orange)", xp: 80 },
+                { icon: "🏃", station: "Running", challenge: "10 min à allure HYROX cible", tip: "Rythme conversationnel, technique parfaite, bras décontractés.", color: "var(--green)", xp: 70 },
+                { icon: "🧠", station: "Mental", challenge: "Visualiser ta race complète", tip: "5 min les yeux fermés : tu franchis chaque station, tu gères le souffle.", color: "#ec4899", xp: 60 },
+                { icon: "🔗", station: "Sled Pull", challenge: "20m en marche arrière × 3", tip: "Dos droit, pas courts, tire avec les hanches pas les bras.", color: "var(--yellow)", xp: 85 },
+                { icon: "💪", station: "Full Body", challenge: "5 rounds : 10 KB swings + 100m run", tip: "Donne tout sur le swing, récupère en courant à 70% d'intensité.", color: "var(--purple)", xp: 110 },
+              ];
+              // Semaine ISO
+              const d = new Date(); d.setHours(0,0,0,0);
+              const dayOfWeek = d.getDay() || 7;
+              const monday = new Date(d); monday.setDate(d.getDate() - dayOfWeek + 1);
+              const weekKey = `defi_${monday.toISOString().slice(0,10)}`;
+              const defiIdx = Math.floor(monday.getTime() / (7 * 86400000)) % DEFIS.length;
+              const defi = DEFIS[defiIdx];
+              const [defiDone, setDefiDone] = React.useState(() => {
+                try { return localStorage.getItem(weekKey) === "1"; } catch { return false; }
+              });
+              const daysLeft = 7 - dayOfWeek + 1;
+
+              function complete() {
+                try { localStorage.setItem(weekKey, "1"); } catch {}
+                setDefiDone(true);
+              }
+
+              return (
+                <div style={{ background: defiDone ? "rgba(57,255,128,0.04)" : `${defi.color}06`, border: `1.5px solid ${defiDone ? "rgba(57,255,128,0.25)" : `${defi.color}25`}`, borderRadius: 16, padding: "16px 16px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                  {/* Glow */}
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${defi.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${defi.color}15`, border: `1.5px solid ${defi.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{defiDone ? "✅" : defi.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 9, color: defiDone ? "var(--green)" : defi.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{defiDone ? "✓ Défi accompli" : `Défi semaine · ${defi.station}`}</div>
+                        <div style={{ fontSize: 9, color: "#333" }}>{defiDone ? `+${defi.xp} XP` : `${daysLeft}j restant${daysLeft>1?"s":""}`}</div>
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: defiDone ? "var(--green)" : "var(--white)", marginTop: 4, lineHeight: 1.2 }}>{defi.challenge}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.4 }}>{defi.tip}</div>
+                    </div>
+                  </div>
+                  {!defiDone ? (
+                    <button onClick={complete} style={{ width: "100%", padding: "10px", background: `${defi.color}15`, border: `1px solid ${defi.color}33`, borderRadius: 10, fontSize: 13, fontWeight: 700, color: defi.color, cursor: "pointer" }}>
+                      🏆 Je l'ai fait · +{defi.xp} XP
+                    </button>
+                  ) : (
+                    <div style={{ textAlign: "center", fontSize: 12, color: "var(--green)", fontWeight: 700 }}>🎉 Excellent ! Nouveau défi lundi.</div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── SEMAINE 1 ROADMAP (beginners) ── */}
+            {(profile.sessions||[]).length < 5 && (() => {
+              const sessionsDone = (profile.sessions||[]).length;
+              const ROADMAP = [
+                { step: 1, icon: "👤", label: "Profil créé", desc: "Ton point de départ est défini", done: true },
+                { step: 2, icon: "📋", label: "Check-in matinal", desc: "Dis-nous comment tu vas chaque matin", done: dailyData.fatigue > 0 },
+                { step: 3, icon: "🏋️", label: "1ère séance", desc: "Lance ta première séance du coach IA", done: sessionsDone >= 1 },
+                { step: 4, icon: "🍽️", label: "Log nutrition", desc: "Note ce que tu manges aujourd'hui", done: false },
+                { step: 5, icon: "📊", label: "3 séances", desc: "Le graphique de progression s'active", done: sessionsDone >= 3 },
+                { step: 6, icon: "🔥", label: "Streak 3 jours", desc: "3 check-ins consécutifs — l'habitude commence", done: (profile.streak||0) >= 3 },
+              ];
+              const doneCount = ROADMAP.filter(r => r.done).length;
+              const nextStep = ROADMAP.find(r => !r.done);
+              return (
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🚀 Prise en main ({doneCount}/{ROADMAP.length})</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>{Math.round(doneCount/ROADMAP.length*100)}% complété</div>
+                  </div>
+                  <div style={{ height: 3, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
+                    <div style={{ height: "100%", width: `${Math.round(doneCount/ROADMAP.length*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.8s" }} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {ROADMAP.map((r, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, opacity: r.done ? 1 : r === nextStep ? 1 : 0.4 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: r.done ? "rgba(57,255,128,0.12)" : r === nextStep ? "rgba(232,255,71,0.1)" : "rgba(255,255,255,0.02)", border: `1.5px solid ${r.done ? "rgba(57,255,128,0.4)" : r === nextStep ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                          {r.done ? "✅" : r.icon}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: r === nextStep ? 700 : 600, color: r.done ? "var(--green)" : r === nextStep ? "var(--yellow)" : "#555" }}>{r.label}</div>
+                          <div style={{ fontSize: 9, color: "#444" }}>{r.desc}</div>
+                        </div>
+                        {r === nextStep && <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700 }}>← NEXT</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── BADGES SHOWCASE ── */}
+            {(() => {
+              const earnedBadges = BADGES.filter(b => b.check(profile));
+              const unearned = BADGES.filter(b => !b.check(profile));
+              if (earnedBadges.length === 0 && unearned.length === 0) return null;
+              return (
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#444", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🏅 Badges ({earnedBadges.length}/{BADGES.length})</div>
+                    <div style={{ fontSize: 10, color: "#333" }}>{BADGES.length - earnedBadges.length} à débloquer</div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {BADGES.map(b => {
+                      const earned = b.check(profile);
+                      return (
+                        <div key={b.id} title={b.desc} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 52, opacity: earned ? 1 : 0.3 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 13, background: earned ? "rgba(232,255,71,0.1)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${earned ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "all 0.2s" }}>
+                            {earned ? b.icon : "🔒"}
+                          </div>
+                          <div style={{ fontSize: 7, color: earned ? "#888" : "#333", textAlign: "center", lineHeight: 1.2, maxWidth: 52 }}>{b.name}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {earnedBadges.length > 0 && (
+                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 10, color: "#444" }}>
+                      Dernier badge : <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{earnedBadges[earnedBadges.length-1].icon} {earnedBadges[earnedBadges.length-1].name}</span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
