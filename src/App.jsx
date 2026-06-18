@@ -3353,22 +3353,34 @@ Génère UN message court (2-3 phrases max) qui:
     const lastSess = (profile.sessions || []).slice(-1)[0];
     const days = daysUntil(profile.raceDate);
 
-    const systemPrompt = `Tu es le Coach IA personnel de ${profile.name}, athlète HYROX. Tu parles directement à l'athlète en français, avec bienveillance et expertise.
+    const recentSessions3 = (profile.sessions || []).slice(-3).map(s => `"${s.titre}" (RPE ${s.difficulte}/10, ${s.ressenti})`).join(" → ");
+    const systemPrompt = `Tu es Marc, coach HYROX certifié de niveau Pro. Tu entraînes ${profile.name} depuis le début. Tu parles directement à lui/elle en français, avec précision et bienveillance. Tu es direct, concret, actionnable — jamais vague.
 
-PROFIL COMPLET:
-- ${profile.name}, ${profile.age} ans, ${profile.poids}kg, ${profile.sexe}
-- Niveau HYROX: ${profile.level}/4 | VMA: ${profile.vmaKmh || "?"}km/h
-- Squat 1RM: ${profile.squat1RM_final || "?"}kg | Deadlift: ${profile.deadlift1RM_final || "?"}kg
-- Score condition: ${score.global}% (Force ${score.force}% | Endurance ${score.endurance}%)
-- Objectif: ${profile.objectifPrincipal || "HYROX"} ${profile.hyroxCategorie || ""}
-- Jours avant la course: ${days !== null ? days : "non défini"}
-- Séances réalisées: ${(profile.sessions || []).length}
-- Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficulte}/10, ressenti: ${lastSess.ressenti}` : "aucune"}
-- Streak: ${profile.streak || 0} jours
+━━ PROFIL ${profile.name?.toUpperCase()} ━━
+${profile.age} ans | ${profile.poids}kg | ${profile.sexe || "?"} | Niveau HYROX: ${profile.level}/4 | Catégorie: ${profile.hyroxCategorie || "Open"}
+VMA: ${profile.vmaKmh || "?"}km/h → Zone 2: ${profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 65) : "??"}/km | Seuil: ${profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 82) : "??"}/km
+Deadlift 1RM: ${profile.deadlift1RM_final || "?"}kg | Squat 1RM: ${profile.squat1RM_final || "?"}kg
+Score forme: ${score.global}% (Force ${score.force}% | Cardio ${score.endurance}%)
+Objectif: ${profile.objectifPrincipal || "Finir HYROX"} | Course dans: ${days !== null ? days+" jours" : "non défini"}
+Séances réalisées: ${(profile.sessions || []).length} | Streak: ${profile.streak || 0} jours
+3 dernières: ${recentSessions3 || "aucune"}
+Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficulte}/10 | ressenti: ${lastSess.ressenti}` : "aucune"}
 
-DOMAINES D'EXPERTISE: HYROX, running, force fonctionnelle, nutrition sportive, récupération, planification, technique des stations (SkiErg, Rowing, Wall Balls, Sled Push/Pull, Burpee Broad Jump, Farmers Carry, Sandbag Lunges).
+━━ TON EXPERTISE ━━
+• Périodisation par blocs (base → développement → pic → affûtage)
+• Modèle Banister charge/récupération (CTL/ATL/TSB)
+• Spécificité HYROX: 8 stations + running compromis
+• Charges officielles: Sled Push ${profile.sexe === "F" ? "102" : "152"}kg, Farmers ${profile.sexe === "F" ? "2x24" : "2x32"}kg, Wall Balls ${profile.sexe === "F" ? "4" : "6"}kg, Sandbag ${profile.sexe === "F" ? "10" : "20"}kg
+• Nutrition sport: timing, glucides intra-effort, récupération protéique
+• Technique stations: compensations à corriger, cues de coaching précis
 
-Réponds de façon conversationnelle, précise et personnalisée. Utilise le prénom de l'athlète. Sois concret et actionnable.`;
+━━ RÈGLES DE RÉPONSE ━━
+• Toujours utiliser le prénom
+• Donner des chiffres précis (allures en min/km, charges en kg, durées)
+• Relier chaque conseil à l'objectif HYROX
+• Si blessure/douleur aiguë → protocole RICE + consultation médicale recommandée
+• Réponses courtes et structurées (pas de pavés de texte)
+• Si question hors sport/santé → recentrer poliment sur la préparation HYROX`;
 
     const historyForAPI = newMessages.map(m => ({ role: m.role, content: m.content }));
 
@@ -3511,21 +3523,114 @@ ADAPTATION À APPLIQUER OBLIGATOIREMENT AUJOURD'HUI: ${allAdaptations.slice(-1)[
     const lastSessions3 = allSessions.slice(-3).map(s => `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti})`).join(" | ");
     const poidsComp = getPoidsHyrox(profile);
 
-    if (!silent) setSessionStreamText("🤖 Coach IA analyse ton profil...");
-    const raw = await callClaudeStream(
-      "Coach HYROX expert. Réponds UNIQUEMENT en JSON valide, sans texte autour, sans backticks.",
-      `Génère une séance ${sessionType} en JSON pour: ${profile.name}, ${profile.poids}kg, Niv.${profile.level}, VMA ${profile.vmaKmh||"?"}km/h, Squat ${profile.squat1RM_final||"?"}kg, Fatigue ${dailyData.fatigue}/4, ${dailyData.temps}min, phase ${phase}.
+    // ─── DONNÉES FORME DU JOUR ───────────────────────────────────────
+    const hrv = dailyData.hrv ? parseInt(dailyData.hrv) : null;
+    const sleepH = parseFloat(dailyData.sleepHours) || 7.5;
+    const fatigueVal = parseInt(dailyData.fatigue) || 3;
+    const hydration = parseInt(dailyData.hydration) || 0;
+    const fatigueLabels = ["","Épuisé(e)","Fatigué(e)","Bien","Frais/Fraîche"];
+    const sommeilLabels = ["","Mauvais","Moyen","Bien","Excellent"];
+
+    // Calcul adaptation intensité basée sur HRV + fatigue + sommeil
+    let intensityModifier = "NORMALE";
+    let intensityNote = "";
+    if (hrv !== null && hrv < 40) { intensityModifier = "RÉDUITE -20%"; intensityNote = `HRV très bas (${hrv}) → récupération insuffisante`; }
+    else if (hrv !== null && hrv > 70) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = `HRV élevé (${hrv}) → système nerveux bien récupéré`; }
+    else if (fatigueVal <= 1) { intensityModifier = "RÉDUITE -30%"; intensityNote = "Épuisement déclaré → séance récupération active uniquement"; }
+    else if (fatigueVal <= 2 || sleepH < 6) { intensityModifier = "RÉDUITE -15%"; intensityNote = `Fatigue élevée (${sleepH < 6 ? `sommeil seulement ${sleepH}h` : "ressenti fatigué"}) → volume réduit`; }
+    else if (fatigueVal === 4 && sleepH >= 7.5) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = "Forme optimale → possibilité de pousser"; }
+
+    // Calculs charges précises basées sur les 1RM
+    const deadliftWork = profile.deadlift1RM_final ? Math.round(profile.deadlift1RM_final * 0.72) : null;
+    const squatWork = profile.squat1RM_final ? Math.round(profile.squat1RM_final * 0.70) : null;
+    const paceZ2 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 65) : null;
+    const paceZ3 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 82) : null;
+    const paceZ4 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 90) : null;
+    const wallBallKg = profile.sexe === "F" ? 4 : 6;
+    const farmersKg = profile.sexe === "F" ? 24 : 32;
+    const sandbagKg = profile.sexe === "F" ? 10 : 20;
+    // ─────────────────────────────────────────────────────────────────
+
+    const expertSystemPrompt = `Tu es Marc, coach HYROX certifié niveau Pro avec 10 ans d'expérience. Tu as préparé des centaines d'athlètes HYROX du débutant au Pro. Ta méthode est scientifique, précise et individualisée.
+
+MÉTHODOLOGIE QUE TU APPLIQUES TOUJOURS:
+1. SPÉCIFICITÉ ABSOLUE: chaque exercice a une raison précise liée à HYROX
+2. CHARGES CALCULÉES SUR LES 1RM: jamais de "charge modérée" — des chiffres précis
+3. ALLURES RUNNING BASÉES SUR LA VMA: pas de "facile/modéré" — des min/km précis
+4. ADAPTATION TEMPS RÉEL: HRV, sommeil, fatigue modifient l'intensité AVANT de générer
+5. COMPROMISED RUNNING: entraîner à courir avec les jambes fatiguées = compétence #1 HYROX
+6. PROGRESSION LOGIQUE: chaque séance prépare la suivante
+
+ZONES RUNNING (à utiliser avec allures calculées, pas des RPE vagues):
+- Zone 1 (<60% VMA): récupération active — uniquement entre blocs très intenses
+- Zone 2 (60-70% VMA): base aérobie — fondamental, représente 70-80% du volume total
+- Zone 3 (75-85% VMA): tempo seuil — développement lactique
+- Zone 4 (88-95% VMA): VO2max — intervalles
+
+CHARGES OFFICIELLES HYROX (base de calcul pour l'entraînement à 60-80%):
+- Sled Push: H=152kg+traineau / F=102kg+traineau → entraîner à 60-75%
+- Sled Pull: H=103kg / F=78kg → entraîner à 65-80%
+- Farmers Carry: H=2x32kg / F=2x24kg
+- Wall Balls: H=6kg à 10m (75 reps) / F=4kg à 9m
+- Sandbag Lunges: H=20kg 100m / F=10kg 100m
+- SkiErg/Rowing: 1000m standard
+- Burpee Broad Jump: 80m
+
+STRUCTURE OBLIGATOIRE DE CHAQUE SÉANCE:
+- Échauffement: 10-12min spécifique à la séance (running progressif + mobilité ciblée + exercices d'activation)
+- Corps: 35-50min selon temps disponible — DENSE, pas de temps perdu
+- Retour au calme: 5-8min (étirements ciblés selon muscles sollicités)
+
+Réponds UNIQUEMENT avec le JSON demandé — aucun texte avant ou après, aucun backtick.`;
+
+    const expertUserPrompt = `GÉNÈRE UNE SÉANCE ${sessionType.toUpperCase()} POUR:
+
+═══ PROFIL ATHLÈTE ═══
+Nom: ${profile.name} | Sexe: ${profile.sexe || "H"} | Âge: ${profile.age} ans | Poids: ${profile.poids}kg
+Niveau HYROX: ${profile.level}/4 | Catégorie: ${profile.hyroxCategorie || "Open"}
+VMA: ${profile.vmaKmh || "?"}km/h
+Deadlift 1RM: ${profile.deadlift1RM_final || "?"}kg → charge de travail (72%): ${deadliftWork ? deadliftWork+"kg" : "?"}
+Squat 1RM: ${profile.squat1RM_final || "?"}kg → charge de travail (70%): ${squatWork ? squatWork+"kg" : "?"}
+Objectif: ${profile.objectifPrincipal || "Finir HYROX"} | Course dans: ${daysUntil(profile.raceDate) !== null ? daysUntil(profile.raceDate)+" jours" : "non défini"}
+
+═══ DONNÉES FORME DU JOUR ═══
+Énergie: ${fatigueLabels[fatigueVal]} (${fatigueVal}/4)
+Qualité sommeil: ${sommeilLabels[parseInt(dailyData.sommeil)||3]} | Durée: ${sleepH}h
+HRV: ${hrv !== null ? hrv+" ms" : "non mesuré"}
+Hydratation: ${hydration}/8 verres
+⚡ INTENSITÉ AJUSTÉE: ${intensityModifier}${intensityNote ? " — " + intensityNote : ""}
+
+═══ ALLURES RUNNING PERSONNALISÉES ═══
+Zone 2 (base): ${paceZ2 || "?"}/km
+Zone 3 (tempo): ${paceZ3 || "?"}/km
+Zone 4 (intervalles): ${paceZ4 || "?"}/km
+
+═══ CHARGES STATIONS HYROX PERSONNALISÉES ═══
+Wall Balls: ${wallBallKg}kg standard | Farmers Carry: ${farmersKg}kg/main | Sandbag: ${sandbagKg}kg
+${squatWork ? `Goblet Squat: ${Math.round(squatWork * 0.45)}kg | Bulgarian Split: ${Math.round(squatWork * 0.35)}kg/côté` : ""}
+
+═══ HISTORIQUE & CONTEXTE ═══
+Phase: ${phase} | Semaine: ${week}/${totalWeeksP || "?"} | Séances réalisées: ${nbSessions}
 ${adaptationContext}
-TYPE DE SÉANCE À GÉNÉRER:
-${sessionTypeDescriptions[sessionType] || "Séance générale HYROX"}
-Retourne UNIQUEMENT ce JSON (4-6 exercices avec charges précises et détails complets):
-{"titre":"","type":"${sessionType}","duree":${dailyData.temps},"explication":"","echauffement":"","exercices":[{"nom":"","series":"","reps":"","charge":"","repos":"","rpe":"","note":""}],"retourCalme":"","nutrition":{"avant":"","apres":""},"metrique":""}
-IMPORTANT: series=nombre de séries (ex:"4"), reps=répétitions ou durée (ex:"8" ou "30s"), charge=charge ou distance (ex:"82kg" ou "20m"), repos=temps de récupération (ex:"90s" ou "2min")`,
-      1400,
+
+═══ TYPE DE SÉANCE À GÉNÉRER ═══
+${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
+Temps disponible: ${dailyData.temps} minutes
+
+RETOURNE UNIQUEMENT CE JSON (5-7 exercices, charges précises en chiffres, aucune approximation):
+{"titre":"","type":"${sessionType}","duree":${dailyData.temps},"objectif":"","explication":"","echauffement":"","exercices":[{"nom":"","series":"","reps":"","charge":"","repos":"","rpe_cible":"","tempo":"","cle_technique":"","note":""}],"retourCalme":"","points_attention":"","nutrition":{"avant":"","pendant":"","apres":""},"charge_seance":"","metrique":""}
+
+RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m", charge=précis ex "82kg" ou "2x32kg" ou "allure ${paceZ2||"?"}/km", repos=précis ex "90s" ou "2min30", rpe_cible=ex "7/10", tempo=optionnel ex "3-1-2-0", cle_technique=1 conseil technique clé en 1 phrase courte, charge_seance=ex "Volume modéré — ~3400kg déplacés"`;
+
+    if (!silent) setSessionStreamText("🤖 Coach Marc analyse ton profil...");
+    const raw = await callClaudeStream(
+      expertSystemPrompt,
+      expertUserPrompt,
+      1800,
       silent ? undefined : (chunk) => {
         const titreMatch = chunk.match(/"titre"\s*:\s*"([^"]{3,})"/);
         if (titreMatch) setSessionStreamText(`📋 ${titreMatch[1]}...`);
-        else if (chunk.length > 50) setSessionStreamText("🤖 Génération en cours...");
+        else if (chunk.length > 50) setSessionStreamText("🤖 Génération de ta séance...");
       }
     );
 
@@ -6048,8 +6153,20 @@ JSON:
                       </div>
                       {/* Titre */}
                       <div className="bebas" style={{ fontSize: 30, color: "var(--white)", lineHeight: 1, letterSpacing: 0.5, marginBottom: 10 }}>{session.titre}</div>
+                      {/* Objectif séance */}
+                      {session.objectif && (
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "4px 10px", marginBottom: 8 }}>
+                          <span style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>🎯 {session.objectif}</span>
+                        </div>
+                      )}
                       {/* Explication */}
                       <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6, marginBottom: 10 }}>{session.explication}</div>
+                      {/* Points d'attention */}
+                      {session.points_attention && (
+                        <div style={{ fontSize: 11, color: "#ff9a3c", background: "rgba(255,154,60,0.06)", border: "1px solid rgba(255,154,60,0.15)", borderRadius: 8, padding: "7px 10px", marginBottom: 10, lineHeight: 1.5 }}>
+                          ⚠️ {session.points_attention}
+                        </div>
+                      )}
                       {/* Pourquoi cette séance ? — beginner guide */}
                       <PourquoiCard session={session} />
                       {/* Progress ring inline */}
@@ -6155,7 +6272,21 @@ JSON:
                             {!ex.series && !ex.reps && !ex.charge && ex.detail && <div className="bebas" style={{ fontSize: 20, color: done ? "#555" : accentColor, letterSpacing: "0.04em" }}>{ex.detail}</div>}
                           </div>
                         )}
-                        {ex.note && <div style={{ fontSize: 11, color: "#555", marginTop: 6, lineHeight: 1.5, paddingLeft: 38, borderLeft: "2px solid rgba(255,255,255,0.04)", marginLeft: 38 }}>💬 {ex.note}</div>}
+                        {/* Chips RPE cible + tempo */}
+                        {(ex.rpe_cible || ex.tempo) && !done && (
+                          <div style={{ display: "flex", gap: 6, marginTop: 4, paddingLeft: 38 }}>
+                            {ex.rpe_cible && <div style={{ fontSize: 10, color: "#888", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe_cible}</div>}
+                            {ex.tempo && <div style={{ fontSize: 10, color: "#888", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>Tempo {ex.tempo}</div>}
+                          </div>
+                        )}
+                        {/* Clé technique — le conseil le plus important */}
+                        {ex.cle_technique && !done && (
+                          <div style={{ fontSize: 11, color: "var(--yellow)", marginTop: 7, lineHeight: 1.5, paddingLeft: 38, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                            <span style={{ flexShrink: 0 }}>⚡</span>
+                            <span>{ex.cle_technique}</span>
+                          </div>
+                        )}
+                        {(ex.note || ex.rpe) && !done && <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.5, paddingLeft: 38 }}>💬 {ex.note || (ex.rpe ? `RPE cible: ${ex.rpe}` : "")}</div>}
                       </div>
                     );
                   })}
@@ -6180,16 +6311,17 @@ JSON:
                 {/* Nutrition */}
                 {session.nutrition && (
                   <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.12)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-                    <div style={{ fontSize: 9, color: "var(--green)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 6 }}>🥗 Nutrition</div>
-                    <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5 }}>🍌 {session.nutrition.avant}</div>
-                    <div style={{ fontSize: 11, color: "#888", marginTop: 3 }}>🥤 {session.nutrition.apres}</div>
+                    <div style={{ fontSize: 9, color: "var(--green)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.1em", marginBottom: 8 }}>🥗 Nutrition autour de la séance</div>
+                    {session.nutrition.avant && <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ flexShrink: 0, color: "#666" }}>Avant :</span>{session.nutrition.avant}</div>}
+                    {session.nutrition.pendant && <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5, marginBottom: 4, display: "flex", gap: 6 }}><span style={{ flexShrink: 0, color: "#666" }}>Pendant :</span>{session.nutrition.pendant}</div>}
+                    {session.nutrition.apres && <div style={{ fontSize: 11, color: "#888", lineHeight: 1.5, display: "flex", gap: 6 }}><span style={{ flexShrink: 0, color: "#666" }}>Après :</span>{session.nutrition.apres}</div>}
                   </div>
                 )}
 
-                {session.metrique && (
-                  <div style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", fontSize: 12, color: "var(--yellow)", marginBottom: 14, display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    <span style={{ fontSize: 16 }}>🎯</span>
-                    <span style={{ lineHeight: 1.5 }}>À noter : {session.metrique}</span>
+                {(session.metrique || session.charge_seance) && (
+                  <div style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                    {session.charge_seance && <div style={{ fontSize: 11, color: "#888", marginBottom: session.metrique ? 4 : 0 }}>📊 {session.charge_seance}</div>}
+                    {session.metrique && <div style={{ fontSize: 12, color: "var(--yellow)", display: "flex", gap: 8, alignItems: "flex-start", lineHeight: 1.5 }}><span>🎯</span><span>À noter : {session.metrique}</span></div>}
                   </div>
                 )}
 
