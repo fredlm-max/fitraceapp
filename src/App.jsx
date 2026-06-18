@@ -30,19 +30,23 @@ const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #080808; --bg2: #101010; --bg3: #181818;
-    --yellow: #e8ff47; --red: #ff4747; --green: #39ff80; --orange: #ff9a3c; --purple: #a78bfa;
-    --white: #f0f0f0; --gray: #555; --gray2: #333;
+    --bg: #F5F5F7; --bg2: #FFFFFF; --bg3: #E8E8ED;
+    --yellow: #D4C800; --red: #FF3B30; --green: #28A745; --orange: #E07A00; --purple: #7B3FCE;
+    --yellow-bright: #e8ff47;
+    --white: #1D1D1F; --gray: #8E8E93; --gray2: #48484A;
     --font-title: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.06);
   }
   html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; }
   #root { min-height: 100vh; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(232,255,71,0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
   .bebas { font-family: var(--font-title); letter-spacing: 0.04em; }
 
   /* ── Buttons ── */
@@ -92,8 +96,8 @@ const GLOBAL_STYLES = `
   .card-press:active { transform: scale(0.97); }
 
   /* ── Skeleton loader ── */
-  .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%); background-size: 300px 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
-  .skeleton-card { background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 100%); background-size: 400px 100%; animation: shimmer 1.6s ease infinite; border-radius: 18px; }
+  .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.07) 50%, rgba(0,0,0,0.04) 100%); background-size: 300px 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
+  .skeleton-card { background: linear-gradient(90deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 100%); background-size: 400px 100%; animation: shimmer 1.6s ease infinite; border-radius: 18px; }
 
   /* ── Touch feedback ── */
   * { -webkit-tap-highlight-color: transparent; }
@@ -103,25 +107,26 @@ const GLOBAL_STYLES = `
   .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); }
 
   /* ── Input range (sliders) ── */
-  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 99px; background: rgba(255,255,255,0.08); outline: none; cursor: pointer; }
-  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--yellow); cursor: pointer; box-shadow: 0 2px 8px rgba(232,255,71,0.4); border: 2px solid rgba(255,255,255,0.2); transition: transform 0.15s var(--spring); }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 99px; background: rgba(0,0,0,0.1); outline: none; cursor: pointer; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--yellow-bright); cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 2px solid #FFFFFF; transition: transform 0.15s var(--spring); }
   input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.3); }
-  input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--yellow); cursor: pointer; border: 2px solid rgba(255,255,255,0.2); }
+  input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--yellow-bright); cursor: pointer; border: 2px solid #FFFFFF; }
 
   /* ── Text inputs premium ── */
   input[type="text"], input[type="number"], input[type="email"], input[type="date"], textarea, select {
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--white);
+    background: #FFFFFF; border: 1px solid rgba(0,0,0,0.1); color: var(--white);
     border-radius: 12px; padding: 12px 14px; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="date"]:focus, textarea:focus, select:focus {
-    background: rgba(255,255,255,0.06); border-color: rgba(232,255,71,0.5); box-shadow: 0 0 0 3px rgba(232,255,71,0.08);
+    background: #FFFFFF; border-color: var(--yellow-bright); box-shadow: 0 0 0 3px rgba(212,200,0,0.15);
   }
 
   /* ── Scrollbar slim ── */
   * { scrollbar-width: thin; scrollbar-color: rgba(232,255,71,0.2) transparent; }
 
   /* ── Selection color ── */
-  ::selection { background: rgba(232,255,71,0.25); color: var(--white); }
+  ::selection { background: rgba(212,200,0,0.25); color: var(--white); }
 
   /* ── Focus ring ── */
   :focus-visible { outline: 2px solid rgba(232,255,71,0.5); outline-offset: 2px; }
@@ -474,7 +479,7 @@ function RPELineChart({ profile }) {
             {/* Grille horizontale */}
             {[2,4,6,8,10].map(v => (
               <g key={v}>
-                <line x1={0} y1={yScale(v)} x2={innerW} y2={yScale(v)} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+                <line x1={0} y1={yScale(v)} x2={innerW} y2={yScale(v)} stroke="rgba(0,0,0,0.04)" strokeWidth={1} />
                 <text x={-4} y={yScale(v)+4} textAnchor="end" fill="#333" fontSize={8}>{v}</text>
               </g>
             ))}
@@ -604,7 +609,7 @@ function TrainingHeatmap({ profile }) {
                     style={{
                       width: 12, height: 12, borderRadius: 3,
                       background: getColor(day),
-                      border: isToday ? "1.5px solid var(--yellow)" : isHover && day.session ? "1px solid rgba(255,255,255,0.3)" : "1px solid transparent",
+                      border: isToday ? "1.5px solid var(--yellow)" : isHover && day.session ? "1px solid rgba(0,0,0,0.2)" : "1px solid transparent",
                       cursor: day.session ? "pointer" : "default",
                       transition: "transform 0.1s",
                       transform: isHover && day.session ? "scale(1.3)" : "scale(1)",
@@ -685,13 +690,13 @@ function RadarChart({ profile }) {
           {[20, 40, 60, 80, 100].map(pct => {
             const pts = axes.map((_, i) => getPoint(startAngle + i * angleStep, (pct / 100) * R));
             const path = pts.map((p, i) => `${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ") + " Z";
-            return <path key={pct} d={path} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={1} />;
+            return <path key={pct} d={path} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth={1} />;
           })}
           {/* Axes */}
           {axes.map((_, i) => {
             const angle = startAngle + i * angleStep;
             const outer = getPoint(angle, R);
-            return <line key={i} x1={CX} y1={CY} x2={outer.x} y2={outer.y} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />;
+            return <line key={i} x1={CX} y1={CY} x2={outer.x} y2={outer.y} stroke="rgba(0,0,0,0.07)" strokeWidth={1} />;
           })}
           {/* Polygone athlète */}
           <path d={polygonPath} fill="rgba(232,255,71,0.12)" stroke="var(--yellow)" strokeWidth={2} />
@@ -718,7 +723,7 @@ function RadarChart({ profile }) {
                 <span style={{ fontSize: 12, color: "#888" }}>{a.label}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: a.color }}>{a.value}%</span>
               </div>
-              <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 4 }}>
+              <div style={{ background: "rgba(0,0,0,0.06)", borderRadius: 99, height: 4 }}>
                 <div style={{ width: `${a.value}%`, height: 4, background: a.color, borderRadius: 99, transition: "width 0.8s" }} />
               </div>
             </div>
@@ -782,7 +787,7 @@ function MultiChargesChart({ profile }) {
             const y = yScale(minVal + (range * pct / 100));
             return (
               <g key={pct}>
-                <line x1={0} y1={y} x2={innerW} y2={y} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+                <line x1={0} y1={y} x2={innerW} y2={y} stroke="rgba(0,0,0,0.04)" strokeWidth={1} />
                 <text x={-4} y={y+4} textAnchor="end" fill="#2a2a2a" fontSize={8}>{Math.round(minVal + range * pct / 100)}</text>
               </g>
             );
@@ -1312,13 +1317,13 @@ function LoginScreen({ onLogin }) {
                 ))}
               </div>
 
-              <div style={{ height: 1, background: "rgba(255,255,255,0.06)", marginBottom: 4 }} />
+              <div style={{ height: 1, background: "rgba(0,0,0,0.06)", marginBottom: 4 }} />
 
               <button onClick={() => setMode("register")} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: "0.04em" }}>
                 ✨ Créer mon compte gratuitement
               </button>
 
-              <button onClick={() => setMode("login")} style={{ width: "100%", background: "rgba(255,255,255,0.05)", color: "var(--white)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+              <button onClick={() => setMode("login")} style={{ width: "100%", background: "rgba(0,0,0,0.05)", color: "var(--white)", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 14, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
                 👤 Se connecter
               </button>
 
@@ -1349,14 +1354,14 @@ function LoginScreen({ onLogin }) {
               <button disabled={!email || !password || loading} onClick={handleLogin} style={{ width: "100%", background: !email || !password || loading ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}>
                 {loading ? "Connexion…" : "Se connecter →"}
               </button>
-              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
                 ← Retour
               </button>
               <div style={{ textAlign: "center", fontSize: 12, color: "#777" }}>
                 Pas encore de compte ?{" "}
                 <span onClick={() => { setMode("register"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Créer un compte</span>
               </div>
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "10px 12px", fontSize: 10, color: "#555", textAlign: "center", lineHeight: 1.5 }}>
+              <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "10px 12px", fontSize: 10, color: "#555", textAlign: "center", lineHeight: 1.5 }}>
                 Tes données sont sauvegardées localement sur cet appareil. Utilise toujours le même navigateur pour retrouver ton compte.
               </div>
             </div>
@@ -1382,7 +1387,7 @@ function LoginScreen({ onLogin }) {
               <button disabled={!email || !password || !name || loading || password.length < 6} onClick={handleRegister} style={{ width: "100%", background: (!email || !password || !name || loading || password.length < 6) ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: (loading || password.length < 6) ? "default" : "pointer", transition: "background 0.2s" }}>
                 {loading ? "Création…" : "Créer mon compte →"}
               </button>
-              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
                 ← Retour
               </button>
               <div style={{ textAlign: "center", fontSize: 12, color: "#777" }}>
@@ -1407,7 +1412,7 @@ function LoginScreen({ onLogin }) {
               <button disabled={!code || loading} onClick={() => { if (code === COACH_CODE) onLogin("coach", "Coach"); else setError("Code incorrect !"); }} style={{ width: "100%", background: !code ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: !code ? "default" : "pointer", transition: "background 0.2s" }}>
                 Accès Coach →
               </button>
-              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+              <button onClick={() => { setMode("choose"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#555", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
                 ← Retour
               </button>
             </div>
@@ -1467,7 +1472,7 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
             { icon: "📈", title: "Progression tracée", sub: "Graphiques de charges, RPE, régularité et condition physique" },
             { icon: "🏁", title: "Stratégie de course", sub: "Split par station, simulation HYROX, checklist J-Day" },
           ].map(b => (
-            <div key={b.icon} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", textAlign: "left" }}>
+            <div key={b.icon} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "14px 16px", textAlign: "left" }}>
               <div style={{ fontSize: 24, flexShrink: 0 }}>{b.icon}</div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", marginBottom: 2 }}>{b.title}</div>
@@ -1953,7 +1958,7 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
             {/* Bouton passer */}
             {!loading && !levelResult && (
               <div style={{ marginTop: 16 }}>
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 16px", marginBottom: 12, textAlign: "center" }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "14px 16px", marginBottom: 12, textAlign: "center" }}>
                   <div style={{ fontSize: 13, color: "#555", lineHeight: 1.6 }}>
                     ℹ️ Ton coach aura besoin de ces informations pour créer le programme le plus adapté à ton profil. Tu pourras compléter ces tests plus tard dans l'onglet Profil.
                   </div>
@@ -2223,7 +2228,7 @@ function ProgressionChargesCard({ profile }) {
             {/* Lignes de grille */}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 20, display: "flex", flexDirection: "column", justifyContent: "space-between", pointerEvents: "none" }}>
               {[100, 75, 50, 25].map(pct => (
-                <div key={pct} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", position: "relative" }}>
+                <div key={pct} style={{ borderTop: "1px solid rgba(0,0,0,0.04)", position: "relative" }}>
                   <span style={{ position: "absolute", left: 0, top: -8, fontSize: 8, color: "#2a2a2a" }}>
                     {Math.round(minVal + (range * pct / 100))}{currentMetric.unit}
                   </span>
@@ -2336,8 +2341,8 @@ function WeeklySummaryCard({ profile }) {
               <div style={{ fontSize: 8, color: isToday ? "var(--yellow)" : "#2a2a2a", fontWeight: isToday ? 700 : 400, marginBottom: 4, textTransform: "uppercase" }}>{dayLabels[i]}</div>
               <div style={{
                 width: "100%", aspectRatio: "1", borderRadius: 7,
-                background: s ? `${ressentiColor}20` : isPast ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.01)",
-                border: s ? `1.5px solid ${ressentiColor}66` : isToday ? "1.5px solid rgba(232,255,71,0.4)" : `1px solid rgba(255,255,255,0.04)`,
+                background: s ? `${ressentiColor}20` : isPast ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.01)",
+                border: s ? `1.5px solid ${ressentiColor}66` : isToday ? "1.5px solid rgba(232,255,71,0.4)" : `1px solid rgba(0,0,0,0.04)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 12,
               }}>
@@ -2408,7 +2413,7 @@ function WeeklyPerformanceCard({ profile }) {
   const DAYS = ["L","M","M","J","V","S","D"];
 
   return (
-    <div style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "18px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+    <div style={{ background: "linear-gradient(135deg, rgba(0,0,0,0.03) 0%, rgba(255,255,255,0.01) 100%)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "18px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
       {/* Halo couleur */}
       <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: `radial-gradient(circle, ${scoreColor}12 0%, transparent 70%)`, pointerEvents: "none" }} />
 
@@ -2418,7 +2423,7 @@ function WeeklyPerformanceCard({ profile }) {
         {/* Gauge circulaire */}
         <div style={{ position: "relative", flexShrink: 0 }}>
           <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="7" />
+            <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="7" />
             <circle cx="50" cy="50" r={R} fill="none" stroke={scoreColor} strokeWidth="7"
               strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
               transform="rotate(-90 50 50)" style={{ transition: "stroke-dashoffset 1s ease, stroke 0.5s" }} />
@@ -2439,7 +2444,7 @@ function WeeklyPerformanceCard({ profile }) {
                 <span style={{ fontSize: 10, color: "#555" }}>{item.label}</span>
                 <span style={{ fontSize: 10, color: item.color, fontWeight: 700 }}>{item.val}</span>
               </div>
-              <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ height: 3, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${item.score}%`, background: item.color, borderRadius: 99, transition: "width 0.8s ease" }} />
               </div>
             </div>
@@ -2460,7 +2465,7 @@ function WeeklyPerformanceCard({ profile }) {
           const isToday = i+1 === dow;
           return (
             <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-              <div style={{ width: "100%", aspectRatio: "1", borderRadius: 6, background: had ? `${scoreColor}20` : isPast ? "rgba(255,255,255,0.02)" : "transparent", border: `1px solid ${had ? scoreColor+"40" : isToday ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>
+              <div style={{ width: "100%", aspectRatio: "1", borderRadius: 6, background: had ? `${scoreColor}20` : isPast ? "rgba(0,0,0,0.02)" : "transparent", border: `1px solid ${had ? scoreColor+"40" : isToday ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.04)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>
                 {had ? "✓" : ""}
               </div>
               <span style={{ fontSize: 8, color: isToday ? "var(--yellow)" : "#2a2a2a", fontWeight: isToday ? 700 : 400 }}>{d}</span>
@@ -2509,13 +2514,13 @@ function TrainingMixChart({ profile }) {
   const top = slices[0];
 
   return (
-    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+    <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
       <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🎯 Mix d'entraînement</div>
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         {/* Donut */}
         <div style={{ flexShrink: 0, position: "relative" }}>
           <svg width="100" height="100" viewBox="0 0 100 100">
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={stroke} />
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth={stroke} />
             {arcs.map((arc, i) => (
               <path key={i} d={arc.d} fill="none" stroke={arc.color} strokeWidth={stroke} strokeLinecap="butt" />
             ))}
@@ -2531,7 +2536,7 @@ function TrainingMixChart({ profile }) {
               <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
               <span style={{ fontSize: 11, color: "#888", flex: 1 }}>{s.icon} {s.label}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{Math.round(s.pct*100)}%</span>
-              <div style={{ width: 40, height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ width: 40, height: 3, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${s.pct*100}%`, background: s.color, borderRadius: 99 }} />
               </div>
             </div>
@@ -2574,28 +2579,28 @@ function Hyrox101Card({ profile, navigateTo }) {
     { icon: "🏐", name: "Wall Balls", dist: "75/100 reps" },
   ];
   return (
-    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+    <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
         <div>
           <div style={{ fontSize: 9, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>HYROX — C'est quoi ?</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>1 km run + 1 station × 8</div>
         </div>
         <button onClick={() => { localStorage.setItem("fitrace_hyrox101_done","1"); setShowHyrox101(false); }}
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#666", fontSize: 14, cursor: "pointer", padding: "4px 8px", lineHeight: 1 }}>×</button>
+          style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, color: "#666", fontSize: 14, cursor: "pointer", padding: "4px 8px", lineHeight: 1 }}>×</button>
       </div>
       <div style={{ fontSize: 11, color: "#666", lineHeight: 1.65, marginBottom: 12 }}>
         <strong style={{ color: "#999" }}>8 km de running</strong> entrecoupés de <strong style={{ color: "#999" }}>8 stations fonctionnelles</strong>. Endurance, force et régularité.
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
         {STATIONS.map((s, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 8px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20 }}>
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 8px", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 20 }}>
             <span style={{ fontSize: 12 }}>{s.icon}</span>
             <span style={{ fontSize: 10, color: "#888" }}>{s.name}</span>
           </div>
         ))}
       </div>
       <button onClick={() => { navigateTo("technique"); }}
-        style={{ width: "100%", padding: "10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#888", cursor: "pointer" }}>
+        style={{ width: "100%", padding: "10px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, fontSize: 12, fontWeight: 700, color: "#888", cursor: "pointer" }}>
         Voir la technique →
       </button>
     </div>
@@ -2617,7 +2622,7 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 500, display: "flex", alignItems: "flex-end" }}
           onClick={() => setSelectedSession(null)}>
           <div className="slide-up" onClick={e => e.stopPropagation()}
-            style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(255,255,255,0.08)", maxHeight: "75vh", overflowY: "auto" }}>
+            style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: "24px 20px 36px", width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(0,0,0,0.08)", maxHeight: "75vh", overflowY: "auto" }}>
             <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
             {(() => {
               const s = selectedSession;
@@ -2642,7 +2647,7 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
                       <div className="bebas" style={{ fontSize: 22, color: "var(--orange)" }}>{s.energie}/5</div>
                       <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>Énergie</div>
                     </div>}
-                    {s.tempsReel && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                    {s.tempsReel && <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{s.tempsReel}</div>
                       <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>Durée</div>
                     </div>}
@@ -2650,7 +2655,7 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
                   <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>
                     📅 {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                   </div>
-                  {s.charges && <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{s.charges}</div>}
+                  {s.charges && <div style={{ background: "rgba(0,0,0,0.02)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{s.charges}</div>}
                   {s.douleurs && s.douleurs !== "Aucune douleur" && (
                     <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--red)" }}>⚠️ {s.douleurs}</div>
                   )}
@@ -2676,7 +2681,7 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
               <div style={{ fontSize: 26, marginBottom: 6, marginTop: 4 }}>{conf.icon}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)", lineHeight: 1.3, marginBottom: 5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{s.titre}</div>
               <div style={{ fontSize: 9, color: "#777", marginBottom: 8 }}>{new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
-              <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
+              <div style={{ height: 3, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
                 <div style={{ height: "100%", width: `${rpePct * 100}%`, background: rpeColor, borderRadius: 99 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2758,7 +2763,7 @@ function WarmupWidget({ session }) {
           <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--purple)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>
             Échauffement · {steps.length} étapes
           </div>
-          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden", width: "100%" }}>
+          <div style={{ height: 3, background: "rgba(0,0,0,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden", width: "100%" }}>
             <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: allDone ? "var(--green)" : "var(--purple)", borderRadius: 99, transition: "width 0.3s" }} />
           </div>
         </div>
@@ -2766,7 +2771,7 @@ function WarmupWidget({ session }) {
         <div style={{ color: "#555", fontSize: 14, transform: warmupOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
       </div>
       {warmupOpen && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
+        <div style={{ borderTop: "1px solid rgba(0,0,0,0.04)", padding: "8px 12px 12px" }}>
           {steps.map((step, i) => {
             const done = warmupDone[i];
             return (
@@ -2825,7 +2830,7 @@ function CooldownWidget({ session }) {
         <div style={{ fontSize: 22, flexShrink: 0 }}>{allDone ? "✅" : "🧘"}</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 10, color: allDone ? "var(--green)" : "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Retour au calme · {steps.length} étapes</div>
-          <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
+          <div style={{ height: 3, background: "rgba(0,0,0,0.06)", borderRadius: 99, marginTop: 5, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${(doneCount/steps.length)*100}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.3s" }} />
           </div>
         </div>
@@ -2833,7 +2838,7 @@ function CooldownWidget({ session }) {
         <div style={{ color: "#555", fontSize: 14, transform: cdOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
       </div>
       {cdOpen && (
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.04)", padding: "8px 12px 12px" }}>
+        <div style={{ borderTop: "1px solid rgba(0,0,0,0.04)", padding: "8px 12px 12px" }}>
           {steps.map((step, i) => {
             const done = cdDone[i];
             return (
@@ -2873,11 +2878,11 @@ function PaceCalcWidget({ profile }) {
       <div className="bebas" style={{ fontSize: 18, color: "var(--green)", marginBottom: 12 }}>🎯 CALCULATEUR PACE HYROX</div>
       <div style={{ fontSize: 11, color: "#777", marginBottom: 10 }}>Ton objectif de temps total :</div>
       <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
-        <select value={targetH} onChange={e => setTargetH(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
+        <select value={targetH} onChange={e => setTargetH(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
           {["1","2","3","4","5"].map(h => <option key={h} value={h}>{h}h</option>)}
         </select>
         <span style={{ color: "#555", fontWeight: 700 }}>:</span>
-        <select value={targetM} onChange={e => setTargetM(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
+        <select value={targetM} onChange={e => setTargetM(e.target.value)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif" }}>
           {["00","05","10","15","20","25","30","35","40","45","50","55"].map(m => <option key={m} value={m}>{m}min</option>)}
         </select>
       </div>
@@ -2910,7 +2915,7 @@ function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, ha
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 97, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }} onClick={() => setShowQuickLog(false)} />
-      <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "20px 20px calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+      <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "20px 20px calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(0,0,0,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>⚡ Log rapide</div>
           <div style={{ fontSize: 10, color: "#777" }}>Enregistrement auto</div>
@@ -2923,7 +2928,7 @@ function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, ha
           <div style={{ display: "flex", gap: 5 }}>
             {Array.from({ length: 8 }, (_, i) => (
               <button key={i} onClick={() => { haptic([5]); setQl(q => ({ ...q, water: i < q.water ? i : i + 1 })); }}
-                style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${i < ql.water ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.08)"}`, background: i < ql.water ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.03)", cursor: "pointer", fontSize: 12 }}>
+                style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${i < ql.water ? "rgba(56,189,248,0.6)" : "rgba(0,0,0,0.08)"}`, background: i < ql.water ? "rgba(56,189,248,0.2)" : "rgba(0,0,0,0.03)", cursor: "pointer", fontSize: 12 }}>
                 {i < ql.water ? "💧" : "○"}
               </button>
             ))}
@@ -2934,13 +2939,13 @@ function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, ha
             <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>⚖️ Poids (kg)</div>
             <input type="number" step="0.1" min="40" max="150" value={ql.weight} onChange={e => setQl(q => ({ ...q, weight: e.target.value }))}
               placeholder={`${profile.poids||75}`}
-              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
+              style={{ width: "100%", background: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
           </div>
           <div>
             <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>💓 HRV (ms)</div>
             <input type="number" min="20" max="120" step="1" value={ql.hrv} onChange={e => setQl(q => ({ ...q, hrv: e.target.value }))}
               placeholder="Ex: 65"
-              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
+              style={{ width: "100%", background: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
           </div>
         </div>
         <button onClick={save}
@@ -3895,7 +3900,7 @@ JSON:
       {streakMilestone && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
           onClick={() => setStreakMilestone(null)}>
-          <div onClick={e => e.stopPropagation()} className="bounce-in" style={{ background: "linear-gradient(145deg, #131500, #080808)", border: "2px solid rgba(232,255,71,0.4)", borderRadius: 28, padding: "36px 28px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 0 60px rgba(232,255,71,0.15)" }}>
+          <div onClick={e => e.stopPropagation()} className="bounce-in" style={{ background: "#FFFFFF", border: "2px solid var(--yellow-bright)", borderRadius: 28, padding: "36px 28px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
             {/* Glow */}
             <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
             <div style={{ fontSize: 72, marginBottom: 8, animation: "bounceIn 0.5s var(--spring) both 0.1s" }}>{streakMilestone.emoji}</div>
@@ -3926,14 +3931,14 @@ JSON:
       {/* ── PWA Install Banner ── */}
       {showInstallBanner && !isInstalled && (
         <div className="slide-up" style={{ position: "fixed", bottom: 90, left: 16, right: 16, zIndex: 500, maxWidth: 480, margin: "0 auto" }}>
-          <div style={{ background: "linear-gradient(135deg, #131500 0%, #0a0a00 100%)", border: "1.5px solid rgba(232,255,71,0.35)", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
+          <div style={{ background: "#FFFFFF", border: "1.5px solid var(--yellow-bright)", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(232,255,71,0.12)", border: "1px solid rgba(232,255,71,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📲</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", marginBottom: 2 }}>Installer FitRace</div>
               <div style={{ fontSize: 11, color: "#555", lineHeight: 1.4 }}>Accès rapide depuis ton écran d'accueil</div>
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button onClick={() => setShowInstallBanner(false)} style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, padding: "7px 10px", color: "#777", fontSize: 12, cursor: "pointer" }}>Plus tard</button>
+              <button onClick={() => setShowInstallBanner(false)} style={{ background: "rgba(0,0,0,0.05)", border: "none", borderRadius: 8, padding: "7px 10px", color: "#777", fontSize: 12, cursor: "pointer" }}>Plus tard</button>
               <button onClick={triggerInstall} style={{ background: "var(--yellow)", border: "none", borderRadius: 8, padding: "7px 14px", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Installer</button>
             </div>
           </div>
@@ -3943,14 +3948,14 @@ JSON:
       {/* ── iOS Install Guide Modal ── */}
       {showIOSGuide && (
         <div onClick={() => setShowIOSGuide(false)} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0 0 16px 0" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#111", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 24, padding: 24, width: "100%", maxWidth: 420, margin: "0 16px" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", border: "none", borderRadius: 24, padding: 24, width: "100%", maxWidth: 420, margin: "0 16px", boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: "var(--yellow)", marginBottom: 3 }}>Installer FitRace</div>
                 <div style={{ fontSize: 12, color: "#666" }}>Ajouter à l'écran d'accueil iPhone</div>
               </div>
-              <button onClick={() => setShowIOSGuide(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 10, width: 32, height: 32, color: "#666", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <button onClick={() => setShowIOSGuide(false)} style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 10, width: 32, height: 32, color: "#666", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
 
             {/* Steps */}
@@ -3960,7 +3965,7 @@ JSON:
               { n: 3, icon: "➕", text: "Choisis", bold: "« Sur l'écran d'accueil »" },
               { n: 4, icon: "✅", text: "Appuie sur", bold: "« Ajouter »" },
             ].map(({ n, icon, text, bold }) => (
-              <div key={n} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: n < 4 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+              <div key={n} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: n < 4 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{icon}</div>
                 <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.4 }}>
                   {text} <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{bold}</span>
@@ -3987,10 +3992,10 @@ JSON:
 
       {/* Coach Chat Modal */}
       {showCoachChat && (
-        <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 300, display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "fixed", inset: 0, background: "#F5F5F7", zIndex: 300, display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", maxWidth: 520, margin: "0 auto", width: "100%", height: "100%" }}>
             {/* Header */}
-            <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(8,8,8,0.95)", backdropFilter: "blur(20px)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(250,250,252,0.97)", backdropFilter: "blur(20px)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, rgba(232,255,71,0.2), rgba(57,255,128,0.1))", border: "1px solid rgba(232,255,71,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🤖</div>
                 <div>
@@ -4001,7 +4006,7 @@ JSON:
                   </div>
                 </div>
               </div>
-              <button onClick={() => setShowCoachChat(false)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#666", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+              <button onClick={() => setShowCoachChat(false)} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.08)", color: "#666", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
 
             {/* Messages */}
@@ -4011,7 +4016,7 @@ JSON:
                   {/* Bulle d'accueil du coach */}
                   <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
                     <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🤖</div>
-                    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "4px 16px 16px 16px", padding: "14px 16px", maxWidth: "85%" }}>
+                    <div style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: "4px 16px 16px 16px", padding: "14px 16px", maxWidth: "85%" }}>
                       <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7 }}>Salut <strong style={{ color: "var(--yellow)" }}>{profile.name}</strong> ! 👋 Je suis ton coach IA HYROX personnel. Connais ton profil, tes forces et tes objectifs. Pose-moi n'importe quelle question.</div>
                     </div>
                   </div>
@@ -4082,13 +4087,13 @@ JSON:
                     maxWidth: "82%",
                     background: msg.role === "user"
                       ? "linear-gradient(135deg, #e8ff47, #b8cc00)"
-                      : "rgba(255,255,255,0.04)",
+                      : "rgba(0,0,0,0.04)",
                     color: msg.role === "user" ? "#000" : "#ddd",
                     borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
                     padding: "11px 15px",
                     fontSize: 14,
                     lineHeight: 1.65,
-                    border: msg.role === "assistant" ? "1px solid rgba(255,255,255,0.07)" : "none",
+                    border: msg.role === "assistant" ? "1px solid rgba(0,0,0,0.07)" : "none",
                     fontWeight: msg.role === "user" ? 600 : 400,
                   }}>
                     {msg.role === "assistant" && !msg.content ? (
@@ -4108,17 +4113,17 @@ JSON:
             </div>
 
             {/* Input */}
-            <div style={{ padding: "12px 16px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(8,8,8,0.95)", display: "flex", gap: 10, alignItems: "flex-end" }}>
+            <div style={{ padding: "12px 16px 20px", borderTop: "1px solid rgba(0,0,0,0.05)", background: "rgba(250,250,252,0.97)", display: "flex", gap: 10, alignItems: "flex-end" }}>
               <input
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
                 placeholder="Pose ta question..."
-                style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 16px", color: "var(--white)", fontSize: 14, outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+                style={{ flex: 1, background: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "12px 16px", color: "var(--white)", fontSize: 14, outline: "none", fontFamily: "'DM Sans', sans-serif" }}
               />
               <button onClick={sendChatMessage} disabled={!chatInput.trim() || chatLoading} style={{
                 width: 46, height: 46, borderRadius: 14, border: "none", flexShrink: 0,
-                background: chatInput.trim() && !chatLoading ? "var(--yellow)" : "rgba(255,255,255,0.05)",
+                background: chatInput.trim() && !chatLoading ? "var(--yellow)" : "rgba(0,0,0,0.05)",
                 color: chatInput.trim() && !chatLoading ? "#000" : "#333",
                 fontSize: 20, cursor: chatInput.trim() && !chatLoading ? "pointer" : "default",
                 transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700,
@@ -4133,7 +4138,7 @@ JSON:
         <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 200, display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
 
           {/* Header sticky */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: chronoRunning ? "var(--green)" : "#444", boxShadow: chronoRunning ? "0 0 8px var(--green)" : "none" }} />
               <div className="bebas" style={{ fontSize: 15, color: "var(--yellow)", letterSpacing: 2 }}>MODE ENTRAÎNEMENT</div>
@@ -4143,7 +4148,7 @@ JSON:
                 {currentExIdx + 1}/{(session.exercices||[]).length}
               </div>
               <button onClick={() => { setChronoMode(false); setChronoRunning(false); setReposMode(false); setReposRunning(false); setLapTimes([]); }}
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #1a1a1a", borderRadius: 8, padding: "6px 12px", color: "#555", fontSize: 12, cursor: "pointer" }}>✕ Quitter</button>
+                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid #1a1a1a", borderRadius: 8, padding: "6px 12px", color: "#555", fontSize: 12, cursor: "pointer" }}>✕ Quitter</button>
             </div>
           </div>
 
@@ -4168,7 +4173,7 @@ JSON:
                   const col = reposCountdown <= 10 ? "var(--red)" : "var(--green)";
                   return (
                     <svg width="220" height="220" viewBox="0 0 220 220">
-                      <circle cx="110" cy="110" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="8" />
+                      <circle cx="110" cy="110" r={r} fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth="8" />
                       <circle cx="110" cy="110" r={r} fill="none" stroke={col} strokeWidth="8" strokeLinecap="round"
                         strokeDasharray={circ} strokeDashoffset={circ - pct * circ}
                         transform="rotate(-90 110 110)" style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s" }} />
@@ -4187,7 +4192,7 @@ JSON:
                 {[30, 60, 90, 120, 180].map(sec => (
                   <button key={sec} onClick={() => { setReposCountdown(sec); setReposRunning(true); }} style={{
                     padding: "8px 12px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer",
-                    background: reposCountdown === sec ? "rgba(57,255,128,0.1)" : "rgba(255,255,255,0.03)",
+                    background: reposCountdown === sec ? "rgba(57,255,128,0.1)" : "rgba(0,0,0,0.03)",
                     border: reposCountdown === sec ? "1.5px solid var(--green)" : "1px solid #1a1a1a",
                     color: reposCountdown === sec ? "var(--green)" : "#444",
                     transition: "all 0.2s",
@@ -4210,7 +4215,7 @@ JSON:
 
               {/* Exercice suivant */}
               {(session.exercices||[])[currentExIdx + 1] && (
-                <div style={{ marginTop: 20, background: "rgba(255,255,255,0.02)", border: "1px solid #181818", borderRadius: 12, padding: "12px 16px", width: "100%", maxWidth: 320 }}>
+                <div style={{ marginTop: 20, background: "rgba(0,0,0,0.02)", border: "1px solid #181818", borderRadius: 12, padding: "12px 16px", width: "100%", maxWidth: 320 }}>
                   <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Prochain exercice</div>
                   <div style={{ fontSize: 15, color: "#666", fontWeight: 600 }}>{(session.exercices||[])[currentExIdx + 1].nom}</div>
                   <div style={{ fontSize: 13, color: "#777" }}>{(session.exercices||[])[currentExIdx + 1].detail}</div>
@@ -4227,7 +4232,7 @@ JSON:
                   <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{(session.exercices||[])[currentExIdx].nom}</div>
                   <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)" }}>{(session.exercices||[])[currentExIdx].detail}</div>
                   {(session.exercices||[])[currentExIdx].note && (
-                    <div style={{ fontSize: 12, color: "#777", marginTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: 8 }}>💬 {(session.exercices||[])[currentExIdx].note}</div>
+                    <div style={{ fontSize: 12, color: "#777", marginTop: 8, borderTop: "1px solid rgba(0,0,0,0.04)", paddingTop: 8 }}>💬 {(session.exercices||[])[currentExIdx].note}</div>
                   )}
                 </div>
               )}
@@ -4257,7 +4262,7 @@ JSON:
 
               {/* Exercice suivant (compact) */}
               {(session.exercices||[])[currentExIdx + 1] && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.02)", border: "1px solid #151515", borderRadius: 12, padding: "10px 14px", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.02)", border: "1px solid #151515", borderRadius: 12, padding: "10px 14px", marginBottom: 12 }}>
                   <div style={{ fontSize: 18 }}>→</div>
                   <div>
                     <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em" }}>Suivant</div>
@@ -4294,7 +4299,7 @@ JSON:
                     setChronoSeconds(0);
                     setLapTimes([]);
                     setChronoRunning(true);
-                  }} style={{ width: "100%", padding: 16, borderRadius: 16, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid #1a1a1a", color: "#888" }}>
+                  }} style={{ width: "100%", padding: 16, borderRadius: 16, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: "pointer", background: "rgba(0,0,0,0.04)", border: "1px solid #1a1a1a", color: "#888" }}>
                     EXERCICE SUIVANT →
                   </button>
                 ) : (
@@ -4367,11 +4372,11 @@ JSON:
                     {/* Radar */}
                     <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
                       {[0.25, 0.5, 0.75, 1].map((r, i) => (
-                        <polygon key={i} points={gridPts(R * r)} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                        <polygon key={i} points={gridPts(R * r)} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="1" />
                       ))}
                       {dims.map((_, i) => {
                         const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
-                        return <line key={i} x1={cx} y1={cy} x2={cx + R * Math.cos(angle)} y2={cy + R * Math.sin(angle)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />;
+                        return <line key={i} x1={cx} y1={cy} x2={cx + R * Math.cos(angle)} y2={cy + R * Math.sin(angle)} stroke="rgba(0,0,0,0.06)" strokeWidth="1" />;
                       })}
                       <polygon points={polygon} fill="rgba(232,255,71,0.12)" stroke="var(--yellow)" strokeWidth="1.5" />
                       {dims.map((d, i) => {
@@ -4432,7 +4437,7 @@ JSON:
                 const score = calcFitnessScore(profile);
                 const txt = "🏋️ Mon bilan FITRACE HYROX\n👤 " + profile.name + " — Niveau " + profile.level + "\n📊 Condition: " + score.global + "% | Force: " + score.force + "% | Endurance: " + score.endurance + "%\n🏃 VMA: " + (profile.vmaKmh || "?") + "km/h | Squat: " + (profile.squat1RM_final || "?") + "kg\n💪 " + (profile.sessions?.length || 0) + " séances\nfitrace-lemon.vercel.app";
                 navigator.clipboard?.writeText(txt).then(() => alert("Copié ! 📋"));
-              }} style={{ width: "100%", padding: 11, background: "rgba(255,255,255,0.04)", border: "1px solid #222", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer" }}>
+              }} style={{ width: "100%", padding: 11, background: "rgba(0,0,0,0.04)", border: "1px solid #222", borderRadius: 10, color: "#888", fontSize: 13, cursor: "pointer" }}>
                 📋 Copier le texte
               </button>
               <button onClick={() => setShowShareCard(false)} style={{ width: "100%", padding: 8, background: "none", border: "none", color: "#777", fontSize: 12, cursor: "pointer" }}>Fermer</button>
@@ -4458,7 +4463,7 @@ JSON:
               {/* Dots de progression */}
               <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 20 }}>
                 {STEPS.map((_, i) => (
-                  <div key={i} style={{ width: i === tourStep ? 20 : 6, height: 6, borderRadius: 99, background: i === tourStep ? "var(--yellow)" : i < tourStep ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.08)", transition: "all 0.3s" }} />
+                  <div key={i} style={{ width: i === tourStep ? 20 : 6, height: 6, borderRadius: 99, background: i === tourStep ? "var(--yellow)" : i < tourStep ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.08)", transition: "all 0.3s" }} />
                 ))}
               </div>
               <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -4467,7 +4472,7 @@ JSON:
                 <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7 }}>{step.body}</div>
               </div>
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={dismissTour} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, color: "#555", fontSize: 13, cursor: "pointer" }}>
+                <button onClick={dismissTour} style={{ flex: 1, padding: "12px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, color: "#555", fontSize: 13, cursor: "pointer" }}>
                   Passer
                 </button>
                 <button onClick={() => {
@@ -4503,11 +4508,11 @@ JSON:
         const dayLabel = now.toLocaleDateString("fr-FR", { weekday: "long" });
         const dateLabel = now.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
         return (
-          <div style={{ background: "rgba(6,6,6,0.96)", padding: "10px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(32px) saturate(1.5)" }}>
+          <div style={{ background: "rgba(245,245,247,0.95)", padding: "10px 16px 8px", borderBottom: "1px solid rgba(0,0,0,0.07)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(32px) saturate(1.5)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 2 }}>FIT<span style={{ color: "var(--white)" }}>RACE</span></div>
-                <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.08)" }} />
+                <div style={{ width: 1, height: 14, background: "rgba(0,0,0,0.08)" }} />
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <div className="bebas" style={{ fontSize: 14, color: meta.color, letterSpacing: 1, lineHeight: 1 }}>{meta.label.toUpperCase()}</div>
                   <div style={{ fontSize: 9, color: "#555", textTransform: "capitalize", lineHeight: 1.2, marginTop: 1 }}>{dayLabel} {dateLabel}</div>
@@ -4515,12 +4520,12 @@ JSON:
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {streak > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "3px 9px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px" }}>
                     <span className="bebas" style={{ fontSize: 13, color: "#888" }}>{streak}j</span>
                   </div>
                 )}
                 {days !== null && tab !== "race" && (
-                  <div onClick={() => setTab("race")} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "3px 9px", textAlign: "center", cursor: "pointer" }}>
+                  <div onClick={() => setTab("race")} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 10, padding: "3px 9px", textAlign: "center", cursor: "pointer" }}>
                     <div className="bebas" style={{ fontSize: 18, color: "var(--white)", lineHeight: 1 }}>{days}</div>
                     <div style={{ fontSize: 7, color: "#555", letterSpacing: "0.06em" }}>jours</div>
                   </div>
@@ -4544,7 +4549,7 @@ JSON:
               const sc = calcFitnessScore(profile);
               const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
               return (
-                <div style={{ paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.04)", marginBottom: 16 }}>
+                <div style={{ paddingBottom: 14, borderBottom: "1px solid rgba(0,0,0,0.04)", marginBottom: 16 }}>
                   <div style={{ fontSize: 12, color: "#777", marginBottom: 4 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
@@ -4560,7 +4565,7 @@ JSON:
                       </div>
                     </div>
                     {/* Mini fitness score badge */}
-                    <div style={{ textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "8px 14px" }}>
+                    <div style={{ textAlign: "center", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, padding: "8px 14px" }}>
                       <div className="bebas number-pop" style={{ fontSize: 32, color: "var(--white)", lineHeight: 1 }}>{sc.global}</div>
                       <div style={{ fontSize: 8, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>Score</div>
                     </div>
@@ -4576,7 +4581,7 @@ JSON:
               const hour = new Date().getHours();
               if (hour < 5 || hour > 22) return null; // Don't show at night
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 16px", marginBottom: 12 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "16px 16px", marginBottom: 12 }}>
                   <div style={{ fontSize: 12, color: "#555", fontWeight: 600, marginBottom: 12 }}>Comment tu te sens aujourd'hui ?</div>
                   <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                     {[
@@ -4590,7 +4595,7 @@ JSON:
                         setDailyData(d => ({ ...d, fatigue: f.v }));
                         showToast(`${f.emoji} Noté ! Continue → onglet Séance`, "success", 2500);
                       }} style={{
-                        flex: 1, padding: "10px 4px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)", cursor: "pointer", transition: "all 0.15s var(--spring)",
+                        flex: 1, padding: "10px 4px", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", background: "rgba(0,0,0,0.02)", cursor: "pointer", transition: "all 0.15s var(--spring)",
                       }}>
                         <div style={{ fontSize: 24, marginBottom: 3 }}>{f.emoji}</div>
                         <div style={{ fontSize: 9, color: "#555", fontWeight: 600 }}>{f.label}</div>
@@ -4609,7 +4614,7 @@ JSON:
               const totalXP = calcTotalXP(profile);
               const lvl = getXPLevel(totalXP);
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "12px 16px", marginBottom: 12 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "12px 16px", marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
                     <div style={{ width: 38, height: 38, borderRadius: 11, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
                       {lvl.icon}
@@ -4627,7 +4632,7 @@ JSON:
                       </div>
                     </div>
                   </div>
-                  <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: 5, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${lvl.progress}%`, background: "linear-gradient(90deg, rgba(232,255,71,0.7), var(--yellow))", borderRadius: 99, transition: "width 1s var(--ease-out)", boxShadow: lvl.progress > 0 ? "0 0 8px rgba(232,255,71,0.4)" : "none" }} />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
@@ -4685,13 +4690,13 @@ JSON:
               return (
                 <div style={{ marginBottom: 14 }}>
                   {/* Recovery Score Hero */}
-                  <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 22, padding: "18px 18px 16px", marginBottom: 10 }}>
+                  <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 22, padding: "18px 18px 16px", marginBottom: 10 }}>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
                       {/* SVG Ring */}
                       <div style={{ position: "relative", flexShrink: 0 }}>
                         <svg width="120" height="120" style={{ transform: "rotate(-90deg)" }}>
-                          <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="9" />
+                          <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="9" />
                           <circle cx="60" cy="60" r={r} fill="none" stroke={recov.color} strokeWidth="9"
                             strokeDasharray={circ} strokeDashoffset={stroke}
                             strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s var(--ease-out)" }} />
@@ -4716,7 +4721,7 @@ JSON:
                             { val: `${dailyData.hydration}/8`, label: "Eau", ok: dailyData.hydration >= 6 },
                             ...(dailyData.hrv ? [{ val: `${dailyData.hrv}`, label: "HRV", ok: parseInt(dailyData.hrv) >= 55 }] : []),
                           ].map(m => (
-                            <div key={m.label} style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
+                            <div key={m.label} style={{ flex: 1, background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
                               <div style={{ fontSize: 11, fontWeight: 600, color: m.ok ? "var(--white)" : "#444", marginTop: 1 }}>{m.val}</div>
                               <div style={{ fontSize: 8, color: "#555", marginTop: 2 }}>{m.label}</div>
                             </div>
@@ -4727,12 +4732,12 @@ JSON:
 
                     {/* Nutrition progress bar */}
                     {kcalPct !== null && (
-                      <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.05)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                           <span style={{ fontSize: 10, color: "#777", fontWeight: 600 }}>Nutrition aujourd'hui</span>
                           <span style={{ fontSize: 10, color: kcalPct >= 80 ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>{todayMacros.kcal} / {objNutrKcal} kcal</span>
                         </div>
-                        <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
+                        <div style={{ height: 5, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 6 }}>
                           <div style={{ height: "100%", width: `${kcalPct}%`, background: `linear-gradient(90deg, var(--orange), var(--yellow))`, borderRadius: 99, transition: "width 0.6s var(--ease-out)" }} />
                         </div>
                         <div style={{ display: "flex", gap: 10 }}>
@@ -4742,7 +4747,7 @@ JSON:
                       </div>
                     )}
                     {kcalPct === null && (
-                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                         <button onClick={() => setTab("nutri")} style={{ width: "100%", background: "rgba(255,154,60,0.06)", border: "1px dashed rgba(255,154,60,0.2)", borderRadius: 10, padding: "8px", fontSize: 11, color: "#555", cursor: "pointer", fontWeight: 600 }}>
                           Ajouter tes repas du jour →
                         </button>
@@ -4781,7 +4786,7 @@ JSON:
                     };
 
                     return (
-                      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 14, marginBottom: 10 }}>
+                      <div style={{ borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: 14, marginBottom: 10 }}>
                         <div style={{ fontSize: 10, color: "#777", fontWeight: 600, marginBottom: 12 }}>Tendances 7 jours</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                           {[
@@ -4793,7 +4798,7 @@ JSON:
                             const last = valid[valid.length - 1];
                             const sparkline = renderSparkline(serie.values, serie.color, serie.min, serie.max);
                             return (
-                              <div key={serie.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 10px 8px" }}>
+                              <div key={serie.label} style={{ background: "rgba(0,0,0,0.02)", borderRadius: 12, padding: "10px 10px 8px" }}>
                                 <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{serie.label}</div>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: serie.color, marginBottom: 4 }}>{last ? serie.fmt(last) : "—"}</div>
                                 <div style={{ height: 28 }}>{sparkline || <div style={{ height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#222" }}>pas de données</div>}</div>
@@ -4828,7 +4833,7 @@ JSON:
                           <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em" }}>Forme</div>
                           <div className="bebas" style={{ fontSize: 24, color: tsb2.color, lineHeight: 1 }}>{todayPMC.tsb > 0 ? "+" : ""}{todayPMC.tsb}</div>
                         </div>
-                        <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                        <div style={{ width: 1, height: 32, background: "rgba(0,0,0,0.06)", flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, color: tsb2.color, fontWeight: 700 }}>{tsb2.label}</div>
                           <div style={{ fontSize: 9, color: "#555", marginTop: 2, lineHeight: 1.4 }}>{tsb2.tip}</div>
@@ -4851,12 +4856,12 @@ JSON:
                         <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{weekSessions.length}</span>
                         <span style={{ fontSize: 10, color: "#777" }}>/ {profile.seancesParSemaine || 4} séances</span>
                       </div>
-                      <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${weekLoadPct}%`, background: weekLoadPct >= 100 ? "var(--green)" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
                       </div>
                     </div>
                     {/* Streak */}
-                    <div style={{ background: streak >= 7 ? "rgba(255,154,60,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${streak >= 7 ? "rgba(255,154,60,0.2)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "12px 14px" }}>
+                    <div style={{ background: streak >= 7 ? "rgba(255,154,60,0.06)" : "rgba(0,0,0,0.02)", border: `1px solid ${streak >= 7 ? "rgba(255,154,60,0.2)" : "rgba(0,0,0,0.06)"}`, borderRadius: 14, padding: "12px 14px" }}>
                       <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
                         <span style={{ fontSize: 18 }}>{streak >= 14 ? "🏆" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "📅"}</span>
@@ -4904,7 +4909,7 @@ JSON:
               const conf = typeConf[todaySession.type] || { label: "Séance", icon: "💪", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(232,255,71,0.15)" };
               const exs = todaySession.exercices || [];
               return (
-                <div className="card-hover" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "18px 18px 16px", marginBottom: 16, position: "relative" }}
+                <div className="card-hover" style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "18px 18px 16px", marginBottom: 16, position: "relative" }}
                   onClick={() => setTab("today")}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
@@ -4913,7 +4918,7 @@ JSON:
                       </div>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1.15 }}>{todaySession.titre}</div>
                     </div>
-                    <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "8px 14px", flexShrink: 0, marginLeft: 10 }}>
+                    <div style={{ background: "rgba(0,0,0,0.08)", borderRadius: 10, padding: "8px 14px", flexShrink: 0, marginLeft: 10 }}>
                       <div className="bebas" style={{ fontSize: 16, color: "var(--white)", lineHeight: 1 }}>START</div>
                     </div>
                   </div>
@@ -4921,11 +4926,11 @@ JSON:
                   {exs.length > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {exs.slice(0, 3).map((ex, i) => (
-                        <div key={i} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#888" }}>
+                        <div key={i} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#888" }}>
                           {ex.nom}
                         </div>
                       ))}
-                      {exs.length > 3 && <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#777" }}>+{exs.length - 3}</div>}
+                      {exs.length > 3 && <div style={{ background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: "4px 10px", fontSize: 11, color: "#777" }}>+{exs.length - 3}</div>}
                     </div>
                   )}
                   {todaySession.duree && (
@@ -4977,7 +4982,7 @@ JSON:
               };
 
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }} onClick={() => setTab("today")} className="card-hover">
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }} onClick={() => setTab("today")} className="card-hover">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)", marginBottom: 2 }}>{meteo.label}</div>
                     <div style={{ fontSize: 11, color: "#777" }}>{meteo.detail} · {meteo.cta}</div>
@@ -5002,7 +5007,7 @@ JSON:
               if (pct === 100) return null; // Profil complet, on n'affiche pas
               const missing = checks.filter(c => !c.done);
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div>
                       <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>Profil</div>
@@ -5011,13 +5016,13 @@ JSON:
                     <div className="bebas" style={{ fontSize: 28, color: "var(--white)" }}>{pct}%</div>
                   </div>
                   {/* Barre */}
-                  <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+                  <div style={{ height: 5, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
                     <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--yellow)" : "var(--orange)", borderRadius: 99, transition: "width 0.6s" }} />
                   </div>
                   {/* Actions manquantes */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {missing.slice(0,3).map(c => (
-                      <button key={c.key} onClick={() => navigateTo(c.tab)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, fontSize: 11, color: "#555", cursor: "pointer" }}>
+                      <button key={c.key} onClick={() => navigateTo(c.tab)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, fontSize: 11, color: "#555", cursor: "pointer" }}>
                         <span>{c.icon}</span><span>{c.label}</span>
                       </button>
                     ))}
@@ -5030,13 +5035,13 @@ JSON:
             {streakData && (() => {
               const streakColor = streak >= 14 ? "#ff6b35" : streak >= 7 ? "var(--yellow)" : streak >= 3 ? "var(--orange)" : "#333";
               const streakBg = streak >= 14 ? "linear-gradient(135deg, #1a0800 0%, #080808 60%)" : streak >= 7 ? "linear-gradient(135deg, #131500 0%, #080808 60%)" : streak >= 3 ? "linear-gradient(135deg, #120800 0%, #080808 60%)" : "rgba(255,255,255,0.01)";
-              const streakBorder = streak >= 7 ? `${streakColor}44` : "rgba(255,255,255,0.05)";
+              const streakBorder = streak >= 7 ? `${streakColor}44` : "rgba(0,0,0,0.05)";
               const milestones = [3, 7, 14, 30];
               const nextMilestone = milestones.find(m => m > streak) || 30;
               const prevMilestone = milestones.filter(m => m <= streak).pop() || 0;
               const milestoneProgress = ((streak - prevMilestone) / (nextMilestone - prevMilestone)) * 100;
               return (
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 18px", marginBottom: 10 }}>
+              <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "16px 18px", marginBottom: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                   <div>
                     <div className="bebas" style={{ fontSize: 40, color: "var(--white)", lineHeight: 1, letterSpacing: 1 }}>{streak}<span style={{ fontSize: 16, color: "#777", letterSpacing: 0, marginLeft: 6 }}>jours</span></div>
@@ -5056,7 +5061,7 @@ JSON:
                     return (
                       <div key={i} style={{ flex: 1, textAlign: "center" }}>
                         <div style={{ fontSize: 9, color: d.isToday ? streakColor : "#2a2a2a", marginBottom: 5, fontWeight: d.isToday ? 700 : 400, textTransform: "uppercase" }}>{dayLabel}</div>
-                        <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: d.done ? (d.isToday ? streakColor : `${streakColor}55`) : "rgba(255,255,255,0.03)", border: d.isToday ? `2px solid ${streakColor}` : "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: d.done ? "#000" : "#111", fontWeight: 700 }}>
+                        <div style={{ width: "100%", aspectRatio: "1", borderRadius: 8, background: d.done ? (d.isToday ? streakColor : `${streakColor}55`) : "rgba(0,0,0,0.03)", border: d.isToday ? `2px solid ${streakColor}` : "1px solid rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: d.done ? "#000" : "#111", fontWeight: 700 }}>
                           {d.done ? "✓" : ""}
                         </div>
                       </div>
@@ -5070,7 +5075,7 @@ JSON:
                       <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em" }}>Prochain objectif</span>
                       <span style={{ fontSize: 10, color: streakColor, fontWeight: 700 }}>{nextMilestone} jours</span>
                     </div>
-                    <div style={{ height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: 4, background: "rgba(0,0,0,0.04)", borderRadius: 99, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${milestoneProgress}%`, background: streakColor, borderRadius: 99, transition: "width 0.6s ease" }} />
                     </div>
                   </div>
@@ -5138,16 +5143,16 @@ JSON:
                         <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em" }}>→ {nextLvl.name}</span>
                         <span style={{ fontSize: 10, color: lvl.color, fontWeight: 700 }}>{progressPct}%</span>
                       </div>
-                      <div style={{ height: 5, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
+                      <div style={{ height: 5, background: "rgba(0,0,0,0.04)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
                         <div style={{ height: "100%", width: `${progressPct}%`, background: `linear-gradient(90deg, ${lvl.color}aa, ${lvl.color})`, borderRadius: 99, transition: "width 0.8s ease", position: "relative" }}>
                           <div style={{ position: "absolute", right: 0, top: -2, width: 9, height: 9, borderRadius: "50%", background: lvl.color, boxShadow: `0 0 8px ${lvl.color}` }} />
                         </div>
                       </div>
                       {/* XP hints */}
                       <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                        {!hasPR && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+100 XP : ajouter un PR</span>}
-                        {!hasRace && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+80 XP : fixer une race</span>}
-                        {nbSessions < 5 && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.03)", borderRadius: 6, padding: "3px 7px" }}>+50 XP par séance</span>}
+                        {!hasPR && <span style={{ fontSize: 9, color: "#555", background: "rgba(0,0,0,0.03)", borderRadius: 6, padding: "3px 7px" }}>+100 XP : ajouter un PR</span>}
+                        {!hasRace && <span style={{ fontSize: 9, color: "#555", background: "rgba(0,0,0,0.03)", borderRadius: 6, padding: "3px 7px" }}>+80 XP : fixer une race</span>}
+                        {nbSessions < 5 && <span style={{ fontSize: 9, color: "#555", background: "rgba(0,0,0,0.03)", borderRadius: 6, padding: "3px 7px" }}>+50 XP par séance</span>}
                       </div>
                     </div>
                   )}
@@ -5267,7 +5272,7 @@ JSON:
                     <div style={{ position: "relative", flexShrink: 0 }}>
                       <svg width="140" height="140" viewBox="0 0 140 140">
                         {/* bg ring */}
-                        <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
+                        <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="10" />
                         {/* colored ring */}
                         <circle cx="70" cy="70" r={r} fill="none"
                           stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}
@@ -5302,7 +5307,7 @@ JSON:
                             <span style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 5 }}><span>{b.icon}</span>{b.label}</span>
                             <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#555" }}>%</span></span>
                           </div>
-                          <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                          <div style={{ background: "rgba(0,0,0,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
                             <div style={{ width: `${b.val}%`, height: "100%", background: `linear-gradient(90deg, ${b.color}88, ${b.color})`, borderRadius: 99, transition: "width 0.8s ease" }} />
                           </div>
                         </div>
@@ -5312,7 +5317,7 @@ JSON:
 
                   {/* Programme week bar */}
                   {tw > 0 && (
-                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                         <span style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
                         <span className="bebas" style={{ fontSize: 13, color: "var(--yellow)" }}>S{cw} / {tw}</span>
@@ -5323,7 +5328,7 @@ JSON:
                           const w = Math.floor(i * ratio) + 1;
                           const isPast = cw > Math.floor((i + 1) * ratio);
                           const isActive = !isPast && cw >= w;
-                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(232,255,71,0.5)" : "rgba(255,255,255,0.05)", border: isActive ? "1px solid rgba(232,255,71,0.6)" : "none" }} />;
+                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(232,255,71,0.5)" : "rgba(0,0,0,0.05)", border: isActive ? "1px solid rgba(232,255,71,0.6)" : "none" }} />;
                         })}
                       </div>
                     </div>
@@ -5360,7 +5365,7 @@ JSON:
                 : { label: "Finisher", color: "#a78bfa" };
               const hasGoal = profile.goalTargetLevel;
               return (
-                <div onClick={() => navigateTo("race")} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
+                <div onClick={() => navigateTo("race")} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -5394,7 +5399,7 @@ JSON:
             {/* CTA séance — GRAND BOUTON */}
             <button onClick={() => { haptic([10]); navigateTo("today"); }} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(232,255,71,0.25)" }}>
               {/* Shine effect */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 30%, rgba(0,0,0,0.12) 50%, transparent 70%)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", right: 60, top: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(0,0,0,0.06)", pointerEvents: "none" }} />
               <div style={{ textAlign: "left" }}>
                 <div style={{ fontSize: 10, color: "rgba(0,0,0,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⚡ Coach IA · Aujourd'hui</div>
@@ -5519,18 +5524,18 @@ JSON:
               const doneCount = ROADMAP.filter(r => r.done).length;
               const nextStep = ROADMAP.find(r => !r.done);
               return (
-                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🚀 Prise en main ({doneCount}/{ROADMAP.length})</div>
                     <div style={{ fontSize: 10, color: "#555" }}>{Math.round(doneCount/ROADMAP.length*100)}% complété</div>
                   </div>
-                  <div style={{ height: 3, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
+                  <div style={{ height: 3, background: "rgba(0,0,0,0.04)", borderRadius: 99, overflow: "hidden", marginBottom: 12 }}>
                     <div style={{ height: "100%", width: `${Math.round(doneCount/ROADMAP.length*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.8s" }} />
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {ROADMAP.map((r, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, opacity: r.done ? 1 : r === nextStep ? 1 : 0.4 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: r.done ? "rgba(57,255,128,0.12)" : r === nextStep ? "rgba(232,255,71,0.1)" : "rgba(255,255,255,0.02)", border: `1.5px solid ${r.done ? "rgba(57,255,128,0.4)" : r === nextStep ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: r.done ? "rgba(57,255,128,0.12)" : r === nextStep ? "rgba(232,255,71,0.1)" : "rgba(0,0,0,0.02)", border: `1.5px solid ${r.done ? "rgba(57,255,128,0.4)" : r === nextStep ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
                           {r.done ? "✅" : r.icon}
                         </div>
                         <div style={{ flex: 1 }}>
@@ -5551,7 +5556,7 @@ JSON:
               const unearned = BADGES.filter(b => !b.check(profile));
               if (earnedBadges.length === 0 && unearned.length === 0) return null;
               return (
-                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🏅 Badges ({earnedBadges.length}/{BADGES.length})</div>
                     <div style={{ fontSize: 10, color: "#555" }}>{BADGES.length - earnedBadges.length} à débloquer</div>
@@ -5561,7 +5566,7 @@ JSON:
                       const earned = b.check(profile);
                       return (
                         <div key={b.id} title={b.desc} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 52, opacity: earned ? 1 : 0.3 }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 13, background: earned ? "rgba(232,255,71,0.1)" : "rgba(255,255,255,0.03)", border: `1.5px solid ${earned ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "all 0.2s" }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 13, background: earned ? "rgba(232,255,71,0.1)" : "rgba(0,0,0,0.03)", border: `1.5px solid ${earned ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "all 0.2s" }}>
                             {earned ? b.icon : "🔒"}
                           </div>
                           <div style={{ fontSize: 7, color: earned ? "#888" : "#333", textAlign: "center", lineHeight: 1.2, maxWidth: 52 }}>{b.name}</div>
@@ -5570,7 +5575,7 @@ JSON:
                     })}
                   </div>
                   {earnedBadges.length > 0 && (
-                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 10, color: "#777" }}>
+                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(0,0,0,0.04)", fontSize: 10, color: "#777" }}>
                       Dernier badge : <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{earnedBadges[earnedBadges.length-1].icon} {earnedBadges[earnedBadges.length-1].name}</span>
                     </div>
                   )}
@@ -5579,7 +5584,7 @@ JSON:
             })()}
 
             {/* Bouton Mon Profil */}
-            <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg, rgba(232,255,71,0.15), rgba(232,255,71,0.05))", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
                 <div style={{ textAlign: "left" }}>
@@ -5598,7 +5603,7 @@ JSON:
         {/* TODAY — toujours rendu */}
         <div style={{display: tab === "today" ? "block" : "none"}} className="fade-in">
             {/* Citation du jour */}
-            <div style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 14, marginBottom: 14 }}>
+            <div style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", paddingBottom: 14, marginBottom: 14 }}>
               <div style={{ fontSize: 13, color: "#555", lineHeight: 1.65, fontStyle: "italic" }}>"{getCitationDuJour()}"</div>
             </div>
 
@@ -5639,7 +5644,7 @@ JSON:
 
               const days = ["L","M","M","J","V","S","D"];
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px 12px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 18, padding: "14px 16px 12px", marginBottom: 14 }}>
                   <div style={{ fontSize: 9, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>📅 Ma semaine</div>
                   <div style={{ display: "flex", gap: 4, justifyContent: "space-between" }}>
                     {days.map((dayLabel, i) => {
@@ -5671,8 +5676,8 @@ JSON:
                         : isToday
                         ? "var(--yellow)"
                         : isPlannedDay && isFuture
-                        ? "rgba(255,255,255,0.15)"
-                        : "rgba(255,255,255,0.06)";
+                        ? "rgba(0,0,0,0.12)"
+                        : "rgba(0,0,0,0.06)";
 
                       const borderStyle = isPlannedDay && isFuture && !doneSession ? "dashed" : "solid";
 
@@ -5693,7 +5698,7 @@ JSON:
                               : isToday
                               ? (session ? (typeIcons[session.type] || "💪") : "•")
                               : isPlannedDay && isFuture
-                              ? <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "block" }} />
+                              ? <span style={{ width: 5, height: 5, borderRadius: "50%", background: "rgba(0,0,0,0.1)", display: "block" }} />
                               : isPast && isPlannedDay
                               ? <span style={{ fontSize: 10, color: "var(--red)", opacity: 0.5 }}>×</span>
                               : null
@@ -5710,7 +5715,7 @@ JSON:
                   <div style={{ display: "flex", gap: 12, marginTop: 10, justifyContent: "center" }}>
                     {[
                       { color: "var(--green)", label: "Fait" },
-                      { style: "dashed", color: "rgba(255,255,255,0.15)", label: "Planifié" },
+                      { style: "dashed", color: "rgba(0,0,0,0.12)", label: "Planifié" },
                     ].map(l => (
                       <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <div style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px ${l.style || "solid"} ${l.color}`, background: l.bg || "transparent" }} />
@@ -5734,7 +5739,7 @@ JSON:
               if (isRestDay && recovery < 35) {
                 // Active rest day
                 return (
-                  <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
+                  <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 10, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Récupération</div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>{greeting}, {profile.name.split(" ")[0]} · Ton corps récupère</div>
@@ -5749,7 +5754,7 @@ JSON:
                         { label: "Hydratation", desc: "Vise 8 verres — la récup dépend de l'eau" },
                         { label: "Protéines à chaque repas", desc: "2g/kg pour reconstruire les muscles" },
                       ].map((item, i) => (
-                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 10px", background: "rgba(255,255,255,0.02)", borderRadius: 10 }}>
+                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 10px", background: "rgba(0,0,0,0.02)", borderRadius: 10 }}>
                           <div>
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#ccc" }}>{item.label}</div>
                             <div style={{ fontSize: 10, color: "#555" }}>{item.desc}</div>
@@ -5766,21 +5771,21 @@ JSON:
               const typeNames = { running_zone2: "Cardio Zone 2", force_stations: "Force & Stations", running_qualite: "Qualité / Vitesse", hybride_compromis: "Hybride" };
               const todayType = coachSession?.type || "force_stations";
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Aujourd'hui</div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>{greeting}, {profile.name.split(" ")[0]}</div>
                   </div>
                   <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                    <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ flex: 1, background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#777", marginBottom: 2 }}>Type</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)" }}>{typeNames[todayType] || "Séance"}</div>
                     </div>
-                    <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ flex: 1, background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#777", marginBottom: 2 }}>Semaine</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)" }}>{sessionsThisWeek}/{target}</div>
                     </div>
-                    <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ flex: 1, background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#777", marginBottom: 2 }}>Récup</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--white)" }}>{recovery}/100</div>
                     </div>
@@ -5802,7 +5807,7 @@ JSON:
                 </div>
                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                   {/* Option séance du coach */}
-                  <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "14px 14px 10px" }}>
+                  <div style={{ flex: 1, background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 14, padding: "14px 14px 10px" }}>
                     <div style={{ fontSize: 10, color: "#555", fontWeight: 600, marginBottom: 6 }}>Du coach</div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", marginBottom: 4, lineHeight: 1.3 }}>{coachSession.titre}</div>
                     <div style={{ fontSize: 12, color: "#888", lineHeight: 1.5, marginBottom: 10 }}>{coachSession.description?.slice(0, 80)}{coachSession.description?.length > 80 ? "…" : ""}</div>
@@ -5825,10 +5830,10 @@ JSON:
                   {/* OU */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#555", fontWeight: 700 }}>OU</div>
                   {/* Option IA */}
-                  <div style={{ flex: 1, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 14px 10px" }}>
+                  <div style={{ flex: 1, background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, padding: "14px 14px 10px" }}>
                     <div style={{ fontSize: 10, color: "#555", fontWeight: 600, marginBottom: 6 }}>Coach IA</div>
                     <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5, marginBottom: 10 }}>Personnalisée selon ton profil et ta fatigue du jour</div>
-                    <button onClick={generateSession} style={{ width: "100%", padding: "8px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "var(--white)", cursor: "pointer" }}>
+                    <button onClick={generateSession} style={{ width: "100%", padding: "8px", background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, fontSize: 13, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: "var(--white)", cursor: "pointer" }}>
                       GÉNÉRER MA SÉANCE
                     </button>
                   </div>
@@ -5841,7 +5846,7 @@ JSON:
               const recovery = calcRecoveryScore(dailyData, profile);
               const recov = recoveryLabel(recovery);
               return (
-                <button onClick={() => setTab("forme")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, cursor: "pointer", textAlign: "left" }}>
+                <button onClick={() => setTab("forme")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 16, cursor: "pointer", textAlign: "left" }}>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${recov.color}15`, border: `2px solid ${recov.color}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 18, fontWeight: 700, color: recov.color, fontFamily: "'Bebas Neue',sans-serif" }}>{recovery}</span>
                   </div>
@@ -5885,11 +5890,11 @@ JSON:
                       return (
                         <button key={t.v} onClick={() => setDailyData(d => ({ ...d, typeSeance: t.v }))} style={{
                           display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 12, textAlign: "left", width: "100%",
-                          background: active ? `${t.color}10` : "rgba(255,255,255,0.02)",
-                          border: active ? `1.5px solid ${t.color}55` : "1px solid rgba(255,255,255,0.05)",
+                          background: active ? `${t.color}10` : "rgba(0,0,0,0.02)",
+                          border: active ? `1.5px solid ${t.color}55` : "1px solid rgba(0,0,0,0.05)",
                           color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
                         }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 10, background: active ? `${t.color}20` : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{t.icon}</div>
+                          <div style={{ width: 38, height: 38, borderRadius: 10, background: active ? `${t.color}20` : "rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{t.icon}</div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: active ? t.color : "var(--white)" }}>{t.label}</div>
                             <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>{t.sub}</div>
@@ -6003,7 +6008,7 @@ JSON:
                     { icon: "⚡", text: "Génération de la séance", done: false },
                   ].map((step, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, opacity: step.done ? 1 : 0.5 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: step.done ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${step.done ? "rgba(57,255,128,0.4)" : "rgba(255,255,255,0.08)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: step.done ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.04)", border: `1px solid ${step.done ? "rgba(57,255,128,0.4)" : "rgba(0,0,0,0.08)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0 }}>
                         {step.done ? "✓" : step.icon}
                       </div>
                       <span style={{ fontSize: 12, color: step.done ? "#888" : "#444", textDecoration: step.done ? "none" : "none" }}>{step.text}</span>
@@ -6036,7 +6041,7 @@ JSON:
               const doneCount0 = Object.values(checkedExercices).filter(Boolean).length;
               const totalEx0 = (session.exercices || []).length;
               return (
-                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "18px 18px 16px", marginBottom: 14, cursor: "pointer" }}>
+                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "18px 18px 16px", marginBottom: 14, cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 16 }}>{c0.icon}</span>
                     <span style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>{c0.label}</span>
@@ -6048,13 +6053,13 @@ JSON:
                   {(session.exercices || []).length > 0 && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
                       {(session.exercices || []).slice(0, 4).map((ex, ei) => (
-                        <div key={ei} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#666", whiteSpace: "nowrap" }}>
+                        <div key={ei} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#666", whiteSpace: "nowrap" }}>
                           {ex.nom?.length > 18 ? ex.nom.slice(0, 18) + "…" : ex.nom}
                           {ex.series && ex.reps ? <span style={{ color: c0.color, marginLeft: 4 }}>{ex.series}×{ex.reps}</span> : null}
                         </div>
                       ))}
                       {(session.exercices || []).length > 4 && (
-                        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#777" }}>
+                        <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#777" }}>
                           +{(session.exercices || []).length - 4}
                         </div>
                       )}
@@ -6063,7 +6068,7 @@ JSON:
                   {/* Progress si déjà commencé */}
                   {doneCount0 > 0 && (
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: 4, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${Math.round(doneCount0/totalEx0*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.4s" }} />
                       </div>
                       <div style={{ fontSize: 10, color: "var(--green)", marginTop: 4 }}>{doneCount0}/{totalEx0} exercices faits</div>
@@ -6083,16 +6088,16 @@ JSON:
             {showSessionModal && session && !showFeedback && !feedback && (
               <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end" }}
                 onClick={e => { if (e.target === e.currentTarget) setShowSessionModal(false); }}>
-                <div className="slide-up" style={{ background: "#080808", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", padding: "0 0 40px", border: "1px solid rgba(255,255,255,0.08)" }}
+                <div className="slide-up" style={{ background: "#080808", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", padding: "0 0 40px", border: "1px solid rgba(0,0,0,0.08)" }}
                   onClick={e => e.stopPropagation()}
                   onTouchStart={e => { e.currentTarget._ty = e.touches[0].clientY; }}
                   onTouchEnd={e => { const dy = e.changedTouches[0].clientY - (e.currentTarget._ty || 0); if (dy > 80) setShowSessionModal(false); }}>
                   {/* Handle bar + header */}
-                  <div style={{ position: "sticky", top: 0, background: "#080808", zIndex: 10, padding: "14px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ position: "sticky", top: 0, background: "#080808", zIndex: 10, padding: "14px 18px 12px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
                     <div style={{ width: 40, height: 4, background: "#333", borderRadius: 99, margin: "0 auto 14px" }} />
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 0.5 }}>{session.titre}</div>
-                      <button onClick={() => setShowSessionModal(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 18, cursor: "pointer" }}>×</button>
+                      <button onClick={() => setShowSessionModal(false)} style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 18, cursor: "pointer" }}>×</button>
                     </div>
                   </div>
                   {/* ── MINI REST TIMER ── */}
@@ -6101,7 +6106,7 @@ JSON:
                       {/* Arc progress */}
                       <div style={{ position: "relative", flexShrink: 0 }}>
                         <svg width="48" height="48" style={{ transform: "rotate(-90deg)" }}>
-                          <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="4" />
                           <circle cx="24" cy="24" r="20" fill="none"
                             stroke={miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa"}
                             strokeWidth="4"
@@ -6123,7 +6128,7 @@ JSON:
                           {miniRestTimer.secs <= 10 ? "Prépare-toi pour la prochaine série" : `${miniRestTimer.secs}s restantes`}
                         </div>
                       </div>
-                      <button onClick={() => setMiniRestTimer(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 28, height: 28, color: "#555", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
+                      <button onClick={() => setMiniRestTimer(null)} style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 8, width: 28, height: 28, color: "#555", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
                     </div>
                   )}
                   <div style={{ padding: "16px 18px 16px" }}>
@@ -6135,7 +6140,7 @@ JSON:
                     running_qualite: { label: "Running Qualité", color: "var(--orange)", bg: "linear-gradient(135deg, #1a0a00 0%, #080808 60%)", border: "rgba(255,154,60,0.25)", icon: "⚡" },
                     hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", bg: "linear-gradient(135deg, #0d0020 0%, #080808 60%)", border: "rgba(167,139,250,0.25)", icon: "🔀" },
                     coach: { label: "Séance Coach", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(232,255,71,0.25)", icon: "👨‍💼" },
-                    perso: { label: "Séance Perso", color: "#888", bg: "linear-gradient(135deg, #111 0%, #080808 60%)", border: "rgba(255,255,255,0.1)", icon: "✏️" },
+                    perso: { label: "Séance Perso", color: "#888", bg: "linear-gradient(135deg, #111 0%, #080808 60%)", border: "rgba(0,0,0,0.08)", icon: "✏️" },
                   };
                   const conf = typeConf[session.type] || typeConf.force_stations;
                   const doneCount = Object.values(checkedExercices).filter(Boolean).length;
@@ -6176,7 +6181,7 @@ JSON:
                             <span style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Exercices</span>
                             <span style={{ fontSize: 11, color: doneCount === totalEx && totalEx > 0 ? "var(--green)" : conf.color, fontWeight: 700 }}>{doneCount}/{totalEx}</span>
                           </div>
-                          <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{ height: 6, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden" }}>
                             <div style={{ height: "100%", width: `${pct}%`, background: doneCount === totalEx && totalEx > 0 ? "var(--green)" : conf.color, borderRadius: 99, transition: "width 0.4s ease" }} />
                           </div>
                         </div>
@@ -6229,8 +6234,8 @@ JSON:
                           }
                         }}
                         style={{
-                          background: done ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)",
-                          border: done ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(255,255,255,0.05)",
+                          background: done ? "rgba(57,255,128,0.04)" : "rgba(0,0,0,0.02)",
+                          border: done ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.05)",
                           borderLeft: done ? "3px solid var(--green)" : `3px solid ${accentColor}66`,
                           borderRadius: 14, padding: "14px 14px 12px 16px", marginBottom: 8,
                           animationDelay: `${i * 0.06}s`, cursor: "pointer",
@@ -6252,7 +6257,7 @@ JSON:
                             <div style={{ fontWeight: 700, fontSize: 15, color: done ? "#666" : "var(--white)", textDecoration: done ? "line-through" : "none" }}>{ex.nom}</div>
                           </div>
                           <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                            {ex.rpe && <div style={{ fontSize: 10, color: "#555", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe}</div>}
+                            {ex.rpe && <div style={{ fontSize: 10, color: "#555", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe}</div>}
                             {findVideoForExercice(ex.nom) && (
                               <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
                                 background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)",
@@ -6266,7 +6271,7 @@ JSON:
                         {(ex.series || ex.reps || ex.charge || ex.repos || ex.detail) && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingLeft: 38 }}>
                             {ex.series && <div style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}30`, borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : accentColor }}>{ex.series} séries</div>}
-                            {ex.reps && <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--white)" }}>× {ex.reps}</div>}
+                            {ex.reps && <div style={{ background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--white)" }}>× {ex.reps}</div>}
                             {ex.charge && <div style={{ background: "rgba(255,154,60,0.1)", border: "1px solid rgba(255,154,60,0.25)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--orange)" }}>⚖️ {ex.charge}</div>}
                             {ex.repos && <div style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 600, color: done ? "#555" : "#a78bfa" }}>⏱ {ex.repos}</div>}
                             {!ex.series && !ex.reps && !ex.charge && ex.detail && <div className="bebas" style={{ fontSize: 20, color: done ? "#555" : accentColor, letterSpacing: "0.04em" }}>{ex.detail}</div>}
@@ -6275,8 +6280,8 @@ JSON:
                         {/* Chips RPE cible + tempo */}
                         {(ex.rpe_cible || ex.tempo) && !done && (
                           <div style={{ display: "flex", gap: 6, marginTop: 4, paddingLeft: 38 }}>
-                            {ex.rpe_cible && <div style={{ fontSize: 10, color: "#888", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe_cible}</div>}
-                            {ex.tempo && <div style={{ fontSize: 10, color: "#888", background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>Tempo {ex.tempo}</div>}
+                            {ex.rpe_cible && <div style={{ fontSize: 10, color: "#888", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe_cible}</div>}
+                            {ex.tempo && <div style={{ fontSize: 10, color: "#888", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>Tempo {ex.tempo}</div>}
                           </div>
                         )}
                         {/* Clé technique — le conseil le plus important */}
@@ -6326,8 +6331,8 @@ JSON:
                 )}
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => { setSession(null); try { localStorage.removeItem(sessionCacheKey); } catch {} setShowSessionModal(false); }} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "#666", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↺ Refaire</button>
-                  <button onClick={() => { setChronoMode(true); setChronoRunning(true); setChronoSeconds(0); setCurrentExIdx(0); }} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "13px", color: "var(--white)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>⏱ Chrono</button>
+                  <button onClick={() => { setSession(null); try { localStorage.removeItem(sessionCacheKey); } catch {} setShowSessionModal(false); }} style={{ flex: 1, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "13px", color: "#666", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↺ Refaire</button>
+                  <button onClick={() => { setChronoMode(true); setChronoRunning(true); setChronoSeconds(0); setCurrentExIdx(0); }} style={{ flex: 1, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "13px", color: "var(--white)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>⏱ Chrono</button>
                   <button onClick={() => { setShowFeedback(true); setShowSessionModal(false); }} style={{ flex: 2, background: "var(--green)", border: "none", borderRadius: 12, padding: "13px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 1, cursor: "pointer" }}>✓ TERMINÉE</button>
                 </div>
               </div>
@@ -6360,8 +6365,8 @@ JSON:
                         return (
                           <button key={r.v} onClick={() => { haptic([6]); setFeedbackData(d => ({ ...d, ressenti: r.v })); }} style={{
                             flex: 1, padding: "14px 6px", borderRadius: 14, textAlign: "center",
-                            background: active ? `${r.color}15` : "rgba(255,255,255,0.02)",
-                            border: active ? `2px solid ${r.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                            background: active ? `${r.color}15` : "rgba(0,0,0,0.02)",
+                            border: active ? `2px solid ${r.color}` : "1.5px solid rgba(0,0,0,0.06)",
                             color: "var(--white)", cursor: "pointer",
                             transform: active ? "scale(1.04)" : "scale(1)",
                             boxShadow: active ? `0 4px 16px ${r.color}25` : "none",
@@ -6396,7 +6401,7 @@ JSON:
                         return (
                         <button key={v} onClick={() => { haptic([6]); setFeedbackData(d => ({ ...d, difficulte: v })); }} style={{
                           flex: 1, height: 38, borderRadius: 8, border: "none", cursor: "pointer",
-                          background: active ? rpeColor : "rgba(255,255,255,0.04)",
+                          background: active ? rpeColor : "rgba(0,0,0,0.04)",
                           fontSize: v === feedbackData.difficulte ? 13 : 11, fontWeight: 700,
                           color: active ? "#000" : "#2a2a2a",
                           transform: v === feedbackData.difficulte ? "scaleY(1.15)" : "scaleY(1)",
@@ -6573,7 +6578,7 @@ JSON:
                           const active = val === s.v;
                           return (
                             <button key={s.v} onClick={() => { haptic([5]); setFeedbackData(d => ({ ...d, mentalPre: s.v })); }}
-                              style={{ padding: "7px 10px", borderRadius: 10, fontSize: 12, cursor: "pointer", border: `1.5px solid ${active ? "rgba(167,139,250,0.5)" : "rgba(255,255,255,0.06)"}`, background: active ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.02)", color: active ? "#a78bfa" : "#444", fontWeight: active ? 700 : 400, transition: "all 0.15s" }}>
+                              style={{ padding: "7px 10px", borderRadius: 10, fontSize: 12, cursor: "pointer", border: `1.5px solid ${active ? "rgba(167,139,250,0.5)" : "rgba(0,0,0,0.06)"}`, background: active ? "rgba(167,139,250,0.12)" : "rgba(0,0,0,0.02)", color: active ? "#a78bfa" : "#444", fontWeight: active ? 700 : 400, transition: "all 0.15s" }}>
                               {s.emoji} {s.label}
                             </button>
                           );
@@ -6586,7 +6591,7 @@ JSON:
                       <div style={{ display: "flex", gap: 4 }}>
                         {[1,2,3,4,5].map(v => (
                           <button key={v} onClick={() => { haptic([5]); setFeedbackData(d => ({ ...d, concentration: v })); }}
-                            style={{ flex: 1, height: 32, borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, background: v <= (feedbackData.concentration||0) ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.04)", color: v <= (feedbackData.concentration||0) ? "#a78bfa" : "#333", transition: "all 0.15s" }}>
+                            style={{ flex: 1, height: 32, borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, background: v <= (feedbackData.concentration||0) ? "rgba(167,139,250,0.3)" : "rgba(0,0,0,0.04)", color: v <= (feedbackData.concentration||0) ? "#a78bfa" : "#333", transition: "all 0.15s" }}>
                             {v <= (feedbackData.concentration||0) ? "⭐" : "☆"}
                           </button>
                         ))}
@@ -6595,7 +6600,7 @@ JSON:
                     {/* Note mentale libre */}
                     <textarea value={feedbackData.mentalNote||""} onChange={e => setFeedbackData(d => ({ ...d, mentalNote: e.target.value }))}
                       placeholder="Comment tu t'es senti mentalement ? Flow, blocages, pensées parasites, confiance..."
-                      style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 10, padding: "10px 14px", color: "var(--white)", fontSize: 12, minHeight: 55, resize: "vertical", fontFamily: "var(--font-body)", outline: "none" }} />
+                      style={{ width: "100%", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 10, padding: "10px 14px", color: "var(--white)", fontSize: 12, minHeight: 55, resize: "vertical", fontFamily: "var(--font-body)", outline: "none" }} />
                   </div>
 
                   {/* 7. Exercices détaillés */}
@@ -6717,7 +6722,7 @@ JSON:
                           { label: "Score", value: sc.global, color: "var(--green)" },
                           { label: "RPE", value: `${feedbackData.difficulte}/10`, color: feedbackData.difficulte >= 8 ? "var(--red)" : feedbackData.difficulte >= 5 ? "var(--orange)" : "var(--green)" },
                         ].map(item => (
-                          <div key={item.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
+                          <div key={item.label} style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "12px 8px", textAlign: "center" }}>
                             <div className="bebas" style={{ fontSize: 30, color: item.color, lineHeight: 1 }}>{item.value}</div>
                             <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 3, letterSpacing: "0.1em" }}>{item.label}</div>
                           </div>
@@ -6830,7 +6835,7 @@ JSON:
                       const d = new Date(s.date);
                       const dateLabel = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
                       return (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14 }}>
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14 }}>
                           <div style={{ width: 38, height: 38, borderRadius: 11, background: `${conf.color}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{conf.icon}</div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre || conf.label}</div>
@@ -6898,7 +6903,7 @@ JSON:
               const delta = lastScore - firstScore;
               const scoreColor = delta >= 0 ? "var(--green)" : "var(--red)";
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px 12px", marginBottom: 16, overflow: "hidden", position: "relative" }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "16px 16px 12px", marginBottom: 16, overflow: "hidden", position: "relative" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
                       <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Score Fitness · {sessions.length} séances</div>
@@ -6922,7 +6927,7 @@ JSON:
                     {/* Grille horizontale */}
                     {[0.25, 0.5, 0.75].map((p, i) => (
                       <line key={i} x1={pad} y1={pad + p * (H - 2 * pad)} x2={W - pad} y2={pad + p * (H - 2 * pad)}
-                        stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                        stroke="rgba(0,0,0,0.04)" strokeWidth="1" />
                     ))}
                     {/* Zone remplie */}
                     <path d={areaD} fill="url(#areaGrad)" />
@@ -6974,7 +6979,7 @@ JSON:
               const zeroY = yOf(0, minTSB - 5, maxTSB + 5);
 
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px 10px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "16px 16px 10px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                     <div>
                       <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Charge d'entraînement</div>
@@ -6985,12 +6990,12 @@ JSON:
                               <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 1 }}>Fitness</div>
                               <div className="bebas" style={{ fontSize: 20, color: "var(--green)", lineHeight: 1 }}>{today.ctl}</div>
                             </div>
-                            <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.06)" }} />
+                            <div style={{ width: 1, height: 28, background: "rgba(0,0,0,0.06)" }} />
                             <div style={{ textAlign: "center" }}>
                               <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 1 }}>Fatigue</div>
                               <div className="bebas" style={{ fontSize: 20, color: "var(--orange)", lineHeight: 1 }}>{today.atl}</div>
                             </div>
-                            <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.06)" }} />
+                            <div style={{ width: 1, height: 28, background: "rgba(0,0,0,0.06)" }} />
                             <div style={{ textAlign: "center" }}>
                               <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", marginBottom: 1 }}>Forme</div>
                               <div className="bebas" style={{ fontSize: 20, color: tsb?.color, lineHeight: 1 }}>{today.tsb > 0 ? "+" : ""}{today.tsb}</div>
@@ -7017,7 +7022,7 @@ JSON:
                     </defs>
                     {/* Grille */}
                     {[0.25, 0.5, 0.75].map((p, i) => (
-                      <line key={i} x1={pad} y1={pad + p * (H - 2 * pad)} x2={W - pad} y2={pad + p * (H - 2 * pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                      <line key={i} x1={pad} y1={pad + p * (H - 2 * pad)} x2={W - pad} y2={pad + p * (H - 2 * pad)} stroke="rgba(0,0,0,0.04)" strokeWidth="1" />
                     ))}
                     {/* CTL fill */}
                     <path d={ctlPath + ` L${xOf(last30.length-1).toFixed(1)},${H-pad} L${xOf(0).toFixed(1)},${H-pad} Z`} fill="url(#ctlGrad)" />
@@ -7046,7 +7051,7 @@ JSON:
                   </div>
 
                   {/* TSB mini bars — Form sur 30j */}
-                  <div style={{ marginTop: 6, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ marginTop: 6, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                     <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Forme du jour — 30 derniers jours</div>
                     <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 28 }}>
                       {last30.map((p, i) => {
@@ -7095,7 +7100,7 @@ JSON:
               ];
 
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 16 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 16 }}>
                   <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Semaine en cours vs précédente</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                     {COLS.map(col => {
@@ -7103,7 +7108,7 @@ JSON:
                       const improved = diff !== null && diff > 0;
                       const equal = diff === 0;
                       return (
-                        <div key={col.label} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+                        <div key={col.label} style={{ background: "rgba(0,0,0,0.02)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
                           <div style={{ fontSize: 16, marginBottom: 4 }}>{col.icon}</div>
                           <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{col.label}</div>
                           <div className="bebas" style={{ fontSize: 24, color: col.color, lineHeight: 1 }}>{col.this}{col.unit}</div>
@@ -7131,7 +7136,7 @@ JSON:
                       const isPast = i + 1 <= dayOfWeek;
                       return (
                         <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: dayHadSession ? "rgba(232,255,71,0.15)" : isPast ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.015)", border: `1px solid ${dayHadSession ? "rgba(232,255,71,0.3)" : "rgba(255,255,255,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: dayHadSession ? "rgba(232,255,71,0.15)" : isPast ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.015)", border: `1px solid ${dayHadSession ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             {dayHadSession && <span style={{ fontSize: 12 }}>✓</span>}
                           </div>
                           <div style={{ fontSize: 8, color: i + 1 === dayOfWeek ? "var(--yellow)" : "#333", fontWeight: i + 1 === dayOfWeek ? 700 : 400 }}>{d}</div>
@@ -7166,7 +7171,7 @@ JSON:
               const maxCount = Math.max(...weeks.map(([,v]) => v.count));
               const W = 320; const H = 80; const barW = Math.floor((W - 20) / weeks.length) - 4;
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "16px 16px 10px", marginBottom: 12 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 16, padding: "16px 16px 10px", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Charge par semaine</div>
                     <div style={{ fontSize: 10, color: "#555" }}>{weeks.length} semaines</div>
@@ -7214,7 +7219,7 @@ JSON:
               ].filter(r => r.s);
               if (!records.length) return null;
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
                   <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>🏅 Records de séance</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {records.map((r, i) => (
@@ -7279,7 +7284,7 @@ JSON:
               };
 
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>⚖️ Suivi corporel — {bodyLogs.length} jours de données</div>
 
                   {/* Weight chart */}
@@ -7294,7 +7299,7 @@ JSON:
                       </div>
                       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
                         {/* Grid lines */}
-                        {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                        {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(0,0,0,0.04)" strokeWidth="1" />)}
                         {renderLine(weightLogs, l => parseFloat(l.poidsJour), "var(--yellow)")}
                       </svg>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#222", marginTop: 2 }}>
@@ -7316,7 +7321,7 @@ JSON:
                         </div>
                       </div>
                       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
-                        {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                        {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(0,0,0,0.04)" strokeWidth="1" />)}
                         {renderLine(sleepLogs, l => parseFloat(l.sleepHours), "#a78bfa")}
                         {/* 8h reference line */}
                         {(() => {
@@ -7342,7 +7347,7 @@ JSON:
                     const lastHrv = parseInt(hrvLogs[hrvLogs.length-1].hrv);
                     const hrvColor = lastHrv>=70?"var(--green)":lastHrv>=55?"var(--yellow)":lastHrv>=40?"var(--orange)":"var(--red)";
                     return (
-                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                           <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>💓 HRV matin</div>
                           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
@@ -7351,7 +7356,7 @@ JSON:
                           </div>
                         </div>
                         <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
-                          {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                          {[0.25,0.5,0.75].map((p,i) => <line key={i} x1={pad} y1={pad + p*(H-2*pad)} x2={W-pad} y2={pad + p*(H-2*pad)} stroke="rgba(0,0,0,0.04)" strokeWidth="1" />)}
                           {renderLine(hrvLogs, l => parseInt(l.hrv), hrvColor)}
                         </svg>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#222", marginTop: 2 }}>
@@ -7417,7 +7422,7 @@ JSON:
               const squatGainPerWeek = avgSessions >= 3 ? 0.5 : 0.3; // kg par semaine
 
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
                   <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>🔮 Simulateur de progression</div>
                   <div style={{ fontSize: 10, color: "#555", marginBottom: 14 }}>Si tu maintiens ton rythme de {avgSessions.toFixed(1)} séances/semaine…</div>
 
@@ -7469,7 +7474,7 @@ JSON:
                       )}
                     </div>
 
-                    <div style={{ fontSize: 9, color: "#555", paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.04)", lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 9, color: "#555", paddingTop: 6, borderTop: "1px solid rgba(0,0,0,0.04)", lineHeight: 1.6 }}>
                       ⚠️ Estimations basées sur ton historique. Les gains réels dépendent de la qualité du sommeil, de la nutrition et de la récupération.
                     </div>
                   </div>
@@ -7502,7 +7507,7 @@ JSON:
               const complianceColor = compliance >= 85 ? "var(--green)" : compliance >= 65 ? "var(--yellow)" : "var(--orange)";
 
               return (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Objectif vs réalisé</div>
                     <div style={{ display: "flex", align: "center", gap: 6 }}>
@@ -7528,7 +7533,7 @@ JSON:
                     })}
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                     <div style={{ display: "flex", gap: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
                         <div style={{ width: 10, height: 3, background: "rgba(232,255,71,0.5)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
@@ -7596,7 +7601,7 @@ JSON:
                   </div>
 
                   {total === 0 ? (
-                    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "36px 20px", textAlign: "center" }}>
+                    <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.08)", borderRadius: 16, padding: "36px 20px", textAlign: "center" }}>
                       <div style={{ fontSize: 48, marginBottom: 12 }}>🏋️</div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)", marginBottom: 6 }}>Aucune séance encore</div>
                       <div style={{ fontSize: 13, color: "#777", lineHeight: 1.6 }}>Lance ta première séance depuis l'onglet Aujourd'hui !</div>
@@ -7626,9 +7631,9 @@ JSON:
                           const chipColor = conf ? conf.color : "var(--yellow)";
                           return (
                             <button key={chip.id} onClick={() => { haptic([6]); setJournalFilter(chip.id); }} style={{
-                              flexShrink: 0, border: `1px solid ${active ? chipColor : "rgba(255,255,255,0.08)"}`,
+                              flexShrink: 0, border: `1px solid ${active ? chipColor : "rgba(0,0,0,0.08)"}`,
                               borderRadius: 20, padding: "6px 12px", fontSize: 11, fontWeight: 700,
-                              background: active ? `${chipColor}18` : "rgba(255,255,255,0.03)",
+                              background: active ? `${chipColor}18` : "rgba(0,0,0,0.03)",
                               color: active ? chipColor : "#444",
                               transition: "all 0.18s var(--spring)",
                               display: "flex", alignItems: "center", gap: 5,
@@ -7654,13 +7659,13 @@ JSON:
                         const origIdx = allSessions.indexOf(s);
                         const num = total - origIdx;
                         const adapt = (profile.adaptations||[])[num - 1];
-                        const conf = TYPE_CONF_J[s.type] || { icon: "💪", label: "Séance", color: "var(--white)", bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.15)" };
+                        const conf = TYPE_CONF_J[s.type] || { icon: "💪", label: "Séance", color: "var(--white)", bg: "rgba(0,0,0,0.04)", border: "rgba(0,0,0,0.12)" };
                         const ressentiColor = s.ressenti === "bien" ? "var(--green)" : s.ressenti === "facile" ? "var(--yellow)" : s.ressenti === "dur" ? "var(--red)" : "#555";
                         const isExpanded = expandedSessions[num];
                         const rpeBar = (s.difficulte || 0) / 10;
                         return (
                           <div key={i} onClick={() => { setExpandedSessions(e => ({ ...e, [num]: !e[num] })); haptic([6]); }}
-                            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${isExpanded ? conf.color + "40" : "rgba(255,255,255,0.06)"}`, borderLeft: `3px solid ${conf.color}`, borderRadius: 16, padding: "14px 16px", marginBottom: 8, cursor: "pointer", transition: "all 0.2s var(--ease-out)" }}>
+                            style={{ background: "rgba(0,0,0,0.02)", border: `1px solid ${isExpanded ? conf.color + "40" : "rgba(0,0,0,0.06)"}`, borderLeft: `3px solid ${conf.color}`, borderRadius: 16, padding: "14px 16px", marginBottom: 8, cursor: "pointer", transition: "all 0.2s var(--ease-out)" }}>
                             {/* Card header */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
@@ -7685,22 +7690,22 @@ JSON:
 
                             {/* RPE bar */}
                             {s.difficulte && (
-                              <div style={{ marginTop: 8, height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, overflow: "hidden" }}>
+                              <div style={{ marginTop: 8, height: 3, background: "rgba(0,0,0,0.05)", borderRadius: 2, overflow: "hidden" }}>
                                 <div style={{ height: "100%", width: `${rpeBar * 100}%`, background: ressentiColor, borderRadius: 2, transition: "width 0.4s var(--ease-out)" }} />
                               </div>
                             )}
 
                             {/* Pills row */}
                             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
-                              {s.tempsReel && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
-                              {s.energie && <span style={{ fontSize: 9, color: "#555", background: "rgba(255,255,255,0.04)", borderRadius: 5, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
+                              {s.tempsReel && <span style={{ fontSize: 9, color: "#555", background: "rgba(0,0,0,0.04)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
+                              {s.energie && <span style={{ fontSize: 9, color: "#555", background: "rgba(0,0,0,0.04)", borderRadius: 5, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
                               {s.ressenti && <span style={{ fontSize: 9, color: ressentiColor, background: `${ressentiColor}12`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{s.ressenti === "bien" ? "Calibré" : s.ressenti === "facile" ? "Facile" : "Dur"}</span>}
                               {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 9, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 5, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
                             </div>
 
                             {/* Expanded details */}
                             {isExpanded && (
-                              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.05)", animation: "fadeIn 0.2s ease" }}>
+                              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.05)", animation: "fadeIn 0.2s ease" }}>
                                 {s.charges && (
                                   <div style={{ fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 8 }}>
                                     <span style={{ fontSize: 10, color: "#555", fontWeight: 700, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Notes charges</span>
@@ -7711,7 +7716,7 @@ JSON:
                                   <div style={{ marginBottom: 8 }}>
                                     <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Exercices ({s.exercices.length})</div>
                                     {s.exercices.slice(0,6).map((ex, ei) => (
-                                      <div key={ei} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                                      <div key={ei} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
                                         <div style={{ width: 5, height: 5, borderRadius: "50%", background: conf.color, flexShrink: 0 }} />
                                         <div style={{ fontSize: 12, color: "#aaa", flex: 1 }}>{typeof ex === "string" ? ex : ex.label || ex.nom || JSON.stringify(ex)}</div>
                                       </div>
@@ -7806,18 +7811,18 @@ JSON:
                                 <div style={{ flex: 1 }}>
                                   <div style={{ fontSize: 10, color: "#555", marginBottom: 6 }}>Minutes</div>
                                   <input type="number" min="0" max="30" value={editMin} onChange={e => setEditMin(e.target.value)}
-                                    placeholder="ex: 3" style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px", color: "var(--white)", fontSize: 20, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                                    placeholder="ex: 3" style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "14px", color: "var(--white)", fontSize: 20, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
                                 </div>
                                 <div style={{ fontSize: 24, color: "#555", marginTop: 20 }}>:</div>
                                 <div style={{ flex: 1 }}>
                                   <div style={{ fontSize: 10, color: "#555", marginBottom: 6 }}>Secondes</div>
                                   <input type="number" min="0" max="59" value={editSec} onChange={e => setEditSec(String(Math.min(59, parseInt(e.target.value)||0)).padStart(2,"0"))}
-                                    placeholder="ex: 45" style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "14px", color: "var(--white)", fontSize: 20, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                                    placeholder="ex: 45" style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "14px", color: "var(--white)", fontSize: 20, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
                                 </div>
                               </div>
                               <button onClick={() => saveBench(editingStation, parseInt(editMin)||0, parseInt(editSec)||0)}
                                 disabled={!editMin}
-                                style={{ width: "100%", padding: 16, background: editMin ? st.color : "rgba(255,255,255,0.05)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, color: editMin ? "#000" : "#333", cursor: editMin ? "pointer" : "default" }}>
+                                style={{ width: "100%", padding: 16, background: editMin ? st.color : "rgba(0,0,0,0.05)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, color: editMin ? "#000" : "#333", cursor: editMin ? "pointer" : "default" }}>
                                 💾 ENREGISTRER MON TEMPS
                               </button>
                             </>
@@ -7838,7 +7843,7 @@ JSON:
                       const pctOfElite = mySecs !== null && eliteSecs ? Math.round((eliteSecs / mySecs) * 100) : null;
                       return (
                         <div key={st.id} onClick={() => { haptic([6]); setEditingStation(st.id); if (bench) { const [m,s] = bench.time.split(":"); setEditMin(m); setEditSec(s); } else { setEditMin(""); setEditSec(""); } }}
-                          style={{ background: bench ? `${st.color}07` : "rgba(255,255,255,0.02)", border: `1px solid ${bench ? st.color + "30" : "rgba(255,255,255,0.06)"}`, borderLeft: `3px solid ${bench ? st.color : "rgba(255,255,255,0.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.18s" }}>
+                          style={{ background: bench ? `${st.color}07` : "rgba(0,0,0,0.02)", border: `1px solid ${bench ? st.color + "30" : "rgba(0,0,0,0.06)"}`, borderLeft: `3px solid ${bench ? st.color : "rgba(0,0,0,0.08)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.18s" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <span style={{ fontSize: 20, flexShrink: 0 }}>{st.icon}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -7865,7 +7870,7 @@ JSON:
                               {/* Progress bar vs ref */}
                               {bench && refSecs && eliteSecs && (
                                 <div style={{ marginTop: 8 }}>
-                                  <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "visible", position: "relative" }}>
+                                  <div style={{ height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "visible", position: "relative" }}>
                                     {/* Elite marker */}
                                     <div style={{ position: "absolute", top: -2, left: `${Math.min(98, (eliteSecs / refSecs) * 100)}%`, width: 2, height: 8, background: st.color, borderRadius: 1 }} />
                                     {/* My bar */}
@@ -7946,7 +7951,7 @@ JSON:
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Adaptations IA</div>
               {(profile.adaptations || []).length === 0 ? (
-                <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 12, padding: "20px", textAlign: "center", fontSize: 13, color: "#777" }}>🤖 Pas encore d'adaptations IA.</div>
+                <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.06)", borderRadius: 12, padding: "20px", textAlign: "center", fontSize: 13, color: "#777" }}>🤖 Pas encore d'adaptations IA.</div>
               ) : (
                 (profile.adaptations || []).slice(-5).reverse().map((a, i) => (
                   <div key={i} style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.1)", borderLeft: "3px solid rgba(57,255,128,0.4)", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
@@ -7976,7 +7981,7 @@ JSON:
                       <div className="bebas" style={{ fontSize: 24, color: "var(--red)", lineHeight: 1 }}>{profile.fcMax}</div>
                       <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 2 }}>FC max</div>
                     </div>
-                    <div style={{ width: 1, background: "rgba(255,255,255,0.06)" }} />
+                    <div style={{ width: 1, background: "rgba(0,0,0,0.06)" }} />
                     <div style={{ textAlign: "center" }}>
                       <div className="bebas" style={{ fontSize: 24, color: "#888", lineHeight: 1 }}>{profile.fcMin}</div>
                       <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 2 }}>FC repos</div>
@@ -8018,7 +8023,7 @@ JSON:
                         </div>
                         {/* Barre d'intensité */}
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.04)", borderRadius: 99, position: "relative", overflow: "hidden" }}>
+                          <div style={{ flex: 1, height: 4, background: "rgba(0,0,0,0.04)", borderRadius: 99, position: "relative", overflow: "hidden" }}>
                             <div style={{ position: "absolute", left: `${z.pct[0]}%`, width: `${barWidth}%`, height: "100%", background: col, borderRadius: 99 }} />
                           </div>
                           <div style={{ fontSize: 10, color: "#777", flexShrink: 0 }}>{z.pct[0]}–{z.pct[1]}%</div>
@@ -8054,7 +8059,7 @@ JSON:
                 {(profile.vmaKmh || profile.squat1RM_final) && <PaceCalcWidget profile={profile} />}
               </>
             ) : (
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.08)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🏃</div>
                 <div style={{ fontSize: 14, color: "#555", lineHeight: 1.6 }}>Complète le test VMA pour calculer tes zones.</div>
               </div>
@@ -8101,10 +8106,10 @@ JSON:
               </div>
 
               {/* Recovery ring */}
-              <div style={{ marginBottom: 16, padding: "18px 20px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, display: "flex", alignItems: "center", gap: 18 }}>
+              <div style={{ marginBottom: 16, padding: "18px 20px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, display: "flex", alignItems: "center", gap: 18 }}>
                 <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
                   <svg width="72" height="72" viewBox="0 0 72 72">
-                    <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7"/>
+                    <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="7"/>
                     <circle cx="36" cy="36" r="30" fill="none" stroke={recov.color} strokeWidth="7"
                       strokeDasharray={`${(recovery/100)*188.5} 188.5`} strokeLinecap="round"
                       transform="rotate(-90 36 36)" style={{ transition: "stroke-dasharray 0.6s ease" }}/>
@@ -8133,8 +8138,8 @@ JSON:
                   ].map(f => (
                     <button key={f.v} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, fatigue: f.v })); }} style={{
                       flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
-                      background: dailyData.fatigue === f.v ? `${f.color}15` : "rgba(255,255,255,0.02)",
-                      border: dailyData.fatigue === f.v ? `2px solid ${f.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                      background: dailyData.fatigue === f.v ? `${f.color}15` : "rgba(0,0,0,0.02)",
+                      border: dailyData.fatigue === f.v ? `2px solid ${f.color}` : "1.5px solid rgba(0,0,0,0.06)",
                       color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
                     }}>
                       <div style={{ fontSize: 22 }}>{f.emoji}</div>
@@ -8156,8 +8161,8 @@ JSON:
                   ].map(s => (
                     <button key={s.v} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, sommeil: s.v })); }} style={{
                       flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
-                      background: dailyData.sommeil === s.v ? `${s.color}15` : "rgba(255,255,255,0.02)",
-                      border: dailyData.sommeil === s.v ? `2px solid ${s.color}` : "1.5px solid rgba(255,255,255,0.06)",
+                      background: dailyData.sommeil === s.v ? `${s.color}15` : "rgba(0,0,0,0.02)",
+                      border: dailyData.sommeil === s.v ? `2px solid ${s.color}` : "1.5px solid rgba(0,0,0,0.06)",
                       color: "var(--white)", cursor: "pointer", transition: "all 0.18s",
                     }}>
                       <div style={{ fontSize: 22 }}>{s.emoji}</div>
@@ -8168,7 +8173,7 @@ JSON:
               </div>
 
               {/* Heures de sommeil */}
-              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Heures de sommeil</div>
                   <div className="bebas" style={{ fontSize: 22, color: parseFloat(dailyData.sleepHours) >= 8 ? "var(--green)" : parseFloat(dailyData.sleepHours) >= 7 ? "var(--yellow)" : "var(--orange)" }}>{dailyData.sleepHours}h</div>
@@ -8182,7 +8187,7 @@ JSON:
               </div>
 
               {/* Hydratation */}
-              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Hydratation</div>
                   <div className="bebas" style={{ fontSize: 22, color: dailyData.hydration >= 8 ? "var(--green)" : dailyData.hydration >= 5 ? "var(--yellow)" : "#555" }}>{dailyData.hydration}/8</div>
@@ -8190,7 +8195,7 @@ JSON:
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {Array.from({ length: 8 }, (_, i) => (
                     <button key={i} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, hydration: i < d.hydration ? i : i + 1 })); }}
-                      style={{ width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${i < dailyData.hydration ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.08)"}`, background: i < dailyData.hydration ? "rgba(56,189,248,0.15)" : "rgba(255,255,255,0.03)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s var(--spring)" }}>
+                      style={{ width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${i < dailyData.hydration ? "rgba(56,189,248,0.6)" : "rgba(0,0,0,0.08)"}`, background: i < dailyData.hydration ? "rgba(56,189,248,0.15)" : "rgba(0,0,0,0.03)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s var(--spring)" }}>
                       {i < dailyData.hydration ? "💧" : "○"}
                     </button>
                   ))}
@@ -8199,14 +8204,14 @@ JSON:
               </div>
 
               {/* Poids du jour */}
-              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14 }}>
                 <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Poids du jour (kg)</div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input type="number" step="0.1" min="40" max="150"
                     value={dailyData.poidsJour}
                     onChange={e => setDailyData(d => ({ ...d, poidsJour: e.target.value }))}
                     placeholder={`${profile.poids || 75} kg`}
-                    style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+                    style={{ flex: 1, background: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
                   <div style={{ fontSize: 12, minWidth: 52, textAlign: "right" }}>
                     {dailyData.poidsJour && profile.poids ? (
                       <span style={{ color: parseFloat(dailyData.poidsJour) <= parseFloat(profile.poids) ? "var(--green)" : "var(--orange)", fontWeight: 700 }}>
@@ -8218,7 +8223,7 @@ JSON:
               </div>
 
               {/* HRV */}
-              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14 }}>
+              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div>
                     <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>HRV matin (ms)</div>
@@ -8234,7 +8239,7 @@ JSON:
                     value={dailyData.hrv}
                     onChange={e => { haptic([4]); setDailyData(d => ({ ...d, hrv: e.target.value })); }}
                     placeholder="Ex: 65"
-                    style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: `1.5px solid ${hrv>0?hrvColor+"40":"rgba(255,255,255,0.08)"}`, borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+                    style={{ flex: 1, background: "rgba(0,0,0,0.05)", border: `1.5px solid ${hrv>0?hrvColor+"40":"rgba(0,0,0,0.08)"}`, borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
                   <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     {[{r:"<40",l:"Bas",c:"var(--red)"},{r:"40-55",l:"Modéré",c:"var(--orange)"},{r:"55-70",l:"Bon",c:"var(--yellow)"},{r:">70",l:"Top",c:"var(--green)"}].map(z=>(
                       <div key={z.r} style={{ fontSize: 8, color: z.c, lineHeight: 1.2 }}>{z.r} {z.l}</div>
@@ -8249,7 +8254,7 @@ JSON:
               </div>
 
               {/* Nutrition */}
-              <button onClick={() => setTab("nutri")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
+              <button onClick={() => setTab("nutri")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,154,60,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🥗</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Nutrition</div>
@@ -8259,7 +8264,7 @@ JSON:
               </button>
 
               {/* Planning */}
-              <button onClick={() => setTab("planning")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
+              <button onClick={() => setTab("planning")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(167,139,250,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📅</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Planning de la semaine</div>
@@ -8298,7 +8303,7 @@ JSON:
           style={{
             position: "fixed", bottom: 80, right: 16, zIndex: 99,
             width: 42, height: 42, borderRadius: "50%",
-            background: "rgba(15,15,15,0.92)", border: "1px solid rgba(255,255,255,0.1)",
+            background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)",
             fontSize: 15, cursor: "pointer", backdropFilter: "blur(16px)",
             display: "flex", alignItems: "center", justifyContent: "center", color: "#666",
             boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
@@ -8318,7 +8323,7 @@ JSON:
 
       {/* ── QUICK LOG FAB ── */}
       <button onClick={() => { haptic([10,20,10]); setShowQuickLog(s => !s); }}
-        style={{ position: "fixed", bottom: 80, left: 16, zIndex: 98, width: 42, height: 42, borderRadius: "50%", background: "rgba(15,15,15,0.92)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#666", backdropFilter: "blur(16px)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", transition: "all 0.2s var(--spring)", transform: showQuickLog ? "rotate(45deg)" : "rotate(0)" }}>
+        style={{ position: "fixed", bottom: 80, left: 16, zIndex: 98, width: 42, height: 42, borderRadius: "50%", background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.1)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#666", backdropFilter: "blur(16px)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", transition: "all 0.2s var(--spring)", transform: showQuickLog ? "rotate(45deg)" : "rotate(0)" }}>
         {showQuickLog ? "✕" : "+"}
       </button>
 
@@ -8327,27 +8332,27 @@ JSON:
 
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        <div style={{ height: 16, background: "linear-gradient(to top, rgba(8,8,8,1), transparent)", pointerEvents: "none" }} />
-        <div style={{ background: "rgba(10,10,10,0.98)", backdropFilter: "blur(32px) saturate(1.8)", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)" }}>
+        <div style={{ height: 16, background: "linear-gradient(to top, rgba(245,245,247,1), transparent)", pointerEvents: "none" }} />
+        <div style={{ background: "rgba(255,255,255,0.94)", backdropFilter: "blur(32px) saturate(1.8)", borderTop: "1px solid rgba(0,0,0,0.09)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)" }}>
           {(() => {
             const ic = {
-              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             };
             return tabs.map(t => {
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
                   style={{ background: "none", border: "none", flex: 1, padding: "4px 2px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative", transition: "all 0.2s var(--spring)", cursor: "pointer" }}>
-                  {active && <div style={{ position: "absolute", top: -8, left: "30%", right: "30%", height: 2, background: "var(--yellow)", borderRadius: "0 0 3px 3px", boxShadow: "0 0 8px rgba(232,255,71,0.6)" }} />}
+                  {active && <div style={{ position: "absolute", top: -8, left: "30%", right: "30%", height: 2.5, background: "var(--yellow)", borderRadius: "0 0 4px 4px" }} />}
                   <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.2s var(--spring)", transform: active ? "scale(1.1)" : "scale(1)" }}>
-                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?"var(--yellow)":"#555" }}>{t.icon}</span>}
-                    {t.badge && !active && <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--green)", border: "1.5px solid #0a0a0a", animation: "pulse 2s ease infinite" }} />}
+                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?"var(--yellow)":"#AEAEB2" }}>{t.icon}</span>}
+                    {t.badge && !active && <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--green)", border: "1.5px solid #FFFFFF", animation: "pulse 2s ease infinite" }} />}
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? "var(--yellow)" : "#555", letterSpacing: "0.02em", transition: "all 0.2s" }}>{t.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? "var(--yellow)" : "#AEAEB2", letterSpacing: "0.02em", transition: "all 0.2s" }}>{t.label}</span>
                 </button>
               );
             });
@@ -8420,7 +8425,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               <span style={{ fontSize: 10, color: "#555", textTransform: "uppercase" }}>/ 100 Score Fitness</span>
             </div>
           </div>
-          <button onClick={editing ? saveProfile : () => setEditing(true)} style={{ background: editing ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.05)", border: editing ? "1px solid rgba(57,255,128,0.4)" : "1px solid rgba(255,255,255,0.1)", color: editing ? "var(--green)" : "#888", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={editing ? saveProfile : () => setEditing(true)} style={{ background: editing ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.05)", border: editing ? "1px solid rgba(57,255,128,0.4)" : "1px solid rgba(0,0,0,0.08)", color: editing ? "var(--green)" : "#888", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             {editing ? "💾 OK" : "✏️"}
           </button>
         </div>
@@ -8451,7 +8456,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                 { icon: "💀", label: "Deadlift", value: profile.deadlift1RM_final ? `${profile.deadlift1RM_final}kg` : "—" },
                 { icon: "📅", label: "Séances", value: `${sessionsDone}` },
               ].map(item => (
-                <div key={item.label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 8px", textAlign: "center", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <div key={item.label} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "10px 8px", textAlign: "center", border: "1px solid rgba(0,0,0,0.05)" }}>
                   <div style={{ fontSize: 16, marginBottom: 2 }}>{item.icon}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)", lineHeight: 1 }}>{item.value}</div>
                   <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{item.label}</div>
@@ -8479,17 +8484,17 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         if (pct === 100) return null; // hide when complete
         const barColor = pct < 40 ? "var(--red)" : pct < 75 ? "var(--orange)" : "var(--green)";
         return (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Profil complété</div>
               <div className="bebas" style={{ fontSize: 22, color: barColor, lineHeight: 1 }}>{pct}<span style={{ fontSize: 11, color: "#777" }}>%</span></div>
             </div>
-            <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+            <div style={{ height: 6, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
               <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 99, transition: "width 0.6s var(--ease-out)" }} />
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {checks.filter(c => !c.done).map((c, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "4px 10px" }}>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 20, padding: "4px 10px" }}>
                   <span style={{ fontSize: 12 }}>{c.icon}</span>
                   <span style={{ fontSize: 10, color: "#555" }}>{c.label}</span>
                 </div>
@@ -8506,14 +8511,14 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
             <div className="bebas" style={{ fontSize: 52, color: "var(--red)", lineHeight: 1 }}>{daysUntil(profile.raceDate)}</div>
             <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em" }}>jours</div>
           </div>
-          <div style={{ flex: 1, borderLeft: "1px solid rgba(255,255,255,0.06)", paddingLeft: 16 }}>
+          <div style={{ flex: 1, borderLeft: "1px solid rgba(0,0,0,0.06)", paddingLeft: 16 }}>
             <div style={{ fontSize: 11, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>🏁 Ta prochaine course</div>
             <div style={{ fontSize: 14, color: "var(--white)", fontWeight: 600 }}>HYROX {profile.hyroxCategorie?.toUpperCase() || "OPEN"}</div>
             <div style={{ fontSize: 12, color: "#555", marginTop: 3 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
             {/* Progress bar */}
             {totalWeeks > 0 && (
               <div style={{ marginTop: 8 }}>
-                <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ height: 4, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${Math.min(100, (currentWeek / totalWeeks) * 100)}%`, background: "var(--red)", borderRadius: 99, transition: "width 0.5s" }} />
                 </div>
                 <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>Semaine {currentWeek} / {totalWeeks} de préparation</div>
@@ -8544,7 +8549,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
           <div style={{ background: "rgba(232,255,71,0.03)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: editGoals || hasGoals ? 14 : 0 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Mes Objectifs HYROX</div>
-              <button onClick={editGoals ? saveGoals : () => setEditGoals(true)} style={{ background: editGoals ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.04)", border: editGoals ? "1px solid rgba(57,255,128,0.3)" : "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "5px 12px", fontSize: 11, color: editGoals ? "var(--green)" : "#666", cursor: "pointer", fontWeight: 700 }}>{editGoals ? "✓ Sauver" : hasGoals ? "Modifier" : "Définir"}</button>
+              <button onClick={editGoals ? saveGoals : () => setEditGoals(true)} style={{ background: editGoals ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.04)", border: editGoals ? "1px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.08)", borderRadius: 8, padding: "5px 12px", fontSize: 11, color: editGoals ? "var(--green)" : "#666", cursor: "pointer", fontWeight: 700 }}>{editGoals ? "✓ Sauver" : hasGoals ? "Modifier" : "Définir"}</button>
             </div>
             {editGoals ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -8552,7 +8557,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                   <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Temps cible HYROX</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {GOAL_LEVELS.map(l => (
-                      <button key={l} onClick={() => setGoals(g => ({ ...g, targetLevel: l, targetTime: l }))} style={{ padding: "7px 13px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", background: goals.targetLevel === l ? "var(--yellow)" : "rgba(255,255,255,0.04)", border: goals.targetLevel === l ? "none" : "1px solid rgba(255,255,255,0.08)", color: goals.targetLevel === l ? "#000" : "#666" }}>{l}</button>
+                      <button key={l} onClick={() => setGoals(g => ({ ...g, targetLevel: l, targetTime: l }))} style={{ padding: "7px 13px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", background: goals.targetLevel === l ? "var(--yellow)" : "rgba(0,0,0,0.04)", border: goals.targetLevel === l ? "none" : "1px solid rgba(0,0,0,0.08)", color: goals.targetLevel === l ? "#000" : "#666" }}>{l}</button>
                     ))}
                   </div>
                 </div>
@@ -8560,7 +8565,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                   <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Station à améliorer en priorité</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {STATIONS.map(s => (
-                      <button key={s} onClick={() => setGoals(g => ({ ...g, weakStation: s }))} style={{ padding: "7px 13px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", background: goals.weakStation === s ? "var(--red)" : "rgba(255,255,255,0.04)", border: goals.weakStation === s ? "none" : "1px solid rgba(255,255,255,0.08)", color: goals.weakStation === s ? "#fff" : "#666" }}>{s}</button>
+                      <button key={s} onClick={() => setGoals(g => ({ ...g, weakStation: s }))} style={{ padding: "7px 13px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", background: goals.weakStation === s ? "var(--red)" : "rgba(0,0,0,0.04)", border: goals.weakStation === s ? "none" : "1px solid rgba(0,0,0,0.08)", color: goals.weakStation === s ? "#fff" : "#666" }}>{s}</button>
                     ))}
                   </div>
                 </div>
@@ -8602,7 +8607,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         ].filter(p => p.value);
         if (!prs.length) return null;
         return (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em" }}>🏆 Personal Records</div>
               <div style={{ fontSize: 10, color: "#2a2a2a" }}>Mis à jour via les tests</div>
@@ -8725,8 +8730,8 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                 <div key={b.id} style={{ textAlign: "center", position: "relative" }}>
                   <div style={{
                     width: "100%", aspectRatio: "1", borderRadius: 14,
-                    background: b.unlocked ? `${b.color}18` : "rgba(255,255,255,0.02)",
-                    border: b.unlocked ? `1.5px solid ${b.color}44` : "1px solid rgba(255,255,255,0.05)",
+                    background: b.unlocked ? `${b.color}18` : "rgba(0,0,0,0.02)",
+                    border: b.unlocked ? `1.5px solid ${b.color}44` : "1px solid rgba(0,0,0,0.05)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 26, marginBottom: 5,
                     filter: b.unlocked ? "none" : "grayscale(1) opacity(0.25)",
@@ -8768,8 +8773,8 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
           )}
 
           {/* Notifications */}
-          <button onClick={notifGranted ? null : requestNotifPermission} style={{ display: "flex", alignItems: "center", gap: 14, background: notifGranted ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)", border: `1px solid ${notifGranted ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "14px 16px", cursor: notifGranted ? "default" : "pointer", width: "100%", textAlign: "left" }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: notifGranted ? "rgba(57,255,128,0.1)" : "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{notifGranted ? "🔔" : "🔕"}</div>
+          <button onClick={notifGranted ? null : requestNotifPermission} style={{ display: "flex", alignItems: "center", gap: 14, background: notifGranted ? "rgba(57,255,128,0.04)" : "rgba(0,0,0,0.02)", border: `1px solid ${notifGranted ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.06)"}`, borderRadius: 14, padding: "14px 16px", cursor: notifGranted ? "default" : "pointer", width: "100%", textAlign: "left" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: notifGranted ? "rgba(57,255,128,0.1)" : "rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{notifGranted ? "🔔" : "🔕"}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: notifGranted ? "var(--green)" : "#888", marginBottom: 2 }}>{notifGranted ? "Notifications actives" : "Activer les notifications"}</div>
               <div style={{ fontSize: 11, color: "#777" }}>{notifGranted ? "Rappels séance, nutrition & streak" : "Séance du jour · Bilan nutrition · Streak"}</div>
@@ -8929,7 +8934,7 @@ function VideoModal({ mouvement, onClose }) {
           <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 1 }}>{mouvement.emoji} {mouvement.nom}</div>
           <div style={{ fontSize: 11, color: "#555" }}>Station {mouvement.station} · {mouvement.distance}</div>
         </div>
-        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#fff", fontSize: 18, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>✕</button>
+        <button onClick={onClose} style={{ background: "rgba(0,0,0,0.08)", border: "none", color: "#fff", fontSize: 18, borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>✕</button>
       </div>
 
       <div onClick={e => e.stopPropagation()} style={{ flex: 1, overflow: "auto", padding: "0 16px 24px" }}>
@@ -9052,14 +9057,14 @@ function TechniqueTab({ profile = {} }) {
           </div>
           {/* Mini anneau */}
           <svg width="72" height="72" viewBox="0 0 72 72">
-            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/>
+            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="6"/>
             <circle cx="36" cy="36" r="28" fill="none" stroke={pct === 100 ? "var(--green)" : "var(--yellow)"} strokeWidth="6" strokeLinecap="round"
               strokeDasharray={2*Math.PI*28} strokeDashoffset={2*Math.PI*28*(1-pct/100)} transform="rotate(-90 36 36)" style={{transition:"stroke-dashoffset 0.8s"}}/>
             <text x="36" y="40" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="16" fill={pct===100?"#39ff80":"#e8ff47"}>{viewedCount}/{stations.length}</text>
           </svg>
         </div>
         {/* Barre progression */}
-        <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ height: 5, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${pct}%`, background: pct === 100 ? "var(--green)" : "linear-gradient(90deg, var(--yellow), #b8cc00)", borderRadius: 99, transition: "width 0.6s" }}/>
         </div>
         {pct === 100 && (
@@ -9098,12 +9103,12 @@ function TechniqueTab({ profile = {} }) {
           { q: "Comment éviter les blessures ?", a: "3 règles : 1) N'augmente pas le volume de plus de 10%/semaine. 2) Dors 7-9h — c'est là que tu progresses réellement. 3) Écoute ton corps — une douleur n'est pas de la fatigue normale. Si ça fait mal, on s'arrête, on consulte." },
         ];
         return (
-          <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+          <div style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
             <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🎓 FAQ Débutant HYROX</div>
             {FAQ.map((item, i) => (
               <div key={i} style={{ marginBottom: 6 }}>
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{ width: "100%", background: openFaq === i ? "rgba(232,255,71,0.05)" : "rgba(255,255,255,0.02)", border: `1px solid ${openFaq === i ? "rgba(232,255,71,0.2)" : "rgba(255,255,255,0.05)"}`, borderRadius: 10, padding: "10px 12px", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  style={{ width: "100%", background: openFaq === i ? "rgba(232,255,71,0.05)" : "rgba(0,0,0,0.02)", border: `1px solid ${openFaq === i ? "rgba(232,255,71,0.2)" : "rgba(0,0,0,0.05)"}`, borderRadius: 10, padding: "10px 12px", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 12, color: openFaq === i ? "var(--yellow)" : "#888", fontWeight: openFaq === i ? 700 : 500, flex: 1 }}>{item.q}</span>
                   <span style={{ color: "#777", transition: "transform 0.2s", display: "inline-block", transform: openFaq === i ? "rotate(180deg)" : "none" }}>▼</span>
                 </button>
@@ -9123,8 +9128,8 @@ function TechniqueTab({ profile = {} }) {
         {cats.map(c => (
           <button key={c} onClick={() => setFilterCat(c)} style={{
             flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
-            background: filterCat === c ? "rgba(232,255,71,0.12)" : "rgba(255,255,255,0.03)",
-            border: filterCat === c ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid rgba(255,255,255,0.06)",
+            background: filterCat === c ? "rgba(232,255,71,0.12)" : "rgba(0,0,0,0.03)",
+            border: filterCat === c ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid rgba(0,0,0,0.06)",
             color: filterCat === c ? "var(--yellow)" : "#444", transition: "all 0.2s",
           }}>{c === "all" ? `Toutes (${stations.length})` : c === "⭐ Favoris" ? `⭐ Favoris${favsCount > 0 ? ` (${favsCount})` : ""}` : c}</button>
         ))}
@@ -9141,8 +9146,8 @@ function TechniqueTab({ profile = {} }) {
           const isWeakStation = profile.goalWeakStation && (s.nom?.toLowerCase().includes(profile.goalWeakStation.toLowerCase()) || profile.goalWeakStation.toLowerCase().includes(s.nom?.toLowerCase().split(" ")[0]?.toLowerCase()));
           return (
             <div key={i} onClick={() => openStation(s)} className="card-hover" style={{
-              background: isViewed ? "rgba(57,255,128,0.04)" : "rgba(255,255,255,0.02)",
-              border: isWeakStation ? "1.5px solid rgba(255,71,71,0.3)" : isViewed ? "1.5px solid rgba(57,255,128,0.2)" : "1px solid rgba(255,255,255,0.05)",
+              background: isViewed ? "rgba(57,255,128,0.04)" : "rgba(0,0,0,0.02)",
+              border: isWeakStation ? "1.5px solid rgba(255,71,71,0.3)" : isViewed ? "1.5px solid rgba(57,255,128,0.2)" : "1px solid rgba(0,0,0,0.05)",
               borderRadius: 16, padding: "14px 16px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: 14, position: "relative", overflow: "hidden",
             }}>
@@ -9165,7 +9170,7 @@ function TechniqueTab({ profile = {} }) {
                 <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{s.muscles}</div>
               </div>
               {/* Fav star */}
-              <button onClick={(e) => toggleFav(s.nom, e)} style={{ width: 32, height: 32, borderRadius: "50%", background: isFav ? "rgba(232,255,71,0.1)" : "transparent", border: isFav ? "1px solid rgba(232,255,71,0.3)" : "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isFav ? "var(--yellow)" : "#333", cursor: "pointer", flexShrink: 0 }}>
+              <button onClick={(e) => toggleFav(s.nom, e)} style={{ width: 32, height: 32, borderRadius: "50%", background: isFav ? "rgba(232,255,71,0.1)" : "transparent", border: isFav ? "1px solid rgba(232,255,71,0.3)" : "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isFav ? "var(--yellow)" : "#333", cursor: "pointer", flexShrink: 0 }}>
                 {isFav ? "⭐" : "☆"}
               </button>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: isViewed ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", border: `1.5px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(232,255,71,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
@@ -9232,7 +9237,7 @@ function TechniqueTab({ profile = {} }) {
                   </div>
                   <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
                     {combo.stations.map((s, j) => (
-                      <div key={j} style={{ fontSize: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 6, padding: "3px 9px", color: "#888" }}>{s}</div>
+                      <div key={j} style={{ fontSize: 10, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 6, padding: "3px 9px", color: "#888" }}>{s}</div>
                     ))}
                   </div>
                   <div style={{ fontSize: 11, color: "#555", lineHeight: 1.55 }}>{combo.reco}</div>
@@ -9257,7 +9262,7 @@ const TYPE_COLORS = {
   running_zone2: { color: "#39ff80", bg: "rgba(57,255,128,0.08)", label: "Zone 2", icon: "🏃" },
   running_qualite: { color: "#39ff80", bg: "rgba(57,255,128,0.08)", label: "Run", icon: "🎯" },
   hybride_compromis: { color: "#ff9a3c", bg: "rgba(255,154,60,0.08)", label: "Hybride", icon: "⚡" },
-  repos: { color: "#777", bg: "rgba(255,255,255,0.02)", label: "Repos", icon: "😴" },
+  repos: { color: "#777", bg: "rgba(0,0,0,0.02)", label: "Repos", icon: "😴" },
   mobilite: { color: "#a78bfa", bg: "rgba(167,139,250,0.08)", label: "Mobilité", icon: "🧘" },
 };
 
@@ -9503,7 +9508,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         for (let i = 0; i < firstDow; i++) cells.push(null);
         for (let d = 1; d <= daysInMonth; d++) cells.push(d);
         return (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--yellow)", textTransform: "capitalize" }}>{monthName}</div>
               <div style={{ fontSize: 10, color: "#555" }}>{sessionDates.size} séances ce mois</div>
@@ -9584,7 +9589,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         })();
 
         return (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 14 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>📅 Phases de préparation</div>
               <div style={{ fontSize: 10, color: "#777" }}>{totalWeeksLeft} semaines avant la course</div>
@@ -9636,7 +9641,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           )}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setShowPrefs(true)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #222", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#888", cursor: "pointer" }}>⚙️</button>
+          <button onClick={() => setShowPrefs(true)} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid #222", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#888", cursor: "pointer" }}>⚙️</button>
           <button onClick={() => refreshPlanning(prefs)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>↺</button>
         </div>
       </div>
@@ -9679,8 +9684,8 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
               const isDone = joursFaits[j.jour];
               return (
                 <button key={i} onClick={() => setSelectedJour(isSelected ? null : j)} style={{
-                  background: isDone ? "rgba(57,255,128,0.05)" : isSelected ? t.bg : isToday ? "rgba(232,255,71,0.04)" : "rgba(255,255,255,0.02)",
-                  border: isDone ? "1.5px solid rgba(57,255,128,0.3)" : isSelected ? `1.5px solid ${t.color}88` : isToday ? "1.5px solid rgba(232,255,71,0.35)" : "1px solid rgba(255,255,255,0.05)",
+                  background: isDone ? "rgba(57,255,128,0.05)" : isSelected ? t.bg : isToday ? "rgba(232,255,71,0.04)" : "rgba(0,0,0,0.02)",
+                  border: isDone ? "1.5px solid rgba(57,255,128,0.3)" : isSelected ? `1.5px solid ${t.color}88` : isToday ? "1.5px solid rgba(232,255,71,0.35)" : "1px solid rgba(0,0,0,0.05)",
                   borderRadius: 14, padding: "12px 4px 10px", textAlign: "center", cursor: "pointer",
                   position: "relative", overflow: "hidden", transition: "all 0.2s",
                 }}>
@@ -9702,8 +9707,8 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                   <div style={{ fontSize: 11, color: TYPE_COLORS[selectedJour.type]?.color || "#888", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{selectedJour.jour}</div>
                   <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{selectedJour.titre || TYPE_COLORS[selectedJour.type]?.label}</div>
                   <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                    {selectedJour.duree > 0 && <span style={{ fontSize: 11, color: "#666", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>⏱ {selectedJour.duree} min</span>}
-                    {selectedJour.intensite && <span style={{ fontSize: 11, color: "#666", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>💥 {selectedJour.intensite}</span>}
+                    {selectedJour.duree > 0 && <span style={{ fontSize: 11, color: "#666", background: "rgba(0,0,0,0.06)", padding: "2px 8px", borderRadius: 6 }}>⏱ {selectedJour.duree} min</span>}
+                    {selectedJour.intensite && <span style={{ fontSize: 11, color: "#666", background: "rgba(0,0,0,0.06)", padding: "2px 8px", borderRadius: 6 }}>💥 {selectedJour.intensite}</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
@@ -9713,7 +9718,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                     onClick={(e) => { e.stopPropagation(); toggleJourFait(selectedJour.jour); }}
                     style={{
                       padding: "5px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                      background: joursFaits[selectedJour.jour] ? "rgba(57,255,128,0.15)" : "rgba(255,255,255,0.05)",
+                      background: joursFaits[selectedJour.jour] ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.05)",
                       border: joursFaits[selectedJour.jour] ? "1.5px solid var(--green)" : "1px solid #333",
                       color: joursFaits[selectedJour.jour] ? "var(--green)" : "#555", cursor: "pointer",
                     }}
@@ -9738,7 +9743,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 10, color: TYPE_COLORS[selectedJour.type]?.color || "#666", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Programme prévu</div>
                   {(selectedJour.exercices_cles || []).map((ex, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < selectedJour.exercices_cles.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < selectedJour.exercices_cles.length - 1 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
                       <div style={{ width: 6, height: 6, borderRadius: "50%", background: TYPE_COLORS[selectedJour.type]?.color || "#666", flexShrink: 0 }} />
                       <span style={{ fontSize: 13, color: "#ccc" }}>{ex}</span>
                     </div>
@@ -9822,7 +9827,7 @@ function PlanningMiniCard({ profile, planningWeek, loadingPlanning, setPlanningW
   }, []);
 
   if (loadingPlanning) return (
-    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: 12, marginBottom: 10 }}>
+    <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: 12, marginBottom: 10 }}>
       <div style={{ fontSize: 11, color: "#777", textAlign: "center" }}>Chargement du planning…</div>
     </div>
   );
@@ -9830,7 +9835,7 @@ function PlanningMiniCard({ profile, planningWeek, loadingPlanning, setPlanningW
   if (!planningWeek) return null;
 
   return (
-    <div onClick={onOpenPlanning} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 14px", marginBottom: 10, cursor: "pointer" }}>
+    <div onClick={onOpenPlanning} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "12px 14px", marginBottom: 10, cursor: "pointer" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Planning S{profile.week || 1}</div>
         <div style={{ fontSize: 11, color: "var(--yellow)" }}>Voir tout →</div>
@@ -10183,7 +10188,7 @@ JSON: {
               ))}
             </div>
             {/* Barre */}
-            <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
+            <div style={{ height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 10 }}>
               <div style={{ width: `${pct}%`, height: "100%", background: col, borderRadius: 99, transition: "width 0.5s" }} />
             </div>
             {/* Boutons */}
@@ -10193,7 +10198,7 @@ JSON: {
                   +{ml}ml
                 </button>
               ))}
-              {waterMl > 0 && <button onClick={() => addWater(-250)} style={{ padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, color: "#777", fontSize: 12, cursor: "pointer" }}>-</button>}
+              {waterMl > 0 && <button onClick={() => addWater(-250)} style={{ padding: "8px 12px", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, color: "#777", fontSize: 12, cursor: "pointer" }}>-</button>}
             </div>
           </div>
         );
@@ -10213,7 +10218,7 @@ JSON: {
           </div>
           {/* Anneau SVG */}
           <svg width="72" height="72" viewBox="0 0 72 72">
-            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="7" />
+            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="7" />
             <circle cx="36" cy="36" r="28" fill="none" stroke={kcalColor} strokeWidth="7" strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 28} strokeDashoffset={2 * Math.PI * 28 * (1 - kcalPct / 100)}
               transform="rotate(-90 36 36)" style={{ transition: "stroke-dashoffset 0.8s" }} />
@@ -10234,7 +10239,7 @@ JSON: {
                   <span style={{ fontSize: 9, color: "#777", textTransform: "uppercase" }}>{m.label}</span>
                   <span className="bebas" style={{ fontSize: 13, color: m.color }}>{m.val}<span style={{ fontSize: 9, color: "#555" }}>g</span></span>
                 </div>
-                <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: m.color, borderRadius: 99, transition: "width 0.6s" }} />
                 </div>
                 <div style={{ fontSize: 9, color: "#555", marginTop: 3 }}>/ {m.obj}g</div>
@@ -10245,7 +10250,7 @@ JSON: {
       </div>
 
       {/* ── SUB-TABS ── */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "rgba(255,255,255,0.02)", borderRadius: 14, padding: 4 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "rgba(0,0,0,0.02)", borderRadius: 14, padding: 4 }}>
         {[
           { id: "journal", label: "📋 Journal" },
           { id: "timing", label: "⏱️ Timing" },
@@ -10282,7 +10287,7 @@ JSON: {
                 <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
                   {QUICK_FOODS.map((f, i) => (
                     <button key={i} onClick={() => ajouterAliment(f)} style={{
-                      flexShrink: 0, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                      flexShrink: 0, background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.07)",
                       borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "center", minWidth: 76,
                     }}>
                       <div style={{ fontSize: 20, marginBottom: 4 }}>{f.emoji}</div>
@@ -10304,7 +10309,7 @@ JSON: {
             </div>
 
             {repasJour.length === 0 ? (
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
+              <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.07)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🍽️</div>
                 <div style={{ fontSize: 13, color: "#777", lineHeight: 1.7 }}>Aucun aliment aujourd'hui.<br/>Commence par ton petit-déjeuner !</div>
                 <button onClick={() => setShowAdd(true)} style={{ marginTop: 14, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 20px", fontSize: 13, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>
@@ -10316,9 +10321,9 @@ JSON: {
                 {repasJour.map((r, i) => {
                   const kcalPctItem = Math.round((r.kcal / objectifs.kcal) * 100);
                   return (
-                    <div key={r.id || i} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative", overflow: "hidden" }}>
+                    <div key={r.id || i} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, position: "relative", overflow: "hidden" }}>
                       <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.min(100, kcalPctItem * 3)}%`, background: "rgba(57,255,128,0.03)", pointerEvents: "none" }} />
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{r.emoji || "🍽️"}</div>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(0,0,0,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{r.emoji || "🍽️"}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 14, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nom}</div>
                         <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
@@ -10342,7 +10347,7 @@ JSON: {
           {/* Modal ajout aliment */}
           {showAdd && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-              <div className="slide-up" style={{ background: "#0d0d0d", borderRadius: "22px 22px 0 0", padding: "0 0 32px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="slide-up" style={{ background: "#0d0d0d", borderRadius: "22px 22px 0 0", padding: "0 0 32px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", border: "1px solid rgba(0,0,0,0.06)" }}>
                 {/* Poignée */}
                 <div style={{ padding: "14px 0 0", textAlign: "center" }}>
                   <div style={{ width: 36, height: 4, background: "#222", borderRadius: 99, margin: "0 auto" }} />
@@ -10350,7 +10355,7 @@ JSON: {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 16px" }}>
                   <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 1 }}>AJOUTER UN ALIMENT</div>
                   <button onClick={() => { setShowAdd(false); setSearchText(""); setCustomAliment({ nom: "", kcal: "", p: "", g: "", l: "" }); }}
-                    style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "none", color: "#555", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.05)", border: "none", color: "#555", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                 </div>
 
                 <div style={{ padding: "0 16px" }}>
@@ -10402,7 +10407,7 @@ JSON: {
                     <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
                       {ALIMENTS_RAPIDES.map((a, i) => (
                         <button key={i} onClick={() => ajouterAliment(a)} style={{
-                          flexShrink: 0, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12,
+                          flexShrink: 0, background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12,
                           padding: "10px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 70,
                         }}>
                           <span style={{ fontSize: 22 }}>{a.emoji}</span>
@@ -10419,16 +10424,16 @@ JSON: {
                     <div style={{ display: "flex", gap: 8 }}>
                       <input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => e.key === "Enter" && estimer()}
                         placeholder="ex: 2 œufs brouillés, tartine beurre..."
-                        style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 14px", color: "var(--white)", fontSize: 14, minWidth: 0, outline: "none" }} />
+                        style={{ flex: 1, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px 14px", color: "var(--white)", fontSize: 14, minWidth: 0, outline: "none" }} />
                       <button onClick={estimer} disabled={!searchText.trim() || loadingMacros} style={{
-                        background: searchText.trim() && !loadingMacros ? "var(--yellow)" : "rgba(255,255,255,0.04)", border: "none", borderRadius: 12, padding: "0 18px",
+                        background: searchText.trim() && !loadingMacros ? "var(--yellow)" : "rgba(0,0,0,0.04)", border: "none", borderRadius: 12, padding: "0 18px",
                         fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: searchText.trim() && !loadingMacros ? "#000" : "#333", cursor: "pointer", flexShrink: 0,
                       }}>{loadingMacros ? "…" : "GO"}</button>
                     </div>
                   </div>
 
                   {/* Champs manuels */}
-                  <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 14, padding: "14px", marginBottom: 14 }}>
+                  <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 14, padding: "14px", marginBottom: 14 }}>
                     <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 10 }}>Valeurs nutritionnelles</div>
                     <div style={{ marginBottom: 10 }}>
                       <Input label="Nom de l'aliment" value={customAliment.nom} onChange={v => setCustomAliment(a => ({ ...a, nom: v }))} placeholder="ex: Riz blanc cuit 200g" />
@@ -10443,7 +10448,7 @@ JSON: {
                         <div key={f.key}>
                           <div style={{ fontSize: 9, color: f.color, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{f.label}</div>
                           <input type="number" value={customAliment[f.key]} onChange={e => setCustomAliment(a => ({ ...a, [f.key]: e.target.value }))}
-                            placeholder="0" style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "8px 10px", color: f.color, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", outline: "none", textAlign: "center" }} />
+                            placeholder="0" style={{ width: "100%", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 8, padding: "8px 10px", color: f.color, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", outline: "none", textAlign: "center" }} />
                         </div>
                       ))}
                     </div>
@@ -10452,7 +10457,7 @@ JSON: {
                   <button onClick={() => ajouterAliment({ ...customAliment, kcal: parseInt(customAliment.kcal)||0, p: parseInt(customAliment.p)||0, g: parseInt(customAliment.g)||0, l: parseInt(customAliment.l)||0 })}
                     disabled={!customAliment.nom} style={{
                       width: "100%", padding: 16, borderRadius: 14, border: "none",
-                      background: customAliment.nom ? "var(--yellow)" : "rgba(255,255,255,0.04)",
+                      background: customAliment.nom ? "var(--yellow)" : "rgba(0,0,0,0.04)",
                       color: customAliment.nom ? "#000" : "#333",
                       fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, cursor: customAliment.nom ? "pointer" : "default",
                     }}>AJOUTER AU JOURNAL ✓</button>
@@ -10576,10 +10581,10 @@ JSON: {
         return (
           <div>
             {/* Timing advice strip */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 16 }}>
+            <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 16 }}>
               <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>⏱️ Timing optimal autour de la séance</div>
               {TIMING_ADVICE.map((a, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: i < TIMING_ADVICE.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: i < TIMING_ADVICE.length-1 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
                   <div style={{ fontSize: 16, lineHeight: 1, marginTop: 2 }}>{a.icon}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 10, color: a.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{a.time}</div>
@@ -10597,7 +10602,7 @@ JSON: {
                 return (
                   <div key={tmpl.id}>
                     <button onClick={() => { haptic([6]); setActiveTemplate(isActive ? null : tmpl); }}
-                      style={{ width: "100%", background: isActive ? `rgba(255,255,255,0.04)` : "rgba(255,255,255,0.02)", border: `1.5px solid ${isActive ? tmpl.color+"60" : "rgba(255,255,255,0.06)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", transition: "all 0.2s var(--spring)" }}>
+                      style={{ width: "100%", background: isActive ? `rgba(0,0,0,0.04)` : "rgba(0,0,0,0.02)", border: `1.5px solid ${isActive ? tmpl.color+"60" : "rgba(0,0,0,0.06)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", textAlign: "left", transition: "all 0.2s var(--spring)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <span style={{ fontSize: 22 }}>{tmpl.icon}</span>
@@ -10615,12 +10620,12 @@ JSON: {
                     {isActive && (
                       <div style={{ background: "rgba(255,255,255,0.01)", border: `1px solid ${tmpl.color}20`, borderTop: "none", borderRadius: "0 0 14px 14px", padding: "10px 14px 14px" }}>
                         {tmpl.items.map((item, j) => (
-                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: j < tmpl.items.length-1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
+                          <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: j < tmpl.items.length-1 ? "1px solid rgba(0,0,0,0.03)" : "none" }}>
                             <span style={{ fontSize: 12, color: "#888" }}>{item.name}</span>
                             <span style={{ fontSize: 11, color: "#555" }}>{item.kcal}kcal · {item.p}g P</span>
                           </div>
                         ))}
-                        <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.06)" }}>
                           {totalTemplate && [
                             { label: "kcal", val: totalTemplate.kcal, color: "var(--yellow)" },
                             { label: "Prot", val: `${totalTemplate.p}g`, color: "var(--green)" },
@@ -10659,8 +10664,8 @@ JSON: {
             ].map(t => (
               <button key={t.id} onClick={() => { setRecetteType(t.id); setRecetteIA(null); }} style={{
                 flex: 1, padding: "12px 4px", borderRadius: 12, fontSize: 12, fontWeight: 700,
-                background: recetteType === t.id ? `rgba(${t.rgb},0.1)` : "rgba(255,255,255,0.02)",
-                border: recetteType === t.id ? `1.5px solid rgba(${t.rgb},0.4)` : "1px solid rgba(255,255,255,0.05)",
+                background: recetteType === t.id ? `rgba(${t.rgb},0.1)` : "rgba(0,0,0,0.02)",
+                border: recetteType === t.id ? `1.5px solid rgba(${t.rgb},0.4)` : "1px solid rgba(0,0,0,0.05)",
                 color: recetteType === t.id ? t.color : "#444", cursor: "pointer", transition: "all 0.2s",
               }}><div style={{ fontSize: 18, marginBottom: 4 }}>{t.icon}</div>{t.label}</button>
             ))}
@@ -10684,7 +10689,7 @@ JSON: {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {(CATEGORIES_RECETTES[recetteType] || []).map((cat, i) => (
                   <button key={i} onClick={() => genererRecetteIA(cat)} style={{
-                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20,
+                    background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 20,
                     padding: "7px 14px", fontSize: 12, color: "#666", cursor: "pointer",
                   }}>{cat}</button>
                 ))}
@@ -10693,7 +10698,7 @@ JSON: {
           )}
 
           {loadingRecette && (
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 18, padding: "40px 20px", textAlign: "center" }}>
               <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
                 {[0,1,2].map(i => <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1.2s ${i*0.2}s ease-in-out infinite` }} />)}
               </div>
@@ -10704,8 +10709,8 @@ JSON: {
           {recetteIA && !loadingRecette && (
             <div className="float-up">
               {/* Header recette */}
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
-                <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", padding: "18px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
+                <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", padding: "18px 18px 14px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                   <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
                     <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>{recetteIA.emoji || "🍽️"}</div>
                     <div style={{ flex: 1 }}>
@@ -10724,7 +10729,7 @@ JSON: {
                       { l: "Gluc.", v: recetteIA.g, c: "#ccc", u: "g" },
                       { l: "Lip.", v: recetteIA.l, c: "var(--orange)", u: "g" },
                     ].map(m => (
-                      <div key={m.l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                      <div key={m.l} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
                         <div className="bebas" style={{ fontSize: 20, color: m.c, lineHeight: 1 }}>{m.v}{m.u}</div>
                         <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>{m.l}</div>
                       </div>
@@ -10733,7 +10738,7 @@ JSON: {
                 </div>
 
                 {/* Ingrédients */}
-                <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                   <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Ingrédients</div>
                   {(recetteIA.ingredients || []).map((ing, i) => (
                     <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 7 }}>
@@ -10744,7 +10749,7 @@ JSON: {
                 </div>
 
                 {/* Préparation */}
-                <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                   <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Préparation</div>
                   <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.75 }}>{recetteIA.prep}</div>
                 </div>
@@ -10760,7 +10765,7 @@ JSON: {
 
               {/* Actions */}
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                <button onClick={() => setRecetteIA(null)} style={{ flex: 1, padding: "13px 0", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#888", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", cursor: "pointer" }}>↺ AUTRE</button>
+                <button onClick={() => setRecetteIA(null)} style={{ flex: 1, padding: "13px 0", borderRadius: 12, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", color: "#888", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", cursor: "pointer" }}>↺ AUTRE</button>
                 <button onClick={() => ajouterAliment({ nom: recetteIA.nom, emoji: recetteIA.emoji || "🍽️", kcal: recetteIA.kcal, p: recetteIA.p, g: recetteIA.g, l: recetteIA.l })} style={{ flex: 2, padding: "13px 0", borderRadius: 12, background: "var(--green)", border: "none", color: "#000", fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", fontWeight: 700, cursor: "pointer" }}>
                   + AJOUTER AU JOURNAL
                 </button>
@@ -10778,7 +10783,7 @@ JSON: {
             {[
               { label: "Calories", val: totaux.kcal, obj: objectifs.kcal, unit: "kcal", color: kcalColor, bg: "rgba(232,255,71,0.05)", border: "rgba(232,255,71,0.15)" },
               { label: "Protéines", val: totaux.p, obj: objectifs.p, unit: "g", color: "var(--green)", bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.15)" },
-              { label: "Glucides", val: totaux.g, obj: objectifs.g, unit: "g", color: "#aaa", bg: "rgba(255,255,255,0.02)", border: "rgba(255,255,255,0.06)" },
+              { label: "Glucides", val: totaux.g, obj: objectifs.g, unit: "g", color: "#aaa", bg: "rgba(0,0,0,0.02)", border: "rgba(0,0,0,0.06)" },
               { label: "Lipides", val: totaux.l, obj: objectifs.l, unit: "g", color: "var(--orange)", bg: "rgba(255,154,60,0.05)", border: "rgba(255,154,60,0.15)" },
             ].map(m => {
               const pct = Math.min(100, Math.round((m.val / m.obj) * 100));
@@ -10787,7 +10792,7 @@ JSON: {
                   <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{m.label}</div>
                   <div className="bebas" style={{ fontSize: 30, color: m.color, lineHeight: 1 }}>{m.val}<span style={{ fontSize: 13, color: "#777" }}>{m.unit}</span></div>
                   <div style={{ fontSize: 10, color: "#555", marginBottom: 6 }}>obj. {m.obj}{m.unit}</div>
-                  <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: 3, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: m.color, borderRadius: 99 }} />
                   </div>
                   <div style={{ fontSize: 9, color: m.color, marginTop: 4, fontWeight: 700 }}>{pct}%</div>
@@ -10798,7 +10803,7 @@ JSON: {
 
           {/* Bouton / loading bilan */}
           {repasJour.length === 0 ? (
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 14, padding: "24px 20px", textAlign: "center" }}>
+            <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.06)", borderRadius: 14, padding: "24px 20px", textAlign: "center" }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
               <div style={{ fontSize: 13, color: "#777" }}>Ajoute des aliments dans le journal d'abord.</div>
             </div>
@@ -10847,7 +10852,7 @@ JSON: {
                 </div>
               ))}
 
-              <button onClick={genererBilan} style={{ width: "100%", padding: "13px 0", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#555", fontSize: 14, fontFamily: "'Bebas Neue',sans-serif", cursor: "pointer", marginTop: 4 }}>
+              <button onClick={genererBilan} style={{ width: "100%", padding: "13px 0", borderRadius: 12, background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", color: "#555", fontSize: 14, fontFamily: "'Bebas Neue',sans-serif", cursor: "pointer", marginTop: 4 }}>
                 ↺ Relancer l'analyse
               </button>
             </div>
@@ -10991,7 +10996,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
   return (
     <div style={{ position: "fixed", inset: 0, background: "#050505", zIndex: 300, display: "flex", flexDirection: "column", padding: "0" }}>
       {/* Header */}
-      <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg)" }}>
+      <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(0,0,0,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg)" }}>
         <div>
           <div className="bebas" style={{ fontSize: 20, color: "var(--red)", letterSpacing: 2 }}>🏁 SIMULATION HYROX</div>
           {phase === "running" && <div style={{ fontSize: 11, color: "#555" }}>{completedCount}/{HYROX_SEGMENTS.length} segments</div>}
@@ -11090,8 +11095,8 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
             </div>
 
             {/* Splits visuels */}
-            <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, overflow: "hidden", marginBottom: 14 }}>
-              <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+            <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 18, overflow: "hidden", marginBottom: 14 }}>
+              <div style={{ padding: "12px 16px 8px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                 <div className="bebas" style={{ fontSize: 15, color: "#666", letterSpacing: 1 }}>SPLITS DÉTAILLÉS</div>
               </div>
               {HYROX_SEGMENTS.map((s, i) => {
@@ -11102,7 +11107,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
                 // Calcul pct relatif au total
                 const pct = totalSecs > 0 ? (t / totalSecs) * 100 : 0;
                 return (
-                  <div key={s.id} style={{ background: bg, borderBottom: i < HYROX_SEGMENTS.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", position: "relative", overflow: "hidden" }}>
+                  <div key={s.id} style={{ background: bg, borderBottom: i < HYROX_SEGMENTS.length - 1 ? "1px solid rgba(0,0,0,0.03)" : "none", position: "relative", overflow: "hidden" }}>
                     {/* Barre de fond proportionnelle */}
                     <div style={{ position: "absolute", inset: 0, width: `${pct}%`, background: isRun ? "rgba(57,255,128,0.05)" : "rgba(232,255,71,0.04)" }} />
                     <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "10px 16px" }}>
@@ -11237,7 +11242,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                   <span style={{ color: "var(--red)" }}>{pct}% du chemin parcouru</span>
                   <span>Course 🏁</span>
                 </div>
-                <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ height: 5, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--green), var(--yellow), var(--red))", borderRadius: 99, transition: "width 1s ease" }} />
                 </div>
               </div>
@@ -11298,7 +11303,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           </div>
 
           {/* Poids officiels — grid visuelle */}
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
             <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Poids de compétition</div>
             <div style={{ fontSize: 11, color: "#2a2a2a", marginBottom: 12 }}>{poidsHyrox.categorie}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -11309,7 +11314,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 { label: "Wall Balls", val: poidsHyrox.wall_balls, icon: "🏀" },
                 { label: "Sandbag Lunges", val: poidsHyrox.sandbag_lunges, icon: "🎒" },
               ].map((s, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+                <div key={i} style={{ background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 20 }}>{s.icon}</span>
                   <div>
                     <div style={{ fontSize: 10, color: "#777", marginBottom: 1 }}>{s.label}</div>
@@ -11364,7 +11369,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
           {(strategy.checklist || []).length > 0 && <ChecklistJDay items={strategy.checklist} />}
 
-          <button onClick={() => setStrategy(null)} style={{ width: "100%", marginTop: 8, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "13px", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+          <button onClick={() => setStrategy(null)} style={{ width: "100%", marginTop: 8, background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "13px", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
             ↺ Regénérer la stratégie
           </button>
         </div>
@@ -11390,7 +11395,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const minTime = Math.min(...levelRefs.map(r => r.mins));
         const maxTime = Math.max(...levelRefs.map(r => r.mins)) + 30;
         return (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
             <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 14 }}>🏆 Temps de référence HYROX ({gender === "H" ? "Homme" : "Femme"})</div>
             <div style={{ position: "relative", paddingBottom: 8 }}>
               {levelRefs.map((ref, i) => {
@@ -11398,7 +11403,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 return (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                     <div style={{ width: 72, fontSize: 10, color: "#777", textAlign: "right", flexShrink: 0 }}>{ref.label.replace(/ [HF]$/,'')}</div>
-                    <div style={{ flex: 1, position: "relative", height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
+                    <div style={{ flex: 1, position: "relative", height: 6, background: "rgba(0,0,0,0.05)", borderRadius: 3 }}>
                       <div style={{ position: "absolute", left: 0, top: 0, width: `${pct}%`, height: "100%", background: ref.color, borderRadius: 3, opacity: 0.6 }} />
                       {objMins && Math.abs(objMins - ref.mins) <= 15 && (
                         <div style={{ position: "absolute", top: -14, left: `${pct}%`, transform: "translateX(-50%)", fontSize: 14, filter: "drop-shadow(0 0 4px #e8ff47)" }}>🎯</div>
@@ -11474,12 +11479,12 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div>
                       <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Date</div>
                       <input type="date" value={newRace.date} onChange={e => setNewRace(r => ({ ...r, date: e.target.value }))}
-                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, outline: "none" }} />
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, outline: "none" }} />
                     </div>
                     <div>
                       <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Ville</div>
                       <input type="text" value={newRace.location} onChange={e => setNewRace(r => ({ ...r, location: e.target.value }))} placeholder="Paris, Lyon..."
-                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, outline: "none" }} />
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, outline: "none" }} />
                     </div>
                   </div>
 
@@ -11501,7 +11506,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                       {[["timeH","H","0-3"],["timeM","min","00-59"],["timeS","sec","00-59"]].map(([k,lbl,pl]) => (
                         <div key={k} style={{ flex: 1, textAlign: "center" }}>
                           <input type="number" value={newRace[k]} onChange={e => setNewRace(r => ({ ...r, [k]: e.target.value }))} placeholder={pl}
-                            style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "14px 4px", color: "var(--white)", fontSize: 24, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                            style={{ width: "100%", background: "var(--bg3)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "14px 4px", color: "var(--white)", fontSize: 24, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
                           <div style={{ fontSize: 9, color: "#555", marginTop: 4 }}>{lbl}</div>
                         </div>
                       ))}
@@ -11512,23 +11517,23 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div>
                       <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Classement</div>
                       <input type="number" value={newRace.rank} onChange={e => setNewRace(r => ({ ...r, rank: e.target.value }))} placeholder="ex: 42"
-                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
                     </div>
                     <div>
                       <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Total participants</div>
                       <input type="number" value={newRace.totalParticipants} onChange={e => setNewRace(r => ({ ...r, totalParticipants: e.target.value }))} placeholder="ex: 350"
-                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
+                        style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 16, textAlign: "center", outline: "none", fontFamily: "'Bebas Neue',sans-serif" }} />
                     </div>
                   </div>
 
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 10, color: "#555", marginBottom: 6, textTransform: "uppercase" }}>Bilan / Notes</div>
                     <textarea value={newRace.notes} onChange={e => setNewRace(r => ({ ...r, notes: e.target.value }))} placeholder="Ce qui a bien marché, ce qui est à améliorer..."
-                      style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, minHeight: 60, resize: "vertical", outline: "none", fontFamily: "'DM Sans',sans-serif" }} />
+                      style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 13, minHeight: 60, resize: "vertical", outline: "none", fontFamily: "'DM Sans',sans-serif" }} />
                   </div>
 
                   <button onClick={saveRace} disabled={!newRace.date || !newRace.timeH}
-                    style={{ width: "100%", padding: 16, background: newRace.date && newRace.timeH ? "var(--yellow)" : "rgba(255,255,255,0.05)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: newRace.date && newRace.timeH ? "#000" : "#333", cursor: newRace.date && newRace.timeH ? "pointer" : "default" }}>
+                    style={{ width: "100%", padding: 16, background: newRace.date && newRace.timeH ? "var(--yellow)" : "rgba(0,0,0,0.05)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: newRace.date && newRace.timeH ? "#000" : "#333", cursor: newRace.date && newRace.timeH ? "pointer" : "default" }}>
                     🏁 ENREGISTRER MA COURSE
                   </button>
                 </div>
@@ -11536,7 +11541,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
             )}
 
             {raceResults.length === 0 ? (
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,71,71,0.15)", borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
+              <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(255,71,71,0.15)", borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 10 }}>🏅</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)", marginBottom: 6 }}>Aucun résultat encore</div>
                 <div style={{ fontSize: 12, color: "#777" }}>Ajoute ton premier temps de course officiel</div>
@@ -11554,18 +11559,18 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                   </div>
                 )}
                 {raceResults.map((r, i) => (
-                  <div key={r.id} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,71,71,0.12)", borderLeft: "3px solid rgba(255,71,71,0.3)", borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
+                  <div key={r.id} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(255,71,71,0.12)", borderLeft: "3px solid rgba(255,71,71,0.3)", borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                          <span style={{ fontSize: 9, color: "#777", background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase", fontWeight: 700 }}>{r.category}</span>
+                          <span style={{ fontSize: 9, color: "#777", background: "rgba(0,0,0,0.05)", borderRadius: 4, padding: "2px 6px", textTransform: "uppercase", fontWeight: 700 }}>{r.category}</span>
                           <span style={{ fontSize: 10, color: "#777" }}>{r.location || "HYROX"}</span>
                         </div>
                         <div className="bebas" style={{ fontSize: 24, color: r.id === bestTime?.id ? "var(--yellow)" : "var(--white)", lineHeight: 1 }}>{r.totalTime}</div>
                         <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
                       </div>
                       {r.rank && r.totalParticipants && (
-                        <div style={{ textAlign: "center", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "8px 12px" }}>
+                        <div style={{ textAlign: "center", background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "8px 12px" }}>
                           <div className="bebas" style={{ fontSize: 22, color: "var(--red)", lineHeight: 1 }}>{r.rank}</div>
                           <div style={{ fontSize: 9, color: "#777" }}>/ {r.totalParticipants}</div>
                           <div style={{ fontSize: 9, color: "#777" }}>Top {Math.round((r.rank / r.totalParticipants) * 100)}%</div>
@@ -11610,7 +11615,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const fmtSplit = (s) => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`;
 
         return (
-          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
+          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "16px", marginTop: 12 }}>
             <div onClick={() => setSplitsOpen(o=>!o)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: splitsOpen ? 14 : 0 }}>
               <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>⏱ Calculateur de splits race</div>
               <div style={{ color: "#555", fontSize: 14, transform: splitsOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</div>
@@ -11657,7 +11662,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                         <div style={{ width: 28, fontSize: 16, textAlign: "center", flexShrink: 0 }}>{st.icon}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, color: "#777", marginBottom: 2 }}>{st.label} <span style={{ color: "#555" }}>· {st.dist}</span></div>
-                          <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{ height: 3, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
                             <div style={{ height: "100%", width: `${(refSecs/Math.max(...STATIONS_SPLITS.map(s=>gender==="H"?s.refH:s.refF)))*100}%`, background: "rgba(232,255,71,0.4)", borderRadius: 99 }} />
                           </div>
                         </div>
