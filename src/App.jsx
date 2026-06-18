@@ -2971,9 +2971,9 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [isInstalled, setIsInstalled] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
-  // Détection iOS
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isInStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  // Détection iOS (avec protection contre null sur Safari anciens)
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent || "") || ((navigator.platform || "") === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+  const isInStandalone = (window.matchMedia ? window.matchMedia("(display-mode: standalone)").matches : false) || window.navigator.standalone === true;
 
   useEffect(() => {
     if (isInStandalone) { setIsInstalled(true); return; }
