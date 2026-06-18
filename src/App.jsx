@@ -1242,7 +1242,9 @@ async function hashPassword(password) {
 
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("choose"); // choose | login | register | coach
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    try { return localStorage.getItem("fitrace_last_email") || ""; } catch { return ""; }
+  });
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -1259,7 +1261,8 @@ function LoginScreen({ onLogin }) {
       const hash = await hashPassword(password);
       const userData = { email: email.trim().toLowerCase(), name: name.trim(), hash, createdAt: new Date().toISOString() };
       await storage.set(key, userData);
-      // Sauvegarder la session avec email ET nom pour double sécurité
+      // Mémoriser l'email pour pré-remplir
+      try { localStorage.setItem("fitrace_last_email", email.trim().toLowerCase()); } catch {}
       await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
       onLogin("athlete", name.trim(), email.trim().toLowerCase());
     } catch (e) { setError("Erreur lors de l'inscription."); }
@@ -1275,6 +1278,8 @@ function LoginScreen({ onLogin }) {
       if (!userData) { setError("Aucun compte trouvé avec cet email."); setLoading(false); return; }
       const hash = await hashPassword(password);
       if (hash !== userData.hash) { setError("Mot de passe incorrect."); setLoading(false); return; }
+      // Mémoriser l'email pour pré-remplir
+      try { localStorage.setItem("fitrace_last_email", email.trim().toLowerCase()); } catch {}
       await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
       onLogin("athlete", userData.name, userData.email);
     } catch (e) { setError("Erreur de connexion."); }
@@ -1334,6 +1339,11 @@ function LoginScreen({ onLogin }) {
               {error && (
                 <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13, textAlign: "center" }}>
                   {error}
+                  {error.includes("Aucun compte") && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: "#ff9999" }}>
+                      ⚠️ Les données sont stockées sur cet appareil. Si tu as changé de navigateur ou vidé le cache, ton compte n'est plus accessible.
+                    </div>
+                  )}
                 </div>
               )}
               <button disabled={!email || !password || loading} onClick={handleLogin} style={{ width: "100%", background: !email || !password || loading ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}>
@@ -1345,6 +1355,9 @@ function LoginScreen({ onLogin }) {
               <div style={{ textAlign: "center", fontSize: 12, color: "#777" }}>
                 Pas encore de compte ?{" "}
                 <span onClick={() => { setMode("register"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Créer un compte</span>
+              </div>
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "10px 12px", fontSize: 10, color: "#555", textAlign: "center", lineHeight: 1.5 }}>
+                Tes données sont sauvegardées localement sur cet appareil. Utilise toujours le même navigateur pour retrouver ton compte.
               </div>
             </div>
           )}
@@ -11951,21 +11964,34 @@ export default function App() {
   // Vérifier session existante au démarrage — setLoading(false) SEULEMENT ici
   useEffect(() => {
     storage.get("session_current").then(async session => {
-      if (session && session.role === "athlete" && session.email) {
+      if (session && session.role === "athlete") {
         try {
-          // Chercher par email en priorité
-          const keyEmail = `athlete_email_${session.email}`;
-          let existing = await storage.get(keyEmail);
-          // Fallback par nom
+          let existing = null;
+          // 1. Chercher par email
+          if (session.email) {
+            existing = await storage.get(`athlete_email_${session.email}`);
+          }
+          // 2. Fallback par nom
           if (!existing && session.name) {
             existing = await storage.get(`athlete_${session.name}`);
           }
+          // 3. Si trouvé, restaurer la session
           if (existing) {
+            // S'assurer que l'email est dans le profil
+            if (session.email && !existing.email) {
+              existing = { ...existing, email: session.email };
+              await storage.set(`athlete_email_${session.email}`, existing);
+            }
             setProfile(existing);
             setNeedTests(!existing.onboardingComplete);
-            setUser({ role: "athlete", name: session.name, email: session.email });
+            setUser({ role: "athlete", name: session.name || existing.name, email: session.email || existing.email });
+          } else if (session.email) {
+            // Session existe mais profil perdu — relancer l'onboarding avec les infos connues
+            setUser({ role: "athlete", name: session.name || "", email: session.email });
           }
         } catch (e) { console.error("Session restore error:", e); }
+      } else if (session && session.role === "coach") {
+        setUser({ role: "coach", name: "Coach" });
       }
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -11994,9 +12020,14 @@ export default function App() {
     setNeedTests(true);
   }
 
-  function handleTestsComplete(updatedProfile) {
+  async function handleTestsComplete(updatedProfile) {
     setProfile(updatedProfile);
     setNeedTests(false);
+    // Sauvegarder les résultats de tests en localStorage
+    const key = (user?.email || updatedProfile.email)
+      ? `athlete_email_${user?.email || updatedProfile.email}`
+      : `athlete_${updatedProfile.name}`;
+    await storage.set(key, { ...updatedProfile, onboardingComplete: true });
   }
 
   if (loading) return (
