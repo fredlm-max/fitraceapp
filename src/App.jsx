@@ -8069,7 +8069,7 @@ JSON:
         {/* COURSE & TECHNIQUE */}
         {tab === "nutri" && <NutritionTab profile={profile} />}
         {tab === "technique" && <TechniqueTab profile={profile} />}
-        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
+        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
         {tab === "planning" && (
           <PlanningTab
             profile={profile}
@@ -8292,7 +8292,7 @@ JSON:
         })()}
 
         {/* PROFIL */}
-        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
+        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
 
       </div>
 
@@ -8366,7 +8366,7 @@ JSON:
 // ============================================================
 // ONGLET PROFIL (modifiable)
 // ============================================================
-function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstalled, triggerInstall, notifGranted, requestNotifPermission }) {
+function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstalled, isIOS, triggerInstall, notifGranted, requestNotifPermission }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     poids: profile.poids || "",
