@@ -2964,18 +2964,18 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  // Détection iOS
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isInStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
   useEffect(() => {
-    // Détecter si déjà installée
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
-    // Capturer le prompt d'installation Chrome/Android
+    if (isInStandalone) { setIsInstalled(true); return; }
+    // Capturer le prompt d'installation Chrome/Android (pas disponible sur iOS)
     const handler = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
-      // Afficher le banner après 3s si pas encore installé
       setTimeout(() => setShowInstallBanner(true), 3000);
     };
     window.addEventListener("beforeinstallprompt", handler);
@@ -2983,6 +2983,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   }, []);
 
   async function triggerInstall() {
+    if (isIOS) { setShowIOSGuide(true); return; }
     if (!installPrompt) return;
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
@@ -3830,6 +3831,48 @@ JSON:
               <button onClick={() => setShowInstallBanner(false)} style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: 8, padding: "7px 10px", color: "#777", fontSize: 12, cursor: "pointer" }}>Plus tard</button>
               <button onClick={triggerInstall} style={{ background: "var(--yellow)", border: "none", borderRadius: 8, padding: "7px 14px", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Installer</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── iOS Install Guide Modal ── */}
+      {showIOSGuide && (
+        <div onClick={() => setShowIOSGuide(false)} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0 0 16px 0" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#111", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 24, padding: 24, width: "100%", maxWidth: 420, margin: "0 16px" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "var(--yellow)", marginBottom: 3 }}>Installer FitRace</div>
+                <div style={{ fontSize: 12, color: "#666" }}>Ajouter à l'écran d'accueil iPhone</div>
+              </div>
+              <button onClick={() => setShowIOSGuide(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 10, width: 32, height: 32, color: "#666", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+
+            {/* Steps */}
+            {[
+              { n: 1, icon: "🌐", text: "Ouvre cette page dans", bold: "Safari" },
+              { n: 2, icon: "⎋", text: "Appuie sur le bouton", bold: "Partager (carré ↑)" },
+              { n: 3, icon: "➕", text: "Choisis", bold: "« Sur l'écran d'accueil »" },
+              { n: 4, icon: "✅", text: "Appuie sur", bold: "« Ajouter »" },
+            ].map(({ n, icon, text, bold }) => (
+              <div key={n} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: n < 4 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{icon}</div>
+                <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.4 }}>
+                  {text} <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{bold}</span>
+                </div>
+              </div>
+            ))}
+
+            {/* Note Chrome */}
+            <div style={{ marginTop: 16, padding: "10px 14px", background: "rgba(255,154,60,0.08)", border: "1px solid rgba(255,154,60,0.2)", borderRadius: 12 }}>
+              <div style={{ fontSize: 11, color: "#ff9a3c", lineHeight: 1.5 }}>
+                ⚠️ <strong>Important :</strong> l'installation PWA ne fonctionne que dans <strong>Safari</strong> sur iPhone — pas dans Chrome ni Firefox.
+              </div>
+            </div>
+
+            <button onClick={() => setShowIOSGuide(false)} style={{ marginTop: 16, width: "100%", background: "var(--yellow)", border: "none", borderRadius: 14, padding: "13px 0", color: "#000", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+              J'ai compris
+            </button>
           </div>
         </div>
       )}
@@ -8574,13 +8617,13 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
           {/* Install PWA */}
           {!isInstalled ? (
-            <button onClick={triggerInstall || (() => {})} style={{ display: "flex", alignItems: "center", gap: 14, background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 14, padding: "14px 16px", cursor: installPrompt ? "pointer" : "default", width: "100%", textAlign: "left" }}>
+            <button onClick={triggerInstall} style={{ display: "flex", alignItems: "center", gap: 14, background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 14, padding: "14px 16px", cursor: "pointer", width: "100%", textAlign: "left" }}>
               <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📲</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--yellow)", marginBottom: 2 }}>Installer l'app</div>
-                <div style={{ fontSize: 11, color: "#777" }}>{installPrompt ? "Ajouter à l'écran d'accueil" : "Ouvre dans Chrome → ⋮ → Installer l'application"}</div>
+                <div style={{ fontSize: 11, color: "#777" }}>{isIOS ? "Guide d'installation iPhone →" : installPrompt ? "Ajouter à l'écran d'accueil" : "Ouvre dans Chrome → ⋮ → Installer"}</div>
               </div>
-              {installPrompt && <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>INSTALLER →</div>}
+              <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>→</div>
             </button>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 14, padding: "14px 16px" }}>
