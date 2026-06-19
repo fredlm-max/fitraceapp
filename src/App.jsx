@@ -2488,6 +2488,96 @@ function WeeklySummaryCard({ profile }) {
 // ANALYTICS COMPONENTS — Premium UX
 // ============================================================
 
+function AchievementsCard({ profile }) {
+  const sessions = profile.sessions || [];
+  const totalSessions = sessions.length;
+  const hasNutrition = Object.keys(profile.dailyNutrition || {}).length > 0;
+  const hasBenchmark = (() => { try { return !!localStorage.getItem(`fitrace_hyrox_times_${profile.name}`); } catch { return false; } })();
+  const hasRace = !!profile.raceDate;
+  const maxRPE = sessions.reduce((m, s) => Math.max(m, s.difficulte||0), 0);
+  const hasZone2 = sessions.some(s => s.type === "running_zone2");
+  const hasSimulation = (() => { try { return !!localStorage.getItem(`fitrace_sim_done_${profile.name}`); } catch { return false; } })();
+  const weeklyMax = (() => {
+    const w = {}; sessions.forEach(s => { const wk = s.date?.slice(0,7); if(wk) w[wk] = (w[wk]||0)+1; });
+    return Math.max(0, ...Object.values(w));
+  })();
+  const streak = (() => {
+    const weeks = new Set(sessions.map(s => { const d = new Date(s.date); d.setDate(d.getDate() + 4 - (d.getDay()||7)); return d.toISOString().slice(0,10); }));
+    return weeks.size;
+  })();
+
+  const BADGES = [
+    { id: "first", icon: "🏁", label: "Premier pas", desc: "1ère séance complétée", unlocked: totalSessions >= 1, color: "#22c55e" },
+    { id: "five", icon: "🔥", label: "En feu", desc: "5 séances réalisées", unlocked: totalSessions >= 5, color: "#f59e0b" },
+    { id: "ten", icon: "💪", label: "Engagé", desc: "10 séances au compteur", unlocked: totalSessions >= 10, color: "#007AFF" },
+    { id: "twentyfive", icon: "🏆", label: "Athlète", desc: "25 séances réalisées", unlocked: totalSessions >= 25, color: "#a855f7" },
+    { id: "fifty", icon: "👑", label: "Champion", desc: "50 séances réalisées", unlocked: totalSessions >= 50, color: "#eab308" },
+    { id: "zone2", icon: "🫀", label: "Base solide", desc: "1ère session Zone 2", unlocked: hasZone2, color: "#39ff80" },
+    { id: "hard", icon: "💀", label: "Guerrier", desc: "Session RPE 9 ou 10", unlocked: maxRPE >= 9, color: "#ef4444" },
+    { id: "week5", icon: "📅", label: "Semaine pleine", desc: "5+ séances en 1 semaine", unlocked: weeklyMax >= 5, color: "#007AFF" },
+    { id: "streak4", icon: "🗓️", label: "Régularité", desc: "4 semaines d'entraînement", unlocked: streak >= 4, color: "#38bdf8" },
+    { id: "benchmark", icon: "🎯", label: "Testé", desc: "Benchmarks HYROX saisis", unlocked: hasBenchmark, color: "#f59e0b" },
+    { id: "race", icon: "🏅", label: "Inscrit", desc: "Date de course ajoutée", unlocked: hasRace, color: "#ef4444" },
+    { id: "nutrition", icon: "🥗", label: "Nutritioniste", desc: "1er log nutritionnel", unlocked: hasNutrition, color: "#22c55e" },
+  ];
+
+  const unlocked = BADGES.filter(b => b.unlocked);
+  const locked = BADGES.filter(b => !b.unlocked);
+  const pct = Math.round((unlocked.length / BADGES.length) * 100);
+
+  return (
+    <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 20, padding: "18px", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div>
+          <div className="bebas" style={{ fontSize: 20, color: "var(--white)", letterSpacing: 0.5 }}>🏅 MES ACHIEVEMENTS</div>
+          <div style={{ fontSize: 11, color: "#777" }}>{unlocked.length}/{BADGES.length} déblocqués · {pct}%</div>
+        </div>
+        <div style={{ position: "relative", width: 44, height: 44 }}>
+          <svg viewBox="0 0 44 44" width="44" height="44">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--bg3)" strokeWidth="4" />
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--yellow)" strokeWidth="4"
+              strokeDasharray={`${2 * Math.PI * 18 * pct / 100} ${2 * Math.PI * 18}`}
+              strokeDashoffset={2 * Math.PI * 18 * 0.25} strokeLinecap="round" />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "var(--yellow)" }}>{pct}%</div>
+        </div>
+      </div>
+      {/* Badges débloqués */}
+      {unlocked.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Débloqués ✅</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {unlocked.map(b => (
+              <div key={b.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: `${b.color}10`, border: `1px solid ${b.color}30`, borderRadius: 14, padding: "10px 12px", minWidth: 70, textAlign: "center" }}>
+                <span style={{ fontSize: 24 }}>{b.icon}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: b.color }}>{b.label}</span>
+                <span style={{ fontSize: 9, color: "#777", lineHeight: 1.3 }}>{b.desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Badges à débloquer */}
+      {locked.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>À débloquer 🔒</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {locked.slice(0, 4).map(b => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "8px 10px", flex: "1 1 calc(50% - 3px)", minWidth: 0 }}>
+                <span style={{ fontSize: 18, opacity: 0.3 }}>{b.icon}</span>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#555" }}>{b.label}</div>
+                  <div style={{ fontSize: 9, color: "#777" }}>{b.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WeeklyPerformanceCard({ profile }) {
   const sessions = profile.sessions || [];
   const goal = profile.seancesParSemaine || 4;
@@ -7406,6 +7496,9 @@ JSON:
 
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
+
+            {/* ── ACHIEVEMENTS ── */}
+            <AchievementsCard profile={profile} />
 
             {/* ── DERNIÈRES SÉANCES ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
@@ -13076,6 +13169,95 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
   );
 }
 
+function RaceWeekChecklist({ days, checkKey }) {
+  const [checked, setChecked] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem(checkKey) || "{}"); } catch { return {}; }
+  });
+  const toggle = (id) => {
+    const next = { ...checked, [id]: !checked[id] };
+    setChecked(next);
+    try { localStorage.setItem(checkKey, JSON.stringify(next)); } catch {}
+  };
+
+  const CHECKLIST_PHASES = [
+    {
+      phase: "J-7", condition: days <= 7, color: "#38bdf8",
+      items: [
+        { id: "j7_kit", label: "Préparer ton kit complet (chaussures, tenue, grip gloves)" },
+        { id: "j7_transport", label: "Confirmer transport & hébergement" },
+        { id: "j7_dossard", label: "Récupérer ton dossard ou confirmer le créneau" },
+        { id: "j7_carb", label: "Débuter la charge glucidique (+30% glucides)" },
+      ],
+    },
+    {
+      phase: "J-3", condition: days <= 3, color: "#f59e0b",
+      items: [
+        { id: "j3_recon", label: "Reconnaître l'itinéraire jusqu'au venue" },
+        { id: "j3_bag", label: "Préparer ton sac de transition : eau, gel, magnésium" },
+        { id: "j3_volume", label: "Réduire volume entraînement de 60%" },
+        { id: "j3_sleep", label: "Coucher à 22h — ne pas changer les habitudes" },
+      ],
+    },
+    {
+      phase: "J-1", condition: days <= 1, color: "#f97316",
+      items: [
+        { id: "j1_nutrition", label: "Repas riche en glucides (pâtes, riz) — dîner 18h-19h" },
+        { id: "j1_sleep", label: "Coucher tôt — même si tu ne dors pas bien, repose-toi" },
+        { id: "j1_kit", label: "Vérifier kit prêt + chargement montre GPS" },
+        { id: "j1_mental", label: "Visualiser les 8 stations — reprendre le pacing planner" },
+        { id: "j1_alcool", label: "Zéro alcool — maximum hydratation (2.5L eau)" },
+      ],
+    },
+    {
+      phase: "Jour J", condition: days === 0 || days === 1, color: "#ef4444",
+      items: [
+        { id: "jj_reveille", label: "Réveil 3h avant le départ" },
+        { id: "jj_petit_dej", label: "Petit déj 2h30 avant : glucides + protéines + café" },
+        { id: "jj_echauff", label: "Échauffement 15min : activation hanches, épaules, gainage" },
+        { id: "jj_gel", label: "Gel énergétique 10min avant le départ" },
+        { id: "jj_mental", label: "Respiration 4-7-8 : inspire 4s, retiens 7s, expire 8s" },
+      ],
+    },
+  ];
+
+  const visiblePhases = CHECKLIST_PHASES.filter(p => p.condition);
+  const allItems = visiblePhases.flatMap(p => p.items);
+  const doneCount = allItems.filter(it => checked[it.id]).length;
+
+  return (
+    <div style={{ background: "linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(239,68,68,0.01) 100%)", border: "1.5px solid rgba(239,68,68,0.2)", borderRadius: 20, padding: "18px", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div>
+          <div className="bebas" style={{ fontSize: 22, color: "#ef4444", letterSpacing: 1 }}>🏁 CHECKLIST RACE WEEK</div>
+          <div style={{ fontSize: 11, color: "#777" }}>{doneCount}/{allItems.length} tâches complétées</div>
+        </div>
+        <div style={{ background: doneCount === allItems.length ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.1)", border: `1px solid ${doneCount === allItems.length ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.3)"}`, borderRadius: 10, padding: "6px 10px", textAlign: "center" }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: doneCount === allItems.length ? "#22c55e" : "#ef4444" }}>{Math.round(doneCount/allItems.length*100)}%</div>
+        </div>
+      </div>
+      <div style={{ height: 4, background: "rgba(0,0,0,0.06)", borderRadius: 2, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ height: "100%", width: `${doneCount/allItems.length*100}%`, background: "linear-gradient(90deg, #ef4444, #f59e0b, #22c55e)", borderRadius: 2, transition: "width 0.4s ease" }} />
+      </div>
+      {visiblePhases.map(phase => (
+        <div key={phase.phase} style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: phase.color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: phase.color }} />
+            {phase.phase}
+          </div>
+          {phase.items.map(item => (
+            <div key={item.id} onClick={() => toggle(item.id)} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", cursor: "pointer", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: checked[item.id] ? "none" : `2px solid ${phase.color}60`, background: checked[item.id] ? phase.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#000", flexShrink: 0, marginTop: 1, transition: "all 0.2s" }}>
+                {checked[item.id] ? "✓" : ""}
+              </div>
+              <span style={{ fontSize: 12, color: checked[item.id] ? "#777" : "var(--white)", textDecoration: checked[item.id] ? "line-through" : "none", lineHeight: 1.5, transition: "all 0.2s" }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RaceTab({ profile, onOpenBenchmark }) {
   const [strategy, setStrategy] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -13208,6 +13390,14 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           <div style={{ fontSize: 14, color: "#555" }}>Aucune date renseignée.<br/>Ajoute ta date de course dans ton profil.</div>
         </div>
       )}
+
+      {/* ── CHECKLIST PRÉPARATION COURSE ── */}
+      {profile.raceDate && days !== null && days <= 7 && (() => {
+        const checkKey = `fitrace_race_checklist_${profile.name}_${profile.raceDate}`;
+        return (
+          <RaceWeekChecklist days={days} checkKey={checkKey} />
+        );
+      })()}
 
       {/* ── RACE PACING PLANNER ── */}
       <button onClick={() => setShowPacer(v => !v)} style={{ width: "100%", background: showPacer ? "rgba(57,255,128,0.08)" : "rgba(0,0,0,0.02)", border: showPacer ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.07)", borderRadius: 16, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
