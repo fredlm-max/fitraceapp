@@ -9777,67 +9777,69 @@ function secToMmss(sec) {
 function HyroxBenchmarkTab({ profile }) {
   const userCat = profile.sexe === "F" ? "F_Open" : "H_Open";
   const [cat, setCat] = useState(userCat);
-  const [view, setView] = useState("stations"); // "stations" | "global" | "ma_perf"
+  const [activeStation, setActiveStation] = useState(null); // station sélectionnée pour "ma perf"
+  const [inputVal, setInputVal] = useState("");
   const [userTimes, setUserTimes] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch { return {}; }
   });
-  const [editStation, setEditStation] = useState(null);
-  const [inputVal, setInputVal] = useState("");
 
   const catObj = HYROX_CATS.find(c => c.id === cat) || HYROX_CATS[0];
   const benchRun = HYROX_BENCHMARKS.run_pace_sec[cat] || {};
   const benchTotal = HYROX_BENCHMARKS.total[cat] || {};
 
-  const saveUserTime = (stationId, mmss) => {
-    const parts = mmss.split(":");
-    const sec = parts.length === 2 ? parseInt(parts[0]) * 60 + parseInt(parts[1]) : parseInt(mmss);
-    if (isNaN(sec)) return;
-    const next = { ...userTimes, [stationId]: sec };
+  const saveUserTime = (id, val) => {
+    const parts = String(val).split(":");
+    const sec = parts.length === 2 ? parseInt(parts[0])*60 + parseInt(parts[1]) : parseInt(val);
+    if (!sec || isNaN(sec)) return;
+    const next = { ...userTimes, [id]: sec };
     setUserTimes(next);
     localStorage.setItem(`fitrace_hyrox_times_${profile.name}`, JSON.stringify(next));
-    setEditStation(null);
+    setActiveStation(null);
     setInputVal("");
   };
 
-  // Calcul du score par station vs médiane catégorie
   const stationScores = HYROX_BENCHMARKS.stations.map(st => {
     const bench = st.temps[cat] || {};
     const userSec = userTimes[st.id];
-    let pct = null;
-    if (userSec && bench.median) {
-      pct = Math.round((bench.median - userSec) / bench.median * 100);
-    }
+    const pct = userSec && bench.median ? Math.round((bench.median - userSec) / bench.median * 100) : null;
     return { ...st, bench, userSec, pct };
   });
 
-  // Identifier les axes faibles (plus lent que la médiane)
-  const weakPoints = stationScores.filter(s => s.pct !== null && s.pct < 0).sort((a, b) => a.pct - b.pct);
-  const strongPoints = stationScores.filter(s => s.pct !== null && s.pct > 5);
+  const runUserSec = userTimes["run"];
+  const runPct = runUserSec && benchRun.median ? Math.round((benchRun.median - runUserSec) / benchRun.median * 100) : null;
+  const filledCount = stationScores.filter(s => s.userSec).length + (runUserSec ? 1 : 0);
 
-  const totalUserSec = Object.values(userTimes).reduce((a, v) => a + (v || 0), 0);
-  const totalWithRun = totalUserSec + (userTimes["run"] ? userTimes["run"] * 8 : 0);
+  const weakPoints = stationScores.filter(s => s.pct !== null && s.pct < -3).sort((a,b) => a.pct - b.pct);
+  const strongPoints = stationScores.filter(s => s.pct !== null && s.pct > 5).sort((a,b) => b.pct - a.pct);
+
+  // Couleur de performance
+  const perfColor = (pct) => pct === null ? "#C7C7CC" : pct > 10 ? "#22c55e" : pct > 0 ? "#007AFF" : pct > -8 ? "#f59e0b" : "#ef4444";
+  const perfLabel = (pct) => pct === null ? "" : pct > 10 ? "Excellent" : pct > 0 ? "Bon" : pct > -8 ? "À travailler" : "Priorité";
+
+  // Calcul total estimé si tous les temps saisis
+  const stationsTotalUser = stationScores.reduce((a, s) => a + (s.userSec || 0), 0);
+  const runTotalUser = (runUserSec || 0) * 8;
+  const grandTotalUser = stationsTotalUser + runTotalUser;
 
   return (
-    <div className="fade-in">
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
-        <div>
-          <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>BENCHMARKS HYROX</div>
-          <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Temps moyens officiels 2023-2025</div>
-        </div>
-        <div style={{ fontSize: 9, color: "#888", textAlign: "right" }}>
-          Source: world.hyrox.com<br/>world records inclus
-        </div>
+    <div className="fade-in" style={{ paddingBottom: 80 }}>
+
+      {/* ── HERO HEADER ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div className="bebas" style={{ fontSize: 32, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>BENCHMARKS</div>
+        <div className="bebas" style={{ fontSize: 32, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1, marginBottom: 4 }}>HYROX</div>
+        <div style={{ fontSize: 12, color: "#999" }}>Temps officiels 2023–2025 · world.hyrox.com</div>
       </div>
 
-      {/* Sélecteur catégorie */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 14, scrollbarWidth: "none" }}>
+      {/* ── SÉLECTEUR CATÉGORIE — scroll horizontal pill style ── */}
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 20, scrollbarWidth: "none" }}>
         {HYROX_CATS.map(c => (
           <button key={c.id} onClick={() => setCat(c.id)} style={{
-            flexShrink: 0, padding: "7px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
-            background: cat === c.id ? `${c.color}20` : "var(--bg2)",
-            border: cat === c.id ? `2px solid ${c.color}` : "1px solid var(--bg3)",
-            color: cat === c.id ? c.color : "#888",
+            flexShrink: 0, height: 36, padding: "0 14px", borderRadius: 18,
+            fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none",
+            background: cat === c.id ? c.color : "var(--bg2)",
+            color: cat === c.id ? "#fff" : "#888",
+            boxShadow: cat === c.id ? `0 4px 14px ${c.color}40` : "none",
             transition: "all 0.2s",
           }}>
             {c.icon} {c.label}
@@ -9845,392 +9847,306 @@ function HyroxBenchmarkTab({ profile }) {
         ))}
       </div>
 
-      {/* Onglets vue */}
-      <div style={{ display: "flex", gap: 0, background: "var(--bg3)", borderRadius: 12, padding: 3, marginBottom: 16 }}>
-        {[
-          { id: "stations", label: "🏟️ Stations" },
-          { id: "global", label: "📊 Temps global" },
-          { id: "ma_perf", label: "🎯 Ma perf" },
-        ].map(v => (
-          <button key={v.id} onClick={() => setView(v.id)} style={{
-            flex: 1, padding: "8px 4px", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none",
-            background: view === v.id ? "var(--bg2)" : "transparent",
-            color: view === v.id ? "var(--yellow)" : "#888",
-            boxShadow: view === v.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-            transition: "all 0.2s",
-          }}>{v.label}</button>
-        ))}
-      </div>
-
-      {/* ── VUE STATIONS ── */}
-      {view === "stations" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Temps running */}
-          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, overflow: "hidden" }}>
-            <div style={{ height: 3, background: "#22c55e" }} />
-            <div style={{ padding: "12px 14px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏃</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Running</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>8 × 1km intercalés</div>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Allure moyenne</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "var(--white)" }}>{secToMmss(benchRun.median)}/km</div>
-                </div>
-              </div>
-              {/* Barre percentiles */}
-              <div style={{ position: "relative", height: 28 }}>
-                <div style={{ position: "absolute", inset: "8px 0", background: "var(--bg3)", borderRadius: 6 }} />
-                {/* Zone interquartile */}
-                {benchRun.p25 && benchRun.p75 && (() => {
-                  const range = benchRun.p75 - benchRun.p25;
-                  const leftPct = (benchRun.p25 - benchRun.elite * 0.9) / ((benchRun.p75 * 1.2) - benchRun.elite * 0.9) * 100;
-                  const widthPct = range / ((benchRun.p75 * 1.2) - benchRun.elite * 0.9) * 100;
-                  return null; // on affiche autrement ci-dessous
-                })()}
-                <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", height: "100%", alignItems: "center", gap: 8, paddingLeft: 8 }}>
-                  <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700 }}>🏆 {secToMmss(benchRun.elite)}/km</div>
-                  <div style={{ fontSize: 10, color: "#888" }}>Top25%: {secToMmss(benchRun.p25)}</div>
-                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700 }}>Médiane: {secToMmss(benchRun.median)}</div>
-                  <div style={{ fontSize: 10, color: "#888" }}>75%: {secToMmss(benchRun.p75)}</div>
-                </div>
-              </div>
-            </div>
+      {/* ── RECORD DU MONDE ── */}
+      {HYROX_BENCHMARKS.records[cat] && (
+        <div style={{ background: "linear-gradient(135deg, rgba(250,204,21,0.08) 0%, rgba(250,204,21,0.02) 100%)", border: "1px solid rgba(250,204,21,0.2)", borderRadius: 18, padding: "14px 18px", marginBottom: 16, display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ fontSize: 32 }}>🏆</div>
+          <div>
+            <div style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>Record du monde {catObj.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "var(--white)", letterSpacing: "-0.02em" }}>{HYROX_BENCHMARKS.records[cat]}</div>
           </div>
-
-          {/* Stations */}
-          {HYROX_BENCHMARKS.stations.map((st, i) => {
-            const bench = st.temps[cat] || {};
-            const userSec = userTimes[st.id];
-            const pct = userSec && bench.median ? Math.round((bench.median - userSec) / bench.median * 100) : null;
-            const perfColor = pct === null ? "#888" : pct > 10 ? "#22c55e" : pct > 0 ? "#007AFF" : pct > -10 ? "#eab308" : "#ef4444";
-            const maxSec = (bench.p75 || 0) * 1.15;
-            const elitePct = bench.elite ? bench.elite / maxSec * 100 : 0;
-            const p25Pct = bench.p25 ? bench.p25 / maxSec * 100 : 0;
-            const medPct = bench.median ? bench.median / maxSec * 100 : 0;
-            const p75Pct = bench.p75 ? bench.p75 / maxSec * 100 : 0;
-            const userPct2 = userSec ? Math.min(userSec / maxSec * 100, 100) : null;
-            return (
-              <div key={st.id} style={{ background: "var(--bg2)", border: `1px solid ${editStation === st.id ? catObj.color+"55" : "var(--bg3)"}`, borderRadius: 16, overflow: "hidden", transition: "border-color 0.2s" }}>
-                <div style={{ height: 3, background: catObj.color, opacity: 0.6 }} />
-                <div style={{ padding: "12px 14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${catObj.color}12`, border: `1px solid ${catObj.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{st.icon}</div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{st.nom}</div>
-                        <div style={{ fontSize: 10, color: "#888" }}>{st.distance} · {st.poids[cat.startsWith("F") ? "F" : "H"]}</div>
-                      </div>
-                    </div>
-                    {/* Ma perf */}
-                    {editStation === st.id ? (
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input
-                          value={inputVal}
-                          onChange={e => setInputVal(e.target.value)}
-                          placeholder="mm:ss"
-                          style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${catObj.color}`, background: "var(--bg)", color: "var(--white)", fontSize: 14, textAlign: "center", fontWeight: 700, outline: "none" }}
-                          autoFocus
-                          onKeyDown={e => e.key === "Enter" && saveUserTime(st.id, inputVal)}
-                        />
-                        <button onClick={() => saveUserTime(st.id, inputVal)} style={{ background: catObj.color, border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓</button>
-                        <button onClick={() => { setEditStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "6px 8px", color: "#888", fontSize: 12, cursor: "pointer" }}>✕</button>
-                      </div>
-                    ) : (
-                      <div style={{ textAlign: "right", cursor: "pointer" }} onClick={() => { setEditStation(st.id); setInputVal(userSec ? secToMmss(userSec) : ""); }}>
-                        {userSec ? (
-                          <>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: perfColor }}>{secToMmss(userSec)}</div>
-                            {pct !== null && <div style={{ fontSize: 10, fontWeight: 700, color: perfColor }}>{pct > 0 ? "+" : ""}{pct}% vs médiane</div>}
-                          </>
-                        ) : (
-                          <div style={{ fontSize: 11, color: "#aaa", background: "var(--bg3)", padding: "5px 10px", borderRadius: 8 }}>+ Ma perf</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Barre percentiles visuelle */}
-                  <div style={{ position: "relative", height: 20, marginBottom: 6 }}>
-                    <div style={{ position: "absolute", top: 6, left: 0, right: 0, height: 8, background: "var(--bg3)", borderRadius: 4 }} />
-                    {/* Zone interquartile (p25→p75) colorée */}
-                    {bench.p25 && bench.p75 && (
-                      <div style={{
-                        position: "absolute", top: 6, height: 8, borderRadius: 4,
-                        left: `${p25Pct}%`, width: `${p75Pct - p25Pct}%`,
-                        background: `${catObj.color}30`, border: `1px solid ${catObj.color}40`,
-                      }} />
-                    )}
-                    {/* Médiane */}
-                    {bench.median && (
-                      <div style={{ position: "absolute", top: 3, left: `${medPct}%`, width: 2, height: 14, background: catObj.color, borderRadius: 1, transform: "translateX(-50%)" }} />
-                    )}
-                    {/* Elite */}
-                    {bench.elite && (
-                      <div style={{ position: "absolute", top: 3, left: `${elitePct}%`, width: 2, height: 14, background: "#22c55e", borderRadius: 1, transform: "translateX(-50%)" }} />
-                    )}
-                    {/* Ma perf */}
-                    {userPct2 !== null && (
-                      <div style={{
-                        position: "absolute", top: 0, left: `${userPct2}%`, transform: "translateX(-50%)",
-                        width: 20, height: 20, borderRadius: "50%",
-                        background: perfColor, border: "2px solid var(--bg2)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 8, color: "#fff", fontWeight: 700, zIndex: 2,
-                      }}>●</div>
-                    )}
-                  </div>
-
-                  {/* Légende */}
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {bench.elite && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} /><span style={{ fontSize: 9, color: "#888" }}>Elite {secToMmss(bench.elite)}</span></div>}
-                    {bench.p25 && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa" }} /><span style={{ fontSize: 9, color: "#888" }}>Top 25% {secToMmss(bench.p25)}</span></div>}
-                    {bench.median && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 2, background: catObj.color }} /><span style={{ fontSize: 9, color: "#888", fontWeight: 700 }}>Médiane {secToMmss(bench.median)}</span></div>}
-                    {bench.p75 && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa" }} /><span style={{ fontSize: 9, color: "#888" }}>75% {secToMmss(bench.p75)}</span></div>}
-                  </div>
-
-                  {/* Conseils techniques */}
-                  <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {st.conseils.slice(0, 2).map((c, ci) => (
-                      <div key={ci} style={{ fontSize: 10, color: "#888", background: "rgba(0,0,0,0.04)", padding: "3px 8px", borderRadius: 6 }}>💡 {c}</div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
-      {/* ── VUE GLOBAL ── */}
-      {view === "global" && (
-        <div>
-          {/* Record du monde */}
-          {HYROX_BENCHMARKS.records[cat] && (
-            <div style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
-              <span style={{ fontSize: 24 }}>🏆</span>
-              <div>
-                <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Record du monde {catObj.label}</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--white)", marginTop: 2 }}>{HYROX_BENCHMARKS.records[cat]}</div>
-              </div>
+      {/* ── RUNNING — carte spéciale ── */}
+      <div style={{ background: "var(--bg2)", borderRadius: 20, padding: "18px", marginBottom: 10, border: "1px solid var(--bg3)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏃</div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--white)" }}>Running</div>
+              <div style={{ fontSize: 11, color: "#999" }}>8 × 1 km · allure /km</div>
             </div>
-          )}
-
-          {/* Distribution des finishers */}
-          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: catObj.color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>Distribution des temps — {catObj.label}</div>
-            {[
-              { label: "Elite (Top 5%)", sec: benchTotal.elite, color: "#22c55e", icon: "🏆" },
-              { label: "Top 25%",        sec: benchTotal.p25,   color: "#007AFF", icon: "💪" },
-              { label: "Médiane (50%)",  sec: benchTotal.median, color: catObj.color, icon: "◎" },
-              { label: "75e percentile", sec: benchTotal.p75,   color: "#eab308", icon: "🔸" },
-            ].map((row, i) => {
-              const userTotal = Object.keys(userTimes).filter(k => k !== "run").reduce((a, k) => a + (userTimes[k]||0), 0);
-              const runTotal = (userTimes["run"] || 0) * 8;
-              const myTotalSec = userTotal + runTotal;
-              const isMine = myTotalSec > 0 && Math.abs(row.sec - myTotalSec) < 300;
-              return (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                  <div style={{ fontSize: 18, flexShrink: 0, width: 24 }}>{row.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: "#888" }}>{row.label}</span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: row.color }}>
-                        {Math.floor(row.sec/3600)}h{String(Math.floor((row.sec%3600)/60)).padStart(2,"0")}:{String(row.sec%60).padStart(2,"0")}
-                      </span>
-                    </div>
-                    <div style={{ background: "var(--bg3)", borderRadius: 4, height: 6 }}>
-                      <div style={{ width: `${Math.min(100, (benchTotal.elite / row.sec) * 100)}%`, height: "100%", background: row.color, borderRadius: 4, opacity: 0.7 }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
           </div>
-
-          {/* Décomposition d'un temps HYROX médian */}
-          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Décomposition du temps médian</div>
-            {(() => {
-              const runTotal = (benchRun.median || 0) * 8;
-              const stationsTotal = HYROX_BENCHMARKS.stations.reduce((a, s) => a + ((s.temps[cat]||{}).median||0), 0);
-              const total2 = runTotal + stationsTotal;
-              const runPct = total2 > 0 ? Math.round(runTotal / total2 * 100) : 50;
-              return (
+          {/* Mon allure */}
+          {activeStation === "run" ? (
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder="mm:ss" autoFocus
+                style={{ width: 60, padding: "7px 8px", borderRadius: 10, border: "2px solid #22c55e", background: "var(--bg3)", color: "var(--white)", fontSize: 15, textAlign: "center", fontWeight: 800, outline: "none" }}
+                onKeyDown={e => e.key === "Enter" && saveUserTime("run", inputVal)} />
+              <button onClick={() => saveUserTime("run", inputVal)} style={{ background: "#22c55e", border: "none", borderRadius: 10, padding: "7px 12px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓</button>
+              <button onClick={() => { setActiveStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 10, padding: "7px 10px", color: "#888", fontSize: 13, cursor: "pointer" }}>✕</button>
+            </div>
+          ) : (
+            <button onClick={() => { setActiveStation("run"); setInputVal(runUserSec ? secToMmss(runUserSec) : ""); }} style={{
+              background: runUserSec ? `${perfColor(runPct)}15` : "var(--bg3)", border: `1.5px solid ${runUserSec ? perfColor(runPct)+"44" : "transparent"}`,
+              borderRadius: 12, padding: "8px 14px", cursor: "pointer", textAlign: "right",
+            }}>
+              {runUserSec ? (
                 <>
-                  <div style={{ display: "flex", height: 28, borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
-                    <div style={{ width: `${runPct}%`, background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>🏃 {runPct}%</span>
-                    </div>
-                    <div style={{ flex: 1, background: catObj.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>💪 {100-runPct}%</span>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <div style={{ fontSize: 12, color: "#22c55e" }}>🏃 Running : {Math.floor(runTotal/60)}min {runTotal%60}s</div>
-                    <div style={{ fontSize: 12, color: catObj.color }}>💪 Stations : {Math.floor(stationsTotal/60)}min {stationsTotal%60}s</div>
-                  </div>
-                  <div style={{ marginTop: 8, fontSize: 13, fontWeight: 800, color: "var(--white)", textAlign: "center" }}>
-                    Total estimé : {Math.floor(total2/3600)}h{String(Math.floor((total2%3600)/60)).padStart(2,"0")}:{String(total2%60).padStart(2,"0")}
-                  </div>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: perfColor(runPct) }}>{secToMmss(runUserSec)}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: perfColor(runPct) }}>{runPct > 0 ? "+" : ""}{runPct}% vs méd.</div>
                 </>
-              );
-            })()}
-          </div>
-
-          {/* Comparaison running vs stations par rang */}
-          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Stations — du plus rapide au plus lent (médiane)</div>
-            {[...HYROX_BENCHMARKS.stations]
-              .map(s => ({ ...s, med: (s.temps[cat]||{}).median || 9999 }))
-              .sort((a,b) => a.med - b.med)
-              .map((s, i) => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < 7 ? "1px solid var(--bg3)" : "none" }}>
-                  <div style={{ width: 20, height: 20, borderRadius: 6, background: `${catObj.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: catObj.color, flexShrink: 0 }}>{i+1}</div>
-                  <div style={{ fontSize: 16, flexShrink: 0 }}>{s.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
-                    <div style={{ fontSize: 9, color: "#888" }}>{s.distance}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: i < 2 ? "#22c55e" : i > 5 ? "#ef4444" : "var(--white)" }}>{secToMmss(s.med)}</div>
-                    <div style={{ fontSize: 9, color: "#888" }}>médiane</div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── VUE MA PERF ── */}
-      {view === "ma_perf" && (
-        <div>
-          {/* Instructions */}
-          <div style={{ background: "rgba(0,122,255,0.05)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, fontSize: 12, color: "#888", lineHeight: 1.6 }}>
-            💡 Saisis tes meilleurs temps par station (format mm:ss) pour identifier tes axes de progression vs la catégorie <strong style={{ color: catObj.color }}>{catObj.label}</strong>.
-          </div>
-
-          {/* Mon temps de running */}
-          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <span style={{ fontSize: 18 }}>🏃</span>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Allure running / 1km</div>
-                  <div style={{ fontSize: 10, color: "#888" }}>Médiane: {secToMmss(benchRun.median)}/km</div>
-                </div>
-              </div>
-              {editStation === "run" ? (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder="mm:ss" autoFocus
-                    style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: `1.5px solid #22c55e`, background: "var(--bg)", color: "var(--white)", fontSize: 14, textAlign: "center", fontWeight: 700, outline: "none" }}
-                    onKeyDown={e => e.key === "Enter" && saveUserTime("run", inputVal)} />
-                  <button onClick={() => saveUserTime("run", inputVal)} style={{ background: "#22c55e", border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓</button>
-                  <button onClick={() => { setEditStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "6px 8px", color: "#888", fontSize: 12, cursor: "pointer" }}>✕</button>
-                </div>
               ) : (
-                <div onClick={() => { setEditStation("run"); setInputVal(userTimes["run"] ? secToMmss(userTimes["run"]) : ""); }} style={{ cursor: "pointer" }}>
-                  {userTimes["run"] ? (
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#22c55e" }}>{secToMmss(userTimes["run"])}/km</div>
-                  ) : (
-                    <div style={{ fontSize: 11, color: "#aaa", background: "var(--bg3)", padding: "5px 10px", borderRadius: 8 }}>+ Saisir</div>
-                  )}
+                <div style={{ fontSize: 12, color: "#999", fontWeight: 600 }}>+ Mon allure</div>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Barre percentiles running */}
+        {(() => {
+          const max = (benchRun.p75 || 480) * 1.1;
+          const toX = v => v ? Math.min(96, v / max * 100) : 0;
+          const userX = runUserSec ? toX(runUserSec) : null;
+          return (
+            <div style={{ position: "relative", height: 40 }}>
+              {/* Track */}
+              <div style={{ position: "absolute", top: 16, left: "2%", right: "2%", height: 8, background: "var(--bg3)", borderRadius: 4 }} />
+              {/* Zone interquartile */}
+              <div style={{ position: "absolute", top: 16, left: `${toX(benchRun.p25)}%`, width: `${toX(benchRun.p75) - toX(benchRun.p25)}%`, height: 8, background: "#22c55e22", border: "1px solid #22c55e33", borderRadius: 4 }} />
+              {/* Marqueurs */}
+              {[
+                { val: benchRun.elite, color: "#22c55e", label: "Elite" },
+                { val: benchRun.p25, color: "#007AFF", label: "Top25%" },
+                { val: benchRun.median, color: catObj.color, label: "Méd." },
+                { val: benchRun.p75, color: "#f59e0b", label: "75%" },
+              ].map(m => m.val ? (
+                <div key={m.label} style={{ position: "absolute", left: `${toX(m.val)}%`, transform: "translateX(-50%)" }}>
+                  <div style={{ width: 2, height: 18, background: m.color, position: "absolute", top: 11, left: "50%", transform: "translateX(-50%)", borderRadius: 1 }} />
+                  <div style={{ position: "absolute", top: 30, left: "50%", transform: "translateX(-50%)", fontSize: 8, color: m.color, fontWeight: 700, whiteSpace: "nowrap" }}>{secToMmss(m.val)}</div>
                 </div>
+              ) : null)}
+              {/* Ma perf dot */}
+              {userX !== null && (
+                <div style={{ position: "absolute", top: 9, left: `${userX}%`, transform: "translateX(-50%)", width: 22, height: 22, borderRadius: "50%", background: perfColor(runPct), border: "3px solid var(--bg2)", boxShadow: `0 2px 8px ${perfColor(runPct)}60`, zIndex: 3 }} />
               )}
             </div>
-          </div>
+          );
+        })()}
+      </div>
 
-          {/* Stations saisies */}
-          {stationScores.map((st, i) => {
-            const perfColor = st.pct === null ? "#888" : st.pct > 10 ? "#22c55e" : st.pct > 0 ? "#007AFF" : st.pct > -10 ? "#eab308" : "#ef4444";
-            return (
-              <div key={st.id} style={{ background: "var(--bg2)", border: `1px solid ${editStation === st.id ? catObj.color+"55" : "var(--bg3)"}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <span style={{ fontSize: 20 }}>{st.icon}</span>
+      {/* ── 8 STATIONS — grille compacte + expansion ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+        {stationScores.map((st, i) => {
+          const isActive = activeStation === st.id;
+          const max = (st.bench.p75 || 300) * 1.15;
+          const toX = v => v ? Math.min(96, v / max * 100) : 0;
+          const userX = st.userSec ? toX(st.userSec) : null;
+          const pColor = perfColor(st.pct);
+
+          // Couleurs uniques par station
+          const stColors = ["#007AFF","#f97316","#a855f7","#ef4444","#06b6d4","#22c55e","#f59e0b","#ec4899"];
+          const stColor = stColors[i % stColors.length];
+
+          return (
+            <div key={st.id} style={{
+              background: "var(--bg2)", borderRadius: 20, overflow: "hidden",
+              border: `1px solid ${isActive ? stColor+"44" : "var(--bg3)"}`,
+              transition: "all 0.25s",
+            }}>
+              {/* Top accent stripe */}
+              <div style={{ height: 3, background: `linear-gradient(90deg, ${stColor}, ${stColor}44)` }} />
+
+              <div style={{ padding: "14px 16px" }}>
+                {/* Header station */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isActive ? 14 : 12 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 13, background: `${stColor}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{st.icon}</div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>{st.nom}</div>
-                      <div style={{ fontSize: 10, color: "#888" }}>Médiane: {secToMmss(st.bench.median)} · Elite: {secToMmss(st.bench.elite)}</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "var(--white)", letterSpacing: "-0.01em" }}>{st.nom}</div>
+                      <div style={{ fontSize: 10, color: "#999", marginTop: 1 }}>{st.distance} · {st.poids[cat.startsWith("F") ? "F" : "H"]}</div>
                     </div>
                   </div>
-                  {editStation === st.id ? (
-                    <div style={{ display: "flex", gap: 6 }}>
+
+                  {/* Ma perf */}
+                  {isActive ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder="mm:ss" autoFocus
-                        style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${catObj.color}`, background: "var(--bg)", color: "var(--white)", fontSize: 14, textAlign: "center", fontWeight: 700, outline: "none" }}
+                        style={{ width: 60, padding: "7px 8px", borderRadius: 10, border: `2px solid ${stColor}`, background: "var(--bg3)", color: "var(--white)", fontSize: 15, textAlign: "center", fontWeight: 800, outline: "none" }}
                         onKeyDown={e => e.key === "Enter" && saveUserTime(st.id, inputVal)} />
-                      <button onClick={() => saveUserTime(st.id, inputVal)} style={{ background: catObj.color, border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓</button>
-                      <button onClick={() => { setEditStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "6px 8px", color: "#888", fontSize: 12, cursor: "pointer" }}>✕</button>
+                      <button onClick={() => saveUserTime(st.id, inputVal)} style={{ background: stColor, border: "none", borderRadius: 10, padding: "7px 12px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓</button>
+                      <button onClick={() => { setActiveStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 10, padding: "7px 10px", color: "#888", fontSize: 13, cursor: "pointer" }}>✕</button>
                     </div>
                   ) : (
-                    <div onClick={() => { setEditStation(st.id); setInputVal(st.userSec ? secToMmss(st.userSec) : ""); }} style={{ cursor: "pointer", textAlign: "right" }}>
+                    <button onClick={() => { setActiveStation(st.id); setInputVal(st.userSec ? secToMmss(st.userSec) : ""); }} style={{
+                      background: st.userSec ? `${pColor}12` : "var(--bg3)", border: `1.5px solid ${st.userSec ? pColor+"44" : "transparent"}`,
+                      borderRadius: 12, padding: "8px 14px", cursor: "pointer", textAlign: "right",
+                    }}>
                       {st.userSec ? (
-                        <div>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: perfColor }}>{secToMmss(st.userSec)}</div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: perfColor }}>{st.pct > 0 ? "+" : ""}{st.pct}% vs méd.</div>
-                        </div>
+                        <>
+                          <div style={{ fontSize: 17, fontWeight: 900, color: pColor }}>{secToMmss(st.userSec)}</div>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: pColor }}>{st.pct > 0 ? "+" : ""}{st.pct}%</div>
+                        </>
                       ) : (
-                        <div style={{ fontSize: 11, color: "#aaa", background: "var(--bg3)", padding: "5px 10px", borderRadius: 8 }}>+ Saisir</div>
+                        <div style={{ fontSize: 12, color: "#999", fontWeight: 600 }}>+ Mon temps</div>
                       )}
-                    </div>
+                    </button>
                   )}
                 </div>
-                {/* Mini barre comparaison */}
-                {st.userSec && st.bench.median && (
-                  <div style={{ marginTop: 8, position: "relative", height: 8 }}>
-                    <div style={{ position: "absolute", inset: 0, background: "var(--bg3)", borderRadius: 4 }} />
-                    <div style={{ position: "absolute", top: 0, height: "100%", borderRadius: 4, background: perfColor, opacity: 0.7,
-                      width: `${Math.min(100, (st.bench.median / st.userSec) * 100)}%` }} />
-                    <div style={{ position: "absolute", top: -2, left: `${Math.min(100, (st.bench.p25||st.bench.median) / (st.bench.p75 * 1.15) * 100)}%`, height: 12, width: 1.5, background: catObj.color, opacity: 0.5 }} />
+
+                {/* 3 chiffres clés — toujours visibles */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
+                  {[
+                    { label: "Élite", val: st.bench.elite, color: "#22c55e" },
+                    { label: "Top 25%", val: st.bench.p25, color: "#007AFF" },
+                    { label: "Médiane", val: st.bench.median, color: stColor },
+                    { label: "75e %", val: st.bench.p75, color: "#f59e0b" },
+                  ].map(m => (
+                    <div key={m.label} style={{ background: `${m.color}08`, borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: m.color, letterSpacing: "-0.01em" }}>{secToMmss(m.val)}</div>
+                      <div style={{ fontSize: 8, color: "#999", marginTop: 2, fontWeight: 600 }}>{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Barre percentiles */}
+                <div style={{ position: "relative", height: 38 }}>
+                  <div style={{ position: "absolute", top: 14, left: "2%", right: "2%", height: 6, background: "var(--bg3)", borderRadius: 3 }} />
+                  <div style={{ position: "absolute", top: 14, left: `${toX(st.bench.p25)}%`, width: `${toX(st.bench.p75) - toX(st.bench.p25)}%`, height: 6, background: `${stColor}25`, border: `1px solid ${stColor}30`, borderRadius: 3 }} />
+                  {[
+                    { val: st.bench.elite, color: "#22c55e" },
+                    { val: st.bench.p25, color: "#007AFF55" },
+                    { val: st.bench.median, color: stColor },
+                    { val: st.bench.p75, color: "#f59e0b55" },
+                  ].map((m, mi) => m.val ? (
+                    <div key={mi} style={{ position: "absolute", top: 10, left: `${toX(m.val)}%`, width: 2, height: 14, background: m.color, borderRadius: 1, transform: "translateX(-50%)" }} />
+                  ) : null)}
+                  {userX !== null && (
+                    <div style={{
+                      position: "absolute", top: 7, left: `${userX}%`, transform: "translateX(-50%)",
+                      width: 20, height: 20, borderRadius: "50%", background: pColor,
+                      border: "2.5px solid var(--bg2)", boxShadow: `0 2px 8px ${pColor}50`, zIndex: 3,
+                    }} />
+                  )}
+                </div>
+
+                {/* Conseil tech — si station active */}
+                {isActive && (
+                  <div className="fade-in" style={{ marginTop: 10, padding: "10px 12px", background: `${stColor}08`, borderRadius: 12, borderLeft: `3px solid ${stColor}` }}>
+                    {st.conseils.map((c, ci) => (
+                      <div key={ci} style={{ fontSize: 11, color: "#888", marginBottom: ci < st.conseils.length-1 ? 5 : 0 }}>· {c}</div>
+                    ))}
                   </div>
                 )}
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
+      </div>
 
-          {/* Axes d'amélioration */}
-          {(weakPoints.length > 0 || strongPoints.length > 0) && (
-            <div style={{ marginTop: 16 }}>
-              {weakPoints.length > 0 && (
-                <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 16, padding: "12px 14px", marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>🎯 Axes à améliorer en priorité</div>
-                  {weakPoints.map((s, i) => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < weakPoints.length - 1 ? "1px solid rgba(239,68,68,0.1)" : "none" }}>
-                      <span style={{ fontSize: 16 }}>{s.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
-                        <div style={{ fontSize: 10, color: "#aaa" }}>Ton temps: {secToMmss(s.userSec)} · Médiane: {secToMmss(s.bench.median)}</div>
-                      </div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{s.pct}%</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {strongPoints.length > 0 && (
-                <div style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 16, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>💪 Tes points forts</div>
-                  {strongPoints.map((s, i) => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < strongPoints.length - 1 ? "1px solid rgba(34,197,94,0.1)" : "none" }}>
-                      <span style={{ fontSize: 16 }}>{s.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
-                        <div style={{ fontSize: 10, color: "#aaa" }}>Tu bats la médiane de {s.pct}%</div>
-                      </div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: "#22c55e" }}>+{s.pct}%</div>
-                    </div>
-                  ))}
-                </div>
-              )}
+      {/* ── TABLEAU DE BORD MA PERF ── */}
+      {filledCount >= 3 && (
+        <div className="fade-in" style={{ marginBottom: 16 }}>
+
+          {/* Temps total estimé */}
+          {grandTotalUser > 0 && (
+            <div style={{ background: `linear-gradient(135deg, ${catObj.color}12, ${catObj.color}04)`, border: `1.5px solid ${catObj.color}30`, borderRadius: 20, padding: "20px", marginBottom: 12, textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: catObj.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Ton temps total estimé</div>
+              <div className="bebas" style={{ fontSize: 48, color: "var(--white)", letterSpacing: 1, lineHeight: 1, marginBottom: 4 }}>
+                {Math.floor(grandTotalUser/3600)}h{String(Math.floor((grandTotalUser%3600)/60)).padStart(2,"0")}
+                <span style={{ fontSize: 28, color: "#888" }}>:{String(grandTotalUser%60).padStart(2,"0")}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#888" }}>
+                Stations: {Math.floor(stationScores.reduce((a,s)=>a+(s.userSec||0),0)/60)}min · Running: {Math.floor(runTotalUser/60)}min
+              </div>
+              {/* vs médiane */}
+              {benchTotal.median && (() => {
+                const diff = grandTotalUser - benchTotal.median;
+                const sign = diff <= 0 ? "+" : "";
+                const mColor = diff <= 0 ? "#22c55e" : "#f59e0b";
+                return (
+                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: mColor }}>
+                    {diff <= 0 ? `${Math.abs(Math.floor(diff/60))}min sous la médiane 🔥` : `${Math.floor(diff/60)}min au-dessus de la médiane`}
+                  </div>
+                );
+              })()}
             </div>
           )}
+
+          {/* Radar visuel — mini barres horizontales */}
+          <div style={{ background: "var(--bg2)", borderRadius: 20, padding: "16px", marginBottom: 12, border: "1px solid var(--bg3)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Performance vs médiane {catObj.label}</div>
+
+            {/* Running */}
+            {runUserSec && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, color: "#aaa" }}>🏃 Running</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: perfColor(runPct) }}>{runPct > 0 ? "+" : ""}{runPct}%</span>
+                </div>
+                <div style={{ height: 6, background: "var(--bg3)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(100, 50 + runPct * 2)}%`, background: perfColor(runPct), borderRadius: 3, transition: "width 0.5s ease" }} />
+                </div>
+              </div>
+            )}
+
+            {stationScores.filter(s => s.userSec).map((s, i) => (
+              <div key={s.id} style={{ marginBottom: i < stationScores.filter(x=>x.userSec).length-1 ? 10 : 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, color: "#aaa" }}>{s.icon} {s.nom}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: perfColor(s.pct) }}>{s.pct > 0 ? "+" : ""}{s.pct}%</span>
+                </div>
+                <div style={{ height: 6, background: "var(--bg3)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(100, 50 + (s.pct||0) * 2)}%`, background: perfColor(s.pct), borderRadius: 3, transition: "width 0.5s ease" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Axes — à améliorer + points forts */}
+          <div style={{ display: "grid", gridTemplateColumns: weakPoints.length && strongPoints.length ? "1fr 1fr" : "1fr", gap: 10 }}>
+            {weakPoints.length > 0 && (
+              <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 16, padding: "14px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>🎯 À travailler</div>
+                {weakPoints.slice(0, 3).map(s => (
+                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 14 }}>{s.icon}</span>
+                      <span style={{ fontSize: 11, color: "#ccc" }}>{s.nom.split(" ")[0]}</span>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {strongPoints.length > 0 && (
+              <div style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: 16, padding: "14px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>💪 Points forts</div>
+                {strongPoints.slice(0, 3).map(s => (
+                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 14 }}>{s.icon}</span>
+                      <span style={{ fontSize: 11, color: "#ccc" }}>{s.nom.split(" ")[0]}</span>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#22c55e" }}>+{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Bottom spacer */}
-      <div style={{ height: 40 }} />
+      {/* Invite à compléter ses temps */}
+      {filledCount < 3 && filledCount > 0 && (
+        <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px", textAlign: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>🎯</div>
+          <div style={{ fontSize: 13, color: "#888" }}>Saisis <strong style={{ color: "var(--white)" }}>{9 - filledCount} temps de plus</strong> pour voir ton analyse complète</div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 10 }}>
+            {Array.from({length: 9}).map((_, i) => (
+              <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: i < filledCount ? "var(--yellow)" : "var(--bg3)" }} />
+            ))}
+          </div>
+        </div>
+      )}
+      {filledCount === 0 && (
+        <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.12)", borderRadius: 16, padding: "16px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: "#007AFF", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Ajoute tes temps</div>
+          <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6 }}>Tape "+ Mon temps" sur chaque station pour voir tes axes d'amélioration vs la catégorie <span style={{ color: catObj.color, fontWeight: 700 }}>{catObj.label}</span></div>
+        </div>
+      )}
+
     </div>
   );
 }
