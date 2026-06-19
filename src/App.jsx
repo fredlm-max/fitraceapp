@@ -11233,6 +11233,137 @@ const ALIMENTS_RAPIDES = [
   { nom: "Poulet 100g", emoji: "🍗", kcal: 165, p: 31, g: 0, l: 4 },
 ];
 
+// ── BASE DE DONNÉES NUTRITIONNELLE LOCALE (valeurs pour 100g sauf indication) ──
+const FOOD_DB = [
+  // Fruits
+  { nom: "Orange", emoji: "🍊", kcal: 47, p: 1, g: 12, l: 0, portion: "1 orange (~130g)", mult: 1.3 },
+  { nom: "Banane", emoji: "🍌", kcal: 89, p: 1, g: 23, l: 0, portion: "1 banane (~120g)", mult: 1.2 },
+  { nom: "Pomme", emoji: "🍎", kcal: 52, p: 0, g: 14, l: 0, portion: "1 pomme (~150g)", mult: 1.5 },
+  { nom: "Fraise", emoji: "🍓", kcal: 32, p: 1, g: 8, l: 0, portion: "100g", mult: 1 },
+  { nom: "Fraises", emoji: "🍓", kcal: 32, p: 1, g: 8, l: 0, portion: "100g", mult: 1 },
+  { nom: "Raisin", emoji: "🍇", kcal: 69, p: 1, g: 18, l: 0, portion: "100g", mult: 1 },
+  { nom: "Kiwi", emoji: "🥝", kcal: 61, p: 1, g: 15, l: 1, portion: "1 kiwi (~80g)", mult: 0.8 },
+  { nom: "Mangue", emoji: "🥭", kcal: 60, p: 1, g: 15, l: 0, portion: "100g", mult: 1 },
+  { nom: "Ananas", emoji: "🍍", kcal: 50, p: 1, g: 13, l: 0, portion: "100g", mult: 1 },
+  { nom: "Pêche", emoji: "🍑", kcal: 39, p: 1, g: 10, l: 0, portion: "1 pêche (~150g)", mult: 1.5 },
+  { nom: "Pastèque", emoji: "🍉", kcal: 30, p: 1, g: 8, l: 0, portion: "1 tranche (~200g)", mult: 2 },
+  { nom: "Melon", emoji: "🍈", kcal: 34, p: 1, g: 8, l: 0, portion: "1 tranche (~150g)", mult: 1.5 },
+  { nom: "Poire", emoji: "🍐", kcal: 57, p: 0, g: 15, l: 0, portion: "1 poire (~170g)", mult: 1.7 },
+  { nom: "Cerise", emoji: "🍒", kcal: 63, p: 1, g: 16, l: 0, portion: "100g", mult: 1 },
+  { nom: "Myrtille", emoji: "🫐", kcal: 57, p: 1, g: 14, l: 0, portion: "100g", mult: 1 },
+  { nom: "Myrtilles", emoji: "🫐", kcal: 57, p: 1, g: 14, l: 0, portion: "100g", mult: 1 },
+  { nom: "Avocat", emoji: "🥑", kcal: 160, p: 2, g: 9, l: 15, portion: "½ avocat (~75g)", mult: 0.75 },
+  { nom: "Citron", emoji: "🍋", kcal: 29, p: 1, g: 9, l: 0, portion: "1 citron (~60g)", mult: 0.6 },
+  // Légumes
+  { nom: "Brocoli", emoji: "🥦", kcal: 34, p: 3, g: 7, l: 0, portion: "100g", mult: 1 },
+  { nom: "Épinard", emoji: "🥬", kcal: 23, p: 3, g: 4, l: 0, portion: "100g", mult: 1 },
+  { nom: "Épinards", emoji: "🥬", kcal: 23, p: 3, g: 4, l: 0, portion: "100g", mult: 1 },
+  { nom: "Carotte", emoji: "🥕", kcal: 41, p: 1, g: 10, l: 0, portion: "1 carotte (~80g)", mult: 0.8 },
+  { nom: "Carottes", emoji: "🥕", kcal: 41, p: 1, g: 10, l: 0, portion: "100g", mult: 1 },
+  { nom: "Tomate", emoji: "🍅", kcal: 18, p: 1, g: 4, l: 0, portion: "1 tomate (~120g)", mult: 1.2 },
+  { nom: "Tomates", emoji: "🍅", kcal: 18, p: 1, g: 4, l: 0, portion: "100g", mult: 1 },
+  { nom: "Concombre", emoji: "🥒", kcal: 15, p: 1, g: 4, l: 0, portion: "100g", mult: 1 },
+  { nom: "Poivron", emoji: "🫑", kcal: 31, p: 1, g: 6, l: 0, portion: "1 poivron (~150g)", mult: 1.5 },
+  { nom: "Courgette", emoji: "🥒", kcal: 17, p: 1, g: 3, l: 0, portion: "100g", mult: 1 },
+  { nom: "Patate douce", emoji: "🍠", kcal: 86, p: 2, g: 20, l: 0, portion: "1 patate (~200g)", mult: 2 },
+  { nom: "Pomme de terre", emoji: "🥔", kcal: 77, p: 2, g: 17, l: 0, portion: "1 pomme de terre (~150g)", mult: 1.5 },
+  { nom: "Pommes de terre", emoji: "🥔", kcal: 77, p: 2, g: 17, l: 0, portion: "150g", mult: 1.5 },
+  { nom: "Oignon", emoji: "🧅", kcal: 40, p: 1, g: 9, l: 0, portion: "1 oignon (~80g)", mult: 0.8 },
+  { nom: "Ail", emoji: "🧄", kcal: 149, p: 6, g: 33, l: 1, portion: "1 gousse (~5g)", mult: 0.05 },
+  { nom: "Champignon", emoji: "🍄", kcal: 22, p: 3, g: 3, l: 0, portion: "100g", mult: 1 },
+  { nom: "Champignons", emoji: "🍄", kcal: 22, p: 3, g: 3, l: 0, portion: "100g", mult: 1 },
+  // Protéines animales
+  { nom: "Poulet", emoji: "🍗", kcal: 165, p: 31, g: 0, l: 4, portion: "150g", mult: 1.5 },
+  { nom: "Blanc de poulet", emoji: "🍗", kcal: 110, p: 23, g: 0, l: 2, portion: "150g", mult: 1.5 },
+  { nom: "Bœuf haché", emoji: "🥩", kcal: 250, p: 26, g: 0, l: 17, portion: "150g", mult: 1.5 },
+  { nom: "Steak", emoji: "🥩", kcal: 200, p: 28, g: 0, l: 10, portion: "150g", mult: 1.5 },
+  { nom: "Saumon", emoji: "🐟", kcal: 208, p: 20, g: 0, l: 13, portion: "150g", mult: 1.5 },
+  { nom: "Thon", emoji: "🐟", kcal: 132, p: 28, g: 0, l: 1, portion: "1 boîte ~130g", mult: 1.3 },
+  { nom: "Thon en boîte", emoji: "🐟", kcal: 116, p: 26, g: 0, l: 1, portion: "1 boîte ~130g", mult: 1.3 },
+  { nom: "Crevettes", emoji: "🍤", kcal: 99, p: 24, g: 0, l: 1, portion: "100g", mult: 1 },
+  { nom: "Œuf", emoji: "🥚", kcal: 155, p: 13, g: 1, l: 11, portion: "1 œuf (~60g)", mult: 0.6 },
+  { nom: "Œufs", emoji: "🥚", kcal: 155, p: 13, g: 1, l: 11, portion: "2 œufs", mult: 1.2 },
+  { nom: "Omelette", emoji: "🍳", kcal: 154, p: 11, g: 1, l: 11, portion: "2 œufs + beurre", mult: 1.3 },
+  { nom: "Jambon", emoji: "🥩", kcal: 107, p: 17, g: 2, l: 4, portion: "2 tranches ~60g", mult: 0.6 },
+  { nom: "Dinde", emoji: "🍗", kcal: 135, p: 29, g: 0, l: 2, portion: "150g", mult: 1.5 },
+  // Produits laitiers
+  { nom: "Fromage blanc", emoji: "🫙", kcal: 73, p: 8, g: 4, l: 3, portion: "200g", mult: 2 },
+  { nom: "Yaourt grec", emoji: "🫙", kcal: 97, p: 9, g: 6, l: 5, portion: "200g", mult: 2 },
+  { nom: "Yaourt nature", emoji: "🫙", kcal: 61, p: 4, g: 5, l: 3, portion: "125g", mult: 1.25 },
+  { nom: "Lait entier", emoji: "🥛", kcal: 61, p: 3, g: 5, l: 3, portion: "200ml", mult: 2 },
+  { nom: "Lait écrémé", emoji: "🥛", kcal: 35, p: 3, g: 5, l: 0, portion: "200ml", mult: 2 },
+  { nom: "Lait", emoji: "🥛", kcal: 42, p: 3, g: 5, l: 1, portion: "200ml", mult: 2 },
+  { nom: "Fromage", emoji: "🧀", kcal: 350, p: 23, g: 1, l: 28, portion: "30g", mult: 0.3 },
+  { nom: "Gruyère", emoji: "🧀", kcal: 413, p: 29, g: 0, l: 32, portion: "30g", mult: 0.3 },
+  { nom: "Mozzarella", emoji: "🧀", kcal: 280, p: 17, g: 2, l: 22, portion: "125g", mult: 1.25 },
+  { nom: "Parmesan", emoji: "🧀", kcal: 431, p: 38, g: 0, l: 29, portion: "20g", mult: 0.2 },
+  { nom: "Beurre", emoji: "🧈", kcal: 717, p: 1, g: 0, l: 81, portion: "10g", mult: 0.1 },
+  // Céréales & Féculents
+  { nom: "Riz blanc", emoji: "🍚", kcal: 130, p: 3, g: 28, l: 0, portion: "100g cuit", mult: 1 },
+  { nom: "Riz complet", emoji: "🍚", kcal: 111, p: 3, g: 23, l: 1, portion: "100g cuit", mult: 1 },
+  { nom: "Pâtes", emoji: "🍝", kcal: 131, p: 5, g: 25, l: 1, portion: "100g cuites", mult: 1 },
+  { nom: "Spaghetti", emoji: "🍝", kcal: 131, p: 5, g: 26, l: 1, portion: "100g cuits", mult: 1 },
+  { nom: "Pain blanc", emoji: "🍞", kcal: 265, p: 9, g: 49, l: 3, portion: "1 tranche ~30g", mult: 0.3 },
+  { nom: "Pain complet", emoji: "🍞", kcal: 247, p: 9, g: 41, l: 4, portion: "1 tranche ~30g", mult: 0.3 },
+  { nom: "Pain de mie", emoji: "🍞", kcal: 270, p: 8, g: 48, l: 5, portion: "1 tranche ~25g", mult: 0.25 },
+  { nom: "Flocons d'avoine", emoji: "🌾", kcal: 379, p: 13, g: 68, l: 7, portion: "60g", mult: 0.6 },
+  { nom: "Avoine", emoji: "🌾", kcal: 379, p: 13, g: 68, l: 7, portion: "60g", mult: 0.6 },
+  { nom: "Muesli", emoji: "🌾", kcal: 370, p: 11, g: 60, l: 8, portion: "60g", mult: 0.6 },
+  { nom: "Quinoa", emoji: "🌾", kcal: 120, p: 4, g: 21, l: 2, portion: "100g cuit", mult: 1 },
+  { nom: "Lentilles", emoji: "🫘", kcal: 116, p: 9, g: 20, l: 0, portion: "100g cuites", mult: 1 },
+  { nom: "Pois chiches", emoji: "🫘", kcal: 164, p: 9, g: 27, l: 3, portion: "100g cuits", mult: 1 },
+  { nom: "Haricots rouges", emoji: "🫘", kcal: 127, p: 9, g: 22, l: 1, portion: "100g cuits", mult: 1 },
+  // Protéines sport
+  { nom: "Whey", emoji: "🥤", kcal: 120, p: 24, g: 3, l: 2, portion: "1 shaker (30g poudre)", mult: 0.3 },
+  { nom: "Whey protéine", emoji: "🥤", kcal: 120, p: 24, g: 3, l: 2, portion: "1 shaker (30g)", mult: 0.3 },
+  { nom: "Shaker whey", emoji: "🥤", kcal: 130, p: 25, g: 5, l: 2, portion: "1 shaker", mult: 1 },
+  { nom: "Barre protéinée", emoji: "🍫", kcal: 200, p: 20, g: 20, l: 7, portion: "1 barre ~60g", mult: 1 },
+  { nom: "Caséine", emoji: "🥛", kcal: 105, p: 23, g: 2, l: 1, portion: "30g poudre", mult: 0.3 },
+  { nom: "Skyr", emoji: "🫙", kcal: 63, p: 11, g: 4, l: 0, portion: "150g", mult: 1.5 },
+  { nom: "Cottage cheese", emoji: "🫙", kcal: 98, p: 11, g: 3, l: 4, portion: "150g", mult: 1.5 },
+  // Graisses & Oléagineux
+  { nom: "Amandes", emoji: "🥜", kcal: 579, p: 21, g: 22, l: 50, portion: "30g", mult: 0.3 },
+  { nom: "Noix", emoji: "🥜", kcal: 654, p: 15, g: 14, l: 65, portion: "30g", mult: 0.3 },
+  { nom: "Cacahuètes", emoji: "🥜", kcal: 567, p: 26, g: 16, l: 49, portion: "30g", mult: 0.3 },
+  { nom: "Beurre d'arachide", emoji: "🥜", kcal: 588, p: 25, g: 20, l: 50, portion: "2 càs ~30g", mult: 0.3 },
+  { nom: "Beurre de cacahuète", emoji: "🥜", kcal: 588, p: 25, g: 20, l: 50, portion: "2 càs ~30g", mult: 0.3 },
+  { nom: "Huile d'olive", emoji: "🫒", kcal: 884, p: 0, g: 0, l: 100, portion: "1 càs ~10g", mult: 0.1 },
+  { nom: "Huile", emoji: "🫒", kcal: 884, p: 0, g: 0, l: 100, portion: "1 càs ~10g", mult: 0.1 },
+  // Sucré & Divers
+  { nom: "Miel", emoji: "🍯", kcal: 304, p: 0, g: 82, l: 0, portion: "1 càs ~20g", mult: 0.2 },
+  { nom: "Chocolat noir", emoji: "🍫", kcal: 546, p: 5, g: 60, l: 31, portion: "30g (3 carrés)", mult: 0.3 },
+  { nom: "Chocolat", emoji: "🍫", kcal: 530, p: 8, g: 58, l: 30, portion: "30g", mult: 0.3 },
+  { nom: "Confiture", emoji: "🍓", kcal: 250, p: 1, g: 65, l: 0, portion: "1 càs ~20g", mult: 0.2 },
+  { nom: "Nutella", emoji: "🍫", kcal: 539, p: 6, g: 58, l: 31, portion: "2 càs ~30g", mult: 0.3 },
+  // Boissons
+  { nom: "Café", emoji: "☕", kcal: 2, p: 0, g: 0, l: 0, portion: "1 tasse ~240ml", mult: 2.4 },
+  { nom: "Jus d'orange", emoji: "🍊", kcal: 45, p: 1, g: 10, l: 0, portion: "200ml", mult: 2 },
+  { nom: "Lait d'amande", emoji: "🥛", kcal: 17, p: 1, g: 1, l: 1, portion: "200ml", mult: 2 },
+  // Repas composés / plats
+  { nom: "Pizza", emoji: "🍕", kcal: 266, p: 11, g: 33, l: 10, portion: "1 part ~150g", mult: 1.5 },
+  { nom: "Burger", emoji: "🍔", kcal: 295, p: 17, g: 24, l: 14, portion: "1 burger ~200g", mult: 2 },
+  { nom: "Soupe", emoji: "🍲", kcal: 50, p: 2, g: 10, l: 1, portion: "300ml", mult: 3 },
+  { nom: "Salade verte", emoji: "🥗", kcal: 15, p: 1, g: 2, l: 0, portion: "100g", mult: 1 },
+  { nom: "Salade", emoji: "🥗", kcal: 20, p: 1, g: 4, l: 0, portion: "100g", mult: 1 },
+  { nom: "Smoothie", emoji: "🥤", kcal: 80, p: 2, g: 18, l: 0, portion: "300ml", mult: 3 },
+];
+
+function searchFoodDB(query) {
+  if (!query || query.length < 2) return [];
+  const q = query.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return FOOD_DB.filter(f => {
+    const n = f.nom.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return n.includes(q) || q.includes(n.split(" ")[0]);
+  }).slice(0, 6).map(f => ({
+    ...f,
+    kcal: Math.round(f.kcal * f.mult),
+    p: Math.round(f.p * f.mult),
+    g: Math.round(f.g * f.mult),
+    l: Math.round(f.l * f.mult),
+    nom: f.nom + (f.portion !== f.nom ? ` (${f.portion})` : ""),
+  }));
+}
+
 const OBJECTIFS_NUTRI = (poids) => ({
   kcal: Math.round(poids * 30 + 500),
   p: Math.round(poids * 2.0),
@@ -11682,18 +11813,52 @@ JSON: {
                     </div>
                   </div>
 
-                  {/* Recherche IA */}
+                  {/* Recherche intelligente */}
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Recherche IA</div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>🔍 Recherche</div>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                       <input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => e.key === "Enter" && estimer()}
-                        placeholder="ex: 2 œufs brouillés, tartine beurre..."
-                        style={{ flex: 1, background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px 14px", color: "var(--white)", fontSize: 14, minWidth: 0, outline: "none" }} />
+                        placeholder="Orange, riz, poulet..."
+                        style={{ flex: 1, background: "rgba(0,0,0,0.04)", border: "1.5px solid rgba(0,122,255,0.2)", borderRadius: 12, padding: "12px 14px", color: "var(--white)", fontSize: 14, minWidth: 0, outline: "none" }} />
                       <button onClick={estimer} disabled={!searchText.trim() || loadingMacros} style={{
                         background: searchText.trim() && !loadingMacros ? "var(--yellow)" : "rgba(0,0,0,0.04)", border: "none", borderRadius: 12, padding: "0 18px",
-                        fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: searchText.trim() && !loadingMacros ? "#000" : "#333", cursor: "pointer", flexShrink: 0,
-                      }}>{loadingMacros ? "…" : "GO"}</button>
+                        fontSize: 14, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1, color: searchText.trim() && !loadingMacros ? "#000" : "#333", cursor: "pointer", flexShrink: 0,
+                      }}>{loadingMacros ? "…" : "IA"}</button>
                     </div>
+                    {/* Résultats base locale — instantanés */}
+                    {searchText.length >= 2 && (() => {
+                      const results = searchFoodDB(searchText);
+                      if (results.length === 0) return (
+                        <div style={{ fontSize: 11, color: "#555", textAlign: "center", padding: "8px 0" }}>
+                          Pas dans la base — clique <strong style={{ color: "var(--yellow)" }}>IA</strong> pour estimer
+                        </div>
+                      );
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {results.map((f, i) => (
+                            <button key={i} onClick={() => {
+                              ajouterAliment({ ...f, emoji: f.emoji });
+                            }} style={{
+                              display: "flex", alignItems: "center", gap: 12, background: "rgba(0,122,255,0.05)",
+                              border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: "10px 14px",
+                              cursor: "pointer", textAlign: "left", width: "100%",
+                            }}>
+                              <span style={{ fontSize: 22, flexShrink: 0 }}>{f.emoji}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.nom}</div>
+                                <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                                  <span style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>{f.kcal} kcal</span>
+                                  <span style={{ fontSize: 11, color: "var(--green)" }}>{f.p}g P</span>
+                                  <span style={{ fontSize: 11, color: "#aaa" }}>{f.g}g G</span>
+                                  <span style={{ fontSize: 11, color: "var(--orange)" }}>{f.l}g L</span>
+                                </div>
+                              </div>
+                              <span style={{ fontSize: 18, color: "var(--yellow)", flexShrink: 0 }}>+</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Champs manuels */}
