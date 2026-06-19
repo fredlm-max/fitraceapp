@@ -10281,6 +10281,66 @@ function HyroxBenchmarkTab({ profile }) {
               </div>
             )}
           </div>
+
+          {/* ── 🎯 PLAN D'ATTAQUE — conseils spécifiques par faiblesse ── */}
+          {weakPoints.length > 0 && (() => {
+            const STATION_TIPS = {
+              skierg: { tip: "3×500m SkiErg avec 2min repos · Tractée épaules basses, corps incliné à 45°", gain: "Station typiquement améliorée de 15–25s en 4 semaines" },
+              sled_push: { tip: "3×20m sled push + 10 goblet squats · Charge +5kg par semaine · Rester bas", gain: "Gain moyen de 10–20s avec 4 semaines ciblées" },
+              sled_pull: { tip: "4×15m sled pull + 8 RDL · Focus gainage bas du dos · Prise large", gain: "Amélioration de 10–15s avec renforcement postérieur" },
+              burpee_broad_jump: { tip: "5×10 reps à 80% vitesse race · Explosivité des hanches + réception souple", gain: "Chaque rep sauvée = ~1s sur le total" },
+              rowing: { tip: "4×500m avec 90s repos · Corps incliné avant, tractée ventre · Ratio 2:1 drive/recover", gain: "500m peut se gagner 20–40s avec bonne technique" },
+              farmers_carry: { tip: "4×50m chaque côté · Grip + gainage · Augmente charge +5kg/semaine · Pas courts rapides", gain: "Amélioration de 10–30s selon charge actuelle" },
+              sandbag_lunges: { tip: "4×25m · Sac sur épaule, tronc droit · Sets de 10m + 5s pause · Renforts fessiers", gain: "Gain de 20–40s avec régularité 3x/semaine" },
+              wall_balls: { tip: "4×20 reps · Squat profond sous le ball · Sets de 10 + respiration · Vise le marqueur", gain: "Chaque set de 10 non-stop = ~8s gagnées" },
+            };
+            const top3Weak = weakPoints.slice(0, 3);
+            const totalGainSec = top3Weak.reduce((acc, s) => {
+              const diffSec = s.userSec && s.bench?.median ? s.userSec - s.bench.median : 0;
+              return acc + Math.max(0, diffSec);
+            }, 0);
+            return (
+              <div style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.05) 0%, rgba(0,122,255,0.01) 100%)", border: "1.5px solid rgba(0,122,255,0.15)", borderRadius: 20, padding: "18px", marginTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 0.5 }}>🎯 PLAN D'ATTAQUE</div>
+                    <div style={{ fontSize: 11, color: "#777" }}>Tes priorités d'entraînement cette semaine</div>
+                  </div>
+                  {totalGainSec > 30 && (
+                    <div style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, padding: "6px 12px", textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#22c55e" }}>-{Math.floor(totalGainSec/60)}:{String(totalGainSec%60).padStart(2,"0")}</div>
+                      <div style={{ fontSize: 9, color: "#22c55e", fontWeight: 700 }}>potentiel</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {top3Weak.map((s, idx) => {
+                    const tipData = STATION_TIPS[s.id] || { tip: "Travail spécifique 3x/semaine", gain: "Amélioration progressive" };
+                    const diffSec = s.userSec && s.bench?.median ? s.userSec - s.bench.median : 0;
+                    const priority = idx === 0 ? { color: "#ef4444", badge: "PRIORITÉ 1", bg: "rgba(239,68,68,0.06)" } : idx === 1 ? { color: "#f59e0b", badge: "PRIORITÉ 2", bg: "rgba(245,158,11,0.06)" } : { color: "#007AFF", badge: "PRIORITÉ 3", bg: "rgba(0,122,255,0.06)" };
+                    return (
+                      <div key={s.id} style={{ background: priority.bg, border: `1px solid ${priority.color}25`, borderRadius: 14, padding: "14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <span style={{ fontSize: 20 }}>{s.icon}</span>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
+                              <div style={{ fontSize: 9, color: priority.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{priority.badge}</div>
+                            </div>
+                          </div>
+                          {diffSec > 0 && <div style={{ textAlign: "right" }}><div style={{ fontSize: 14, fontWeight: 900, color: "#ef4444" }}>+{diffSec}s</div><div style={{ fontSize: 9, color: "#777" }}>vs médiane</div></div>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#555", lineHeight: 1.6, marginBottom: 6, padding: "8px 10px", background: "rgba(0,0,0,0.03)", borderRadius: 8 }}>
+                          💪 {tipData.tip}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 600 }}>📈 {tipData.gain}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -10757,6 +10817,7 @@ IMPORTANT: Les champs "exercices" doivent contenir les vraies charges/allures/FC
 function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, setLoadingPlanning, onGoToSeance }) {
   const [selectedJour, setSelectedJour] = useState(null);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [showMacroCycle, setShowMacroCycle] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [expandedExo, setExpandedExo] = useState(null);
   const [joursFaits, setJoursFaits] = useState(() => {
@@ -10880,10 +10941,90 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           )}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowMacroCycle(v => !v)} style={{ background: showMacroCycle ? "rgba(0,122,255,0.12)" : "var(--bg2)", border: showMacroCycle ? "1.5px solid var(--yellow)" : "1px solid var(--bg3)", borderRadius: 10, height: 36, padding: "0 10px", fontSize: 11, color: showMacroCycle ? "var(--yellow)" : "#888", cursor: "pointer", fontWeight: 700 }}>📊 4S</button>
           <button onClick={() => setShowPrefs(true)} style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 10, width: 36, height: 36, fontSize: 16, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⚙️</button>
           <button onClick={() => refreshPlanning(prefs)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 10, width: 36, height: 36, fontSize: 16, color: "var(--yellow)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>↺</button>
         </div>
       </div>
+
+      {/* ── MACRO-CYCLE 4 SEMAINES ── */}
+      {showMacroCycle && (() => {
+        const MACRO_PHASES = [
+          {
+            num: 1, label: "BASE AÉROBIE", icon: "🏗️", color: "#38bdf8",
+            charge: 65,
+            focus: ["70% Zone 2 (cardio facile)", "30% Force légère — technique stations", "Priorité: Running économique + SkiErg"],
+            objectifs: ["Établir base cardiovasculaire solide", "Maîtriser la technique de chaque station", "Adapter le corps au volume HYROX"],
+          },
+          {
+            num: 2, label: "CONSTRUCTION", icon: "📈", color: "#22c55e",
+            charge: 80,
+            focus: ["60% Zone 2 + lactate threshold", "40% Force modérée — charges +10%", "Priorité: Enchaînements Run → Station"],
+            objectifs: ["Augmenter l'endurance musculaire", "Améliorer les transitions Run/Station", "Seuil lactate: tenir 85% FCmax sur 5min"],
+          },
+          {
+            num: 3, label: "INTENSITÉ PEAK", icon: "🔥", color: "#f59e0b",
+            charge: 100,
+            focus: ["40% Zone 2", "40% Force intense — simulation race pace", "20% HIIT + vitesse critique"],
+            objectifs: ["Simulations partielles HYROX (4–6 stations)", "Atteindre les allures de course cibles", "Tester la stratégie de pacing"],
+          },
+          {
+            num: 4, label: "AFFÛTAGE", icon: "✈️", color: "#a855f7",
+            charge: 40,
+            focus: ["70% Récupération active — intensité légère", "20% Activation neuromusculaire courte", "10% Technique fine — mental race"],
+            objectifs: ["Récupérer sans perdre les adaptations", "Activer le système nerveux 2×/semaine", "Visualisation et préparation mentale"],
+          },
+        ];
+        const currentWeek = parseInt(profile.week) || 1;
+        const currentPhaseIdx = currentWeek <= 4 ? 0 : currentWeek <= 8 ? 1 : currentWeek <= 10 ? 2 : 3;
+        return (
+          <div className="fade-in" style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 20, padding: "18px", marginBottom: 14 }}>
+            <div className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 1, marginBottom: 4 }}>MACRO-CYCLE HYROX</div>
+            <div style={{ fontSize: 11, color: "#777", marginBottom: 16 }}>Structure de préparation 12 semaines</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {MACRO_PHASES.map((phase, idx) => {
+                const isActive = idx === currentPhaseIdx;
+                return (
+                  <div key={phase.num} style={{ background: isActive ? `${phase.color}12` : "rgba(0,0,0,0.02)", border: `1.5px solid ${isActive ? phase.color + "40" : "rgba(0,0,0,0.06)"}`, borderRadius: 14, padding: "14px", opacity: isActive ? 1 : 0.7 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isActive ? 12 : 0 }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${phase.color}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{phase.icon}</div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: isActive ? phase.color : "var(--white)" }}>S{phase.num > 1 ? `${(phase.num-1)*3+1}–${phase.num*3}` : "1–3"} — {phase.label}</div>
+                          {isActive && <div style={{ fontSize: 9, color: phase.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>📍 Phase actuelle</div>}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: phase.color }}>{phase.charge}%</div>
+                        <div style={{ fontSize: 9, color: "#777" }}>charge</div>
+                      </div>
+                    </div>
+                    {isActive && (
+                      <>
+                        <div style={{ height: 4, background: "rgba(0,0,0,0.06)", borderRadius: 2, overflow: "hidden", marginBottom: 10 }}>
+                          <div style={{ height: "100%", width: `${phase.charge}%`, background: phase.color, borderRadius: 2 }} />
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+                          {phase.focus.map((f, i) => <div key={i} style={{ fontSize: 11, color: "#555", lineHeight: 1.5 }}>• {f}</div>)}
+                        </div>
+                        <div style={{ borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 10 }}>
+                          <div style={{ fontSize: 9, color: "#999", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Objectifs clés</div>
+                          {phase.objectifs.map((o, i) => (
+                            <div key={i} style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+                              <span style={{ color: phase.color, fontSize: 10, marginTop: 1 }}>✓</span>
+                              <span style={{ fontSize: 11, color: "#555" }}>{o}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
@@ -12850,6 +12991,26 @@ function RaceTab({ profile, onOpenBenchmark }) {
   const [loading, setLoading] = useState(false);
   const [strategyStream, setStrategyStream] = useState("");
   const [showSim, setShowSim] = useState(false);
+  const [showPacer, setShowPacer] = useState(false);
+  const [pacerRunMin, setPacerRunMin] = useState(() => {
+    if (profile.vmaKmh) return String(Math.round(60 / (profile.vmaKmh * 0.75) * 10) / 10).replace(".", ":");
+    return "5:30";
+  });
+  const [pacerStations, setPacerStations] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}");
+      return {
+        skierg: saved.skierg ? String(Math.floor(saved.skierg/60)) + ":" + String(saved.skierg%60).padStart(2,"0") : "5:00",
+        sled_push: saved.sled_push ? String(Math.floor(saved.sled_push/60)) + ":" + String(saved.sled_push%60).padStart(2,"0") : "2:30",
+        sled_pull: saved.sled_pull ? String(Math.floor(saved.sled_pull/60)) + ":" + String(saved.sled_pull%60).padStart(2,"0") : "3:00",
+        burpee_broad_jump: saved.burpee_broad_jump ? String(Math.floor(saved.burpee_broad_jump/60)) + ":" + String(saved.burpee_broad_jump%60).padStart(2,"0") : "4:00",
+        rowing: saved.rowing ? String(Math.floor(saved.rowing/60)) + ":" + String(saved.rowing%60).padStart(2,"0") : "4:30",
+        farmers_carry: saved.farmers_carry ? String(Math.floor(saved.farmers_carry/60)) + ":" + String(saved.farmers_carry%60).padStart(2,"0") : "2:00",
+        sandbag_lunges: saved.sandbag_lunges ? String(Math.floor(saved.sandbag_lunges/60)) + ":" + String(saved.sandbag_lunges%60).padStart(2,"0") : "5:30",
+        wall_balls: saved.wall_balls ? String(Math.floor(saved.wall_balls/60)) + ":" + String(saved.wall_balls%60).padStart(2,"0") : "5:00",
+      };
+    } catch { return { skierg:"5:00", sled_push:"2:30", sled_pull:"3:00", burpee_broad_jump:"4:00", rowing:"4:30", farmers_carry:"2:00", sandbag_lunges:"5:30", wall_balls:"5:00" }; }
+  });
   const days = daysUntil(profile.raceDate);
   const poidsHyrox = getPoidsHyrox(profile);
 
@@ -12957,6 +13118,95 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           <div style={{ fontSize: 14, color: "#555" }}>Aucune date renseignée.<br/>Ajoute ta date de course dans ton profil.</div>
         </div>
       )}
+
+      {/* ── RACE PACING PLANNER ── */}
+      <button onClick={() => setShowPacer(v => !v)} style={{ width: "100%", background: showPacer ? "rgba(57,255,128,0.08)" : "rgba(0,0,0,0.02)", border: showPacer ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.07)", borderRadius: 16, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+        <div style={{ textAlign: "left" }}>
+          <div className="bebas" style={{ fontSize: 20, color: showPacer ? "var(--green)" : "var(--white)", letterSpacing: 1 }}>⏱️ RACE PACING PLANNER</div>
+          <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>Calcule ton temps de finish objectif</div>
+        </div>
+        <div style={{ fontSize: 18, color: showPacer ? "var(--green)" : "#555" }}>{showPacer ? "▲" : "▼"}</div>
+      </button>
+      {showPacer && (() => {
+        const parseMin = (s) => { const p = String(s).split(":"); return p.length === 2 ? parseInt(p[0]||0)*60+parseInt(p[1]||0) : parseInt(s||0)*60; };
+        const runSec = parseMin(pacerRunMin);
+        const stSecs = {
+          skierg: parseMin(pacerStations.skierg),
+          sled_push: parseMin(pacerStations.sled_push),
+          sled_pull: parseMin(pacerStations.sled_pull),
+          burpee_broad_jump: parseMin(pacerStations.burpee_broad_jump),
+          rowing: parseMin(pacerStations.rowing),
+          farmers_carry: parseMin(pacerStations.farmers_carry),
+          sandbag_lunges: parseMin(pacerStations.sandbag_lunges),
+          wall_balls: parseMin(pacerStations.wall_balls),
+        };
+        const totalRunSec = runSec * 8;
+        const totalStSec = Object.values(stSecs).reduce((a,b)=>a+b,0);
+        const transitionSec = 8 * 30; // ~30s par transition
+        const totalSec = totalRunSec + totalStSec + transitionSec;
+        const fmtSec = (s) => { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const ss = s%60; return `${h}h${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`; };
+        const PACER_STATIONS = [
+          { id: "skierg", label: "SkiErg 1000m", icon: "⛷️" },
+          { id: "sled_push", label: "Sled Push 50m", icon: "🛷" },
+          { id: "sled_pull", label: "Sled Pull 50m", icon: "🔗" },
+          { id: "burpee_broad_jump", label: "Burpee Broad Jump", icon: "🤸" },
+          { id: "rowing", label: "Rowing 1000m", icon: "🚣" },
+          { id: "farmers_carry", label: "Farmers Carry 200m", icon: "🧳" },
+          { id: "sandbag_lunges", label: "Sandbag Lunges 100m", icon: "🎒" },
+          { id: "wall_balls", label: "Wall Balls 100 reps", icon: "🏀" },
+        ];
+        const goalSec = profile.goalTargetLevel === 1 ? 5400 : profile.goalTargetLevel === 2 ? 4800 : profile.goalTargetLevel === 3 ? 4200 : 6000;
+        const diffSec = totalSec - goalSec;
+        return (
+          <div className="fade-in" style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "18px", marginBottom: 14 }}>
+            {/* Résultat total */}
+            <div style={{ background: "linear-gradient(135deg, rgba(57,255,128,0.08) 0%, rgba(57,255,128,0.02) 100%)", border: "1.5px solid rgba(57,255,128,0.2)", borderRadius: 16, padding: "16px", marginBottom: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Temps de finish estimé</div>
+              <div className="bebas" style={{ fontSize: 48, color: "var(--green)", letterSpacing: 1, lineHeight: 1, marginBottom: 4 }}>
+                {Math.floor(totalSec/3600)}h{String(Math.floor((totalSec%3600)/60)).padStart(2,"0")}
+                <span style={{ fontSize: 28, color: "#22c55e99" }}>:{String(totalSec%60).padStart(2,"0")}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#777", marginBottom: 8 }}>
+                Running: {Math.floor(totalRunSec/60)}min · Stations: {Math.floor(totalStSec/60)}min · Transitions: {Math.floor(transitionSec/60)}min
+              </div>
+              {goalSec > 0 && (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: diffSec <= 0 ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", border: `1px solid ${diffSec <= 0 ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 10, padding: "6px 12px" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: diffSec <= 0 ? "#22c55e" : "#ef4444" }}>
+                    {diffSec <= 0 ? `🎯 ${Math.abs(Math.floor(diffSec/60))}min sous l'objectif !` : `⚠️ +${Math.floor(diffSec/60)}min vs objectif`}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Input allure run */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: "#888", fontWeight: 700, marginBottom: 8 }}>🏃 Allure running (min:sec / km)</div>
+              <input
+                value={pacerRunMin}
+                onChange={e => setPacerRunMin(e.target.value)}
+                placeholder="5:30"
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(57,255,128,0.3)", background: "rgba(57,255,128,0.04)", fontSize: 16, fontWeight: 700, color: "var(--green)", outline: "none", boxSizing: "border-box" }}
+              />
+              {runSec > 0 && <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>→ 8km running = {Math.floor(totalRunSec/60)}min {totalRunSec%60}s</div>}
+            </div>
+            {/* Inputs stations */}
+            <div style={{ fontSize: 11, color: "#888", fontWeight: 700, marginBottom: 10 }}>⚙️ Temps cibles par station (min:sec)</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {PACER_STATIONS.map(st => (
+                <div key={st.id}>
+                  <div style={{ fontSize: 10, color: "#777", marginBottom: 4 }}>{st.icon} {st.label.split(" ").slice(0,2).join(" ")}</div>
+                  <input
+                    value={pacerStations[st.id] || ""}
+                    onChange={e => setPacerStations(prev => ({ ...prev, [st.id]: e.target.value }))}
+                    placeholder="5:00"
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", background: "var(--bg2)", fontSize: 14, fontWeight: 700, color: "var(--white)", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, fontSize: 10, color: "#666", textAlign: "center" }}>Les temps sont pré-remplis depuis tes benchmarks · modifie pour simuler</div>
+          </div>
+        );
+      })()}
 
       {/* ── CTA STRATÉGIE ── */}
       {!strategy && !loading && (
