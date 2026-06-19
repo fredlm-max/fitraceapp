@@ -3574,6 +3574,170 @@ ADAPTATION À APPLIQUER OBLIGATOIREMENT AUJOURD'HUI: ${allAdaptations.slice(-1)[
     const sandbagKg = profile.sexe === "F" ? 10 : 20;
     // ─────────────────────────────────────────────────────────────────
 
+    // ═══ BASE DE CONNAISSANCES HYROX ════════════════════════════════════
+    // Sélectionner les données pertinentes selon le type de séance
+    const hyroxDB = {
+      stations: {
+        skiErg: {
+          officiel: "1000m",
+          technique: "Tirer avec les bras ET le gainage — ne pas arrondir le dos. Rythme : 1 coup = expiration forcée. Cadence cible : 22-26 coups/min. Corps légèrement penché avant (10°). Pousser avec les épaules, pas seulement les bras.",
+          erreurs: "Dos voûté, regarder le sol, coudes trop hauts, apnée",
+          progression: "Débutant: 4x250m récup 90s | Intermédiaire: 3x400m récup 2min | Avancé: 2x500m récup 90s",
+          temps_cibles: { debutant: "4:30-5:00", intermediaire: "3:30-4:00", avance: "3:00-3:20", pro: "2:45-3:00" },
+        },
+        sledPush: {
+          officiel: { H: "152kg+traineau 50m aller-retour", F: "102kg+traineau 50m aller-retour" },
+          technique: "Position sprint : corps à 45°, appui sur talons-milieu pied, pousser avec fessiers+quadriceps+mollets. Garder la tête dans l'axe du corps. Petits pas rapides (fréquence > amplitude). Respiration : expire à chaque poussée.",
+          erreurs: "Corps trop vertical (perd la force), grandes enjambées (lent), regarder en l'air",
+          progression: "Débutant: 4x10m @ 50% | Intermédiaire: 4x20m @ 65% | Avancé: 3x40m @ 75% | Simulation: 2x50m @ race pace",
+          muscles: "Quadriceps, fessiers, mollets, épaules, gainage",
+        },
+        sledPull: {
+          officiel: { H: "103kg 50m aller-retour", F: "78kg 50m aller-retour" },
+          technique: "Corde entre les jambes ou latérale selon disposition. Fléchir les genoux (squat dynamique), tirer avec le dos + bras fléchis. Faire des pas en arrière courts et rapides. Garde les bras en tension constante.",
+          erreurs: "Bras tendus (tire avec les bras seuls), dos arrondi, grande amplitude de pas",
+          progression: "Débutant: 4x15m @ 55% | Intermédiaire: 3x25m @ 70% | Avancé: 3x40m @ 80%",
+          muscles: "Ischio-jambiers, fessiers, dos (rhomboïdes, trapèzes), biceps",
+        },
+        rowingErg: {
+          officiel: "1000m",
+          technique: "Séquence OBLIGATOIRE : jambes → dos → bras (traction). Retour : bras → dos → jambes. Drive explosif avec les jambes en premier. Ratio 1:2 (drive:récupération). Cadence : 22-26 spm. Damper setting : 4-6.",
+          erreurs: "Tirer avec les bras avant les jambes (erreur #1), dos arrondi, haussement d'épaules",
+          progression: "4x250m récup 90s → 3x400m → 2x500m → 1000m continu",
+          temps_cibles: { debutant: "4:00-4:30", intermediaire: "3:20-3:50", avance: "3:00-3:20", pro: "2:45-3:00" },
+          split_cible: "Split moyen = temps objectif / 4 (ex: objectif 3:20 → split 50s/250m)",
+        },
+        farmers: {
+          officiel: { H: "2×32kg 200m (aller-retour 2×100m)", F: "2×24kg 200m" },
+          technique: "Épaules en arrière et en bas, ne pas laisser les KB descendre. Pas normaux (pas de course). Grip neutre, avant-bras serrés contre les cuisses. Respiration haute — ne pas bloquer.",
+          erreurs: "Épaules qui s'affaissent, inclinaison latérale du tronc, relâchement du grip",
+          progression: "Débutant: 3x40m KB légères | Intermédiaire: 3x80m @ 75% | Avancé: 2x150m race charge | Simulation: 200m complet",
+          grip_training: "Dead hangs 3x30s, KB carries progressifs, towel pull-ups",
+        },
+        wallBalls: {
+          officiel: { H: "6kg balle à 10m hauteur 75 reps", F: "4kg balle à 9m hauteur 75 reps" },
+          technique: "Squat profond (cuisse parallèle ou en dessous), explosion du bas (triple extension hanches+genoux+chevilles), lancer au niveau du front. Attraper à hauteur de visage, absorber avec les jambes pour enchaîner. Rythme continu > explosif-pause.",
+          erreurs: "Squat trop haut (pas assez de profondeur), lancer avec les bras seuls, regarder la balle (regarder la cible)",
+          strategie_reps: "Débutant: 15-10-10-10-10-10-10 | Intermédiaire: 25-25-25 | Avancé: 50-25 | Pro: 75 non-stop",
+          muscles: "Quadriceps (75%), épaules, gainage",
+        },
+        sandbagLunges: {
+          officiel: { H: "20kg 100m", F: "10kg 100m" },
+          technique: "Sac sur les épaules (trapèzes, pas le cou). Fente avant : genou arrière à 2cm du sol. Pas de lunge longs et réguliers. Tronc droit, regard devant. Alterner jambes naturellement.",
+          erreurs: "Genou avant qui dépasse les orteils, pencher en avant, pas trop courts",
+          progression: "Débutant: 3x20m | Intermédiaire: 3x40m | Avancé: 2x80m | Simulation: 100m continu",
+          muscles: "Quadriceps, fessiers, core stabilisateur",
+        },
+        burpeeBroadJump: {
+          officiel: "80m",
+          technique: "Burpee complet (poitrine au sol) → saut en longueur bras en avant. Atterrir pieds joints, fléchir les genoux pour absorber. Enchaîner immédiatement. Rythme constant > sprints entrecoupés de pauses.",
+          erreurs: "Demi-burpee (poitrine pas au sol → pénalité), saut sans élan, pause entre chaque rep",
+          strategie: "Garder rythme constant du début à la fin. Distance par saut : 1.2-1.5m en moyenne → 55-65 sauts pour 80m",
+          progression: "Débutant: 4x10m | Intermédiaire: 3x20m | Avancé: 2x40m | Simulation: 80m",
+          muscles: "Full body — poitrine, épaules, core, quadriceps, mollets",
+        },
+      },
+
+      running: {
+        zones: {
+          Z1: { pct_vma: "50-60%", ressenti: "Très facile, conversation aisée", role: "Récupération active post-effort intense" },
+          Z2: { pct_vma: "60-70%", ressenti: "Facile, on peut parler en phrases complètes", role: "Base aérobie — 70-80% du volume total", adaptation: "Mitochondries, capillarisation, économie de course" },
+          Z3: { pct_vma: "75-83%", ressenti: "Modéré, phrases courtes", role: "Seuil lactique, tempo", adaptation: "Tolérance lactique, seuil anaérobie" },
+          Z4: { pct_vma: "88-95%", ressenti: "Difficile, quelques mots seulement", role: "VO2max, intervalles", adaptation: "VO2max, puissance aérobie maximale" },
+        },
+        protocoles: {
+          sortie_longue: "1h30-2h Z2 pur — LA séance la plus importante de la semaine. Jamais plus vite. Construit le moteur.",
+          tempo: "3-4x8-10min seuil (Z3) récup 3min marche active — développe le seuil lactique",
+          intervalles_1km: "4-6x1km @ Z4 récup 2-3min marche/trot — améliore VO2max",
+          intervalles_courts: "8-10x400m @ Z4+ récup 90s — vitesse et économie de course",
+          compromised_run: "Run 1km Z3 → station → run 1km Z3 → station → répéter. LA compétence HYROX.",
+          fartlek: "30min avec 6x2min d'accélérations Z4 naturelles en terrain varié",
+        },
+        economieCourse: {
+          cues: "Cadence 170-180 pas/min, appui milieu-avant pied, bras fléchis à 90° (pas de balancement latéral), regard devant (pas au sol), épaules détendues",
+          erreurs: "Surstride (attaque talon trop en avant), trop lent (< 160 pas/min), épaules crispées",
+          drills: "Talons-fesses, genoux hauts, jambes tendues, skipping, marche sur pointes",
+        },
+      },
+
+      force: {
+        squatVariantes: {
+          goblet: { utilite: "Technique squat + gainage anterior — idéal avant les Wall Balls", charge_guide: "30-40% 1RM squat", cues: "Coudes sous la barre/KB, genoux écartés (45°), profondeur cuisse parallèle minimum" },
+          frontSquat: { utilite: "Quadriceps + gainage — transfert direct Wall Balls", charge_guide: "40-55% 1RM squat", cues: "Coudes hauts (parallèle sol), dos droit, genoux dans l'axe des pieds" },
+          bulgarianSplit: { utilite: "Équilibre + force unijambiste — jambes pour Lunges", charge_guide: "30-40% 1RM squat par côté", cues: "Pied avant à 60cm du banc, descendre verticalement, genou arrière 2cm du sol" },
+          boxSquat: { utilite: "Apprendre la profondeur + puissance concentrique — Sled Push", charge_guide: "65-75% 1RM", cues: "Asseoir sur la boîte (ne pas rebondir), exploser vers le haut" },
+        },
+        hinge: {
+          romanianDeadlift: { utilite: "Ischio-jambiers + fessiers — prévention blessures, Sled Pull", charge_guide: "55-65% 1RM deadlift", cues: "Hanches en arrière, dos plat, barre près du corps, sentir l'étirement des ischio" },
+          trapBarDeadlift: { utilite: "Développement de puissance générale sans stress spinal", charge_guide: "80-90% 1RM deadlift classique", cues: "Hanches basses, dos plat, pousser le sol (ne pas tirer la barre)" },
+          kettlebellSwing: { utilite: "Puissance hanches + endurance — transfert direct Sled Push/Pull", charge_guide: "16-32kg selon niveau", cues: "Hanches en avant explosive, bras passifs (ne pas lever avec les bras), planche en haut" },
+        },
+        upperBody: {
+          pullUps: { utilite: "Force grip + dos — Rope Climb, Sled Pull, SkiErg", cues: "Depression scapulaire d'abord, tirer coudes vers hanches" },
+          pressDebout: { utilite: "Force épaules — SkiErg, Wall Balls", charge_guide: "50-60% 1RM", cues: "Gainage serré, pas de cambrure, coudes devant" },
+          rowHalter: { utilite: "Équilibre push/pull, santé épaules", charge_guide: "50-60% 1RM deadlift", cues: "Dos parallèle sol, coudes dans l'axe du corps" },
+        },
+        conditioning: {
+          circuitHyrox: "Station 1 → run 200m → station 2 → run 200m → répéter. Volume progressif sur 8 semaines.",
+          emom: "Every Minute On the Minute : x reps d'un exercice, le reste de la minute = récup",
+          tabata: "20s effort max / 10s repos × 8 rounds (4min) — pour la puissance aérobie",
+          amrap: "As Many Rounds As Possible en X minutes — simule la fatigue de course",
+        },
+      },
+
+      periodisation: {
+        semaine_type: {
+          lundi: "Force + stations (musculation spécifique HYROX)",
+          mardi: "Running qualité (intervalles ou tempo)",
+          mercredi: "Zone 2 facile (récupération active)",
+          jeudi: "Force + stations (volume différent du lundi)",
+          vendredi: "Hybride HYROX (compromised running)",
+          samedi: "Sortie longue Zone 2 (1h-1h30)",
+          dimanche: "Repos actif ou mobilité",
+        },
+        phases: {
+          base: { duree: "S1-S3", focus: "Volume aérobie + technique stations. 80% Z2, charges légères, apprendre les mouvements." },
+          developpement: { duree: "S4-S6", focus: "Intensité progressive. Intervalles, seuil, charges en hausse. Compromised running." },
+          pic: { duree: "S7", focus: "Simulation complète. Race pace. Volume maximal." },
+          affutage: { duree: "S8", focus: "-40% volume, garder intensité. Récup. Confiance." },
+        },
+        decharge: {
+          frequence: "Toutes les 4 semaines",
+          application: "Volume -40%, intensité maintenue, durée séances -20%. NE PAS réduire l'intensité.",
+          signaux_necessaires: "3 séances consécutives 'Dur', HRV chroniquement bas, qualité de sommeil dégradée",
+        },
+        surcompensation: "Appliquer la surcharge puis laisser 48-72h de récupération pour adaptation. La progression vient PENDANT la récup, pas pendant l'effort.",
+      },
+
+      nutrition: {
+        avant_seance: {
+          moins2h: "Repas complet : 60-80g glucides complexes + 20-30g protéines + légumes. Ex: riz + poulet + brocoli",
+          moins1h: "Collation légère : banane + 20g protéines. Éviter les graisses et fibres.",
+          moins30min: "1 gel ou 30g de dattes + eau. Optionnel selon tolérance.",
+        },
+        pendant: {
+          courte: "< 60min : eau suffit (500-750ml/h)",
+          longue: "> 60min : 30-60g glucides/h (gels, boisson isotonique), eau",
+          sels: "Si > 90min ou forte chaleur : électrolytes (sodium 500-700mg/h)",
+        },
+        apres: {
+          fenetre: "Dans les 30-45min après l'effort",
+          protocole: "25-35g protéines + 50-80g glucides rapides. Ex: shake whey + banane ou riz blanc + thon",
+          hydratation: "1.5L d'eau pour chaque kg perdu à l'entraînement",
+        },
+      },
+    };
+
+    // Extraire le bon bloc selon le type de séance
+    const dbByType = {
+      running_zone2: `\n\nBASE DE CONNAISSANCES RUNNING:\n${JSON.stringify({zones: hyroxDB.running.zones, protocoles: hyroxDB.running.protocoles, economieCourse: hyroxDB.running.economieCourse, periodisation: hyroxDB.periodisation.phases}, null, 1)}`,
+      running_qualite: `\n\nBASE DE CONNAISSANCES RUNNING QUALITÉ:\n${JSON.stringify({zones: hyroxDB.running.zones, protocoles: hyroxDB.running.protocoles, economieCourse: hyroxDB.running.economieCourse}, null, 1)}`,
+      force_stations: `\n\nBASE DE CONNAISSANCES FORCE & STATIONS:\n${JSON.stringify({stations: hyroxDB.stations, force: hyroxDB.force}, null, 1)}`,
+      hybride_compromis: `\n\nBASE DE CONNAISSANCES HYBRIDE HYROX:\n${JSON.stringify({stations: {skiErg: hyroxDB.stations.skiErg, rowingErg: hyroxDB.stations.rowingErg, wallBalls: hyroxDB.stations.wallBalls, burpeeBroadJump: hyroxDB.stations.burpeeBroadJump}, running: hyroxDB.running, force: {conditioning: hyroxDB.force.conditioning}}, null, 1)}`,
+    };
+    const knowledgeBlock = dbByType[sessionType] || `\n\nBASE DE CONNAISSANCES HYROX:\n${JSON.stringify({stations: hyroxDB.stations, running: hyroxDB.running.zones}, null, 1)}`;
+    // ════════════════════════════════════════════════════════════════════
+
     const expertSystemPrompt = `Tu es Marc, coach HYROX certifié niveau Pro avec 10 ans d'expérience. Tu as préparé des centaines d'athlètes HYROX du débutant au Pro. Ta méthode est scientifique, précise et individualisée.
 
 MÉTHODOLOGIE QUE TU APPLIQUES TOUJOURS:
@@ -3583,6 +3747,7 @@ MÉTHODOLOGIE QUE TU APPLIQUES TOUJOURS:
 4. ADAPTATION TEMPS RÉEL: HRV, sommeil, fatigue modifient l'intensité AVANT de générer
 5. COMPROMISED RUNNING: entraîner à courir avec les jambes fatiguées = compétence #1 HYROX
 6. PROGRESSION LOGIQUE: chaque séance prépare la suivante
+7. TECHNIQUE AVANT CHARGE: utilise les cues techniques de la base de données pour les cle_technique
 
 ZONES RUNNING (à utiliser avec allures calculées, pas des RPE vagues):
 - Zone 1 (<60% VMA): récupération active — uniquement entre blocs très intenses
@@ -3603,6 +3768,7 @@ STRUCTURE OBLIGATOIRE DE CHAQUE SÉANCE:
 - Échauffement: 10-12min spécifique à la séance (running progressif + mobilité ciblée + exercices d'activation)
 - Corps: 35-50min selon temps disponible — DENSE, pas de temps perdu
 - Retour au calme: 5-8min (étirements ciblés selon muscles sollicités)
+${knowledgeBlock}
 
 Réponds UNIQUEMENT avec le JSON demandé — aucun texte avant ou après, aucun backtick.`;
 
@@ -3640,7 +3806,10 @@ ${adaptationContext}
 ${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
 Temps disponible: ${dailyData.temps} minutes
 
-RETOURNE UNIQUEMENT CE JSON (5-7 exercices, charges précises en chiffres, aucune approximation):
+BASE NUTRITION À UTILISER:
+Avant (<2h): repas glucides complexes + protéines | Avant (<1h): banane + protéines légères | Pendant (>60min): 30-60g glucides/h | Après (dans 30min): 25-35g protéines + glucides rapides
+
+RETOURNE UNIQUEMENT CE JSON (5-8 exercices, charges précises en chiffres, cle_technique issue de la base de connaissances, aucune approximation):
 {"titre":"","type":"${sessionType}","duree":${dailyData.temps},"objectif":"","explication":"","echauffement":"","exercices":[{"nom":"","series":"","reps":"","charge":"","repos":"","rpe_cible":"","tempo":"","cle_technique":"","note":""}],"retourCalme":"","points_attention":"","nutrition":{"avant":"","pendant":"","apres":""},"charge_seance":"","metrique":""}
 
 RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m", charge=précis ex "82kg" ou "2x32kg" ou "allure ${paceZ2||"?"}/km", repos=précis ex "90s" ou "2min30", rpe_cible=ex "7/10", tempo=optionnel ex "3-1-2-0", cle_technique=1 conseil technique clé en 1 phrase courte, charge_seance=ex "Volume modéré — ~3400kg déplacés"`;
@@ -3649,7 +3818,7 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
     const raw = await callClaudeStream(
       expertSystemPrompt,
       expertUserPrompt,
-      1800,
+      2200,
       silent ? undefined : (chunk) => {
         const titreMatch = chunk.match(/"titre"\s*:\s*"([^"]{3,})"/);
         if (titreMatch) setSessionStreamText(`📋 ${titreMatch[1]}...`);
