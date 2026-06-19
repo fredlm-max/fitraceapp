@@ -330,7 +330,7 @@ function calcFitnessScore(profile) {
   let squat1RM = parseFloat(profile.squat1RM_final) || 0;
   // Extraire les charges réelles des feedbacks (exercicesLog)
   sessions.forEach(s => {
-    (s.exercicesLog || []).forEach(ex => {
+    (s.exercicesLog || []).filter(ex => ex && ex.nom).forEach(ex => {
       const nom = (ex.nom || "").toLowerCase();
       if ((nom.includes("squat") || nom.includes("back squat")) && ex.charge) {
         const charge = parseFloat(ex.charge);
@@ -6052,7 +6052,7 @@ JSON:
                   {/* Mini exercice chips */}
                   {(session.exercices || []).length > 0 && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-                      {(session.exercices || []).slice(0, 4).map((ex, ei) => (
+                      {(session.exercices || []).filter(ex => ex?.nom).slice(0, 4).map((ex, ei) => (
                         <div key={ei} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#666", whiteSpace: "nowrap" }}>
                           {ex.nom?.length > 18 ? ex.nom.slice(0, 18) + "…" : ex.nom}
                           {ex.series && ex.reps ? <span style={{ color: c0.color, marginLeft: 4 }}>{ex.series}×{ex.reps}</span> : null}
@@ -6196,7 +6196,7 @@ JSON:
 
                 {/* Programme */}
                 <div style={{ marginBottom: 10 }}>
-                  {(session.exercices || []).map((ex, i) => {
+                  {(session.exercices || []).filter(ex => ex && ex.nom).map((ex, i) => {
                     const done = checkedExercices[i];
                     const typeConf2 = {
                       running_zone2: "var(--green)", force_stations: "var(--yellow)",
@@ -6487,7 +6487,7 @@ JSON:
                       Charges & performances (complète ou corrige)
                     </label>
                     <div style={{ fontSize: 11, color: "#777", marginBottom: 6 }}>
-                      {(session?.exercices || []).slice(0,3).map(ex => ex.nom).join(" · ")}…
+                      {(session?.exercices || []).filter(ex => ex?.nom).slice(0,3).map(ex => ex.nom).join(" · ")}…
                     </div>
                     <textarea
                       value={feedbackData.charges}
@@ -6609,7 +6609,7 @@ JSON:
                       <div style={{ fontSize: 11, color: "#aaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Détail exercice par exercice</div>
                       <div style={{ fontSize: 11, color: "#777", marginBottom: 10 }}>Remplis ce que tu as réellement fait — laisse vide si tu n'as pas fait l'exercice</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {(session.exercices || []).map((ex, i) => {
+                        {(session.exercices || []).filter(ex => ex?.nom).map((ex, i) => {
                           const log = feedbackData.exercicesLog[i] || { nom: ex.nom, charge: "", reps: "", sets: "", ressenti: "bien" };
                           const updateLog = (field, val) => {
                             const newLog = [...(feedbackData.exercicesLog || [])];
@@ -6784,7 +6784,7 @@ JSON:
                   <Card style={{ border: "1.5px solid rgba(232,255,71,0.3)", marginBottom: 12 }}>
                     <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 4 }}>⚡ PROCHAINE SÉANCE PRÊTE</div>
                     <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>{feedback.prochaine_seance.titre}</div>
-                    {(feedback.prochaine_seance.exercices || []).map((ex, i) => (
+                    {(feedback.prochaine_seance.exercices || []).filter(ex => ex?.nom).map((ex, i) => (
                       <div key={i} style={{ background: "var(--bg3)", borderRadius: 8, padding: "8px 12px", marginBottom: 6 }}>
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{ex.nom}</div>
                         <div style={{ color: "var(--yellow)", fontSize: 13, marginTop: 2 }}>{ex.detail}</div>
@@ -7715,7 +7715,7 @@ JSON:
                                 {(s.exercices||[]).length > 0 && (
                                   <div style={{ marginBottom: 8 }}>
                                     <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Exercices ({s.exercices.length})</div>
-                                    {s.exercices.slice(0,6).map((ex, ei) => (
+                                    {(s.exercices || []).filter(ex => ex?.nom || typeof ex === "string").slice(0,6).map((ex, ei) => (
                                       <div key={ei} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
                                         <div style={{ width: 5, height: 5, borderRadius: "50%", background: conf.color, flexShrink: 0 }} />
                                         <div style={{ fontSize: 12, color: "#aaa", flex: 1 }}>{typeof ex === "string" ? ex : ex.label || ex.nom || JSON.stringify(ex)}</div>
