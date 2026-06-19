@@ -953,7 +953,7 @@ const XP_REWARDS = {
   checkin_done:    { xp: 20,  label: "+20 XP",  icon: "✅", msg: "Check-in matinal !" },
   nutrition_log:   { xp: 15,  label: "+15 XP",  icon: "🥗", msg: "Nutrition trackée !" },
   hydration_full:  { xp: 25,  label: "+25 XP",  icon: "💧", msg: "Hydratation complète !" },
-  hrv_logged:      { xp: 10,  label: "+10 XP",  icon: "💓", msg: "HRV enregistré !" },
+  hrv_logged:      { xp: 10,  label: "+10 XP",  icon: "💓", msg: "VFC enregistrée !" },
   weight_logged:   { xp: 10,  label: "+10 XP",  icon: "⚖️", msg: "Poids enregistré !" },
   benchmark_set:   { xp: 50,  label: "+50 XP",  icon: "🏅", msg: "Nouveau benchmark !" },
 };
@@ -993,7 +993,7 @@ const BADGES = [
   { id: "nutrition_pro",  icon: "🥗", name: "Nutrition consciente", desc: "5 jours de journal nutritionnel rempli",     check: p => (p.nutriDays||0) >= 5 },
   { id: "early_bird",     icon: "🌅", name: "Lève-tôt",            desc: "Check-in avant 7h du matin",                  check: p => (p.earlyBird||false) },
   { id: "iron_will",      icon: "💪", name: "Volonté de fer",       desc: "Séance réalisée malgré RPE déclaré 8+",       check: p => (p.sessions||[]).some(s => s.difficulte >= 8) },
-  { id: "data_nerd",      icon: "📊", name: "Data addict",          desc: "HRV + poids + hydratation logués le même jour", check: p => (p.dataNerd||false) },
+  { id: "data_nerd",      icon: "📊", name: "Data addict",          desc: "VFC + poids + hydratation logués le même jour", check: p => (p.dataNerd||false) },
   { id: "podium",         icon: "🏆", name: "Podium HYROX",         desc: "Résultat de course enregistré",               check: p => (p.raceResults||[]).length >= 1 },
   { id: "ten_sessions",   icon: "⚡", name: "10 séances",           desc: "10 séances complètes dans l'app",             check: p => (p.sessions||[]).length >= 10 },
   { id: "level5",         icon: "👑", name: "Elite",                desc: "Atteindre le niveau Elite (1800 XP)",         check: p => calcTotalXP(p) >= 1800 },
@@ -2942,7 +2942,7 @@ function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, ha
               style={{ width: "100%", background: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
           </div>
           <div>
-            <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>💓 HRV (ms)</div>
+            <div style={{ fontSize: 11, color: "#555", fontWeight: 600, marginBottom: 6 }}>💓 VFC (ms)</div>
             <input type="number" min="20" max="120" step="1" value={ql.hrv} onChange={e => setQl(q => ({ ...q, hrv: e.target.value }))}
               placeholder="Ex: 65"
               style={{ width: "100%", background: "rgba(0,0,0,0.05)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
@@ -3622,8 +3622,8 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
     // Calcul adaptation intensité basée sur HRV + fatigue + sommeil
     let intensityModifier = "NORMALE";
     let intensityNote = "";
-    if (hrv !== null && hrv < 40) { intensityModifier = "RÉDUITE -20%"; intensityNote = `HRV très bas (${hrv}) → récupération insuffisante`; }
-    else if (hrv !== null && hrv > 70) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = `HRV élevé (${hrv}) → système nerveux bien récupéré`; }
+    if (hrv !== null && hrv < 40) { intensityModifier = "RÉDUITE -20%"; intensityNote = `VFC très basse (${hrv}) → récupération insuffisante`; }
+    else if (hrv !== null && hrv > 70) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = `VFC élevée (${hrv}) → système nerveux bien récupéré`; }
     else if (fatigueVal <= 1) { intensityModifier = "RÉDUITE -30%"; intensityNote = "Épuisement déclaré → séance récupération active uniquement"; }
     else if (fatigueVal <= 2 || sleepH < 6) { intensityModifier = "RÉDUITE -15%"; intensityNote = `Fatigue élevée (${sleepH < 6 ? `sommeil seulement ${sleepH}h` : "ressenti fatigué"}) → volume réduit`; }
     else if (fatigueVal === 4 && sleepH >= 7.5) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = "Forme optimale → possibilité de pousser"; }
@@ -3769,7 +3769,7 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
         decharge: {
           frequence: "Toutes les 4 semaines",
           application: "Volume -40%, intensité maintenue, durée séances -20%. NE PAS réduire l'intensité.",
-          signaux_necessaires: "3 séances consécutives 'Dur', HRV chroniquement bas, qualité de sommeil dégradée",
+          signaux_necessaires: "3 séances consécutives 'Dur', VFC chroniquement basse, qualité de sommeil dégradée",
         },
         surcompensation: "Appliquer la surcharge puis laisser 48-72h de récupération pour adaptation. La progression vient PENDANT la récup, pas pendant l'effort.",
       },
@@ -3809,7 +3809,7 @@ MÉTHODOLOGIE QUE TU APPLIQUES TOUJOURS:
 1. SPÉCIFICITÉ ABSOLUE: chaque exercice a une raison précise liée à HYROX
 2. CHARGES CALCULÉES SUR LES 1RM: jamais de "charge modérée" — des chiffres précis
 3. ALLURES RUNNING BASÉES SUR LA VMA: pas de "facile/modéré" — des min/km précis
-4. ADAPTATION TEMPS RÉEL: HRV, sommeil, fatigue modifient l'intensité AVANT de générer
+4. ADAPTATION TEMPS RÉEL: VFC, sommeil, fatigue modifient l'intensité AVANT de générer
 5. COMPROMISED RUNNING: entraîner à courir avec les jambes fatiguées = compétence #1 HYROX
 6. PROGRESSION LOGIQUE: chaque séance prépare la suivante
 7. TECHNIQUE AVANT CHARGE: utilise les cues techniques de la base de données pour les cle_technique
@@ -3853,7 +3853,7 @@ Objectif: ${profile.objectifPrincipal || "Finir HYROX"} | Course dans: ${daysUnt
 ═══ DONNÉES FORME DU JOUR ═══
 Énergie: ${fatigueLabels[fatigueVal]} (${fatigueVal}/4)
 Qualité sommeil: ${sommeilLabels[parseInt(dailyData.sommeil)||3]} | Durée: ${sleepH}h
-HRV: ${hrv !== null ? hrv+" ms" : "non mesuré"}
+VFC: ${hrv !== null ? hrv+" ms" : "non mesurée"}
 Hydratation: ${hydration}/8 verres
 ⚡ INTENSITÉ AJUSTÉE: ${intensityModifier}${intensityNote ? " — " + intensityNote : ""}
 
@@ -4983,7 +4983,7 @@ JSON:
                             { val: `${dailyData.sleepHours}h`, label: "Sommeil", ok: dailyData.sleepHours >= 7 },
                             { val: ["","Épuisé","Moyen","Bien","Frais"][dailyData.fatigue||3], label: "Énergie", ok: dailyData.fatigue >= 3 },
                             { val: `${dailyData.hydration}/8`, label: "Eau", ok: dailyData.hydration >= 6 },
-                            ...(dailyData.hrv ? [{ val: `${dailyData.hrv}`, label: "HRV", ok: parseInt(dailyData.hrv) >= 55 }] : []),
+                            ...(dailyData.hrv ? [{ val: `${dailyData.hrv}`, label: "VFC", ok: parseInt(dailyData.hrv) >= 55 }] : []),
                           ].map(m => (
                             <div key={m.label} style={{ flex: 1, background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "6px 4px", textAlign: "center" }}>
                               <div style={{ fontSize: 11, fontWeight: 600, color: m.ok ? "var(--white)" : "#444", marginTop: 1 }}>{m.val}</div>
@@ -7623,7 +7623,7 @@ JSON:
                     return (
                       <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                          <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>💓 HRV matin</div>
+                          <div style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>💓 VFC matin</div>
                           <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                             <span className="bebas" style={{ fontSize: 20, color: hrvColor, lineHeight: 1 }}>{lastHrv}</span>
                             <span style={{ fontSize: 9, color: "#777" }}>moy. {avgHrv}ms</span>
@@ -8500,7 +8500,7 @@ JSON:
               <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>HRV matin (ms)</div>
+                    <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>VFC matin (ms)</div>
                     <div style={{ fontSize: 9, color: "#555", marginTop: 2 }}>Variabilité cardiaque au réveil</div>
                   </div>
                   {hrv > 0 && <div style={{ textAlign: "right" }}>
@@ -8522,7 +8522,7 @@ JSON:
                 </div>
                 {hrv > 0 && (
                   <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, background: `${hrvColor}10`, border: `1px solid ${hrvColor}20`, fontSize: 10, color: hrvColor }}>
-                    {hrv>=70?"Récupération optimale — séance intense possible":hrv>=55?"Bonne forme — entraînement normal recommandé":hrv>=40?"Fatigue modérée — réduis l'intensité aujourd'hui":"HRV bas — privilégie la récupération active"}
+                    {hrv>=70?"Récupération optimale — séance intense possible":hrv>=55?"Bonne forme — entraînement normal recommandé":hrv>=40?"Fatigue modérée — réduis l'intensité aujourd'hui":"VFC basse — privilégie la récupération active"}
                   </div>
                 )}
               </div>
