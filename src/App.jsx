@@ -4293,8 +4293,8 @@ JSON:
   const tabs = [
     { id: "home", label: "Accueil", icon: "🏠" },
     { id: "today", label: "Séance", icon: "⚡", badge: coachSession && !session },
+    { id: "planning", label: "Planning", icon: "📅" },
     { id: "progress", label: "Stats", icon: "📈" },
-    { id: "forme", label: "Forme", icon: "◎" },
     { id: "profil", label: "Profil", icon: "👤" },
   ];
 
@@ -4304,7 +4304,7 @@ JSON:
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
     try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
   });
-  const BOTTOM_TABS = ["home","today","progress","forme","profil"];
+  const BOTTOM_TABS = ["home","today","planning","progress","profil"];
 
   function handleTouchStart(e) {
     touchStartX.current = e.touches[0].clientX;
@@ -8917,8 +8917,8 @@ JSON:
             const ic = {
               home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
               today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+              planning: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
               progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
               profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             };
             return tabs.map(t => {
