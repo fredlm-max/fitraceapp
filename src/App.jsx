@@ -178,13 +178,122 @@ const LEVELS = [
   { id: 4, label: "Compétition", color: "#ff4747", emoji: "🔴" },
 ];
 
+// ============================================================
+// ZONES FC — SYSTÈME SCIENTIFIQUE 5 ZONES
+// % FCmax (Astrand) + % Karvonen (FCréserve) + VMA
+// Sources: Billat 2003, Seiler 2010, Skinner & McLellan 1980
+// ============================================================
 const ZONES = [
-  { z: "Z1", label: "Récupération", pct: [50, 60] },
-  { z: "Z2", label: "Endurance", pct: [60, 70] },
-  { z: "Z3", label: "Tempo", pct: [70, 80] },
-  { z: "Z4", label: "Seuil", pct: [80, 90] },
-  { z: "Z5", label: "VO2Max", pct: [90, 100] },
+  {
+    z: "Z1", label: "Récupération active",
+    pct: [50, 60],          // % FCmax
+    karvo: [30, 45],        // % FC réserve (Karvonen — plus individualisé)
+    vma: [50, 60],          // % VMA
+    color: "#3b82f6",
+    description: "Récupération, mobilité, marche active",
+    role: "Élimination des déchets métaboliques. Ne fatigue pas. Peut se faire après une séance dure.",
+    hyrox: "Entre les stations lors des premières séances — ne jamais y rester en course",
+    duree: "20-60 min selon besoin",
+    ressenti: "Très facile — conversation sans effort",
+    fc_note: "Utilisé pour les footings de récupération après séance intense",
+  },
+  {
+    z: "Z2", label: "Endurance fondamentale",
+    pct: [60, 72],
+    karvo: [45, 62],
+    vma: [60, 70],
+    color: "#22c55e",
+    description: "Base aérobie — le fondement de tout",
+    role: "Développe les mitochondries, la capillarisation, l'économie de course et le métabolisme lipidique. 70-80% du volume total doit être ici.",
+    hyrox: "Allure cible sur les runs HYROX entre les stations (kilomètres de liaison)",
+    duree: "30-120 min",
+    ressenti: "Facile — phrases complètes, nez seul possible",
+    fc_note: "Test : tu dois pouvoir chanter une chanson. Si difficile → trop vite → repasse en Z1",
+  },
+  {
+    z: "Z3", label: "Tempo / Seuil aérobie",
+    pct: [72, 82],
+    karvo: [62, 75],
+    vma: [75, 83],
+    color: "#eab308",
+    description: "Développement du seuil lactique",
+    role: "Améliore la tolérance lactique et le seuil anaérobie. Séances les plus souvent mal utilisées (ni Z2 ni Z4). À utiliser avec parcimonie.",
+    hyrox: "Allure pendant les runs de liaisons en compétition avancée",
+    duree: "20-40 min en continu ou 3-4×8-10 min",
+    ressenti: "Modéré — phrases courtes, légèrement inconfortable",
+    fc_note: "Le seuil aérobie : point où le lactate commence vraiment à accumuler",
+  },
+  {
+    z: "Z4", label: "Seuil anaérobie / Lactate",
+    pct: [82, 92],
+    karvo: [75, 88],
+    vma: [83, 92],
+    color: "#f97316",
+    description: "Performance et puissance aérobie maximale",
+    role: "Repousse le seuil anaérobie. Améliore la capacité à maintenir une intensité élevée. Clé pour HYROX race pace.",
+    hyrox: "Réponse FC lors des stations en course. Apprenez à courir à cette FC après les stations.",
+    duree: "4-6×3-5 min avec récup complète (ratio 1:1)",
+    ressenti: "Difficile — quelques mots, gorge sèche",
+    fc_note: "Race pace HYROX pour les coureurs confirmés. Difficile à tenir > 20 min.",
+  },
+  {
+    z: "Z5", label: "VO2max / Vitesse max aérobie",
+    pct: [92, 100],
+    karvo: [88, 100],
+    vma: [92, 105],
+    color: "#ef4444",
+    description: "Intervalles courts — capacité aérobie maximale",
+    role: "Améliore le VO2max directement. Sessions courtes et intenses. À faire reposé·e. 2× par semaine maximum.",
+    hyrox: "Sprints dans les stations les plus intenses (burpees, sled push)",
+    duree: "6-10×1 min à 30-40s avec récup longue (2-3 min)",
+    ressenti: "Très difficile — quelques mots seulement, brûlures musculaires",
+    fc_note: "Méthode scientifique : 4×4 min @ 90-95% FCmax (Helgerud 2007) — améliore VO2max 3× plus que le steady-state",
+  },
 ];
+
+// ============================================================
+// CALCUL FC PERSONNALISÉ (formules validées scientifiquement)
+// ============================================================
+function estimateFCmax(age, sex) {
+  // Tanaka 2001 (hommes, plus précis que 220-âge): FCmax = 208 - 0.7 × âge (R²=0.81)
+  // Inbar 1994 (femmes): FCmax = 211 - 0.64 × âge
+  if (!age) return null;
+  return sex === "F" ? Math.round(211 - 0.64 * age) : Math.round(208 - 0.7 * age);
+}
+
+function calcFCZones(fcMax, fcRest, age, sex) {
+  const fcM = fcMax || estimateFCmax(age, sex);
+  const fcR = fcRest || 0;
+  const fcReserve = fcM - fcR;
+  if (!fcM) return null;
+
+  return ZONES.map(z => {
+    // Méthode 1 : % FCmax (standard Garmin/Polar)
+    const fcLowPct = Math.round(fcM * z.pct[0] / 100);
+    const fcHighPct = Math.round(fcM * z.pct[1] / 100);
+    // Méthode 2 : Karvonen (% FC réserve + FC repos) — plus précise si FC repos connue
+    const fcLowKarvo = fcRest ? Math.round(fcR + fcReserve * z.karvo[0] / 100) : null;
+    const fcHighKarvo = fcRest ? Math.round(fcR + fcReserve * z.karvo[1] / 100) : null;
+    // Préférer Karvonen si FC repos disponible (recommandé par la recherche)
+    return {
+      ...z,
+      fcLow: fcLowKarvo || fcLowPct,
+      fcHigh: fcHighKarvo || fcHighPct,
+      fcLowPct, fcHighPct,
+      fcLowKarvo, fcHighKarvo,
+      method: fcRest ? "Karvonen" : "% FCmax",
+    };
+  });
+}
+
+// Zones FC pour le prompt IA
+function fcZonesForPrompt(fcMax, fcRest, age, sex) {
+  const zones = calcFCZones(fcMax, fcRest, age, sex);
+  if (!zones) return "FC max non renseignée";
+  return zones.map(z =>
+    `${z.z} (${z.label}): ${z.fcLow}–${z.fcHigh} bpm [${z.pct[0]}-${z.pct[1]}% FCmax] — ${z.description}`
+  ).join("\n");
+}
 
 // ============================================================
 // STANDARDS HYROX OFFICIELS (poids sled + charges stations)
@@ -3907,10 +4016,14 @@ VFC: ${hrv !== null ? hrv+" ms" : "non mesurée"}${vfcBaseline ? ` | Baseline pe
 Hydratation: ${hydration}/8 verres
 ⚡ INTENSITÉ AJUSTÉE: ${intensityModifier}${intensityNote ? " — " + intensityNote : ""}
 
-═══ ALLURES RUNNING PERSONNALISÉES ═══
-Zone 2 (base): ${paceZ2 || "?"}/km
-Zone 3 (tempo): ${paceZ3 || "?"}/km
-Zone 4 (intervalles): ${paceZ4 || "?"}/km
+═══ ALLURES & FC PERSONNALISÉES ═══
+${profile.fcMax ? `FC max: ${profile.fcMax} bpm | FC repos: ${profile.fcMin || "?"}bpm | Méthode: ${profile.fcMin ? "Karvonen (plus précise)" : "% FCmax"}` : `FC max estimée (Tanaka/Inbar): ${estimateFCmax(profile.age, profile.sexe) || "?"}bpm (non mesurée — moins précise)`}
+Zone 1 (récup):      ${paceFromVMA(profile.vmaKmh, 55) || "?"}/km | FC ${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.38) || "?"}–${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.45) || "?"}bpm
+Zone 2 (base):       ${paceZ2 || "?"}/km | FC ${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.45) || "?"}–${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.62) || "?"}bpm
+Zone 3 (tempo):      ${paceZ3 || "?"}/km | FC ${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.62) || "?"}–${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.75) || "?"}bpm
+Zone 4 (seuil):      ${paceZ4 || "?"}/km | FC ${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.75) || "?"}–${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.88) || "?"}bpm
+Zone 5 (VO2max):     ${paceFromVMA(profile.vmaKmh, 95) || "?"}/km | FC ${Math.round((profile.fcMin || 0) + ((profile.fcMax || estimateFCmax(profile.age, profile.sexe) || 180) - (profile.fcMin || 0)) * 0.88) || "?"}–${profile.fcMax || estimateFCmax(profile.age, profile.sexe) || "?"}bpm
+→ RÈGLE : donner TOUJOURS les deux (allure min/km ET FC bpm cible) pour chaque bloc de running
 
 ═══ CHARGES STATIONS HYROX PERSONNALISÉES ═══
 Wall Balls: ${wallBallKg}kg standard | Farmers Carry: ${farmersKg}kg/main | Sandbag: ${sandbagKg}kg
@@ -8298,62 +8411,88 @@ JSON:
 
             {profile.vmaKmh ? (
               <>
-                {/* FC info card */}
-                {profile.fcMax && profile.fcMin && (
-                  <div style={{ background: "rgba(255,71,71,0.05)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 14, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 16 }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div className="bebas" style={{ fontSize: 24, color: "var(--red)", lineHeight: 1 }}>{profile.fcMax}</div>
-                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 2 }}>FC max</div>
+                {/* FC header card */}
+                {(()=>{
+                  const fcM = profile.fcMax || estimateFCmax(profile.age, profile.sexe);
+                  const fcR = profile.fcMin || null;
+                  const reserve = fcM && fcR ? fcM - fcR : null;
+                  const isEstimated = !profile.fcMax;
+                  return (
+                    <div style={{ background: "var(--bg3)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                      <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+                        <div style={{ flex: 1, textAlign: "center", background: "rgba(255,71,71,0.08)", border: "1px solid rgba(255,71,71,0.2)", borderRadius: 12, padding: "10px 8px" }}>
+                          <div className="bebas" style={{ fontSize: 26, color: "var(--red)", lineHeight: 1 }}>{fcM || "?"}</div>
+                          <div style={{ fontSize: 9, color: "var(--gray)", textTransform: "uppercase", marginTop: 2, fontWeight: 700 }}>FC max{isEstimated ? " (est.)" : ""}</div>
+                        </div>
+                        {fcR && <div style={{ flex: 1, textAlign: "center", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 12, padding: "10px 8px" }}>
+                          <div className="bebas" style={{ fontSize: 26, color: "var(--gray2)", lineHeight: 1 }}>{fcR}</div>
+                          <div style={{ fontSize: 9, color: "var(--gray)", textTransform: "uppercase", marginTop: 2, fontWeight: 700 }}>FC repos</div>
+                        </div>}
+                        {reserve && <div style={{ flex: 1, textAlign: "center", background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 12, padding: "10px 8px" }}>
+                          <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{reserve}</div>
+                          <div style={{ fontSize: 9, color: "var(--gray)", textTransform: "uppercase", marginTop: 2, fontWeight: 700 }}>FC réserve</div>
+                        </div>}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--gray)", lineHeight: 1.5 }}>
+                        {fcR ? `✅ Méthode Karvonen activée (FC réserve) — zones personnalisées et plus précises` : `⚠️ Ajoute ta FC repos dans le profil → zones Karvonen (plus précises)`}
+                        {isEstimated && <span style={{ color: "var(--orange)" }}> · FCmax estimée Tanaka/Inbar — mesure la lors d'un effort max pour plus de précision</span>}
+                      </div>
                     </div>
-                    <div style={{ width: 1, background: "rgba(0,0,0,0.06)" }} />
-                    <div style={{ textAlign: "center" }}>
-                      <div className="bebas" style={{ fontSize: 24, color: "#888", lineHeight: 1 }}>{profile.fcMin}</div>
-                      <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", marginTop: 2 }}>FC repos</div>
-                    </div>
-                    <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-                      <div style={{ fontSize: 11, color: "#777" }}>Méthode Karvonen · FC de réserve {parseInt(profile.fcMax) - parseInt(profile.fcMin)} bpm</div>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
-                {/* Zones visuelles */}
-                {(() => {
-                  const zoneColors = ["#3b82f6","#22c55e","#eab308","#f97316","#ef4444"];
-                  const zoneDescs = ["Récupération active","Endurance fondamentale","Tempo · Seuil aérobie","Seuil anaérobie","VO2max · Sprint"];
-                  return ZONES.map((z, idx) => {
+                {/* Zones visuelles enrichies */}
+                {(()=>{
+                  const fcM = profile.fcMax || estimateFCmax(profile.age, profile.sexe);
+                  const fcR = profile.fcMin || null;
+                  const zonesCalc = calcFCZones(fcM, fcR, profile.age, profile.sexe);
+                  return (zonesCalc || ZONES).map((z, idx) => {
                     const midPct = (z.pct[0] + z.pct[1]) / 2;
-                    const hasKarvo = profile.fcMax && profile.fcMin;
-                    const fcR = hasKarvo ? parseInt(profile.fcMax) - parseInt(profile.fcMin) : 0;
-                    const fcLow = hasKarvo ? Math.round(parseInt(profile.fcMin) + fcR * z.pct[0] / 100) : null;
-                    const fcHigh = hasKarvo ? Math.round(parseInt(profile.fcMin) + fcR * z.pct[1] / 100) : null;
-                    const col = zoneColors[idx] || "var(--yellow)";
+                    const pace = paceFromVMA(profile.vmaKmh, (z.vma[0] + z.vma[1]) / 2);
+                    const col = z.color;
                     const barWidth = z.pct[1] - z.pct[0];
+                    const [expanded, setExpanded] = React.useState(false);
                     return (
-                      <div key={z.z} style={{ background: `${col}08`, border: `1px solid ${col}22`, borderLeft: `3px solid ${col}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                      <div key={z.z} onClick={() => setExpanded(e => !e)} style={{ background: `${col}06`, border: `1.5px solid ${col}22`, borderLeft: `4px solid ${col}`, borderRadius: 16, padding: "14px 14px", marginBottom: 8, cursor: "pointer", transition: "all 0.2s" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 10, background: `${col}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <span className="bebas" style={{ fontSize: 18, color: col }}>{z.z}</span>
+                            <div style={{ width: 34, height: 34, borderRadius: 10, background: `${col}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span className="bebas" style={{ fontSize: 16, color: col }}>{z.z}</span>
                             </div>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)" }}>{z.label}</div>
-                              <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>{zoneDescs[idx]}</div>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: "var(--white)" }}>{z.label}</div>
+                              <div style={{ fontSize: 10, color: "var(--gray)", marginTop: 1 }}>{z.description}</div>
                             </div>
                           </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div className="bebas" style={{ fontSize: 20, color: col, lineHeight: 1 }}>{paceFromVMA(profile.vmaKmh, midPct)}</div>
-                            <div style={{ fontSize: 10, color: "#777" }}>min/km</div>
+                          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+                            {zonesCalc && z.fcLow ? (
+                              <div>
+                                <div className="bebas" style={{ fontSize: 16, color: col, lineHeight: 1 }}>❤️ {z.fcLow}–{z.fcHigh}</div>
+                                <div style={{ fontSize: 9, color: "var(--gray)", marginTop: 1 }}>bpm · {z.method}</div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: 10, color: "var(--gray)" }}>{z.pct[0]}–{z.pct[1]}%</div>
+                            )}
                           </div>
                         </div>
-                        {/* Barre d'intensité */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ flex: 1, height: 4, background: "rgba(0,0,0,0.04)", borderRadius: 99, position: "relative", overflow: "hidden" }}>
-                            <div style={{ position: "absolute", left: `${z.pct[0]}%`, width: `${barWidth}%`, height: "100%", background: col, borderRadius: 99 }} />
+                        {/* Barre intensité */}
+                        <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ flex: 1, height: 5, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                            <div style={{ marginLeft: `${z.pct[0]}%`, width: `${barWidth}%`, height: "100%", background: col, borderRadius: 99 }} />
                           </div>
-                          <div style={{ fontSize: 10, color: "#777", flexShrink: 0 }}>{z.pct[0]}–{z.pct[1]}%</div>
+                          {pace && <div className="bebas" style={{ fontSize: 14, color: col, flexShrink: 0 }}>{pace}/km</div>}
                         </div>
-                        {hasKarvo && fcLow && (
-                          <div style={{ marginTop: 6, fontSize: 11, color: `${col}99` }}>❤️ {fcLow}–{fcHigh} bpm</div>
+                        {/* Détail dépliable */}
+                        {expanded && (
+                          <div style={{ marginTop: 10, borderTop: `1px solid ${col}20`, paddingTop: 10 }}>
+                            <div style={{ fontSize: 11, color: "var(--gray2)", lineHeight: 1.6, marginBottom: 6 }}><strong>Rôle :</strong> {z.role}</div>
+                            <div style={{ fontSize: 11, color: col, lineHeight: 1.5, marginBottom: 4 }}>🏃 HYROX : {z.hyrox}</div>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <div style={{ background: `${col}10`, border: `1px solid ${col}20`, borderRadius: 8, padding: "4px 10px", fontSize: 10, color: col }}>⏱ {z.duree}</div>
+                              <div style={{ background: "rgba(0,0,0,0.04)", borderRadius: 8, padding: "4px 10px", fontSize: 10, color: "var(--gray2)" }}>💬 {z.ressenti}</div>
+                            </div>
+                            {z.fc_note && <div style={{ marginTop: 6, fontSize: 10, color: "var(--gray)", fontStyle: "italic" }}>💡 {z.fc_note}</div>}
+                          </div>
                         )}
                       </div>
                     );
