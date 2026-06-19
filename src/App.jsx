@@ -3473,18 +3473,36 @@ PATTERN DÉTECTÉ sur les 3 derniers ressentis (${dernierRessentis.join(", ") ||
 ADAPTATION À APPLIQUER OBLIGATOIREMENT AUJOURD'HUI: ${allAdaptations.slice(-1)[0]?.adaptation || "Aucune — calibrer sur profil de base"}`;
     // ─────────────────────────────────────────────────────────────────
 
-    // Déterminer le type de séance à faire selon la semaine
-    // Structure HYROX validée : 3 running + 2 force/stations par semaine
-    // Phase 1 (S1-S3) : base aérobie + technique stations
-    // Phase 2 (S4-S6) : volume running + compromised running + intensité stations
-    // Phase 3 (S7) : simulation complète + pic de forme
-    // Phase 4 (S8) : affûtage -40% volume, garder intensité
-    // Type de séance : choix athlète ou rotation automatique IA
-    const sessionTypes = ["running_zone2", "force_stations", "running_qualite", "hybride_compromis", "force_stations"];
-    const sessionType = dailyData.typeSeance && dailyData.typeSeance !== "auto"
-      ? dailyData.typeSeance
-      : sessionTypes[nbSessions % 5];
+    // Déterminer le type de séance — logique intelligente basée sur le jour + historique
     const choixManuel = dailyData.typeSeance && dailyData.typeSeance !== "auto";
+
+    // Détection semaine de décharge : toutes les 4 semaines
+    const isDeloadWeek = week > 0 && week % 4 === 0 && phase !== "affûtage";
+
+    // Éviter de répéter le même type que la dernière séance
+    const lastSessionType = allSessions.length > 0 ? allSessions[allSessions.length - 1]?.type : null;
+
+    // Structure semaine HYROX validée par jour de la semaine
+    const dayOfWeek = new Date().getDay(); // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
+    const smartTypeByDay = {
+      0: "running_zone2",      // Dimanche → sortie longue Z2
+      1: "force_stations",     // Lundi → force + stations
+      2: "running_qualite",    // Mardi → qualité running
+      3: "running_zone2",      // Mercredi → Z2 récup
+      4: "force_stations",     // Jeudi → force
+      5: "hybride_compromis",  // Vendredi → hybride HYROX
+      6: "running_zone2",      // Samedi → sortie Z2
+    };
+    // Rotation de secours si conflit avec dernière séance
+    const rotationFallback = ["running_zone2", "force_stations", "running_qualite", "hybride_compromis", "force_stations"];
+    let autoType = smartTypeByDay[dayOfWeek];
+    if (autoType === lastSessionType) {
+      // Éviter répétition : prendre le suivant dans la rotation
+      const idx = rotationFallback.indexOf(lastSessionType);
+      autoType = rotationFallback[(idx + 1) % rotationFallback.length];
+    }
+
+    const sessionType = choixManuel ? dailyData.typeSeance : autoType;
 
     const sessionTypeDescriptions = {
       running_zone2: `SESSION RUNNING ZONE 2 + TECHNIQUE STATIONS
@@ -3588,7 +3606,7 @@ STRUCTURE OBLIGATOIRE DE CHAQUE SÉANCE:
 
 Réponds UNIQUEMENT avec le JSON demandé — aucun texte avant ou après, aucun backtick.`;
 
-    const expertUserPrompt = `GÉNÈRE UNE SÉANCE ${sessionType.toUpperCase()} POUR:
+    const expertUserPrompt = `GÉNÈRE UNE SÉANCE ${sessionType.toUpperCase()}${isDeloadWeek ? " [SEMAINE DE DÉCHARGE — VOLUME -40%, INTENSITÉ MAINTENUE]" : ""} POUR:
 
 ═══ PROFIL ATHLÈTE ═══
 Nom: ${profile.name} | Sexe: ${profile.sexe || "H"} | Âge: ${profile.age} ans | Poids: ${profile.poids}kg
@@ -3615,7 +3633,7 @@ Wall Balls: ${wallBallKg}kg standard | Farmers Carry: ${farmersKg}kg/main | Sand
 ${squatWork ? `Goblet Squat: ${Math.round(squatWork * 0.45)}kg | Bulgarian Split: ${Math.round(squatWork * 0.35)}kg/côté` : ""}
 
 ═══ HISTORIQUE & CONTEXTE ═══
-Phase: ${phase} | Semaine: ${week}/${totalWeeksP || "?"} | Séances réalisées: ${nbSessions}
+Phase: ${phase} | Semaine: ${week}/${totalWeeksP || "?"} | Séances réalisées: ${nbSessions}${isDeloadWeek ? " | ⚠️ SEMAINE DE DÉCHARGE : réduire le volume de 40%, maintenir l'intensité sur les séries clés" : ""}
 ${adaptationContext}
 
 ═══ TYPE DE SÉANCE À GÉNÉRER ═══
@@ -6041,25 +6059,33 @@ JSON:
               const doneCount0 = Object.values(checkedExercices).filter(Boolean).length;
               const totalEx0 = (session.exercices || []).length;
               return (
-                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 20, padding: "18px 18px 16px", marginBottom: 14, cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 16 }}>{c0.icon}</span>
-                    <span style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>{c0.label}</span>
-                    <span style={{ fontSize: 10, color: "#777", marginLeft: "auto" }}>⏱ {session.duree} min</span>
+                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: "var(--bg2)", border: `1.5px solid ${c0.color}25`, borderRadius: 20, overflow: "hidden", marginBottom: 14, cursor: "pointer", boxShadow: "var(--shadow-md)" }}>
+                  {/* Barre colorée en haut */}
+                  <div style={{ height: 4, background: `linear-gradient(90deg, ${c0.color}, ${c0.color}88)` }} />
+                  <div style={{ padding: "16px 18px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: `${c0.color}15`, border: `1px solid ${c0.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{c0.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 10, color: c0.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em" }}>{c0.label}</div>
+                      <div style={{ fontSize: 10, color: "var(--gray)", marginTop: 1 }}>⏱ {session.duree} min · {(session.exercices||[]).filter(ex=>ex?.nom).length} exercices</div>
+                    </div>
+                    <div style={{ marginLeft: "auto", background: "var(--yellow)", borderRadius: 10, padding: "6px 14px" }}>
+                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 1, color: "#fff" }}>VOIR ›</span>
+                    </div>
                   </div>
-                  <div className="bebas" style={{ fontSize: 26, color: "var(--white)", lineHeight: 1.1, marginBottom: 6 }}>{session.titre}</div>
-                  <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5, marginBottom: 10 }}>{session.explication?.slice(0, 80)}{(session.explication?.length || 0) > 80 ? "…" : ""}</div>
+                  <div className="bebas" style={{ fontSize: 24, color: "var(--white)", lineHeight: 1.1, marginBottom: 5 }}>{session.titre}</div>
+                  <div style={{ fontSize: 12, color: "var(--gray)", lineHeight: 1.5, marginBottom: 10 }}>{session.explication?.slice(0, 90)}{(session.explication?.length || 0) > 90 ? "…" : ""}</div>
                   {/* Mini exercice chips */}
                   {(session.exercices || []).length > 0 && (
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
                       {(session.exercices || []).filter(ex => ex?.nom).slice(0, 4).map((ex, ei) => (
-                        <div key={ei} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#666", whiteSpace: "nowrap" }}>
-                          {ex.nom?.length > 18 ? ex.nom.slice(0, 18) + "…" : ex.nom}
-                          {ex.series && ex.reps ? <span style={{ color: c0.color, marginLeft: 4 }}>{ex.series}×{ex.reps}</span> : null}
+                        <div key={ei} style={{ background: `${c0.color}10`, border: `1px solid ${c0.color}25`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: c0.color, fontWeight: 600, whiteSpace: "nowrap" }}>
+                          {ex.nom?.length > 16 ? ex.nom.slice(0, 16) + "…" : ex.nom}
+                          {ex.series && ex.reps ? <span style={{ opacity: 0.7, marginLeft: 3 }}>{ex.series}×{ex.reps}</span> : null}
                         </div>
                       ))}
                       {(session.exercices || []).length > 4 && (
-                        <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "#777" }}>
+                        <div style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "var(--gray)" }}>
                           +{(session.exercices || []).length - 4}
                         </div>
                       )}
@@ -6074,11 +6100,6 @@ JSON:
                       <div style={{ fontSize: 10, color: "var(--green)", marginTop: 4 }}>{doneCount0}/{totalEx0} exercices faits</div>
                     </div>
                   )}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontSize: 10, color: "#777", flex: 1 }}>{totalEx0} exercices</div>
-                    <div style={{ background: "var(--yellow)", borderRadius: 12, padding: "10px 22px" }}>
-                      <span className="bebas" style={{ fontSize: 16, color: "#000", letterSpacing: 1.5 }}>DÉMARRER ⚡</span>
-                    </div>
                   </div>
                 </div>
               );
@@ -6088,13 +6109,13 @@ JSON:
             {showSessionModal && session && !showFeedback && !feedback && (
               <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end" }}
                 onClick={e => { if (e.target === e.currentTarget) setShowSessionModal(false); }}>
-                <div className="slide-up" style={{ background: "#080808", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", padding: "0 0 40px", border: "1px solid rgba(0,0,0,0.08)" }}
+                <div className="slide-up" style={{ background: "var(--bg2)", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", padding: "0 0 40px", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)" }}
                   onClick={e => e.stopPropagation()}
                   onTouchStart={e => { e.currentTarget._ty = e.touches[0].clientY; }}
                   onTouchEnd={e => { const dy = e.changedTouches[0].clientY - (e.currentTarget._ty || 0); if (dy > 80) setShowSessionModal(false); }}>
                   {/* Handle bar + header */}
-                  <div style={{ position: "sticky", top: 0, background: "#080808", zIndex: 10, padding: "14px 18px 12px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <div style={{ width: 40, height: 4, background: "#333", borderRadius: 99, margin: "0 auto 14px" }} />
+                  <div style={{ position: "sticky", top: 0, background: "var(--bg2)", zIndex: 10, padding: "14px 18px 12px", borderBottom: "1px solid rgba(0,0,0,0.07)" }}>
+                    <div style={{ width: 40, height: 4, background: "rgba(0,0,0,0.2)", borderRadius: 99, margin: "0 auto 14px" }} />
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 0.5 }}>{session.titre}</div>
                       <button onClick={() => setShowSessionModal(false)} style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 18, cursor: "pointer" }}>×</button>
@@ -6135,12 +6156,12 @@ JSON:
                 {/* ── HERO SÉANCE ── */}
                 {(() => {
                   const typeConf = {
-                    running_zone2: { label: "Running Zone 2", color: "var(--green)", bg: "linear-gradient(135deg, #003318 0%, #080808 60%)", border: "rgba(57,255,128,0.25)", icon: "🏃" },
-                    force_stations: { label: "Force Stations", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(0,122,255,0.25)", icon: "🏋️" },
-                    running_qualite: { label: "Running Qualité", color: "var(--orange)", bg: "linear-gradient(135deg, #1a0a00 0%, #080808 60%)", border: "rgba(255,154,60,0.25)", icon: "⚡" },
-                    hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", bg: "linear-gradient(135deg, #0d0020 0%, #080808 60%)", border: "rgba(167,139,250,0.25)", icon: "🔀" },
-                    coach: { label: "Séance Coach", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(0,122,255,0.25)", icon: "👨‍💼" },
-                    perso: { label: "Séance Perso", color: "#888", bg: "linear-gradient(135deg, #111 0%, #080808 60%)", border: "rgba(0,0,0,0.08)", icon: "✏️" },
+                    running_zone2: { label: "Running Zone 2", color: "var(--green)", bg: "linear-gradient(135deg, rgba(40,167,69,0.08) 0%, rgba(40,167,69,0.02) 100%)", border: "rgba(40,167,69,0.3)", icon: "🏃" },
+                    force_stations: { label: "Force Stations", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(0,122,255,0.08) 0%, rgba(0,122,255,0.02) 100%)", border: "rgba(0,122,255,0.25)", icon: "🏋️" },
+                    running_qualite: { label: "Running Qualité", color: "var(--orange)", bg: "linear-gradient(135deg, rgba(224,122,0,0.08) 0%, rgba(224,122,0,0.02) 100%)", border: "rgba(224,122,0,0.25)", icon: "⚡" },
+                    hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", bg: "linear-gradient(135deg, rgba(123,63,206,0.08) 0%, rgba(123,63,206,0.02) 100%)", border: "rgba(123,63,206,0.25)", icon: "🔀" },
+                    coach: { label: "Séance Coach", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(0,122,255,0.08) 0%, rgba(0,122,255,0.02) 100%)", border: "rgba(0,122,255,0.25)", icon: "👨‍💼" },
+                    perso: { label: "Séance Perso", color: "var(--gray)", bg: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.01) 100%)", border: "rgba(0,0,0,0.1)", icon: "✏️" },
                   };
                   const conf = typeConf[session.type] || typeConf.force_stations;
                   const doneCount = Object.values(checkedExercices).filter(Boolean).length;
@@ -6196,6 +6217,11 @@ JSON:
 
                 {/* Programme */}
                 <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray)" }}>Programme</div>
+                    <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.06)" }} />
+                    <div style={{ fontSize: 11, color: "var(--gray)", fontWeight: 700 }}>{(session.exercices||[]).filter(ex=>ex?.nom).length} exercices</div>
+                  </div>
                   {(session.exercices || []).filter(ex => ex && ex.nom).map((ex, i) => {
                     const done = checkedExercices[i];
                     const typeConf2 = {
@@ -6209,7 +6235,6 @@ JSON:
                           const wasUndone = !checkedExercices[i];
                           setCheckedExercices(c => ({ ...c, [i]: !c[i] }));
                           if (wasUndone) haptic([8]);
-                          // Auto-launch rest timer if exercise has repos time
                           if (wasUndone && ex.repos) {
                             const parseRepos = (str) => {
                               if (!str) return 0;
@@ -6226,7 +6251,6 @@ JSON:
                             const secs = parseRepos(ex.repos);
                             if (secs > 0) setMiniRestTimer({ secs, initial: secs });
                           }
-                          // Check if all done after this tick
                           const newCount = Object.values({...checkedExercices, [i]: true}).filter(Boolean).length;
                           if (wasUndone && newCount === (session.exercices||[]).length) {
                             haptic([10, 20, 10, 20, 30]);
@@ -6234,64 +6258,68 @@ JSON:
                           }
                         }}
                         style={{
-                          background: done ? "rgba(57,255,128,0.04)" : "rgba(0,0,0,0.02)",
-                          border: done ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.05)",
-                          borderLeft: done ? "3px solid var(--green)" : `3px solid ${accentColor}66`,
-                          borderRadius: 14, padding: "14px 14px 12px 16px", marginBottom: 8,
+                          background: done ? "rgba(40,167,69,0.05)" : "var(--bg3)",
+                          border: done ? "1.5px solid rgba(40,167,69,0.25)" : "1.5px solid rgba(0,0,0,0.06)",
+                          borderRadius: 16, marginBottom: 10,
                           animationDelay: `${i * 0.06}s`, cursor: "pointer",
-                          transition: "background 0.25s, border 0.25s, opacity 0.25s",
-                          opacity: done ? 0.6 : 1,
+                          transition: "all 0.25s",
+                          opacity: done ? 0.65 : 1,
+                          overflow: "hidden",
                         }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-                            {/* Numéro / checkmark */}
-                            <div style={{
-                              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                              background: done ? "var(--green)" : `${accentColor}18`,
-                              border: done ? "none" : `2px solid ${accentColor}44`,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: done ? 14 : 12, fontWeight: 700,
-                              color: done ? "#000" : accentColor,
-                              animation: done ? "bounceIn 0.35s var(--spring) both" : "none",
-                            }}>{done ? "✓" : i + 1}</div>
-                            <div style={{ fontWeight: 700, fontSize: 15, color: done ? "#666" : "var(--white)", textDecoration: done ? "line-through" : "none" }}>{ex.nom}</div>
+                        {/* Barre colorée en haut */}
+                        <div style={{ height: 3, background: done ? "var(--green)" : accentColor, borderRadius: "16px 16px 0 0", opacity: done ? 1 : 0.7 }} />
+                        <div style={{ padding: "12px 14px 12px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (ex.series || ex.reps || ex.charge || ex.repos || ex.detail || ex.cle_technique) && !done ? 10 : 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                              {/* Badge numéro */}
+                              <div style={{
+                                width: 30, height: 30, borderRadius: 10, flexShrink: 0,
+                                background: done ? "var(--green)" : accentColor,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: done ? 15 : 13, fontWeight: 800,
+                                color: "#fff",
+                                boxShadow: done ? "0 2px 8px rgba(40,167,69,0.3)" : `0 2px 8px ${accentColor}40`,
+                              }}>{done ? "✓" : i + 1}</div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: 15, color: done ? "var(--gray)" : "var(--white)", textDecoration: done ? "line-through" : "none", lineHeight: 1.2 }}>{ex.nom}</div>
+                                {!done && (ex.series || ex.reps) && (
+                                  <div style={{ fontSize: 12, color: accentColor, fontWeight: 800, marginTop: 2 }}>
+                                    {ex.series && `${ex.series} × `}{ex.reps || ""}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center", marginLeft: 8 }}>
+                              {ex.repos && !done && (
+                                <div style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "#a78bfa", whiteSpace: "nowrap" }}>⏱ {ex.repos}</div>
+                              )}
+                              {findVideoForExercice(ex.nom) && (
+                                <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
+                                  background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.2)",
+                                  borderRadius: 8, width: 30, height: 30, fontSize: 12, color: "var(--yellow)",
+                                  cursor: "pointer", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>▶</button>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                            {ex.rpe && <div style={{ fontSize: 10, color: "#555", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe}</div>}
-                            {findVideoForExercice(ex.nom) && (
-                              <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
-                                background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)",
-                                borderRadius: 6, padding: "2px 8px", fontSize: 10, color: "var(--yellow)",
-                                cursor: "pointer", fontWeight: 700,
-                              }}>▶</button>
-                            )}
-                          </div>
+                          {/* Ligne de métriques */}
+                          {!done && (ex.charge || ex.rpe_cible || ex.tempo || (!ex.series && !ex.reps && ex.detail)) && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: ex.cle_technique ? 8 : 0 }}>
+                              {ex.charge && <div style={{ background: "rgba(224,122,0,0.1)", border: "1px solid rgba(224,122,0,0.2)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: "var(--orange)" }}>⚖️ {ex.charge}</div>}
+                              {ex.rpe_cible && <div style={{ background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, padding: "3px 9px", fontSize: 11, fontWeight: 700, color: "var(--gray2)" }}>RPE {ex.rpe_cible}</div>}
+                              {ex.tempo && <div style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 8, padding: "3px 9px", fontSize: 11, color: "var(--gray)" }}>Tempo {ex.tempo}</div>}
+                              {!ex.series && !ex.reps && !ex.charge && ex.detail && <div className="bebas" style={{ fontSize: 20, color: accentColor, letterSpacing: "0.04em" }}>{ex.detail}</div>}
+                            </div>
+                          )}
+                          {/* Clé technique */}
+                          {ex.cle_technique && !done && (
+                            <div style={{ background: `${accentColor}08`, border: `1px solid ${accentColor}20`, borderRadius: 10, padding: "7px 10px", display: "flex", gap: 7, alignItems: "flex-start" }}>
+                              <span style={{ flexShrink: 0, fontSize: 13 }}>⚡</span>
+                              <span style={{ fontSize: 12, color: accentColor, lineHeight: 1.45, fontWeight: 600 }}>{ex.cle_technique}</span>
+                            </div>
+                          )}
+                          {ex.note && !done && <div style={{ fontSize: 11, color: "var(--gray)", marginTop: 6, lineHeight: 1.5 }}>💬 {ex.note}</div>}
                         </div>
-                        {/* Chips séries / reps / charge / repos */}
-                        {(ex.series || ex.reps || ex.charge || ex.repos || ex.detail) && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingLeft: 38 }}>
-                            {ex.series && <div style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}30`, borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : accentColor }}>{ex.series} séries</div>}
-                            {ex.reps && <div style={{ background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--white)" }}>× {ex.reps}</div>}
-                            {ex.charge && <div style={{ background: "rgba(255,154,60,0.1)", border: "1px solid rgba(255,154,60,0.25)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 700, color: done ? "#555" : "var(--orange)" }}>⚖️ {ex.charge}</div>}
-                            {ex.repos && <div style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.2)", borderRadius: 8, padding: "3px 9px", fontSize: 12, fontWeight: 600, color: done ? "#555" : "#a78bfa" }}>⏱ {ex.repos}</div>}
-                            {!ex.series && !ex.reps && !ex.charge && ex.detail && <div className="bebas" style={{ fontSize: 20, color: done ? "#555" : accentColor, letterSpacing: "0.04em" }}>{ex.detail}</div>}
-                          </div>
-                        )}
-                        {/* Chips RPE cible + tempo */}
-                        {(ex.rpe_cible || ex.tempo) && !done && (
-                          <div style={{ display: "flex", gap: 6, marginTop: 4, paddingLeft: 38 }}>
-                            {ex.rpe_cible && <div style={{ fontSize: 10, color: "#888", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe_cible}</div>}
-                            {ex.tempo && <div style={{ fontSize: 10, color: "#888", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>Tempo {ex.tempo}</div>}
-                          </div>
-                        )}
-                        {/* Clé technique — le conseil le plus important */}
-                        {ex.cle_technique && !done && (
-                          <div style={{ fontSize: 11, color: "var(--yellow)", marginTop: 7, lineHeight: 1.5, paddingLeft: 38, display: "flex", gap: 6, alignItems: "flex-start" }}>
-                            <span style={{ flexShrink: 0 }}>⚡</span>
-                            <span>{ex.cle_technique}</span>
-                          </div>
-                        )}
-                        {(ex.note || ex.rpe) && !done && <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.5, paddingLeft: 38 }}>💬 {ex.note || (ex.rpe ? `RPE cible: ${ex.rpe}` : "")}</div>}
                       </div>
                     );
                   })}
