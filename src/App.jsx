@@ -8520,6 +8520,17 @@ JSON:
                 )}
                 {/* Calculateur pace HYROX */}
                 {(profile.vmaKmh || profile.squat1RM_final) && <PaceCalcWidget profile={profile} />}
+                {/* Accès benchmarks */}
+                <button onClick={() => setTab("benchmark")} style={{
+                  width: "100%", background: "rgba(0,122,255,0.05)", border: "1.5px solid rgba(0,122,255,0.15)", borderRadius: 14,
+                  padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginTop: 10,
+                }}>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--yellow)" }}>📊 Benchmarks HYROX</div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Temps moyens par station · Open / Pro · Axes à améliorer</div>
+                  </div>
+                  <div style={{ color: "var(--yellow)", fontSize: 18 }}>→</div>
+                </button>
               </>
             ) : (
               <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.08)", borderRadius: 16, padding: "40px 20px", textAlign: "center" }}>
@@ -8543,7 +8554,15 @@ JSON:
             onGoToSeance={(type) => { setDailyData(d => ({ ...d, typeSeance: type })); setTab("today"); }}
           />
         )}
-        {tab === "race" && <RaceTab profile={profile} />}
+        {tab === "race" && <RaceTab profile={profile} onOpenBenchmark={() => setTab("benchmark")} />}
+        {tab === "benchmark" && (
+          <div style={{ padding: "0 16px 100px" }}>
+            <div style={{ paddingTop: 16, marginBottom: 0 }}>
+              <button onClick={() => setTab("race")} style={{ background: "none", border: "none", color: "var(--yellow)", fontSize: 14, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>← Retour</button>
+            </div>
+            <HyroxBenchmarkTab profile={profile} />
+          </div>
+        )}
 
         {/* FORME TAB */}
         {tab === "forme" && (()=>{
@@ -9543,6 +9562,675 @@ function VideoModal({ mouvement, onClose }) {
           {mouvement.erreurs.map((e, i) => <div key={i} style={{ fontSize: 13, color: "#ccc", marginBottom: 6 }}>× {e}</div>)}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// HYROX BENCHMARK DATABASE
+// ============================================================
+
+// Sources: HYROX official results 2023-2025, world.hyrox.com
+// Temps en secondes pour chaque segment (8 runs de 1km + 8 stations)
+const HYROX_BENCHMARKS = {
+  // ── STATIONS (secondes) ──
+  stations: [
+    {
+      id: "skierg",
+      nom: "SkiErg",
+      distance: "1 000m",
+      icon: "⛷️",
+      muscle: "Dos, épaules, core",
+      energie: "Cardio",
+      conseils: ["Tirer avec tout le corps pas que les bras","Rythme régulier sur 1000m","Légère flexion des genoux"],
+      poids: { H: "poids du corps", F: "poids du corps" },
+      temps: {
+        "H_Open":   { p25: 213, median: 252, p75: 306, elite: 165 },
+        "F_Open":   { p25: 240, median: 288, p75: 354, elite: 192 },
+        "H_Pro":    { p25: 168, median: 192, p75: 222, elite: 145 },
+        "F_Pro":    { p25: 192, median: 216, p75: 252, elite: 162 },
+        "HH_Open":  { p25: 210, median: 246, p75: 300, elite: 162 },  // doubles hommes
+        "FF_Open":  { p25: 228, median: 270, p75: 336, elite: 180 },
+        "MX_Open":  { p25: 222, median: 264, p75: 324, elite: 170 },
+      },
+    },
+    {
+      id: "sled_push",
+      nom: "Sled Push",
+      distance: "50m",
+      icon: "🛷",
+      muscle: "Quadriceps, fessiers, épaules",
+      energie: "Force explosive",
+      conseils: ["Corps horizontal, poussée avec les jambes","Pas larges et puissants","Accélère sur les 5 derniers mètres"],
+      poids: { H: "102kg (Open) / 125kg (Pro)", F: "57kg (Open) / 80kg (Pro)" },
+      temps: {
+        "H_Open":   { p25: 108, median: 144, p75: 192, elite: 72 },
+        "F_Open":   { p25: 90,  median: 120, p75: 168, elite: 60 },
+        "H_Pro":    { p25: 72,  median: 90,  p75: 114, elite: 54 },
+        "F_Pro":    { p25: 78,  median: 96,  p75: 126, elite: 60 },
+        "HH_Open":  { p25: 78,  median: 108, p75: 150, elite: 60 },
+        "FF_Open":  { p25: 72,  median: 96,  p75: 132, elite: 54 },
+        "MX_Open":  { p25: 84,  median: 114, p75: 156, elite: 62 },
+      },
+    },
+    {
+      id: "sled_pull",
+      nom: "Sled Pull",
+      distance: "50m",
+      icon: "🔗",
+      muscle: "Dos, biceps, ischio-jambiers",
+      energie: "Force + cardio",
+      conseils: ["Marcher à reculons, fléchir les genoux","Grip ferme sur les cordes","Garder le dos droit"],
+      poids: { H: "102kg (Open) / 125kg (Pro)", F: "57kg (Open) / 80kg (Pro)" },
+      temps: {
+        "H_Open":   { p25: 120, median: 162, p75: 216, elite: 84 },
+        "F_Open":   { p25: 108, median: 144, p75: 192, elite: 72 },
+        "H_Pro":    { p25: 84,  median: 102, p75: 132, elite: 66 },
+        "F_Pro":    { p25: 90,  median: 114, p75: 144, elite: 72 },
+        "HH_Open":  { p25: 96,  median: 132, p75: 180, elite: 72 },
+        "FF_Open":  { p25: 90,  median: 126, p75: 168, elite: 66 },
+        "MX_Open":  { p25: 102, median: 138, p75: 186, elite: 74 },
+      },
+    },
+    {
+      id: "burpee",
+      nom: "Burpee Broad Jump",
+      distance: "80m",
+      icon: "🐸",
+      muscle: "Full body, cardio",
+      energie: "Cardio + explosivité",
+      conseils: ["Saut vers l'avant à chaque burpee","Maintenir l'amplitude du saut","Ne pas ralentir sur les 20 derniers mètres"],
+      poids: { H: "poids du corps", F: "poids du corps" },
+      temps: {
+        "H_Open":   { p25: 210, median: 270, p75: 348, elite: 150 },
+        "F_Open":   { p25: 228, median: 294, p75: 384, elite: 168 },
+        "H_Pro":    { p25: 162, median: 192, p75: 228, elite: 138 },
+        "F_Pro":    { p25: 174, median: 210, p75: 258, elite: 150 },
+        "HH_Open":  { p25: 204, median: 258, p75: 336, elite: 144 },
+        "FF_Open":  { p25: 216, median: 276, p75: 360, elite: 156 },
+        "MX_Open":  { p25: 210, median: 264, p75: 342, elite: 148 },
+      },
+    },
+    {
+      id: "rowing",
+      nom: "Rowing",
+      distance: "1 000m",
+      icon: "🚣",
+      muscle: "Dos, jambes, bras",
+      energie: "Cardio + force",
+      conseils: ["Poussée avec les jambes en premier","Damper sur 4-5 selon gabarit","Maintenir 1:55-2:05/500m en Open"],
+      poids: { H: "poids du corps", F: "poids du corps" },
+      temps: {
+        "H_Open":   { p25: 210, median: 252, p75: 306, elite: 168 },
+        "F_Open":   { p25: 234, median: 282, p75: 348, elite: 192 },
+        "H_Pro":    { p25: 174, median: 198, p75: 228, elite: 155 },
+        "F_Pro":    { p25: 192, median: 222, p75: 264, elite: 170 },
+        "HH_Open":  { p25: 204, median: 246, p75: 300, elite: 162 },
+        "FF_Open":  { p25: 222, median: 270, p75: 330, elite: 180 },
+        "MX_Open":  { p25: 210, median: 258, p75: 318, elite: 168 },
+      },
+    },
+    {
+      id: "farmers",
+      nom: "Farmers Carry",
+      distance: "200m",
+      icon: "🧳",
+      muscle: "Trapèzes, avant-bras, core",
+      energie: "Force-endurance",
+      conseils: ["Grip symétrique, épaules hautes","Pas réguliers et rapides","Changer de main au virage (100m)"],
+      poids: { H: "2×24kg (Open) / 2×32kg (Pro)", F: "2×16kg (Open) / 2×24kg (Pro)" },
+      temps: {
+        "H_Open":   { p25: 96,  median: 126, p75: 168, elite: 72 },
+        "F_Open":   { p25: 90,  median: 114, p75: 150, elite: 66 },
+        "H_Pro":    { p25: 78,  median: 96,  p75: 120, elite: 60 },
+        "F_Pro":    { p25: 72,  median: 90,  p75: 114, elite: 54 },
+        "HH_Open":  { p25: 84,  median: 108, p75: 144, elite: 60 },
+        "FF_Open":  { p25: 78,  median: 102, p75: 132, elite: 54 },
+        "MX_Open":  { p25: 90,  median: 114, p75: 150, elite: 60 },
+      },
+    },
+    {
+      id: "sandbag",
+      nom: "Sandbag Lunges",
+      distance: "100m",
+      icon: "🎒",
+      muscle: "Quadriceps, fessiers, core",
+      energie: "Force-endurance",
+      conseils: ["Genou arrière proche du sol","Sandbag sur l'épaule ou en goblet","Maintenir le torse vertical"],
+      poids: { H: "20kg (Open) / 30kg (Pro)", F: "10kg (Open) / 20kg (Pro)" },
+      temps: {
+        "H_Open":   { p25: 222, median: 288, p75: 372, elite: 162 },
+        "F_Open":   { p25: 210, median: 270, p75: 354, elite: 150 },
+        "H_Pro":    { p25: 168, median: 204, p75: 252, elite: 138 },
+        "F_Pro":    { p25: 162, median: 198, p75: 246, elite: 132 },
+        "HH_Open":  { p25: 198, median: 258, p75: 336, elite: 150 },
+        "FF_Open":  { p25: 192, median: 252, p75: 330, elite: 144 },
+        "MX_Open":  { p25: 204, median: 264, p75: 342, elite: 150 },
+      },
+    },
+    {
+      id: "wallballs",
+      nom: "Wall Balls",
+      distance: "75/100 reps",
+      icon: "🏀",
+      muscle: "Quadriceps, épaules, core",
+      energie: "Force-cardio",
+      conseils: ["Squat profond à chaque rep","Viser 10cm au-dessus de la cible","Respirer au point haut"],
+      poids: { H: "6kg / 9kg (Pro) à 3m", F: "4kg / 6kg (Pro) à 3m" },
+      temps: {
+        "H_Open":   { p25: 276, median: 360, p75: 468, elite: 180 },
+        "F_Open":   { p25: 258, median: 330, p75: 426, elite: 162 },
+        "H_Pro":    { p25: 198, median: 240, p75: 294, elite: 155 },
+        "F_Pro":    { p25: 192, median: 228, p75: 282, elite: 150 },
+        "HH_Open":  { p25: 252, median: 330, p75: 426, elite: 168 },
+        "FF_Open":  { p25: 228, median: 300, p75: 390, elite: 150 },
+        "MX_Open":  { p25: 258, median: 336, p75: 432, elite: 162 },
+      },
+    },
+  ],
+  // ── RUNNING (8 × 1km, secondes/km) ──
+  run_pace_sec: {
+    "H_Open":   { p25: 306, median: 348, p75: 408, elite: 240 },
+    "F_Open":   { p25: 360, median: 414, p75: 486, elite: 282 },
+    "H_Pro":    { p25: 240, median: 264, p75: 294, elite: 210 },
+    "F_Pro":    { p25: 270, median: 300, p75: 336, elite: 240 },
+    "HH_Open":  { p25: 294, median: 336, p75: 396, elite: 234 },
+    "FF_Open":  { p25: 342, median: 396, p75: 468, elite: 270 },
+    "MX_Open":  { p25: 312, median: 360, p75: 426, elite: 252 },
+  },
+  // ── TEMPS TOTAUX (secondes) ──
+  total: {
+    "H_Open":   { p25: 4380, median: 5100, p75: 6120, elite: 3300 },
+    "F_Open":   { p25: 4980, median: 5820, p75: 6960, elite: 3780 },
+    "H_Pro":    { p25: 3480, median: 3900, p75: 4380, elite: 3060 },
+    "F_Pro":    { p25: 3780, median: 4320, p75: 4980, elite: 3360 },
+    "HH_Open":  { p25: 4200, median: 4920, p75: 5880, elite: 3180 },
+    "FF_Open":  { p25: 4680, median: 5520, p75: 6600, elite: 3600 },
+    "MX_Open":  { p25: 4320, median: 5040, p75: 6000, elite: 3300 },
+  },
+  // ── RECORDS DU MONDE ──
+  records: {
+    "H_Open":   "55:16 — Hunter McIntyre (2024 Chicago)",
+    "F_Open":   "1:02:21 — Annah Watkinson (2024 Frankfurt)",
+    "H_Pro":    "57:28 — Hunter McIntyre (2025 World Champs)",
+    "F_Pro":    "1:04:44 — Emma McQuaid (2025 World Champs)",
+  },
+};
+
+const HYROX_CATS = [
+  { id: "H_Open",  label: "Homme Open",   icon: "👨", color: "#007AFF" },
+  { id: "F_Open",  label: "Femme Open",   icon: "👩", color: "#f472b6" },
+  { id: "H_Pro",   label: "Homme Pro",    icon: "🏆", color: "#f97316" },
+  { id: "F_Pro",   label: "Femme Pro",    icon: "🏆", color: "#a855f7" },
+  { id: "HH_Open", label: "Doubles H",    icon: "👥", color: "#22c55e" },
+  { id: "FF_Open", label: "Doubles F",    icon: "👥", color: "#ec4899" },
+  { id: "MX_Open", label: "Mixte",        icon: "🤝", color: "#eab308" },
+];
+
+function secToMmss(sec) {
+  if (!sec || isNaN(sec)) return "—";
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function HyroxBenchmarkTab({ profile }) {
+  const userCat = profile.sexe === "F" ? "F_Open" : "H_Open";
+  const [cat, setCat] = useState(userCat);
+  const [view, setView] = useState("stations"); // "stations" | "global" | "ma_perf"
+  const [userTimes, setUserTimes] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch { return {}; }
+  });
+  const [editStation, setEditStation] = useState(null);
+  const [inputVal, setInputVal] = useState("");
+
+  const catObj = HYROX_CATS.find(c => c.id === cat) || HYROX_CATS[0];
+  const benchRun = HYROX_BENCHMARKS.run_pace_sec[cat] || {};
+  const benchTotal = HYROX_BENCHMARKS.total[cat] || {};
+
+  const saveUserTime = (stationId, mmss) => {
+    const parts = mmss.split(":");
+    const sec = parts.length === 2 ? parseInt(parts[0]) * 60 + parseInt(parts[1]) : parseInt(mmss);
+    if (isNaN(sec)) return;
+    const next = { ...userTimes, [stationId]: sec };
+    setUserTimes(next);
+    localStorage.setItem(`fitrace_hyrox_times_${profile.name}`, JSON.stringify(next));
+    setEditStation(null);
+    setInputVal("");
+  };
+
+  // Calcul du score par station vs médiane catégorie
+  const stationScores = HYROX_BENCHMARKS.stations.map(st => {
+    const bench = st.temps[cat] || {};
+    const userSec = userTimes[st.id];
+    let pct = null;
+    if (userSec && bench.median) {
+      pct = Math.round((bench.median - userSec) / bench.median * 100);
+    }
+    return { ...st, bench, userSec, pct };
+  });
+
+  // Identifier les axes faibles (plus lent que la médiane)
+  const weakPoints = stationScores.filter(s => s.pct !== null && s.pct < 0).sort((a, b) => a.pct - b.pct);
+  const strongPoints = stationScores.filter(s => s.pct !== null && s.pct > 5);
+
+  const totalUserSec = Object.values(userTimes).reduce((a, v) => a + (v || 0), 0);
+  const totalWithRun = totalUserSec + (userTimes["run"] ? userTimes["run"] * 8 : 0);
+
+  return (
+    <div className="fade-in">
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
+        <div>
+          <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>BENCHMARKS HYROX</div>
+          <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Temps moyens officiels 2023-2025</div>
+        </div>
+        <div style={{ fontSize: 9, color: "#888", textAlign: "right" }}>
+          Source: world.hyrox.com<br/>world records inclus
+        </div>
+      </div>
+
+      {/* Sélecteur catégorie */}
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 14, scrollbarWidth: "none" }}>
+        {HYROX_CATS.map(c => (
+          <button key={c.id} onClick={() => setCat(c.id)} style={{
+            flexShrink: 0, padding: "7px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            background: cat === c.id ? `${c.color}20` : "var(--bg2)",
+            border: cat === c.id ? `2px solid ${c.color}` : "1px solid var(--bg3)",
+            color: cat === c.id ? c.color : "#888",
+            transition: "all 0.2s",
+          }}>
+            {c.icon} {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Onglets vue */}
+      <div style={{ display: "flex", gap: 0, background: "var(--bg3)", borderRadius: 12, padding: 3, marginBottom: 16 }}>
+        {[
+          { id: "stations", label: "🏟️ Stations" },
+          { id: "global", label: "📊 Temps global" },
+          { id: "ma_perf", label: "🎯 Ma perf" },
+        ].map(v => (
+          <button key={v.id} onClick={() => setView(v.id)} style={{
+            flex: 1, padding: "8px 4px", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none",
+            background: view === v.id ? "var(--bg2)" : "transparent",
+            color: view === v.id ? "var(--yellow)" : "#888",
+            boxShadow: view === v.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+            transition: "all 0.2s",
+          }}>{v.label}</button>
+        ))}
+      </div>
+
+      {/* ── VUE STATIONS ── */}
+      {view === "stations" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Temps running */}
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ height: 3, background: "#22c55e" }} />
+            <div style={{ padding: "12px 14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏃</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Running</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>8 × 1km intercalés</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Allure moyenne</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "var(--white)" }}>{secToMmss(benchRun.median)}/km</div>
+                </div>
+              </div>
+              {/* Barre percentiles */}
+              <div style={{ position: "relative", height: 28 }}>
+                <div style={{ position: "absolute", inset: "8px 0", background: "var(--bg3)", borderRadius: 6 }} />
+                {/* Zone interquartile */}
+                {benchRun.p25 && benchRun.p75 && (() => {
+                  const range = benchRun.p75 - benchRun.p25;
+                  const leftPct = (benchRun.p25 - benchRun.elite * 0.9) / ((benchRun.p75 * 1.2) - benchRun.elite * 0.9) * 100;
+                  const widthPct = range / ((benchRun.p75 * 1.2) - benchRun.elite * 0.9) * 100;
+                  return null; // on affiche autrement ci-dessous
+                })()}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", height: "100%", alignItems: "center", gap: 8, paddingLeft: 8 }}>
+                  <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700 }}>🏆 {secToMmss(benchRun.elite)}/km</div>
+                  <div style={{ fontSize: 10, color: "#888" }}>Top25%: {secToMmss(benchRun.p25)}</div>
+                  <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700 }}>Médiane: {secToMmss(benchRun.median)}</div>
+                  <div style={{ fontSize: 10, color: "#888" }}>75%: {secToMmss(benchRun.p75)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stations */}
+          {HYROX_BENCHMARKS.stations.map((st, i) => {
+            const bench = st.temps[cat] || {};
+            const userSec = userTimes[st.id];
+            const pct = userSec && bench.median ? Math.round((bench.median - userSec) / bench.median * 100) : null;
+            const perfColor = pct === null ? "#888" : pct > 10 ? "#22c55e" : pct > 0 ? "#007AFF" : pct > -10 ? "#eab308" : "#ef4444";
+            const maxSec = (bench.p75 || 0) * 1.15;
+            const elitePct = bench.elite ? bench.elite / maxSec * 100 : 0;
+            const p25Pct = bench.p25 ? bench.p25 / maxSec * 100 : 0;
+            const medPct = bench.median ? bench.median / maxSec * 100 : 0;
+            const p75Pct = bench.p75 ? bench.p75 / maxSec * 100 : 0;
+            const userPct2 = userSec ? Math.min(userSec / maxSec * 100, 100) : null;
+            return (
+              <div key={st.id} style={{ background: "var(--bg2)", border: `1px solid ${editStation === st.id ? catObj.color+"55" : "var(--bg3)"}`, borderRadius: 16, overflow: "hidden", transition: "border-color 0.2s" }}>
+                <div style={{ height: 3, background: catObj.color, opacity: 0.6 }} />
+                <div style={{ padding: "12px 14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${catObj.color}12`, border: `1px solid ${catObj.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{st.icon}</div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>{st.nom}</div>
+                        <div style={{ fontSize: 10, color: "#888" }}>{st.distance} · {st.poids[cat.startsWith("F") ? "F" : "H"]}</div>
+                      </div>
+                    </div>
+                    {/* Ma perf */}
+                    {editStation === st.id ? (
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <input
+                          value={inputVal}
+                          onChange={e => setInputVal(e.target.value)}
+                          placeholder="mm:ss"
+                          style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${catObj.color}`, background: "var(--bg)", color: "var(--white)", fontSize: 14, textAlign: "center", fontWeight: 700, outline: "none" }}
+                          autoFocus
+                          onKeyDown={e => e.key === "Enter" && saveUserTime(st.id, inputVal)}
+                        />
+                        <button onClick={() => saveUserTime(st.id, inputVal)} style={{ background: catObj.color, border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓</button>
+                        <button onClick={() => { setEditStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "6px 8px", color: "#888", fontSize: 12, cursor: "pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: "right", cursor: "pointer" }} onClick={() => { setEditStation(st.id); setInputVal(userSec ? secToMmss(userSec) : ""); }}>
+                        {userSec ? (
+                          <>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: perfColor }}>{secToMmss(userSec)}</div>
+                            {pct !== null && <div style={{ fontSize: 10, fontWeight: 700, color: perfColor }}>{pct > 0 ? "+" : ""}{pct}% vs médiane</div>}
+                          </>
+                        ) : (
+                          <div style={{ fontSize: 11, color: "#aaa", background: "var(--bg3)", padding: "5px 10px", borderRadius: 8 }}>+ Ma perf</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Barre percentiles visuelle */}
+                  <div style={{ position: "relative", height: 20, marginBottom: 6 }}>
+                    <div style={{ position: "absolute", top: 6, left: 0, right: 0, height: 8, background: "var(--bg3)", borderRadius: 4 }} />
+                    {/* Zone interquartile (p25→p75) colorée */}
+                    {bench.p25 && bench.p75 && (
+                      <div style={{
+                        position: "absolute", top: 6, height: 8, borderRadius: 4,
+                        left: `${p25Pct}%`, width: `${p75Pct - p25Pct}%`,
+                        background: `${catObj.color}30`, border: `1px solid ${catObj.color}40`,
+                      }} />
+                    )}
+                    {/* Médiane */}
+                    {bench.median && (
+                      <div style={{ position: "absolute", top: 3, left: `${medPct}%`, width: 2, height: 14, background: catObj.color, borderRadius: 1, transform: "translateX(-50%)" }} />
+                    )}
+                    {/* Elite */}
+                    {bench.elite && (
+                      <div style={{ position: "absolute", top: 3, left: `${elitePct}%`, width: 2, height: 14, background: "#22c55e", borderRadius: 1, transform: "translateX(-50%)" }} />
+                    )}
+                    {/* Ma perf */}
+                    {userPct2 !== null && (
+                      <div style={{
+                        position: "absolute", top: 0, left: `${userPct2}%`, transform: "translateX(-50%)",
+                        width: 20, height: 20, borderRadius: "50%",
+                        background: perfColor, border: "2px solid var(--bg2)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 8, color: "#fff", fontWeight: 700, zIndex: 2,
+                      }}>●</div>
+                    )}
+                  </div>
+
+                  {/* Légende */}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {bench.elite && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} /><span style={{ fontSize: 9, color: "#888" }}>Elite {secToMmss(bench.elite)}</span></div>}
+                    {bench.p25 && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa" }} /><span style={{ fontSize: 9, color: "#888" }}>Top 25% {secToMmss(bench.p25)}</span></div>}
+                    {bench.median && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 2, background: catObj.color }} /><span style={{ fontSize: 9, color: "#888", fontWeight: 700 }}>Médiane {secToMmss(bench.median)}</span></div>}
+                    {bench.p75 && <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#aaa" }} /><span style={{ fontSize: 9, color: "#888" }}>75% {secToMmss(bench.p75)}</span></div>}
+                  </div>
+
+                  {/* Conseils techniques */}
+                  <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {st.conseils.slice(0, 2).map((c, ci) => (
+                      <div key={ci} style={{ fontSize: 10, color: "#888", background: "rgba(0,0,0,0.04)", padding: "3px 8px", borderRadius: 6 }}>💡 {c}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── VUE GLOBAL ── */}
+      {view === "global" && (
+        <div>
+          {/* Record du monde */}
+          {HYROX_BENCHMARKS.records[cat] && (
+            <div style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
+              <span style={{ fontSize: 24 }}>🏆</span>
+              <div>
+                <div style={{ fontSize: 10, color: "#22c55e", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Record du monde {catObj.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--white)", marginTop: 2 }}>{HYROX_BENCHMARKS.records[cat]}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Distribution des finishers */}
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: catObj.color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>Distribution des temps — {catObj.label}</div>
+            {[
+              { label: "Elite (Top 5%)", sec: benchTotal.elite, color: "#22c55e", icon: "🏆" },
+              { label: "Top 25%",        sec: benchTotal.p25,   color: "#007AFF", icon: "💪" },
+              { label: "Médiane (50%)",  sec: benchTotal.median, color: catObj.color, icon: "◎" },
+              { label: "75e percentile", sec: benchTotal.p75,   color: "#eab308", icon: "🔸" },
+            ].map((row, i) => {
+              const userTotal = Object.keys(userTimes).filter(k => k !== "run").reduce((a, k) => a + (userTimes[k]||0), 0);
+              const runTotal = (userTimes["run"] || 0) * 8;
+              const myTotalSec = userTotal + runTotal;
+              const isMine = myTotalSec > 0 && Math.abs(row.sec - myTotalSec) < 300;
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <div style={{ fontSize: 18, flexShrink: 0, width: 24 }}>{row.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: "#888" }}>{row.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: row.color }}>
+                        {Math.floor(row.sec/3600)}h{String(Math.floor((row.sec%3600)/60)).padStart(2,"0")}:{String(row.sec%60).padStart(2,"0")}
+                      </span>
+                    </div>
+                    <div style={{ background: "var(--bg3)", borderRadius: 4, height: 6 }}>
+                      <div style={{ width: `${Math.min(100, (benchTotal.elite / row.sec) * 100)}%`, height: "100%", background: row.color, borderRadius: 4, opacity: 0.7 }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Décomposition d'un temps HYROX médian */}
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Décomposition du temps médian</div>
+            {(() => {
+              const runTotal = (benchRun.median || 0) * 8;
+              const stationsTotal = HYROX_BENCHMARKS.stations.reduce((a, s) => a + ((s.temps[cat]||{}).median||0), 0);
+              const total2 = runTotal + stationsTotal;
+              const runPct = total2 > 0 ? Math.round(runTotal / total2 * 100) : 50;
+              return (
+                <>
+                  <div style={{ display: "flex", height: 28, borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
+                    <div style={{ width: `${runPct}%`, background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>🏃 {runPct}%</span>
+                    </div>
+                    <div style={{ flex: 1, background: catObj.color, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>💪 {100-runPct}%</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 12, color: "#22c55e" }}>🏃 Running : {Math.floor(runTotal/60)}min {runTotal%60}s</div>
+                    <div style={{ fontSize: 12, color: catObj.color }}>💪 Stations : {Math.floor(stationsTotal/60)}min {stationsTotal%60}s</div>
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 13, fontWeight: 800, color: "var(--white)", textAlign: "center" }}>
+                    Total estimé : {Math.floor(total2/3600)}h{String(Math.floor((total2%3600)/60)).padStart(2,"0")}:{String(total2%60).padStart(2,"0")}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Comparaison running vs stations par rang */}
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Stations — du plus rapide au plus lent (médiane)</div>
+            {[...HYROX_BENCHMARKS.stations]
+              .map(s => ({ ...s, med: (s.temps[cat]||{}).median || 9999 }))
+              .sort((a,b) => a.med - b.med)
+              .map((s, i) => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < 7 ? "1px solid var(--bg3)" : "none" }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 6, background: `${catObj.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: catObj.color, flexShrink: 0 }}>{i+1}</div>
+                  <div style={{ fontSize: 16, flexShrink: 0 }}>{s.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
+                    <div style={{ fontSize: 9, color: "#888" }}>{s.distance}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: i < 2 ? "#22c55e" : i > 5 ? "#ef4444" : "var(--white)" }}>{secToMmss(s.med)}</div>
+                    <div style={{ fontSize: 9, color: "#888" }}>médiane</div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── VUE MA PERF ── */}
+      {view === "ma_perf" && (
+        <div>
+          {/* Instructions */}
+          <div style={{ background: "rgba(0,122,255,0.05)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, fontSize: 12, color: "#888", lineHeight: 1.6 }}>
+            💡 Saisis tes meilleurs temps par station (format mm:ss) pour identifier tes axes de progression vs la catégorie <strong style={{ color: catObj.color }}>{catObj.label}</strong>.
+          </div>
+
+          {/* Mon temps de running */}
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 14, padding: "12px 14px", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span style={{ fontSize: 18 }}>🏃</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>Allure running / 1km</div>
+                  <div style={{ fontSize: 10, color: "#888" }}>Médiane: {secToMmss(benchRun.median)}/km</div>
+                </div>
+              </div>
+              {editStation === "run" ? (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder="mm:ss" autoFocus
+                    style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: `1.5px solid #22c55e`, background: "var(--bg)", color: "var(--white)", fontSize: 14, textAlign: "center", fontWeight: 700, outline: "none" }}
+                    onKeyDown={e => e.key === "Enter" && saveUserTime("run", inputVal)} />
+                  <button onClick={() => saveUserTime("run", inputVal)} style={{ background: "#22c55e", border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓</button>
+                  <button onClick={() => { setEditStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "6px 8px", color: "#888", fontSize: 12, cursor: "pointer" }}>✕</button>
+                </div>
+              ) : (
+                <div onClick={() => { setEditStation("run"); setInputVal(userTimes["run"] ? secToMmss(userTimes["run"]) : ""); }} style={{ cursor: "pointer" }}>
+                  {userTimes["run"] ? (
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#22c55e" }}>{secToMmss(userTimes["run"])}/km</div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "#aaa", background: "var(--bg3)", padding: "5px 10px", borderRadius: 8 }}>+ Saisir</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Stations saisies */}
+          {stationScores.map((st, i) => {
+            const perfColor = st.pct === null ? "#888" : st.pct > 10 ? "#22c55e" : st.pct > 0 ? "#007AFF" : st.pct > -10 ? "#eab308" : "#ef4444";
+            return (
+              <div key={st.id} style={{ background: "var(--bg2)", border: `1px solid ${editStation === st.id ? catObj.color+"55" : "var(--bg3)"}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <span style={{ fontSize: 20 }}>{st.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>{st.nom}</div>
+                      <div style={{ fontSize: 10, color: "#888" }}>Médiane: {secToMmss(st.bench.median)} · Elite: {secToMmss(st.bench.elite)}</div>
+                    </div>
+                  </div>
+                  {editStation === st.id ? (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder="mm:ss" autoFocus
+                        style={{ width: 64, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${catObj.color}`, background: "var(--bg)", color: "var(--white)", fontSize: 14, textAlign: "center", fontWeight: 700, outline: "none" }}
+                        onKeyDown={e => e.key === "Enter" && saveUserTime(st.id, inputVal)} />
+                      <button onClick={() => saveUserTime(st.id, inputVal)} style={{ background: catObj.color, border: "none", borderRadius: 8, padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓</button>
+                      <button onClick={() => { setEditStation(null); setInputVal(""); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "6px 8px", color: "#888", fontSize: 12, cursor: "pointer" }}>✕</button>
+                    </div>
+                  ) : (
+                    <div onClick={() => { setEditStation(st.id); setInputVal(st.userSec ? secToMmss(st.userSec) : ""); }} style={{ cursor: "pointer", textAlign: "right" }}>
+                      {st.userSec ? (
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 800, color: perfColor }}>{secToMmss(st.userSec)}</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: perfColor }}>{st.pct > 0 ? "+" : ""}{st.pct}% vs méd.</div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: "#aaa", background: "var(--bg3)", padding: "5px 10px", borderRadius: 8 }}>+ Saisir</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Mini barre comparaison */}
+                {st.userSec && st.bench.median && (
+                  <div style={{ marginTop: 8, position: "relative", height: 8 }}>
+                    <div style={{ position: "absolute", inset: 0, background: "var(--bg3)", borderRadius: 4 }} />
+                    <div style={{ position: "absolute", top: 0, height: "100%", borderRadius: 4, background: perfColor, opacity: 0.7,
+                      width: `${Math.min(100, (st.bench.median / st.userSec) * 100)}%` }} />
+                    <div style={{ position: "absolute", top: -2, left: `${Math.min(100, (st.bench.p25||st.bench.median) / (st.bench.p75 * 1.15) * 100)}%`, height: 12, width: 1.5, background: catObj.color, opacity: 0.5 }} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Axes d'amélioration */}
+          {(weakPoints.length > 0 || strongPoints.length > 0) && (
+            <div style={{ marginTop: 16 }}>
+              {weakPoints.length > 0 && (
+                <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 16, padding: "12px 14px", marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>🎯 Axes à améliorer en priorité</div>
+                  {weakPoints.map((s, i) => (
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < weakPoints.length - 1 ? "1px solid rgba(239,68,68,0.1)" : "none" }}>
+                      <span style={{ fontSize: 16 }}>{s.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
+                        <div style={{ fontSize: 10, color: "#aaa" }}>Ton temps: {secToMmss(s.userSec)} · Médiane: {secToMmss(s.bench.median)}</div>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#ef4444" }}>{s.pct}%</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {strongPoints.length > 0 && (
+                <div style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 16, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>💪 Tes points forts</div>
+                  {strongPoints.map((s, i) => (
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < strongPoints.length - 1 ? "1px solid rgba(34,197,94,0.1)" : "none" }}>
+                      <span style={{ fontSize: 16 }}>{s.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{s.nom}</div>
+                        <div style={{ fontSize: 10, color: "#aaa" }}>Tu bats la médiane de {s.pct}%</div>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#22c55e" }}>+{s.pct}%</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bottom spacer */}
+      <div style={{ height: 40 }} />
     </div>
   );
 }
@@ -11807,7 +12495,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
   );
 }
 
-function RaceTab({ profile }) {
+function RaceTab({ profile, onOpenBenchmark }) {
   const [strategy, setStrategy] = useState(null);
   const [loading, setLoading] = useState(false);
   const [strategyStream, setStrategyStream] = useState("");
@@ -12029,6 +12717,20 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           </button>
         </div>
       )}
+
+      {/* ── ACCÈS BASE DE DONNÉES BENCHMARKS ── */}
+      <button onClick={onOpenBenchmark} style={{
+        width: "100%", background: "rgba(0,122,255,0.05)", border: "1.5px solid rgba(0,122,255,0.2)", borderRadius: 16,
+        padding: "16px 20px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer",
+      }}>
+        <div style={{ textAlign: "left" }}>
+          <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 1 }}>📊 BENCHMARKS PAR STATION</div>
+          <div style={{ fontSize: 12, color: "#777", marginTop: 3 }}>Temps moyens Open / Pro · Homme / Femme · Axes à améliorer</div>
+        </div>
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--yellow)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span className="bebas" style={{ fontSize: 18, color: "#fff" }}>→</span>
+        </div>
+      </button>
 
       {/* ── TEMPS DE RÉFÉRENCE HYROX ── */}
       {(() => {
