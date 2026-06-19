@@ -3155,14 +3155,25 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   };
 
   const TAB_ORDER = ["home","today","progress","race","planning","technique","profil","zones"];
+  const scrollPositions = useRef({});
+  const mainScrollRef = useRef(null);
+
   const navigateTo = (newTab) => {
     if (newTab === tab) return;
+    // Sauvegarder position scroll de l'onglet actuel
+    if (mainScrollRef.current) {
+      scrollPositions.current[tab] = mainScrollRef.current.scrollTop;
+    }
     const cur = TAB_ORDER.indexOf(tab); const nxt = TAB_ORDER.indexOf(newTab);
     setTabDir(nxt >= cur ? 1 : -1);
     setTab(newTab);
     haptic([6]);
-    // Scroll to top on tab change
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+    // Restaurer position scroll du nouvel onglet (ou haut de page)
+    requestAnimationFrame(() => {
+      if (mainScrollRef.current) {
+        mainScrollRef.current.scrollTop = scrollPositions.current[newTab] || 0;
+      }
+    });
   };
   const todayStr = new Date().toISOString().split("T")[0];
   const [dailyData, setDailyData] = useState({ fatigue: 3, sommeil: 3, temps: 60, materiel: "tout", typeSeance: "auto", sleepHours: 7.5, poidsJour: profile.poids || "", hydration: 0, hrv: "" });
@@ -4287,24 +4298,26 @@ JSON:
     { id: "profil", label: "Profil", icon: "👤" },
   ];
 
-  // ── Swipe gesture state ──
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [touchStartY, setTouchStartY] = useState(null);
+  // ── Swipe gesture state — useRef pour éviter les re-renders sur chaque toucher ──
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
     try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
   });
   const BOTTOM_TABS = ["home","today","progress","forme","profil"];
 
   function handleTouchStart(e) {
-    setTouchStartX(e.touches[0].clientX);
-    setTouchStartY(e.touches[0].clientY);
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   }
   function handleTouchEnd(e) {
-    if (touchStartX === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-    // Only horizontal swipes (dx > 55px, not mostly vertical)
-    if (Math.abs(dx) > 55 && dy < 80) {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+    touchStartX.current = null;
+    touchStartY.current = null;
+    // Only horizontal swipes (dx > 60px, not mostly vertical, ratio check)
+    if (Math.abs(dx) > 60 && dy < 60 && Math.abs(dx) > dy * 1.5) {
       const idx = BOTTOM_TABS.indexOf(tab);
       if (dx < 0 && idx < BOTTOM_TABS.length - 1) {
         navigateTo(BOTTOM_TABS[idx + 1]);
@@ -4314,12 +4327,10 @@ JSON:
         if (showSwipeHint) { localStorage.setItem("fitrace_swipe_hint_seen","1"); setShowSwipeHint(false); }
       }
     }
-    setTouchStartX(null);
-    setTouchStartY(null);
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", paddingBottom: 84 }}
+    <div style={{ height: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", overflow: "hidden" }}
       onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <style>{GLOBAL_STYLES}</style>
 
@@ -4963,7 +4974,8 @@ JSON:
         );
       })()}
 
-      <div key={tab} className={tabDir >= 0 ? "tab-slide-right" : "tab-slide-left"} style={{ padding: "20px 16px", maxWidth: 480, margin: "0 auto" }}>
+      <div ref={mainScrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}>
+      <div style={{ padding: "20px 16px 100px", maxWidth: 480, margin: "0 auto" }}>
 
         {/* HOME — toujours rendu, caché si inactif (fix hooks) */}
         <div style={{display: tab === "home" ? "block" : "none"}}>
@@ -8868,6 +8880,7 @@ JSON:
         {/* PROFIL */}
         {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
 
+      </div>
       </div>
 
       {/* Floating Coach Chat Button */}
