@@ -9870,47 +9870,87 @@ async function generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning
     : parseInt(nbSeances);
 
   const joursList = joursAplanifier.join(", ");
-  const paceZ2 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 65) : "?";
-  const paceTempo = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 83) : "?";
+  const paceZ2 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 65) : null;
+  const paceTempo = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 83) : null;
+  const paceZ4 = profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 90) : null;
+  const deadliftWork = profile.deadlift1RM_final ? Math.round(profile.deadlift1RM_final * 0.72) : null;
+  const squatWork = profile.squat1RM_final ? Math.round(profile.squat1RM_final * 0.70) : null;
+  const fcM = profile.fcMax || estimateFCmax(profile.age, profile.sexe);
+  const fcR = profile.fcMin || 0;
+  const fcZ2low = fcR ? Math.round(fcR + (fcM-fcR)*0.45) : fcM ? Math.round(fcM*0.62) : null;
+  const fcZ2high = fcR ? Math.round(fcR + (fcM-fcR)*0.62) : fcM ? Math.round(fcM*0.72) : null;
+  const fcZ4low = fcR ? Math.round(fcR + (fcM-fcR)*0.75) : fcM ? Math.round(fcM*0.82) : null;
+  const fcZ4high = fcR ? Math.round(fcR + (fcM-fcR)*0.88) : fcM ? Math.round(fcM*0.92) : null;
+  const wallBallKg = profile.sexe === "F" ? 4 : 6;
+  const farmersKg = profile.sexe === "F" ? 24 : 32;
+  const sandbagKg = profile.sexe === "F" ? 10 : 20;
 
-  // Résumé des 3 dernières séances
-  const recentText = sessions.slice(-3).map(s => `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti})`).join(" → ");
+  // Résumé des 3 dernières séances avec logs
+  const recentText = sessions.slice(-3).map(s => {
+    const log = (s.exercicesLog||[]).filter(e=>e?.nom&&e.charge).slice(0,2).map(e=>`${e.nom}:${e.charge}kg`).join(",");
+    return `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti}${log?","+log:""})`;
+  }).join(" → ");
 
   const raw = await callClaudeStream(
-    "Tu es coach HYROX expert. Réponds UNIQUEMENT avec du JSON valide, sans texte autour, sans backticks.",
-    `Planifie la semaine HYROX pour ${profile.name}.
+    `Tu es Marc, coach HYROX Pro. Génère un planning hebdomadaire HYROX ultra-détaillé et personnalisé. Réponds UNIQUEMENT avec du JSON valide — aucun texte, aucun backtick, aucune explication.`,
+    `Planifie la semaine HYROX complète pour ${profile.name}.
 
-PROFIL:
-- Niveau ${profile.level}/4 | Phase: ${phase} (semaine ${week}/${totalWeeks})
-- VMA: ${profile.vmaKmh || "?"}km/h | Squat: ${profile.squat1RM_final || "?"}kg | Deadlift: ${profile.deadlift1RM_final || "?"}kg
-- Jours avant la course: ${days !== null ? days : "non défini"}
-- Séances réalisées total: ${sessions.length}
-- 3 dernières séances: ${recentText || "aucune encore"}
-- Dernière adaptation IA: ${lastAdapt || "aucune"}
-- Fatigue estimée: ${lastSession?.difficulte >= 8 ? "élevée (dernière séance RPE "+lastSession.difficulte+")" : "normale"}
+══ PROFIL ATHLÈTE ══
+Niveau ${profile.level}/4 | Sexe: ${profile.sexe||"H"} | Poids: ${profile.poids}kg | Âge: ${profile.age||"?"}
+Phase: ${phase} (semaine ${week}/${totalWeeks||"?"}) | J-${days!==null?days:"?"} avant la course
+VMA: ${profile.vmaKmh||"?"}km/h | Squat 1RM: ${profile.squat1RM_final||"?"}kg | Deadlift 1RM: ${profile.deadlift1RM_final||"?"}kg
+FC max: ${fcM||"?"}bpm | FC repos: ${fcR||"?"}bpm
+Séances réalisées: ${sessions.length} | Dernières: ${recentText||"aucune"}
+Dernière adaptation IA: ${lastAdapt||"aucune"}
 
-RÈGLES SCIENTIFIQUES HYROX:
-- Phase BASE: 70% aérobie (Zone 2), 30% force. Fréquence: 3-4 séances/semaine. Repos: 2-3 jours.
-- Phase DÉVELOPPEMENT: mix run qualité + force stations + hybride compromised running
-- Phase PIC: intensité max, volume réduit, simulation race
-- Phase AFFÛTAGE: volume -40%, intensité conservée, repos++
-- Ne jamais mettre 2 séances dures consécutives (running qualité + force = ok, 2x running qualité = non)
-- Après RPE ≥ 8 → imposer un repos ou une mobilité le lendemain
+══ DONNÉES PERSONNALISÉES À UTILISER DANS LES EXERCICES ══
+Allure Z2: ${paceZ2||"?"}${paceZ2?"/km":""} | FC Z2: ${fcZ2low||"?"}–${fcZ2high||"?"}bpm
+Allure Z4/tempo: ${paceZ4||"?"}${paceZ4?"/km":""} | FC Z4: ${fcZ4low||"?"}–${fcZ4high||"?"}bpm
+Charge deadlift travail (72% 1RM): ${deadliftWork||"?"}kg
+Charge squat travail (70% 1RM): ${squatWork||"?"}kg
+Wall Balls: ${wallBallKg}kg | Farmers Carry: 2×${farmersKg}kg | Sandbag: ${sandbagKg}kg
 
-JOURS À PLANIFIER: ${joursList}
-NOMBRE DE SÉANCES: ${nbSeancesTarget} séances d'entraînement
-RÉPARTITION: ${repartitionInstr}
+══ RÈGLES DE PLANIFICATION ══
+- Jamais 2 séances dures consécutives
+- Après RPE≥8 → repos ou mobilité obligatoire
+- 70-80% du volume en Z2 (phase base), augmenter progressivement
+- Séances force : 4-6 exercices avec charges précises basées sur les 1RM
+- Séances running : allures ET FC pour chaque bloc
+- Séances hybrides : alterner run-station-run-station
 
-Allures de référence:
-- Zone 2: ${paceZ2}/km
-- Tempo: ${paceTempo}/km
+JOURS: ${joursList} | SÉANCES: ${nbSeancesTarget} | RÉPARTITION: ${repartitionInstr}
 
-Génère ce JSON (modifie chaque jour selon le plan optimal):
-{"semaine":${week},"phase":"${phase}","debut":"${joursAplanifier[0]}","fin":"${joursAplanifier[joursAplanifier.length-1]}","charge_semaine":"faible|modérée|élevée","conseil":"conseil stratégique en 1 phrase précise et chiffrée","jours":[${joursAplanifier.map(j => `{"jour":"${j}","type":"repos","titre":"","duree":0,"intensite":"","focus":"","exercices_cles":[],"objectif_seance":""}`).join(",")}]}
-
+══ FORMAT JSON OBLIGATOIRE ══
+Retourne EXACTEMENT ce format (remplis chaque champ avec des données réelles et précises):
+{
+  "semaine":${week},
+  "phase":"${phase}",
+  "charge_semaine":"faible|modérée|élevée",
+  "volume_semaine":"ex: ~18km run + 3 séances force",
+  "conseil":"conseil précis et chiffré en 1-2 phrases",
+  "jours":[
+    {
+      "jour":"Lundi",
+      "type":"force_stations|running_zone2|running_qualite|hybride_compromis|repos|mobilite",
+      "titre":"titre précis ex: Force HYROX — Deadlift + Stations",
+      "duree":60,
+      "intensite":"faible|modérée|élevée",
+      "zone_principale":"Z2|Z3|Z4|Force|Repos",
+      "objectif":"objectif précis en 1 phrase",
+      "echauffement":"description échauffement 8-10min",
+      "exercices":[
+        {"nom":"Romanian Deadlift","series":"4","reps":"6","charge":"${deadliftWork||70}kg","repos":"2min","fc":"","allure":"","note":"Dos plat, charnière hanche"},
+        {"nom":"Run Zone 2","series":"1","reps":"","charge":"","repos":"","fc":"${fcZ2low||130}–${fcZ2high||145}bpm","allure":"${paceZ2||"5:30"}","note":"Allure conversationnelle"},
+        {"nom":"Goblet Squat","series":"3","reps":"10","charge":"30kg","repos":"90s","fc":"","allure":"","note":"Profondeur max, genoux écartés"}
+      ],
+      "retour_calme":"description retour au calme 5min",
+      "exercices_cles":["résumé ex: Deadlift 4×6@${deadliftWork||70}kg","Run 30min Z2@${paceZ2||"5:30"}/km"]
+    }
+  ]
+}
 Types valides: force_stations, running_zone2, running_qualite, hybride_compromis, repos, mobilite
-Pour chaque séance: "exercices_cles" = array de 2-3 strings (ex: "Squat 4x6@80kg", "Run 30min Z2@5:45/km", "SkiErg 4x500m")`,
-    1800,
+IMPORTANT: Les champs "exercices" doivent contenir les vraies charges/allures/FC calculées pour cet athlète — jamais de valeurs génériques.`,
+    2400,
     (chunk) => {
       if (setStreamText) {
         if (chunk.includes('"conseil"')) setStreamText("💡 Stratégie de semaine...");
@@ -9958,6 +9998,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
   const [selectedJour, setSelectedJour] = useState(null);
   const [showPrefs, setShowPrefs] = useState(false);
   const [streamText, setStreamText] = useState("");
+  const [expandedExo, setExpandedExo] = useState(null);
   const [joursFaits, setJoursFaits] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`fitrace_planning_done_${profile.name}`) || "{}"); } catch { return {}; }
   });
@@ -9983,378 +10024,436 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
   const refreshPlanning = async (newPrefs = prefs) => {
     const cacheKey = `planning_${profile.name}_from${startIdx}`;
     await storage.del(cacheKey);
+    setSelectedJour(null);
     await generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, newPrefs, setStreamText);
     setShowPrefs(false);
   };
 
-  // Générer au premier chargement
   useEffect(() => {
     if (!planningWeek && !loadingPlanning) {
       generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, prefs, setStreamText);
     }
   }, []);
 
+  // Auto-select today's session
+  useEffect(() => {
+    if (planningWeek?.jours && !selectedJour) {
+      const todayJour = planningWeek.jours.find(j => JOURS_FULL.indexOf(j.jour) === todayIdx);
+      if (todayJour && todayJour.type !== "repos") setSelectedJour(todayJour);
+    }
+  }, [planningWeek]);
+
+  // Stats hebdo
+  const weekStats = React.useMemo(() => {
+    if (!planningWeek?.jours) return null;
+    const seances = planningWeek.jours.filter(j => j.type !== "repos" && j.type !== "mobilite");
+    const totalMin = seances.reduce((a, j) => a + (j.duree || 0), 0);
+    const nbRun = planningWeek.jours.filter(j => j.type?.includes("running")).length;
+    const nbForce = planningWeek.jours.filter(j => j.type?.includes("force")).length;
+    const nbHybride = planningWeek.jours.filter(j => j.type?.includes("hybride")).length;
+    return { seances: seances.length, totalMin, nbRun, nbForce, nbHybride };
+  }, [planningWeek]);
+
   return (
     <div className="fade-in">
 
-      {/* Modal préférences */}
+      {/* ── MODAL PRÉFÉRENCES ── */}
       {showPrefs && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-          <div className="slide-up" style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
+          <div className="slide-up" style={{ background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: 24, width: "100%", maxWidth: 480, margin: "0 auto", boxShadow: "0 -8px 40px rgba(0,0,0,0.18)" }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.2)", margin: "0 auto 20px" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>PARAMÈTRES SEMAINE</div>
-              <button onClick={() => setShowPrefs(false)} style={{ background: "none", border: "none", color: "#666", fontSize: 20, cursor: "pointer" }}>×</button>
+              <button onClick={() => setShowPrefs(false)} style={{ background: "var(--bg3)", border: "none", borderRadius: "50%", width: 30, height: 30, fontSize: 16, color: "#666", cursor: "pointer" }}>×</button>
             </div>
-
-            {/* Nb séances */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, color: "#aaa", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>Séances dans la semaine</div>
+              <div style={{ fontSize: 11, color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Nombre de séances</div>
               <div style={{ display: "flex", gap: 8 }}>
-                {[{ v: "auto", label: "🏅 Coach" }, { v: "3", label: "3" }, { v: "4", label: "4" }, { v: "5", label: "5" }].map(s => (
+                {[{ v: "auto", label: "🏅 Coach" }, { v: "3", label: "3 séances" }, { v: "4", label: "4 séances" }, { v: "5", label: "5 séances" }].map(s => (
                   <button key={s.v} onClick={() => setPrefs(p => ({ ...p, nbSeances: s.v }))} style={{
-                    flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 13, fontWeight: 700,
-                    background: prefs.nbSeances === s.v ? "var(--yellow)22" : "var(--bg3)",
+                    flex: 1, padding: "10px 4px", borderRadius: 12, fontSize: 12, fontWeight: 700,
+                    background: prefs.nbSeances === s.v ? "rgba(0,122,255,0.12)" : "var(--bg3)",
                     border: prefs.nbSeances === s.v ? "2px solid var(--yellow)" : "1.5px solid transparent",
-                    color: prefs.nbSeances === s.v ? "var(--yellow)" : "#666", cursor: "pointer",
+                    color: prefs.nbSeances === s.v ? "var(--yellow)" : "#888", cursor: "pointer",
                   }}>{s.label}</button>
                 ))}
               </div>
             </div>
-
-            {/* Répartition */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, color: "#aaa", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>Répartition des séances</div>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Répartition</div>
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 {[{ v: "auto", label: "🏅 Choix du coach" }, { v: "custom", label: "✏️ Personnalisée" }].map(r => (
                   <button key={r.v} onClick={() => setPrefs(p => ({ ...p, repartition: r.v }))} style={{
-                    flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 700,
-                    background: prefs.repartition === r.v ? "var(--yellow)22" : "var(--bg3)",
+                    flex: 1, padding: "10px", borderRadius: 12, fontSize: 12, fontWeight: 700,
+                    background: prefs.repartition === r.v ? "rgba(0,122,255,0.12)" : "var(--bg3)",
                     border: prefs.repartition === r.v ? "2px solid var(--yellow)" : "1.5px solid transparent",
-                    color: prefs.repartition === r.v ? "var(--yellow)" : "#666", cursor: "pointer",
+                    color: prefs.repartition === r.v ? "var(--yellow)" : "#888", cursor: "pointer",
                   }}>{r.label}</button>
                 ))}
               </div>
               {prefs.repartition === "custom" && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                  <Input label="🏃 Run" value={prefs.nbRun} onChange={v => setPrefs(p => ({ ...p, nbRun: v }))} type="number" placeholder="ex: 2" />
-                  <Input label="🏋️ Muscu" value={prefs.nbMuscu} onChange={v => setPrefs(p => ({ ...p, nbMuscu: v }))} type="number" placeholder="ex: 2" />
-                  <Input label="⚡ Hybride" value={prefs.nbHybride} onChange={v => setPrefs(p => ({ ...p, nbHybride: v }))} type="number" placeholder="ex: 1" />
+                  <Input label="🏃 Run" value={prefs.nbRun} onChange={v => setPrefs(p => ({ ...p, nbRun: v }))} type="number" placeholder="2" />
+                  <Input label="🏋️ Muscu" value={prefs.nbMuscu} onChange={v => setPrefs(p => ({ ...p, nbMuscu: v }))} type="number" placeholder="2" />
+                  <Input label="⚡ Hybride" value={prefs.nbHybride} onChange={v => setPrefs(p => ({ ...p, nbHybride: v }))} type="number" placeholder="1" />
                 </div>
               )}
             </div>
-
             <Btn size="lg" onClick={() => refreshPlanning(prefs)} style={{ width: "100%" }}>
-              📅 Générer le planning
+              📅 Régénérer le planning
             </Btn>
           </div>
         </div>
       )}
 
-      {/* ── MINI-CALENDRIER MENSUEL ── */}
-      {(() => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // 0=Lun
-        const sessionDates = new Set((profile.sessions||[]).map(s => s.date?.slice(0,10)));
-        const monthName = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-        const cells = [];
-        for (let i = 0; i < firstDow; i++) cells.push(null);
-        for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-        return (
-          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 16, padding: "14px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--yellow)", textTransform: "capitalize" }}>{monthName}</div>
-              <div style={{ fontSize: 10, color: "#555" }}>{sessionDates.size} séances ce mois</div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 6 }}>
-              {["L","M","M","J","V","S","D"].map((d,i) => (
-                <div key={i} style={{ textAlign: "center", fontSize: 8, color: "#2a2a2a", fontWeight: 700, paddingBottom: 4 }}>{d}</div>
-              ))}
-              {cells.map((d, i) => {
-                if (!d) return <div key={`e${i}`} />;
-                const iso = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-                const done = sessionDates.has(iso);
-                const isToday = d === now.getDate();
-                const isPast = new Date(iso) < new Date(now.toDateString());
-                return (
-                  <div key={i} style={{ textAlign: "center", padding: "2px 0" }}>
-                    <div style={{
-                      width: "100%", aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 9, fontWeight: isToday ? 700 : 400,
-                      background: done ? "rgba(57,255,128,0.15)" : isToday ? "rgba(0,122,255,0.12)" : "transparent",
-                      border: done ? "1px solid rgba(57,255,128,0.3)" : isToday ? "1.5px solid var(--yellow)" : "none",
-                      color: done ? "var(--green)" : isToday ? "var(--yellow)" : isPast ? "#2a2a2a" : "#444",
-                    }}>{d}</div>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#555" }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: "rgba(57,255,128,0.3)", border: "1px solid rgba(57,255,128,0.4)" }} />Séance réalisée
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#555" }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, border: "1.5px solid var(--yellow)" }} />Aujourd'hui
-              </div>
-            </div>
+      {/* ── HEADER ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div>
+          <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>
+            PLANNING SEMAINE
           </div>
-        );
-      })()}
+          {planningWeek && (
+            <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+              {planningWeek.debut} → {planningWeek.fin}
+              {weekStats && <> · <span style={{ color: "var(--yellow)" }}>{weekStats.seances} séances</span> · {Math.round(weekStats.totalMin / 60)}h{String(weekStats.totalMin % 60).padStart(2,"0")}</>}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowPrefs(true)} style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 10, width: 36, height: 36, fontSize: 16, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>⚙️</button>
+          <button onClick={() => refreshPlanning(prefs)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 10, width: 36, height: 36, fontSize: 16, color: "var(--yellow)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>↺</button>
+        </div>
+      </div>
 
-      {/* ── PREPARATION PHASES TIMELINE ── */}
+      {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
         const now2 = new Date(); now2.setHours(0,0,0,0);
         const totalDays = Math.max(1, Math.ceil((raceDate - now2) / 86400000));
         const totalWeeksLeft = Math.ceil(totalDays / 7);
-
-        // Phase model: Base=40%, Build=30%, Peak=20%, Taper=10%
         const PHASES = [
-          { id: "base",  label: "BASE",  icon: "🏗️", color: "#38bdf8", pct: 0.40, tip: "Fondations aérobies" },
-          { id: "build", label: "BUILD", icon: "📈", color: "var(--green)", pct: 0.30, tip: "Volume + intensité" },
-          { id: "peak",  label: "PEAK",  icon: "🔥", color: "var(--yellow)", pct: 0.20, tip: "Spécificité course" },
-          { id: "taper", label: "TAPER", icon: "✈️", color: "var(--purple)", pct: 0.10, tip: "Affûtage compétition" },
+          { id: "base",  label: "BASE",  icon: "🏗️", color: "#38bdf8", pct: 0.40 },
+          { id: "build", label: "BUILD", icon: "📈", color: "#22c55e", pct: 0.30 },
+          { id: "peak",  label: "PEAK",  icon: "🔥", color: "#007AFF", pct: 0.20 },
+          { id: "taper", label: "TAPER", icon: "✈️", color: "#a855f7", pct: 0.10 },
         ];
-
-        // Determine current phase
-        const elapsed = Math.ceil((now2 - (new Date(now2.getTime() - totalDays * 86400000))) / 86400000);
-        // Figure out which phase we're in based on weeks left
-        let currentPhase = "base";
-        if (totalWeeksLeft <= 2) currentPhase = "taper";
-        else if (totalWeeksLeft <= Math.ceil(totalWeeksLeft * 0.3)) currentPhase = "peak";
-        else if (totalWeeksLeft <= Math.ceil(totalWeeksLeft * 0.6)) currentPhase = "build";
-
-        // Calculate phase week ranges from now
         let cursor = 0;
-        const phaseData = PHASES.map(p => {
-          const wks = Math.max(1, Math.round(totalWeeksLeft * p.pct));
-          const start = cursor; cursor += wks;
-          return { ...p, weeks: wks, startWeek: start };
-        });
-
-        const currentPhaseObj = (() => {
-          let rem = totalWeeksLeft;
-          for (const p of phaseData) {
-            if (rem > totalWeeksLeft - p.weeks) return { ...p, weeksLeft: Math.min(rem, p.weeks) };
-            rem -= p.weeks;
-          }
-          return phaseData[phaseData.length - 1];
-        })();
-
+        const phaseData = PHASES.map(p => { const wks = Math.max(1, Math.round(totalWeeksLeft * p.pct)); const s = cursor; cursor += wks; return { ...p, weeks: wks }; });
+        let rem = totalWeeksLeft, currentPhaseObj = phaseData[phaseData.length-1];
+        for (const p of phaseData) { if (rem > totalWeeksLeft - p.weeks) { currentPhaseObj = p; break; } rem -= p.weeks; }
         return (
-          <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: "14px 14px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>📅 Phases de préparation</div>
-              <div style={{ fontSize: 10, color: "#777" }}>{totalWeeksLeft} semaines avant la course</div>
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "12px 14px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: "#888", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Préparation {currentPhaseObj.icon} Phase {currentPhaseObj.label}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: currentPhaseObj.color }}>J-{totalDays}</div>
             </div>
-
-            {/* Phases bar */}
-            <div style={{ display: "flex", gap: 2, height: 8, borderRadius: 6, overflow: "hidden", marginBottom: 10 }}>
-              {phaseData.map(p => (
-                <div key={p.id} style={{ flex: p.pct, background: p.color, opacity: p.id === currentPhaseObj.id ? 1 : 0.3, transition: "opacity 0.3s" }} />
-              ))}
+            <div style={{ display: "flex", gap: 2, height: 6, borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
+              {phaseData.map(p => <div key={p.id} style={{ flex: p.pct, background: p.color, opacity: p.id === currentPhaseObj.id ? 1 : 0.25 }} />)}
             </div>
-
-            {/* Phase labels */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+            <div style={{ display: "flex" }}>
               {phaseData.map(p => (
                 <div key={p.id} style={{ flex: p.pct, textAlign: "center" }}>
-                  <div style={{ fontSize: 8, color: p.id === currentPhaseObj.id ? p.color : "#333", fontWeight: p.id === currentPhaseObj.id ? 700 : 400, textTransform: "uppercase", letterSpacing: "0.04em" }}>{p.label}</div>
-                  <div style={{ fontSize: 8, color: "#222" }}>{p.weeks}S</div>
+                  <div style={{ fontSize: 8, color: p.id === currentPhaseObj.id ? p.color : "#aaa", fontWeight: p.id === currentPhaseObj.id ? 700 : 400, textTransform: "uppercase" }}>{p.label}</div>
+                  <div style={{ fontSize: 8, color: "#bbb" }}>{p.weeks}S</div>
                 </div>
               ))}
-            </div>
-
-            {/* Current phase detail */}
-            <div style={{ background: `${currentPhaseObj.color}10`, border: `1px solid ${currentPhaseObj.color}30`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 22 }}>{currentPhaseObj.icon}</span>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: currentPhaseObj.color }}>Phase {currentPhaseObj.label} · {currentPhaseObj.tip}</div>
-                <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
-                  {currentPhaseObj.id === "base" && "Construis ta base aérobie avec des sorties longues et faciles (Z1-Z2). Volume progressif."}
-                  {currentPhaseObj.id === "build" && "Augmente l'intensité. Inclus des séances seuil + stations. Simule les formats HYROX."}
-                  {currentPhaseObj.id === "peak" && "Séances spécifiques HYROX race-pace. Répétitions des 8 stations à pleine intensité."}
-                  {currentPhaseObj.id === "taper" && "Réduis le volume de 40%. Garde l'intensité. Repos et nutrition race-day. Tu es prêt !"}
-                </div>
-              </div>
             </div>
           </div>
         );
       })()}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-        <div>
-          <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", letterSpacing: 1 }}>
-            {isDimanche ? "PLANNING SEMAINE PROCHAINE" : `PLANNING — ${JOURS_FULL[startIdx].toUpperCase()} → DIM`}
-          </div>
-          {planningWeek && (
-            <div style={{ fontSize: 12, color: "#555", marginTop: 2 }}>
-              {planningWeek.debut} → {planningWeek.fin} · {planningWeek.jours?.filter(j => j.type !== "repos" && j.type !== "mobilite").length} séances
-            </div>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setShowPrefs(true)} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid #222", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#888", cursor: "pointer" }}>⚙️</button>
-          <button onClick={() => refreshPlanning(prefs)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>↺</button>
-        </div>
-      </div>
-
+      {/* ── CHARGEMENT ── */}
       {loadingPlanning ? (
-        <div className="fade-in" style={{ textAlign: "center", padding: "40px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(0,122,255,0.12)" }}>
-          <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
-          <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 8 }}>{streamText || "Coach IA planifie ta semaine..."}</div>
-          <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+        <div className="fade-in" style={{ textAlign: "center", padding: "48px 20px", background: "var(--bg2)", borderRadius: 20, border: "1px solid var(--bg3)" }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>🗓️</div>
+          <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", marginBottom: 10 }}>
+            {streamText || "Coach IA planifie ta semaine…"}
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
             {[0,1,2].map(i => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--yellow)", opacity: 0.6, animation: `pulse 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1.2s ${i * 0.25}s ease-in-out infinite` }} />
             ))}
           </div>
-          <div style={{ fontSize: 12, color: "#555", marginTop: 12 }}>Basé sur ta phase, tes performances et tes récupérations</div>
+          <div style={{ fontSize: 12, color: "#888" }}>Séances pré-calculées avec charges et allures personnalisées</div>
         </div>
+
       ) : planningWeek ? (
         <>
-          {/* Header charge semaine + conseil */}
-          <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: planningWeek.conseil ? 8 : 0 }}>
-              <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Charge semaine</div>
-              <div style={{
-                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                background: planningWeek.charge_semaine === "élevée" ? "rgba(255,71,71,0.15)" : planningWeek.charge_semaine === "faible" ? "rgba(57,255,128,0.15)" : "rgba(0,122,255,0.12)",
-                color: planningWeek.charge_semaine === "élevée" ? "var(--red)" : planningWeek.charge_semaine === "faible" ? "var(--green)" : "var(--yellow)",
-              }}>{planningWeek.charge_semaine || "modérée"}</div>
+          {/* ── CONSEIL COACH ── */}
+          {planningWeek.conseil && (
+            <div style={{ background: "rgba(0,122,255,0.05)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 14, padding: "12px 14px", marginBottom: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>💡</span>
+              <div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "var(--yellow)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Conseil du coach</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
+                    background: planningWeek.charge_semaine === "élevée" ? "rgba(239,68,68,0.12)" : planningWeek.charge_semaine === "faible" ? "rgba(34,197,94,0.12)" : "rgba(0,122,255,0.1)",
+                    color: planningWeek.charge_semaine === "élevée" ? "#ef4444" : planningWeek.charge_semaine === "faible" ? "#22c55e" : "var(--yellow)",
+                  }}>Charge {planningWeek.charge_semaine || "modérée"}</span>
+                  {planningWeek.volume_semaine && <span style={{ fontSize: 10, color: "#888" }}>{planningWeek.volume_semaine}</span>}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--white)", lineHeight: 1.5 }}>{planningWeek.conseil}</div>
+              </div>
             </div>
-            {planningWeek.conseil && (
-              <div style={{ fontSize: 13, color: "#ccc", lineHeight: 1.5, fontStyle: "italic" }}>💡 {planningWeek.conseil}</div>
-            )}
-          </div>
+          )}
 
-          {/* Vue grid jours — cartes visuelles */}
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min((planningWeek.jours || []).length, 7)}, 1fr)`, gap: 6, marginBottom: 16 }}>
+          {/* ── STATS HEBDO ── */}
+          {weekStats && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+              {[
+                { label: "Séances", value: weekStats.seances, icon: "🏋️" },
+                { label: "Durée", value: `${Math.floor(weekStats.totalMin/60)}h${String(weekStats.totalMin%60).padStart(2,"0")}`, icon: "⏱" },
+                { label: "Running", value: weekStats.nbRun, icon: "🏃" },
+                { label: "Force", value: weekStats.nbForce + weekStats.nbHybride, icon: "⚡" },
+              ].map((s, i) => (
+                <div key={i} style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+                  <div style={{ fontSize: 16, marginBottom: 3 }}>{s.icon}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "var(--white)" }}>{s.value}</div>
+                  <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── GRILLE 7 JOURS ── */}
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min((planningWeek.jours||[]).length, 7)}, 1fr)`, gap: 5, marginBottom: 16 }}>
             {(planningWeek.jours || []).map((j, i) => {
               const t = TYPE_COLORS[j.type] || TYPE_COLORS.repos;
               const globalIdx = JOURS_FULL.indexOf(j.jour);
               const isToday = globalIdx === todayIdx;
               const isSelected = selectedJour?.jour === j.jour;
               const isDone = joursFaits[j.jour];
+              const isRest = j.type === "repos";
               return (
                 <button key={i} onClick={() => setSelectedJour(isSelected ? null : j)} style={{
-                  background: isDone ? "rgba(57,255,128,0.05)" : isSelected ? t.bg : isToday ? "rgba(0,122,255,0.04)" : "rgba(0,0,0,0.02)",
-                  border: isDone ? "1.5px solid rgba(57,255,128,0.3)" : isSelected ? `1.5px solid ${t.color}88` : isToday ? "1.5px solid rgba(0,122,255,0.35)" : "1px solid rgba(0,0,0,0.05)",
-                  borderRadius: 14, padding: "12px 4px 10px", textAlign: "center", cursor: "pointer",
+                  background: isDone ? "rgba(34,197,94,0.07)" : isSelected ? `${t.color}12` : isToday ? "rgba(0,122,255,0.05)" : "var(--bg2)",
+                  border: isDone ? "1.5px solid rgba(34,197,94,0.35)" : isSelected ? `2px solid ${t.color}` : isToday ? "2px solid rgba(0,122,255,0.5)" : "1px solid var(--bg3)",
+                  borderRadius: 14, padding: "10px 3px 8px", textAlign: "center", cursor: "pointer",
                   position: "relative", overflow: "hidden", transition: "all 0.2s",
                 }}>
-                  {/* Top color stripe */}
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: isDone ? "var(--green)" : isToday ? "var(--yellow)" : t.color, opacity: isDone ? 1 : isToday ? 1 : 0.4, borderRadius: "14px 14px 0 0" }} />
-                  <div style={{ fontSize: 9, color: isToday ? "var(--yellow)" : isDone ? "var(--green)" : "#333", fontWeight: isToday ? 700 : 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{j.jour.slice(0, 3)}</div>
-                  <div style={{ fontSize: 20, marginBottom: 4 }}>{isDone ? "✅" : t.icon}</div>
-                  {j.duree > 0 && <div style={{ fontSize: 8, color: "#555", letterSpacing: "0.04em" }}>{j.duree}m</div>}
+                  {/* Top stripe */}
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: isDone ? "#22c55e" : isToday ? "var(--yellow)" : isRest ? "transparent" : t.color, borderRadius: "14px 14px 0 0" }} />
+                  <div style={{ fontSize: 9, fontWeight: isToday ? 800 : 600, color: isToday ? "var(--yellow)" : isDone ? "#22c55e" : isSelected ? t.color : "#888", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {j.jour.slice(0, 3)}
+                  </div>
+                  <div style={{ fontSize: 18, marginBottom: 3 }}>{isDone ? "✅" : t.icon}</div>
+                  {j.duree > 0 && <div style={{ fontSize: 8, color: "#aaa" }}>{j.duree}m</div>}
+                  {isRest && !isDone && <div style={{ fontSize: 8, color: "#bbb" }}>Repos</div>}
                 </button>
               );
             })}
           </div>
 
-          {/* Détail du jour sélectionné */}
-          {selectedJour && (
-            <div className="fade-in" style={{ background: TYPE_COLORS[selectedJour.type]?.bg || "var(--bg2)", border: `1.5px solid ${TYPE_COLORS[selectedJour.type]?.color || "#333"}44`, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: TYPE_COLORS[selectedJour.type]?.color || "#888", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{selectedJour.jour}</div>
-                  <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{selectedJour.titre || TYPE_COLORS[selectedJour.type]?.label}</div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                    {selectedJour.duree > 0 && <span style={{ fontSize: 11, color: "#666", background: "rgba(0,0,0,0.06)", padding: "2px 8px", borderRadius: 6 }}>⏱ {selectedJour.duree} min</span>}
-                    {selectedJour.intensite && <span style={{ fontSize: 11, color: "#666", background: "rgba(0,0,0,0.06)", padding: "2px 8px", borderRadius: 6 }}>💥 {selectedJour.intensite}</span>}
+          {/* ── SÉANCE DU JOUR SÉLECTIONNÉ ── */}
+          {selectedJour && (() => {
+            const t = TYPE_COLORS[selectedJour.type] || TYPE_COLORS.repos;
+            const isRest = selectedJour.type === "repos" || selectedJour.type === "mobilite";
+            const exos = (selectedJour.exercices || []).filter(e => e?.nom);
+            const cles = (selectedJour.exercices_cles || []);
+            const globalIdx = JOURS_FULL.indexOf(selectedJour.jour);
+            const isToday = globalIdx === todayIdx;
+            return (
+              <div className="fade-in" style={{ background: "var(--bg2)", border: `1.5px solid ${t.color}33`, borderRadius: 20, marginBottom: 16, overflow: "hidden" }}>
+                {/* Colored header */}
+                <div style={{ background: `linear-gradient(135deg, ${t.color}18 0%, ${t.color}06 100%)`, borderBottom: `1px solid ${t.color}22`, padding: "16px 16px 12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: t.color, textTransform: "uppercase", letterSpacing: "0.1em" }}>{selectedJour.jour}</span>
+                        {isToday && <span style={{ fontSize: 9, background: "var(--yellow)", color: "#000", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>AUJOURD'HUI</span>}
+                        {joursFaits[selectedJour.jour] && <span style={{ fontSize: 9, background: "rgba(34,197,94,0.2)", color: "#22c55e", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>✓ FAIT</span>}
+                      </div>
+                      <div className="bebas" style={{ fontSize: 24, color: "var(--white)", lineHeight: 1, marginBottom: 6 }}>{selectedJour.titre || t.label}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {selectedJour.duree > 0 && <span style={{ fontSize: 11, color: "#888", background: "rgba(0,0,0,0.06)", padding: "3px 9px", borderRadius: 8 }}>⏱ {selectedJour.duree} min</span>}
+                        {selectedJour.intensite && <span style={{ fontSize: 11, color: "#888", background: "rgba(0,0,0,0.06)", padding: "3px 9px", borderRadius: 8 }}>💥 {selectedJour.intensite}</span>}
+                        {selectedJour.zone_principale && <span style={{ fontSize: 11, color: t.color, background: `${t.color}12`, padding: "3px 9px", borderRadius: 8, fontWeight: 600 }}>{selectedJour.zone_principale}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                      <div style={{ fontSize: 30 }}>{t.icon}</div>
+                      <button onClick={() => toggleJourFait(selectedJour.jour)} style={{
+                        padding: "5px 12px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                        background: joursFaits[selectedJour.jour] ? "rgba(34,197,94,0.15)" : "rgba(0,0,0,0.06)",
+                        border: joursFaits[selectedJour.jour] ? "1.5px solid #22c55e" : "1px solid rgba(0,0,0,0.12)",
+                        color: joursFaits[selectedJour.jour] ? "#22c55e" : "#888",
+                      }}>{joursFaits[selectedJour.jour] ? "✓ Fait" : "Marquer fait"}</button>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                  <div style={{ fontSize: 28 }}>{TYPE_COLORS[selectedJour.type]?.icon}</div>
-                  {/* Bouton Fait / Non fait */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleJourFait(selectedJour.jour); }}
-                    style={{
-                      padding: "5px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                      background: joursFaits[selectedJour.jour] ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.05)",
-                      border: joursFaits[selectedJour.jour] ? "1.5px solid var(--green)" : "1px solid #333",
-                      color: joursFaits[selectedJour.jour] ? "var(--green)" : "#555", cursor: "pointer",
-                    }}
-                  >{joursFaits[selectedJour.jour] ? "✓ Fait" : "Marquer fait"}</button>
+
+                <div style={{ padding: "14px 16px" }}>
+                  {/* Objectif */}
+                  {(selectedJour.objectif || selectedJour.objectif_seance || selectedJour.focus) && (
+                    <div style={{ background: `${t.color}08`, border: `1px solid ${t.color}20`, borderRadius: 10, padding: "9px 12px", marginBottom: 14 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: t.color }}>🎯 Objectif : </span>
+                      <span style={{ fontSize: 12, color: "var(--white)", lineHeight: 1.5 }}>{selectedJour.objectif || selectedJour.objectif_seance || selectedJour.focus}</span>
+                    </div>
+                  )}
+
+                  {/* Échauffement */}
+                  {selectedJour.echauffement && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>🔥 Échauffement</div>
+                      <div style={{ fontSize: 12, color: "#aaa", background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>{selectedJour.echauffement}</div>
+                    </div>
+                  )}
+
+                  {/* Exercices détaillés (nouveau format avec objets) */}
+                  {exos.length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: t.color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+                        Programme — {exos.length} exercices
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {exos.map((ex, i) => {
+                          const exKey = `${selectedJour.jour}-${i}`;
+                          const isExpanded = expandedExo === exKey;
+                          const hasDetails = ex.note || ex.fc || ex.allure;
+                          return (
+                            <div key={i}
+                              onClick={() => hasDetails && setExpandedExo(isExpanded ? null : exKey)}
+                              style={{
+                                background: "var(--bg)",
+                                border: `1px solid ${isExpanded ? t.color+"44" : "var(--bg3)"}`,
+                                borderRadius: 12, overflow: "hidden",
+                                cursor: hasDetails ? "pointer" : "default",
+                                transition: "border-color 0.2s",
+                              }}>
+                              {/* Top accent bar */}
+                              <div style={{ height: 2, background: t.color, opacity: 0.5 }} />
+                              <div style={{ padding: "10px 12px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  {/* Numéro */}
+                                  <div style={{ width: 26, height: 26, borderRadius: 8, background: `${t.color}18`, border: `1px solid ${t.color}33`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: t.color }}>{i+1}</span>
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", marginBottom: 3 }}>{ex.nom}</div>
+                                    {/* Métriques en ligne */}
+                                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                      {ex.series && ex.reps && (
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: t.color }}>{ex.series}×{ex.reps}</span>
+                                      )}
+                                      {ex.charge && (
+                                        <span style={{ fontSize: 12, color: "#888", background: "rgba(0,0,0,0.06)", padding: "1px 7px", borderRadius: 6 }}>🏋️ {ex.charge}</span>
+                                      )}
+                                      {ex.allure && (
+                                        <span style={{ fontSize: 12, color: "#888", background: "rgba(0,0,0,0.06)", padding: "1px 7px", borderRadius: 6 }}>⚡ {ex.allure}/km</span>
+                                      )}
+                                      {ex.fc && (
+                                        <span style={{ fontSize: 12, color: "#e74c3c", background: "rgba(231,76,60,0.08)", padding: "1px 7px", borderRadius: 6 }}>❤️ {ex.fc}</span>
+                                      )}
+                                      {ex.repos && (
+                                        <span style={{ fontSize: 11, color: "#aaa" }}>🔄 {ex.repos}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {hasDetails && (
+                                    <div style={{ fontSize: 12, color: "#aaa", flexShrink: 0 }}>{isExpanded ? "▲" : "▼"}</div>
+                                  )}
+                                </div>
+                                {/* Clé technique expandable */}
+                                {isExpanded && ex.note && (
+                                  <div className="fade-in" style={{ marginTop: 10, background: `${t.color}08`, border: `1px solid ${t.color}20`, borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#888", lineHeight: 1.5 }}>
+                                    💡 {ex.note}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fallback: exercices_cles si pas d'objets */}
+                  {exos.length === 0 && cles.length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: t.color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Programme</div>
+                      {cles.map((ex, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < cles.length - 1 ? "1px solid var(--bg3)" : "none" }}>
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: t.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, color: "var(--white)" }}>{ex}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Retour au calme */}
+                  {selectedJour.retour_calme && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>🧊 Retour au calme</div>
+                      <div style={{ fontSize: 12, color: "#aaa", background: "rgba(0,0,0,0.03)", borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>{selectedJour.retour_calme}</div>
+                    </div>
+                  )}
+
+                  {/* CTA Générer */}
+                  {!isRest && (
+                    <button onClick={() => onGoToSeance(selectedJour.type)} style={{
+                      width: "100%", padding: "13px", background: "var(--yellow)", border: "none", borderRadius: 12,
+                      fontSize: 15, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1.5, color: "#fff", cursor: "pointer",
+                      boxShadow: "0 4px 16px rgba(0,122,255,0.25)",
+                    }}>
+                      ⚡ LANCER CETTE SÉANCE
+                    </button>
+                  )}
                 </div>
               </div>
+            );
+          })()}
 
-              {/* Objectif de la séance */}
-              {selectedJour.objectif_seance && (
-                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#aaa", lineHeight: 1.5, marginBottom: 10 }}>
-                  🎯 <strong>Objectif :</strong> {selectedJour.objectif_seance}
-                </div>
-              )}
-              {!selectedJour.objectif_seance && selectedJour.focus && (
-                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#aaa", lineHeight: 1.5, marginBottom: 10 }}>
-                  🎯 {selectedJour.focus}
-                </div>
-              )}
-
-              {/* Exercices clés */}
-              {(selectedJour.exercices_cles || []).length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: TYPE_COLORS[selectedJour.type]?.color || "#666", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Programme prévu</div>
-                  {(selectedJour.exercices_cles || []).map((ex, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < selectedJour.exercices_cles.length - 1 ? "1px solid rgba(0,0,0,0.04)" : "none" }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: TYPE_COLORS[selectedJour.type]?.color || "#666", flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, color: "#ccc" }}>{ex}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedJour.type !== "repos" && selectedJour.type !== "mobilite" && (
-                <button onClick={() => onGoToSeance(selectedJour.type)} style={{ width: "100%", padding: "12px", background: "var(--yellow)", border: "none", borderRadius: 10, fontSize: 14, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 1, color: "#000", cursor: "pointer" }}>
-                  ⚡ GÉNÉRER CETTE SÉANCE
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Liste complète */}
+          {/* ── LISTE SEMAINE COMPLÈTE ── */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)" }}>PROGRAMME COMPLET</div>
-            <div style={{ fontSize: 11, color: "#555" }}>
-              {Object.values(joursFaits).filter(Boolean).length}/{(planningWeek.jours || []).filter(j => j.type !== "repos").length} séances faites
+            <div className="bebas" style={{ fontSize: 17, color: "var(--yellow)", letterSpacing: 0.5 }}>PROGRAMME COMPLET</div>
+            <div style={{ fontSize: 11, color: "#888" }}>
+              {Object.values(joursFaits).filter(Boolean).length}/{weekStats?.seances || 0} faites
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {(planningWeek.jours || []).map((j, i) => {
               const t = TYPE_COLORS[j.type] || TYPE_COLORS.repos;
               const globalIdx2 = JOURS_FULL.indexOf(j.jour);
               const isToday = globalIdx2 === todayIdx;
               const isFait = joursFaits[j.jour];
               const isSelected = selectedJour?.jour === j.jour;
+              const isRest = j.type === "repos" || j.type === "mobilite";
+              const exos2 = (j.exercices || []).filter(e => e?.nom);
+              const preview = exos2.slice(0, 2).map(e => `${e.nom}${e.series&&e.reps ? ` ${e.series}×${e.reps}` : ""}${e.charge ? ` @${e.charge}` : ""}${e.allure ? ` @${e.allure}/km` : ""}`).join(" · ");
+              const fallbackPreview = (j.exercices_cles||[]).slice(0,2).join(" · ");
               return (
                 <div key={i}
                   onClick={() => setSelectedJour(isSelected ? null : j)}
                   style={{
-                    background: isFait ? "rgba(57,255,128,0.04)" : "var(--bg2)",
-                    border: isSelected ? `1.5px solid ${t.color}66` : isFait ? "1.5px solid rgba(57,255,128,0.25)" : isToday ? "1.5px solid rgba(0,122,255,0.4)" : "1px solid var(--bg3)",
-                    borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12,
-                    cursor: "pointer", opacity: isFait ? 0.7 : 1, transition: "all 0.2s",
+                    background: isFait ? "rgba(34,197,94,0.04)" : "var(--bg2)",
+                    border: isSelected ? `2px solid ${t.color}66` : isFait ? "1.5px solid rgba(34,197,94,0.25)" : isToday ? "2px solid rgba(0,122,255,0.4)" : "1px solid var(--bg3)",
+                    borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "all 0.2s",
                   }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isFait ? "rgba(57,255,128,0.15)" : t.bg, border: `1px solid ${isFait ? "rgba(57,255,128,0.3)" : t.color+"33"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {isFait ? "✓" : t.icon}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isFait ? "var(--green)" : isToday ? "var(--yellow)" : "var(--white)", textDecoration: isFait ? "line-through" : "none" }}>{j.jour}</span>
-                      {isToday && !isFait && <span style={{ fontSize: 9, background: "var(--yellow)", color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>AUJOURD'HUI</span>}
-                      {isFait && <span style={{ fontSize: 9, background: "rgba(57,255,128,0.2)", color: "var(--green)", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>FAIT</span>}
+                  {/* Colored left bar */}
+                  <div style={{ display: "flex", alignItems: "stretch" }}>
+                    <div style={{ width: 4, background: isFait ? "#22c55e" : isRest ? "transparent" : t.color, flexShrink: 0, borderRadius: "14px 0 0 14px", opacity: 0.7 }} />
+                    <div style={{ flex: 1, padding: "11px 12px", display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 12, background: isFait ? "rgba(34,197,94,0.12)" : `${t.color}12`, border: `1px solid ${isFait ? "rgba(34,197,94,0.3)" : t.color+"22"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                        {isFait ? "✓" : t.icon}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: isFait ? "#22c55e" : isToday ? "var(--yellow)" : "var(--white)", textDecoration: isFait ? "line-through" : "none" }}>{j.jour}</span>
+                          {isToday && !isFait && <span style={{ fontSize: 8, background: "var(--yellow)", color: "#000", borderRadius: 4, padding: "1px 6px", fontWeight: 800, letterSpacing: "0.05em" }}>TODAY</span>}
+                          {isFait && <span style={{ fontSize: 8, background: "rgba(34,197,94,0.15)", color: "#22c55e", borderRadius: 4, padding: "1px 6px", fontWeight: 700 }}>✓ FAIT</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: isFait ? "#22c55e" : t.color, fontWeight: 600, marginBottom: 2 }}>{j.titre || t.label}</div>
+                        {(preview || fallbackPreview) && (
+                          <div style={{ fontSize: 10, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {preview || fallbackPreview}{(exos2.length > 2 || (j.exercices_cles||[]).length > 2) ? " ···" : ""}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {j.duree > 0 && <div style={{ fontSize: 12, fontWeight: 600, color: "#888" }}>{j.duree}m</div>}
+                        <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>{isSelected ? "▲" : "›"}</div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: isFait ? "var(--green)" : t.color, fontWeight: 600, marginTop: 2 }}>{j.titre || t.label}</div>
-                    {(j.exercices_cles || []).length > 0 && (
-                      <div style={{ fontSize: 10, color: "#777", marginTop: 3 }}>{j.exercices_cles.slice(0,2).join(" · ")}{j.exercices_cles.length > 2 ? "…" : ""}</div>
-                    )}
-                    {!(j.exercices_cles?.length) && j.focus && <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>{j.focus}</div>}
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                    {j.duree > 0 && <div style={{ fontSize: 12, color: "#666" }}>{j.duree}min</div>}
-                    <div style={{ fontSize: 14, color: isSelected ? "var(--yellow)" : "#333" }}>{isSelected ? "▲" : "▼"}</div>
                   </div>
                 </div>
               );
@@ -10362,8 +10461,9 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           </div>
         </>
       ) : (
-        <div style={{ textAlign: "center", padding: 40 }}>
-          <div style={{ fontSize: 13, color: "#555", marginBottom: 16 }}>Génère ton planning de la semaine</div>
+        <div style={{ textAlign: "center", padding: "48px 20px" }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🗓️</div>
+          <div style={{ fontSize: 14, color: "#888", marginBottom: 20 }}>Génère ton planning personnalisé de la semaine</div>
           <Btn onClick={() => generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning, {}, setStreamText)}>📅 Générer le planning</Btn>
         </div>
       )}
