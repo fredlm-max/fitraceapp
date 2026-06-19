@@ -6078,10 +6078,26 @@ JSON:
 
         {/* TODAY — toujours rendu */}
         <div style={{display: tab === "today" ? "block" : "none"}} className="fade-in">
-            {/* Citation du jour */}
-            <div style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", paddingBottom: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 13, color: "#555", lineHeight: 1.65, fontStyle: "italic" }}>"{getCitationDuJour()}"</div>
-            </div>
+
+            {/* ── HEADER GREETING + RECOVERY ── */}
+            {(()=>{
+              const recovery = calcRecoveryScore(dailyData, profile);
+              const hour = new Date().getHours();
+              const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+              const recov = recoveryLabel(recovery);
+              return (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "var(--white)" }}>{greeting}, {(profile.name||"").split(" ")[0]} 👋</div>
+                    <div style={{ fontSize: 12, color: "#777", marginTop: 2, fontStyle: "italic" }}>"{getCitationDuJour()}"</div>
+                  </div>
+                  <button onClick={() => setTab("forme")} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: "50%", background: `${recov.color}15`, border: `2px solid ${recov.color}40`, cursor: "pointer" }}>
+                    <span style={{ fontSize: 16, fontWeight: 900, color: recov.color, fontFamily: "'Bebas Neue',sans-serif", lineHeight: 1 }}>{recovery}</span>
+                    <span style={{ fontSize: 8, color: recov.color, fontWeight: 700 }}>FORME</span>
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* ── BACKGROUND GENERATION INDICATOR ── */}
             {generatingSilently && !session && (
@@ -6203,14 +6219,49 @@ JSON:
               );
             })()}
 
+            {/* ── DERNIERS ENTRAÎNEMENTS ── */}
+            {(()=>{
+              const lastSessions = [...(profile.sessions||[])].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4);
+              if (!lastSessions.length) return null;
+              const typeInfo = {
+                running_zone2: { icon: "🏃", color: "var(--green)", label: "Zone 2" },
+                force_stations: { icon: "🏋️", color: "var(--yellow)", label: "Force" },
+                running_qualite: { icon: "⚡", color: "var(--orange)", label: "Qualité" },
+                hybride_compromis: { icon: "🔀", color: "#a855f7", label: "Hybride" },
+                coach: { icon: "📋", color: "var(--yellow)", label: "Coach" },
+                perso: { icon: "✏️", color: "#888", label: "Perso" },
+              };
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>🕐 Derniers entraînements</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {lastSessions.map((s, i) => {
+                      const ti = typeInfo[s.type] || { icon: "💪", color: "var(--yellow)", label: s.type || "Séance" };
+                      const dateStr = new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+                      const isToday = s.date === new Date().toISOString().split("T")[0];
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: isToday ? `${ti.color}08` : "rgba(0,0,0,0.02)", border: isToday ? `1px solid ${ti.color}30` : "1px solid rgba(0,0,0,0.05)", borderRadius: 12 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: "50%", background: `${ti.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{ti.icon}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre || ti.label}</div>
+                            <div style={{ fontSize: 10, color: "#777", marginTop: 1 }}>{dateStr} · {s.duree || "–"} min</div>
+                          </div>
+                          {s.feedback?.difficulte && <div style={{ fontSize: 11, fontWeight: 700, color: ti.color, flexShrink: 0 }}>{s.feedback.difficulte}/10</div>}
+                          {isToday && <div style={{ fontSize: 9, color: ti.color, fontWeight: 700, background: `${ti.color}15`, borderRadius: 6, padding: "2px 6px", flexShrink: 0 }}>aujourd'hui</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MISSION DU JOUR (beginner-friendly) ── */}
             {!session && (() => {
               const recovery = calcRecoveryScore(dailyData, profile);
               const sessionsThisWeek = (profile.sessions||[]).filter(s => { const w = new Date(); w.setDate(w.getDate()-7); return new Date(s.date) >= w; }).length;
               const target = profile.seancesParSemaine || 4;
               const isRestDay = recovery < 35 || sessionsThisWeek >= target;
-              const hour = new Date().getHours();
-              const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
 
               if (isRestDay && recovery < 35) {
                 // Active rest day
@@ -6218,7 +6269,7 @@ JSON:
                   <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 10, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Récupération</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>{greeting}, {profile.name.split(" ")[0]} · Ton corps récupère</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>Ton corps récupère 🛌</div>
                     </div>
                     <div style={{ fontSize: 12, color: "#555", lineHeight: 1.7, marginBottom: 14 }}>
                       Score récup {recovery}/100 — C'est pendant le repos que les muscles se renforcent.
@@ -6250,7 +6301,7 @@ JSON:
                 <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "18px 18px", marginBottom: 14 }}>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Aujourd'hui</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>{greeting}, {profile.name.split(" ")[0]}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--white)" }}>Séance prévue aujourd'hui 💪</div>
                   </div>
                   <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                     <div style={{ flex: 1, background: "rgba(0,0,0,0.03)", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
@@ -6335,22 +6386,61 @@ JSON:
               );
             })()}
 
-            {/* Type de séance */}
-            {/* CTA Générer — visible immédiatement si pas de séance */}
-            {!session && !loadingSession && dailyData.typeSeance !== "perso" && (
-              <button onClick={generateSession} className="fade-in" style={{
-                width: "100%", marginBottom: 14, padding: "16px", borderRadius: 16,
-                background: "var(--yellow)", border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              }}>
-                <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 1.5, color: "#000" }}>GÉNÉRER MA SÉANCE</span>
-                <span style={{ fontSize: 18 }}>⚡</span>
-              </button>
+            {/* ── BLOC GÉNÉRER SÉANCE — toujours visible si pas de session en cours ── */}
+            {!loadingSession && (
+              <div style={{ marginBottom: 14 }}>
+                {/* Si une séance existe déjà aujourd'hui, bouton compact "Regénérer" */}
+                {session ? (
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+                    <button onClick={() => { setSession(null); try { localStorage.removeItem(sessionCacheKey); } catch {} }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12, color: "#666", cursor: "pointer", fontWeight: 600 }}>
+                      🔄 Nouvelle séance IA
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Sélecteur de type compact — pills horizontaux */}
+                    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 12, scrollbarWidth: "none" }}>
+                      {[
+                        { v: "auto", icon: "🏅", label: "Coach", color: "var(--yellow)" },
+                        { v: "force_stations", icon: "🏋️", label: "Force", color: "var(--yellow)" },
+                        { v: "running_zone2", icon: "🏃", label: "Cardio", color: "var(--green)" },
+                        { v: "hybride_compromis", icon: "⚡", label: "Hybride", color: "#a855f7" },
+                        { v: "running_qualite", icon: "🎯", label: "Qualité", color: "var(--orange)" },
+                        { v: "perso", icon: "✏️", label: "Perso", color: "#888" },
+                      ].map(t => {
+                        const active = dailyData.typeSeance === t.v;
+                        return (
+                          <button key={t.v} onClick={() => setDailyData(d => ({ ...d, typeSeance: t.v }))} style={{
+                            flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "8px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", border: "none",
+                            background: active ? t.color : "var(--bg2)",
+                            color: active ? (t.color === "var(--green)" || t.color === "var(--yellow)" ? "#000" : "#fff") : "#888",
+                            boxShadow: active ? `0 4px 12px ${t.color}40` : "none",
+                            transition: "all 0.15s",
+                          }}>
+                            {t.icon} {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Bouton GÉNÉRER grand et visible */}
+                    {dailyData.typeSeance !== "perso" && (
+                      <button onClick={generateSession} className="fade-in" style={{
+                        width: "100%", padding: "18px", borderRadius: 18,
+                        background: "var(--yellow)", border: "none", cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                        boxShadow: "0 6px 20px rgba(0,122,255,0.3)",
+                      }}>
+                        <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 22, letterSpacing: 2, color: "#000" }}>⚡ GÉNÉRER MA SÉANCE IA</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             )}
 
-            <Section title="Ma séance">
+            <Section title="Options avancées">
               <Card>
-                {/* Type de séance */}
+                {/* Type de séance — version détaillée (masquée si pills suffisent) */}
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: "#777", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🎯 Type de séance</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
