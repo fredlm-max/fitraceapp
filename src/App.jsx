@@ -5085,6 +5085,101 @@ JSON:
             {/* ── HYROX 101 BEGINNER CARD (shows for new users) ── */}
             {(profile.sessions||[]).length < 3 && <Hyrox101Card profile={profile} navigateTo={navigateTo} />}
 
+            {/* ═══ HERO SCORE RING ═══ */}
+            {(() => {
+              const sc = calcFitnessScore(profile);
+              const r = 54; const circ = 2 * Math.PI * r;
+              const offset = circ - (sc.global / 100) * circ;
+              const tw = totalWeeksFromDate(profile.raceDate);
+              const cw = profile.week || 1;
+              return (
+                <div className="float-up" style={{ background: "linear-gradient(145deg, #0f1200 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(0,122,255,0.12)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  {/* Halo */}
+                  <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(0,122,255,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+                  {/* Top row: name + share */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Bonjour 👋</div>
+                      <div className="bebas" style={{ fontSize: 34, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
+                      <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
+                    </div>
+                    <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                      📤 Partager
+                    </button>
+                  </div>
+
+                  {/* Score ring + stats */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    {/* SVG Ring */}
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                      <svg width="140" height="140" viewBox="0 0 140 140">
+                        {/* bg ring */}
+                        <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="10" />
+                        {/* colored ring */}
+                        <circle cx="70" cy="70" r={r} fill="none"
+                          stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}
+                          strokeWidth="10" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          transform="rotate(-90 70 70)"
+                          style={{ transition: "stroke-dashoffset 1s ease, stroke 0.5s" }}
+                        />
+                        {/* inner glow ring */}
+                        <circle cx="70" cy="70" r={r} fill="none"
+                          stroke={sc.global >= 75 ? "rgba(57,255,128,0.15)" : sc.global >= 50 ? "rgba(0,122,255,0.15)" : "rgba(255,154,60,0.15)"}
+                          strokeWidth="18" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset}
+                          transform="rotate(-90 70 70)"
+                        />
+                        {/* Score text */}
+                        <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}>{sc.global}</text>
+                        <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#444" letterSpacing="2">/ 100</text>
+                        <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#333" letterSpacing="1">SCORE FITNESS</text>
+                      </svg>
+                    </div>
+
+                    {/* Bars */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                      {[
+                        { label: "Force", val: sc.force, color: "var(--yellow)", icon: "🏋️" },
+                        { label: "Endurance", val: sc.endurance, color: "var(--green)", icon: "🏃" },
+                        { label: "Puissance", val: sc.puissance, color: "var(--red)", icon: "⚡" },
+                      ].map(b => (
+                        <div key={b.label}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 5 }}><span>{b.icon}</span>{b.label}</span>
+                            <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#555" }}>%</span></span>
+                          </div>
+                          <div style={{ background: "rgba(0,0,0,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                            <div style={{ width: `${b.val}%`, height: "100%", background: `linear-gradient(90deg, ${b.color}88, ${b.color})`, borderRadius: 99, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Programme week bar */}
+                  {tw > 0 && (
+                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
+                        <span className="bebas" style={{ fontSize: 13, color: "var(--yellow)" }}>S{cw} / {tw}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 2 }}>
+                        {Array.from({ length: Math.min(tw, 20) }, (_, i) => {
+                          const ratio = tw / Math.min(tw, 20);
+                          const w = Math.floor(i * ratio) + 1;
+                          const isPast = cw > Math.floor((i + 1) * ratio);
+                          const isActive = !isPast && cw >= w;
+                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(0,122,255,0.5)" : "rgba(0,0,0,0.05)", border: isActive ? "1px solid rgba(0,122,255,0.6)" : "none" }} />;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ══════════════════════════════════════════
                 COMMAND CENTER — PRO ATHLETE DASHBOARD
                 ══════════════════════════════════════════ */}
@@ -5374,6 +5469,139 @@ JSON:
                   )}
                   {todaySession.duree && (
                     <div style={{ marginTop: 10, fontSize: 11, color: "#777" }}>⏱ {todaySession.duree} min · {conf.label}</div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── ESTIMATEUR TEMPS HYROX ── */}
+            {(profile.vmaKmh || profile.squat1RM_final) && (() => {
+              const vma = parseFloat(profile.vmaKmh) || 12;
+              const squat = parseFloat(profile.squat1RM_final) || 80;
+              const poids = parseFloat(profile.poids) || 75;
+              const genre = profile.genre || "H";
+              const runPctVma = genre === "F" ? 0.72 : 0.70;
+              const runSpeedKmh = vma * runPctVma;
+              const runMins = (8 / runSpeedKmh) * 60;
+              const forceRatio = squat / poids;
+              const stationsBase = genre === "F" ? 32 : 28;
+              const stationsBonus = Math.min(6, Math.max(0, (forceRatio - 0.8) * 5));
+              const stationsMins = Math.max(20, stationsBase - stationsBonus);
+              const totalMins = runMins + stationsMins + 4;
+              const h = Math.floor(totalMins / 60);
+              const m = Math.round(totalMins % 60);
+              const timeStr = `${h}h${String(m).padStart(2,"0")}`;
+              const cat = totalMins < 70 ? { label: "Élite", color: "#ff4747" }
+                : totalMins < 85 ? { label: "Pro", color: "#ff9a3c" }
+                : totalMins < 100 ? { label: "Semi-Pro", color: "var(--yellow)" }
+                : totalMins < 120 ? { label: "Amateur+", color: "var(--green)" }
+                : { label: "Finisher", color: "#a78bfa" };
+              const hasGoal = profile.goalTargetLevel;
+              return (
+                <div onClick={() => navigateTo("race")} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <div className="bebas" style={{ fontSize: 36, color: cat.color, lineHeight: 1 }}>{timeStr}</div>
+                      <div style={{ background: `${cat.color}18`, border: `1px solid ${cat.color}33`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: cat.color, fontWeight: 700 }}>{cat.label}</div>
+                    </div>
+                    {hasGoal && (
+                      <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>
+                        Objectif : {profile.goalTargetLevel} · {totalMins < (profile.goalTargetLevel.replace("Sub ","").includes("h") ? parseInt(profile.goalTargetLevel.replace("Sub ",""))*60 : 999) ? "🎯 Dans les clous !" : "💪 À améliorer"}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 3 }}>Basé sur VMA {vma}km/h · Squat {squat}kg</div>
+                  </div>
+                  <div style={{ color: "#555", fontSize: 16, flexShrink: 0 }}>→</div>
+                </div>
+              );
+            })()}
+
+            {/* ── TIP DU JOUR HYROX ── */}
+            {(() => {
+              const TIPS = [
+                { icon: "⛷️", cat: "SkiErg", tip: "Garde les épaules basses et tire avec tout le corps, pas seulement les bras. La puissance vient des hanches.", color: "#a78bfa" },
+                { icon: "🛷", cat: "Sled Push", tip: "Incline-toi à 45°, pousse avec les jambes en extension complète. Gardez le dos droit, regardez le sol.", color: "var(--yellow)" },
+                { icon: "🔗", cat: "Sled Pull", tip: "Marche en arrière avec des pas courts et rapides. Bras tendus, cordes bien tendues à chaque traction.", color: "var(--orange)" },
+                { icon: "🤸", cat: "Burpee BJ", tip: "Saut le plus loin possible, pas le plus haut. Atterris en flexion pour absorber et enchaîne immédiatement.", color: "var(--red)" },
+                { icon: "🚣", cat: "Rowing", tip: "Jambes → hanches → bras dans cet ordre. Le drive commence par les jambes. Tire les poignées sous les côtes.", color: "#38bdf8" },
+                { icon: "🧳", cat: "Farmers Carry", tip: "Chest up, abdos gainés, pas réguliers. Évite de balancer les kettlebells — ça coûte de l'énergie.", color: "var(--green)" },
+                { icon: "🎒", cat: "Sandbag Lunges", tip: "Pose le sac sur les épaules, pas dans le cou. Genou avant à 90°, genou arrière effleure le sol.", color: "var(--orange)" },
+                { icon: "🏀", cat: "Wall Balls", tip: "Squatte sous le parallèle à chaque rep. Lance la balle au point le plus haut de ton extension, pas avec les bras.", color: "var(--yellow)" },
+                { icon: "🏃", cat: "Running HYROX", tip: "Entre les stations, trottine à un rythme conversationnel (Zone 2). Le running est ta récupération active.", color: "var(--green)" },
+                { icon: "🧠", cat: "Mental Race", tip: "Divise la race en 2 blocs : km 1-4 et km 5-8. Garde 30% d'énergie pour la seconde moitié.", color: "#ec4899" },
+                { icon: "🍌", cat: "Nutrition J-1", tip: "Charge glucidique la veille (pâtes, riz, pommes de terre). Évite les graisses et les fibres en excès.", color: "var(--yellow)" },
+                { icon: "💤", cat: "Récupération", tip: "48h après une séance intense, priorise le sommeil. C'est pendant le repos que tu progresses, pas pendant l'effort.", color: "#a78bfa" },
+                { icon: "🎯", cat: "Stratégie", tip: "Les 3 premières stations déterminent souvent ta course. Pars 10% en dessous de ton objectif, accélère après.", color: "var(--red)" },
+              ];
+              const dayIdx = Math.floor(Date.now() / 86400000) % TIPS.length;
+              const tip = TIPS[dayIdx];
+              return (
+                <div style={{ background: `${tip.color}06`, border: `1px solid ${tip.color}22`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: `${tip.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{tip.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: tip.color, textTransform: "uppercase", letterSpacing: "0.08em" }}>Tip · {tip.cat}</div>
+                        <div style={{ fontSize: 9, color: "#2a2a2a" }}>J+{dayIdx % 13 + 1}/13</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#888", lineHeight: 1.55 }}>{tip.tip}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── DÉFI DE LA SEMAINE ── */}
+            {(() => {
+              const DEFIS = [
+                { icon: "⛷️", station: "SkiErg", challenge: "100 coups en 2 min", tip: "Focus sur la synchronisation hanches + bras. Maintiens un rythme constant.", color: "#a78bfa", xp: 80 },
+                { icon: "🤸", station: "Burpee BJ", challenge: "10 reps en moins d'1 min", tip: "Explose sur le saut, atterris en douceur et enchaîne sans pause.", color: "var(--red)", xp: 100 },
+                { icon: "🚣", station: "Rowing", challenge: "500m sous 2:00 min/500m", tip: "Jambes complètes avant de tirer les bras. Drive explosif, retour lent.", color: "#38bdf8", xp: 90 },
+                { icon: "🏋️", station: "Force", challenge: "3×10 squats à 60% du max", tip: "Descends sous le parallèle, genoux dans l'axe, montée explosive.", color: "var(--yellow)", xp: 70 },
+                { icon: "🧳", station: "Farmers Carry", challenge: "50m sans poser les kettlebells", tip: "Abdos actifs, pas réguliers, regarde loin devant toi.", color: "var(--green)", xp: 75 },
+                { icon: "🏀", station: "Wall Balls", challenge: "21-15-9 reps sans pause", tip: "Balle sur les trapèzes, squat complet à chaque rep, souffle en remontant.", color: "var(--orange)", xp: 85 },
+                { icon: "🛷", station: "Sled Push", challenge: "20m × 3 en moins de 45s", tip: "Corps à 45°, pousse du sol avec les jambes, pas avec le dos.", color: "#ff9a3c", xp: 95 },
+                { icon: "🎒", station: "Sandbag", challenge: "20 lunges avec sac sur épaules", tip: "Sac bien haut, genou avant droit, genou arrière effleure le sol.", color: "var(--orange)", xp: 80 },
+                { icon: "🏃", station: "Running", challenge: "10 min à allure HYROX cible", tip: "Rythme conversationnel, technique parfaite, bras décontractés.", color: "var(--green)", xp: 70 },
+                { icon: "🧠", station: "Mental", challenge: "Visualiser ta race complète", tip: "5 min les yeux fermés : tu franchis chaque station, tu gères le souffle.", color: "#ec4899", xp: 60 },
+                { icon: "🔗", station: "Sled Pull", challenge: "20m en marche arrière × 3", tip: "Dos droit, pas courts, tire avec les hanches pas les bras.", color: "var(--yellow)", xp: 85 },
+                { icon: "💪", station: "Full Body", challenge: "5 rounds : 10 KB swings + 100m run", tip: "Donne tout sur le swing, récupère en courant à 70% d'intensité.", color: "var(--purple)", xp: 110 },
+              ];
+              const d = new Date(); d.setHours(0,0,0,0);
+              const dayOfWeek = d.getDay() || 7;
+              const monday = new Date(d); monday.setDate(d.getDate() - dayOfWeek + 1);
+              const weekKey = `defi_${monday.toISOString().slice(0,10)}`;
+              const defiIdx = Math.floor(monday.getTime() / (7 * 86400000)) % DEFIS.length;
+              const defi = DEFIS[defiIdx];
+              const [defiDone, setDefiDone] = React.useState(() => {
+                try { return localStorage.getItem(weekKey) === "1"; } catch { return false; }
+              });
+              const daysLeft = 7 - dayOfWeek + 1;
+              function complete() {
+                try { localStorage.setItem(weekKey, "1"); } catch {}
+                setDefiDone(true);
+              }
+              return (
+                <div style={{ background: defiDone ? "rgba(57,255,128,0.04)" : `${defi.color}06`, border: `1.5px solid ${defiDone ? "rgba(57,255,128,0.25)" : `${defi.color}25`}`, borderRadius: 16, padding: "16px 16px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${defi.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${defi.color}15`, border: `1.5px solid ${defi.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{defiDone ? "✅" : defi.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 9, color: defiDone ? "var(--green)" : defi.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{defiDone ? "✓ Défi accompli" : `Défi semaine · ${defi.station}`}</div>
+                        <div style={{ fontSize: 9, color: "#555" }}>{defiDone ? `+${defi.xp} XP` : `${daysLeft}j restant${daysLeft>1?"s":""}`}</div>
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: defiDone ? "var(--green)" : "var(--white)", marginTop: 4, lineHeight: 1.2 }}>{defi.challenge}</div>
+                      <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.4 }}>{defi.tip}</div>
+                    </div>
+                  </div>
+                  {!defiDone ? (
+                    <button onClick={complete} style={{ width: "100%", padding: "10px", background: `${defi.color}15`, border: `1px solid ${defi.color}33`, borderRadius: 10, fontSize: 13, fontWeight: 700, color: defi.color, cursor: "pointer" }}>
+                      🏆 Je l'ai fait · +{defi.xp} XP
+                    </button>
+                  ) : (
+                    <div style={{ textAlign: "center", fontSize: 12, color: "var(--green)", fontWeight: 700 }}>🎉 Excellent ! Nouveau défi lundi.</div>
                   )}
                 </div>
               );
@@ -5681,148 +5909,6 @@ JSON:
               );
             })()}
 
-            {/* ═══ HERO SCORE RING ═══ */}
-            {(() => {
-              const sc = calcFitnessScore(profile);
-              const r = 54; const circ = 2 * Math.PI * r;
-              const offset = circ - (sc.global / 100) * circ;
-              const tw = totalWeeksFromDate(profile.raceDate);
-              const cw = profile.week || 1;
-              return (
-                <div className="float-up" style={{ background: "linear-gradient(145deg, #0f1200 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(0,122,255,0.12)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
-                  {/* Halo */}
-                  <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(0,122,255,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
-
-                  {/* Top row: name + share */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: "#777", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>Bonjour 👋</div>
-                      <div className="bebas" style={{ fontSize: 34, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
-                      <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
-                    </div>
-                    <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                      📤 Partager
-                    </button>
-                  </div>
-
-                  {/* Score ring + stats */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                    {/* SVG Ring */}
-                    <div style={{ position: "relative", flexShrink: 0 }}>
-                      <svg width="140" height="140" viewBox="0 0 140 140">
-                        {/* bg ring */}
-                        <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="10" />
-                        {/* colored ring */}
-                        <circle cx="70" cy="70" r={r} fill="none"
-                          stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}
-                          strokeWidth="10" strokeLinecap="round"
-                          strokeDasharray={circ} strokeDashoffset={offset}
-                          transform="rotate(-90 70 70)"
-                          style={{ transition: "stroke-dashoffset 1s ease, stroke 0.5s" }}
-                        />
-                        {/* inner glow ring */}
-                        <circle cx="70" cy="70" r={r} fill="none"
-                          stroke={sc.global >= 75 ? "rgba(57,255,128,0.15)" : sc.global >= 50 ? "rgba(0,122,255,0.15)" : "rgba(255,154,60,0.15)"}
-                          strokeWidth="18" strokeLinecap="round"
-                          strokeDasharray={circ} strokeDashoffset={offset}
-                          transform="rotate(-90 70 70)"
-                        />
-                        {/* Score text */}
-                        <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}>{sc.global}</text>
-                        <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#444" letterSpacing="2">/ 100</text>
-                        <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#333" letterSpacing="1">SCORE FITNESS</text>
-                      </svg>
-                    </div>
-
-                    {/* Bars */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                      {[
-                        { label: "Force", val: sc.force, color: "var(--yellow)", icon: "🏋️" },
-                        { label: "Endurance", val: sc.endurance, color: "var(--green)", icon: "🏃" },
-                        { label: "Puissance", val: sc.puissance, color: "var(--red)", icon: "⚡" },
-                      ].map(b => (
-                        <div key={b.label}>
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                            <span style={{ fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 5 }}><span>{b.icon}</span>{b.label}</span>
-                            <span className="bebas" style={{ fontSize: 16, color: b.color, lineHeight: 1 }}>{b.val}<span style={{ fontSize: 10, color: "#555" }}>%</span></span>
-                          </div>
-                          <div style={{ background: "rgba(0,0,0,0.04)", borderRadius: 99, height: 6, overflow: "hidden" }}>
-                            <div style={{ width: `${b.val}%`, height: "100%", background: `linear-gradient(90deg, ${b.color}88, ${b.color})`, borderRadius: 99, transition: "width 0.8s ease" }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Programme week bar */}
-                  {tw > 0 && (
-                    <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em" }}>Progression programme</span>
-                        <span className="bebas" style={{ fontSize: 13, color: "var(--yellow)" }}>S{cw} / {tw}</span>
-                      </div>
-                      <div style={{ display: "flex", gap: 2 }}>
-                        {Array.from({ length: Math.min(tw, 20) }, (_, i) => {
-                          const ratio = tw / Math.min(tw, 20);
-                          const w = Math.floor(i * ratio) + 1;
-                          const isPast = cw > Math.floor((i + 1) * ratio);
-                          const isActive = !isPast && cw >= w;
-                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(0,122,255,0.5)" : "rgba(0,0,0,0.05)", border: isActive ? "1px solid rgba(0,122,255,0.6)" : "none" }} />;
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* ── ESTIMATEUR TEMPS HYROX ── */}
-            {(profile.vmaKmh || profile.squat1RM_final) && (() => {
-              // Estimation basée sur: VMA → temps running, Force → temps stations
-              const vma = parseFloat(profile.vmaKmh) || 12;
-              const squat = parseFloat(profile.squat1RM_final) || 80;
-              const poids = parseFloat(profile.poids) || 75;
-              const genre = profile.genre || "H";
-              // Running: 8km à une allure fonction de la VMA (% VMA)
-              const runPctVma = genre === "F" ? 0.72 : 0.70;
-              const runSpeedKmh = vma * runPctVma;
-              const runMins = (8 / runSpeedKmh) * 60;
-              // Stations: base selon ratio force/poids (plus c'est élevé, plus vite)
-              const forceRatio = squat / poids;
-              const stationsBase = genre === "F" ? 32 : 28; // minutes
-              const stationsBonus = Math.min(6, Math.max(0, (forceRatio - 0.8) * 5));
-              const stationsMins = Math.max(20, stationsBase - stationsBonus);
-              const totalMins = runMins + stationsMins + 4; // 4 min transitions
-              const h = Math.floor(totalMins / 60);
-              const m = Math.round(totalMins % 60);
-              const timeStr = `${h}h${String(m).padStart(2,"0")}`;
-              // Catégorie
-              const cat = totalMins < 70 ? { label: "Élite", color: "#ff4747" }
-                : totalMins < 85 ? { label: "Pro", color: "#ff9a3c" }
-                : totalMins < 100 ? { label: "Semi-Pro", color: "var(--yellow)" }
-                : totalMins < 120 ? { label: "Amateur+", color: "var(--green)" }
-                : { label: "Finisher", color: "#a78bfa" };
-              const hasGoal = profile.goalTargetLevel;
-              return (
-                <div onClick={() => navigateTo("race")} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⏱ Temps HYROX estimé</div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                      <div className="bebas" style={{ fontSize: 36, color: cat.color, lineHeight: 1 }}>{timeStr}</div>
-                      <div style={{ background: `${cat.color}18`, border: `1px solid ${cat.color}33`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: cat.color, fontWeight: 700 }}>{cat.label}</div>
-                    </div>
-                    {hasGoal && (
-                      <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>
-                        Objectif : {profile.goalTargetLevel} · {totalMins < (profile.goalTargetLevel.replace("Sub ","").includes("h") ? parseInt(profile.goalTargetLevel.replace("Sub ",""))*60 : 999) ? "🎯 Dans les clous !" : "💪 À améliorer"}
-                      </div>
-                    )}
-                    <div style={{ fontSize: 9, color: "#2a2a2a", marginTop: 3 }}>Basé sur VMA {vma}km/h · Squat {squat}kg</div>
-                  </div>
-                  <div style={{ color: "#555", fontSize: 16, flexShrink: 0 }}>→</div>
-                </div>
-              );
-            })()}
-
             {/* Séance coach dispo */}
             {coachSession && (
               <div onClick={() => setTab("today")} className="card-hover" style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.08) 0%, rgba(0,122,255,0.03) 100%)", border: "1.5px solid rgba(0,122,255,0.25)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
@@ -5854,100 +5940,6 @@ JSON:
 
             {/* Historique — scroll horizontal */}
             {(profile.sessions || []).length > 0 && <SessionHistoryCard profile={profile} haptic={haptic} navigateTo={navigateTo} />}
-
-            {/* ── TIP DU JOUR HYROX ── */}
-            {(() => {
-              const TIPS = [
-                { icon: "⛷️", cat: "SkiErg", tip: "Garde les épaules basses et tire avec tout le corps, pas seulement les bras. La puissance vient des hanches.", color: "#a78bfa" },
-                { icon: "🛷", cat: "Sled Push", tip: "Incline-toi à 45°, pousse avec les jambes en extension complète. Gardez le dos droit, regardez le sol.", color: "var(--yellow)" },
-                { icon: "🔗", cat: "Sled Pull", tip: "Marche en arrière avec des pas courts et rapides. Bras tendus, cordes bien tendues à chaque traction.", color: "var(--orange)" },
-                { icon: "🤸", cat: "Burpee BJ", tip: "Saut le plus loin possible, pas le plus haut. Atterris en flexion pour absorber et enchaîne immédiatement.", color: "var(--red)" },
-                { icon: "🚣", cat: "Rowing", tip: "Jambes → hanches → bras dans cet ordre. Le drive commence par les jambes. Tire les poignées sous les côtes.", color: "#38bdf8" },
-                { icon: "🧳", cat: "Farmers Carry", tip: "Chest up, abdos gainés, pas réguliers. Évite de balancer les kettlebells — ça coûte de l'énergie.", color: "var(--green)" },
-                { icon: "🎒", cat: "Sandbag Lunges", tip: "Pose le sac sur les épaules, pas dans le cou. Genou avant à 90°, genou arrière effleure le sol.", color: "var(--orange)" },
-                { icon: "🏀", cat: "Wall Balls", tip: "Squatte sous le parallèle à chaque rep. Lance la balle au point le plus haut de ton extension, pas avec les bras.", color: "var(--yellow)" },
-                { icon: "🏃", cat: "Running HYROX", tip: "Entre les stations, trottine à un rythme conversationnel (Zone 2). Le running est ta récupération active.", color: "var(--green)" },
-                { icon: "🧠", cat: "Mental Race", tip: "Divise la race en 2 blocs : km 1-4 et km 5-8. Garde 30% d'énergie pour la seconde moitié.", color: "#ec4899" },
-                { icon: "🍌", cat: "Nutrition J-1", tip: "Charge glucidique la veille (pâtes, riz, pommes de terre). Évite les graisses et les fibres en excès.", color: "var(--yellow)" },
-                { icon: "💤", cat: "Récupération", tip: "48h après une séance intense, priorise le sommeil. C'est pendant le repos que tu progresses, pas pendant l'effort.", color: "#a78bfa" },
-                { icon: "🎯", cat: "Stratégie", tip: "Les 3 premières stations déterminent souvent ta course. Pars 10% en dessous de ton objectif, accélère après.", color: "var(--red)" },
-              ];
-              const dayIdx = Math.floor(Date.now() / 86400000) % TIPS.length;
-              const tip = TIPS[dayIdx];
-              return (
-                <div style={{ background: `${tip.color}06`, border: `1px solid ${tip.color}22`, borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
-                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: `${tip.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{tip.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: tip.color, textTransform: "uppercase", letterSpacing: "0.08em" }}>Tip · {tip.cat}</div>
-                        <div style={{ fontSize: 9, color: "#2a2a2a" }}>J+{dayIdx % 13 + 1}/13</div>
-                      </div>
-                      <div style={{ fontSize: 12, color: "#888", lineHeight: 1.55 }}>{tip.tip}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── DÉFI DE LA SEMAINE ── */}
-            {(() => {
-              const DEFIS = [
-                { icon: "⛷️", station: "SkiErg", challenge: "100 coups en 2 min", tip: "Focus sur la synchronisation hanches + bras. Maintiens un rythme constant.", color: "#a78bfa", xp: 80 },
-                { icon: "🤸", station: "Burpee BJ", challenge: "10 reps en moins d'1 min", tip: "Explose sur le saut, atterris en douceur et enchaîne sans pause.", color: "var(--red)", xp: 100 },
-                { icon: "🚣", station: "Rowing", challenge: "500m sous 2:00 min/500m", tip: "Jambes complètes avant de tirer les bras. Drive explosif, retour lent.", color: "#38bdf8", xp: 90 },
-                { icon: "🏋️", station: "Force", challenge: "3×10 squats à 60% du max", tip: "Descends sous le parallèle, genoux dans l'axe, montée explosive.", color: "var(--yellow)", xp: 70 },
-                { icon: "🧳", station: "Farmers Carry", challenge: "50m sans poser les kettlebells", tip: "Abdos actifs, pas réguliers, regarde loin devant toi.", color: "var(--green)", xp: 75 },
-                { icon: "🏀", station: "Wall Balls", challenge: "21-15-9 reps sans pause", tip: "Balle sur les trapèzes, squat complet à chaque rep, souffle en remontant.", color: "var(--orange)", xp: 85 },
-                { icon: "🛷", station: "Sled Push", challenge: "20m × 3 en moins de 45s", tip: "Corps à 45°, pousse du sol avec les jambes, pas avec le dos.", color: "#ff9a3c", xp: 95 },
-                { icon: "🎒", station: "Sandbag", challenge: "20 lunges avec sac sur épaules", tip: "Sac bien haut, genou avant droit, genou arrière effleure le sol.", color: "var(--orange)", xp: 80 },
-                { icon: "🏃", station: "Running", challenge: "10 min à allure HYROX cible", tip: "Rythme conversationnel, technique parfaite, bras décontractés.", color: "var(--green)", xp: 70 },
-                { icon: "🧠", station: "Mental", challenge: "Visualiser ta race complète", tip: "5 min les yeux fermés : tu franchis chaque station, tu gères le souffle.", color: "#ec4899", xp: 60 },
-                { icon: "🔗", station: "Sled Pull", challenge: "20m en marche arrière × 3", tip: "Dos droit, pas courts, tire avec les hanches pas les bras.", color: "var(--yellow)", xp: 85 },
-                { icon: "💪", station: "Full Body", challenge: "5 rounds : 10 KB swings + 100m run", tip: "Donne tout sur le swing, récupère en courant à 70% d'intensité.", color: "var(--purple)", xp: 110 },
-              ];
-              // Semaine ISO
-              const d = new Date(); d.setHours(0,0,0,0);
-              const dayOfWeek = d.getDay() || 7;
-              const monday = new Date(d); monday.setDate(d.getDate() - dayOfWeek + 1);
-              const weekKey = `defi_${monday.toISOString().slice(0,10)}`;
-              const defiIdx = Math.floor(monday.getTime() / (7 * 86400000)) % DEFIS.length;
-              const defi = DEFIS[defiIdx];
-              const [defiDone, setDefiDone] = React.useState(() => {
-                try { return localStorage.getItem(weekKey) === "1"; } catch { return false; }
-              });
-              const daysLeft = 7 - dayOfWeek + 1;
-
-              function complete() {
-                try { localStorage.setItem(weekKey, "1"); } catch {}
-                setDefiDone(true);
-              }
-
-              return (
-                <div style={{ background: defiDone ? "rgba(57,255,128,0.04)" : `${defi.color}06`, border: `1.5px solid ${defiDone ? "rgba(57,255,128,0.25)" : `${defi.color}25`}`, borderRadius: 16, padding: "16px 16px", marginBottom: 10, position: "relative", overflow: "hidden" }}>
-                  {/* Glow */}
-                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${defi.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${defi.color}15`, border: `1.5px solid ${defi.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{defiDone ? "✅" : defi.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ fontSize: 9, color: defiDone ? "var(--green)" : defi.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{defiDone ? "✓ Défi accompli" : `Défi semaine · ${defi.station}`}</div>
-                        <div style={{ fontSize: 9, color: "#555" }}>{defiDone ? `+${defi.xp} XP` : `${daysLeft}j restant${daysLeft>1?"s":""}`}</div>
-                      </div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: defiDone ? "var(--green)" : "var(--white)", marginTop: 4, lineHeight: 1.2 }}>{defi.challenge}</div>
-                      <div style={{ fontSize: 11, color: "#555", marginTop: 4, lineHeight: 1.4 }}>{defi.tip}</div>
-                    </div>
-                  </div>
-                  {!defiDone ? (
-                    <button onClick={complete} style={{ width: "100%", padding: "10px", background: `${defi.color}15`, border: `1px solid ${defi.color}33`, borderRadius: 10, fontSize: 13, fontWeight: 700, color: defi.color, cursor: "pointer" }}>
-                      🏆 Je l'ai fait · +{defi.xp} XP
-                    </button>
-                  ) : (
-                    <div style={{ textAlign: "center", fontSize: 12, color: "var(--green)", fontWeight: 700 }}>🎉 Excellent ! Nouveau défi lundi.</div>
-                  )}
-                </div>
-              );
-            })()}
 
             {/* ── SEMAINE 1 ROADMAP (beginners) ── */}
             {(profile.sessions||[]).length < 5 && (() => {
