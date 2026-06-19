@@ -12,7 +12,7 @@ class ErrorBoundary extends Component {
           <div style={{ background:"#111", border:"1px solid #333", borderRadius:8, padding:16, fontSize:12, lineHeight:1.6, whiteSpace:"pre-wrap", wordBreak:"break-all" }}>
             {String(this.state.error)}
           </div>
-          <button onClick={() => this.setState({ error: null })} style={{ marginTop:16, padding:"10px 20px", background:"#e8ff47", color:"#000", border:"none", borderRadius:8, fontWeight:700, cursor:"pointer" }}>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop:16, padding:"10px 20px", background:"#007AFF", color:"#000", border:"none", borderRadius:8, fontWeight:700, cursor:"pointer" }}>
             Réessayer
           </button>
         </div>
@@ -31,8 +31,8 @@ const GLOBAL_STYLES = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #F5F5F7; --bg2: #FFFFFF; --bg3: #E8E8ED;
-    --yellow: #D4C800; --red: #FF3B30; --green: #28A745; --orange: #E07A00; --purple: #7B3FCE;
-    --yellow-bright: #e8ff47;
+    --yellow: #007AFF; --red: #FF3B30; --green: #28A745; --orange: #E07A00; --purple: #7B3FCE;
+    --yellow-bright: #007AFF;
     --white: #1D1D1F; --gray: #8E8E93; --gray2: #48484A;
     --font-title: 'Bebas Neue', sans-serif; --font-body: 'DM Sans', sans-serif;
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -54,7 +54,7 @@ const GLOBAL_STYLES = `
   button:active { transform: scale(0.94) !important; opacity: 0.85; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   input, select, textarea { font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(232,255,71,0.6); outline-offset: 2px; transition: outline 0.15s; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(0,122,255,0.6); outline-offset: 2px; transition: outline 0.15s; }
 
   /* ── Tab transitions ── */
   @keyframes slideInRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
@@ -76,7 +76,7 @@ const GLOBAL_STYLES = `
   @keyframes toastIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes toastOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(10px) scale(0.95); } }
   @keyframes ripple { 0% { transform: scale(0); opacity: 0.5; } 100% { transform: scale(4); opacity: 0; } }
-  @keyframes glow { 0%, 100% { box-shadow: 0 0 8px rgba(232,255,71,0.3); } 50% { box-shadow: 0 0 20px rgba(232,255,71,0.6); } }
+  @keyframes glow { 0%, 100% { box-shadow: 0 0 8px rgba(0,122,255,0.3); } 50% { box-shadow: 0 0 20px rgba(0,122,255,0.6); } }
   @keyframes confetti { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(-80px) rotate(360deg); opacity: 0; } }
   @keyframes scoreIn { 0% { stroke-dashoffset: 251; } 100% { } }
   @keyframes progressFill { from { width: 0; } }
@@ -119,17 +119,17 @@ const GLOBAL_STYLES = `
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="date"]:focus, textarea:focus, select:focus {
-    background: #FFFFFF; border-color: var(--yellow-bright); box-shadow: 0 0 0 3px rgba(212,200,0,0.15);
+    background: #FFFFFF; border-color: var(--yellow-bright); box-shadow: 0 0 0 3px rgba(0,122,255,0.15);
   }
 
   /* ── Scrollbar slim ── */
-  * { scrollbar-width: thin; scrollbar-color: rgba(232,255,71,0.2) transparent; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(0,122,255,0.2) transparent; }
 
   /* ── Selection color ── */
-  ::selection { background: rgba(212,200,0,0.25); color: var(--white); }
+  ::selection { background: rgba(0,122,255,0.25); color: var(--white); }
 
   /* ── Focus ring ── */
-  :focus-visible { outline: 2px solid rgba(232,255,71,0.5); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid rgba(0,122,255,0.5); outline-offset: 2px; }
 `;
 
 // ============================================================
@@ -173,7 +173,7 @@ const storage = {
 // ============================================================
 const LEVELS = [
   { id: 1, label: "Découverte", color: "#39ff80", emoji: "🟢" },
-  { id: 2, label: "Développement", color: "#e8ff47", emoji: "🟡" },
+  { id: 2, label: "Développement", color: "#007AFF", emoji: "🟡" },
   { id: 3, label: "Performance", color: "#ff9a3c", emoji: "🟠" },
   { id: 4, label: "Compétition", color: "#ff4747", emoji: "🔴" },
 ];
@@ -464,7 +464,7 @@ function RPELineChart({ profile }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>ÉVOLUTION RPE</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ background: "rgba(232,255,71,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>Moy {avg}/10</div>
+          <div style={{ background: "rgba(0,122,255,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>Moy {avg}/10</div>
           {trend !== null && (
             <div style={{ background: parseFloat(trend) > 0 ? "rgba(255,71,71,0.1)" : "rgba(57,255,128,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, color: parseFloat(trend) > 0 ? "var(--red)" : "var(--green)" }}>
               {parseFloat(trend) > 0 ? "▲" : "▼"} {Math.abs(trend)}
@@ -485,12 +485,12 @@ function RPELineChart({ profile }) {
             ))}
             {/* Zone couleur RPE */}
             <rect x={0} y={0} width={innerW} height={yScale(4)} fill="rgba(255,71,71,0.05)" />
-            <rect x={0} y={yScale(7)} width={innerW} height={yScale(4)-yScale(7)} fill="rgba(232,255,71,0.04)" />
+            <rect x={0} y={yScale(7)} width={innerW} height={yScale(4)-yScale(7)} fill="rgba(0,122,255,0.04)" />
             <rect x={0} y={yScale(10)} width={innerW} height={yScale(7)-yScale(10)} fill="rgba(57,255,128,0.04)" />
             {/* Ligne de moyenne */}
-            <line x1={0} y1={yScale(avg)} x2={innerW} y2={yScale(avg)} stroke="rgba(232,255,71,0.25)" strokeWidth={1} strokeDasharray="4,4" />
+            <line x1={0} y1={yScale(avg)} x2={innerW} y2={yScale(avg)} stroke="rgba(0,122,255,0.25)" strokeWidth={1} strokeDasharray="4,4" />
             {/* Aire */}
-            <path d={areaPath} fill="rgba(232,255,71,0.06)" />
+            <path d={areaPath} fill="rgba(0,122,255,0.06)" />
             {/* Courbe */}
             <path d={linePath} fill="none" stroke="var(--yellow)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             {/* Points */}
@@ -565,7 +565,7 @@ function TrainingHeatmap({ profile }) {
     if (!day.session) return "var(--bg3)";
     const rpe = day.session.difficulte || 5;
     if (rpe >= 8) return "rgba(255,71,71,0.7)";
-    if (rpe >= 6) return "rgba(232,255,71,0.7)";
+    if (rpe >= 6) return "rgba(0,122,255,0.7)";
     return "rgba(57,255,128,0.7)";
   };
 
@@ -580,7 +580,7 @@ function TrainingHeatmap({ profile }) {
     <Card style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>RÉGULARITÉ — 12 SEMAINES</div>
-        <div style={{ background: "rgba(232,255,71,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>
+        <div style={{ background: "rgba(0,122,255,0.1)", borderRadius: 6, padding: "2px 10px", fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>
           {totalSeances} séances
         </div>
       </div>
@@ -639,7 +639,7 @@ function TrainingHeatmap({ profile }) {
 
       <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
         <span style={{ fontSize: 10, color: "#777" }}>Intensité:</span>
-        {[{ c: "rgba(57,255,128,0.7)", l: "Facile" }, { c: "rgba(232,255,71,0.7)", l: "Modérée" }, { c: "rgba(255,71,71,0.7)", l: "Intense" }, { c: "var(--bg3)", l: "Repos" }].map(item => (
+        {[{ c: "rgba(57,255,128,0.7)", l: "Facile" }, { c: "rgba(0,122,255,0.7)", l: "Modérée" }, { c: "rgba(255,71,71,0.7)", l: "Intense" }, { c: "var(--bg3)", l: "Repos" }].map(item => (
           <div key={item.l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#555" }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: item.c }} />{item.l}
           </div>
@@ -699,7 +699,7 @@ function RadarChart({ profile }) {
             return <line key={i} x1={CX} y1={CY} x2={outer.x} y2={outer.y} stroke="rgba(0,0,0,0.07)" strokeWidth={1} />;
           })}
           {/* Polygone athlète */}
-          <path d={polygonPath} fill="rgba(232,255,71,0.12)" stroke="var(--yellow)" strokeWidth={2} />
+          <path d={polygonPath} fill="rgba(0,122,255,0.12)" stroke="var(--yellow)" strokeWidth={2} />
           {/* Points sur les axes */}
           {athletePoints.map((p, i) => (
             <circle key={i} cx={p.x} cy={p.y} r={4} fill={axes[i].color} stroke="var(--bg)" strokeWidth={1.5} />
@@ -1487,7 +1487,7 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
         <button onClick={() => setShowWelcome(false)} style={{
           width: "100%", padding: "18px", background: "var(--yellow)", border: "none",
           borderRadius: 16, fontSize: 18, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2,
-          color: "#0a0a0a", cursor: "pointer", boxShadow: "0 8px 32px rgba(232,255,71,0.25)",
+          color: "#0a0a0a", cursor: "pointer", boxShadow: "0 8px 32px rgba(0,122,255,0.25)",
         }}>
           CRÉER MON PROFIL →
         </button>
@@ -1777,9 +1777,9 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
         {step === 4 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Profil IA streamé */}
-            <Card style={{ border: "1.5px solid rgba(232,255,71,0.25)" }}>
+            <Card style={{ border: "1.5px solid rgba(0,122,255,0.25)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(0,122,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
                 <div>
                   <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", lineHeight: 1 }}>TON PROFIL COACH IA</div>
                   <div style={{ fontSize: 11, color: "#555" }}>Personnalisé par l'IA</div>
@@ -1804,7 +1804,7 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
             {/* Option batterie de tests */}
             {!loading && (
               <div className="fade-in">
-                <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 14, padding: "16px", marginBottom: 12 }}>
+                <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 14, padding: "16px", marginBottom: 12 }}>
                   <div className="bebas" style={{ fontSize: 17, color: "var(--yellow)", marginBottom: 6 }}>🧪 CALIBRER TON PROGRAMME</div>
                   <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 12 }}>
                     Une batterie de tests rapide pour personnaliser les charges et allures au kilo près.
@@ -1896,7 +1896,7 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
     setActiveTest(null);
   }
 
-  const lvlColors = ["", "#39ff80", "#e8ff47", "#ff9a3c", "#ff4747"];
+  const lvlColors = ["", "#39ff80", "#007AFF", "#ff9a3c", "#ff4747"];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", padding: "20px 16px" }}>
@@ -2042,7 +2042,7 @@ function TestModal({ test, onSave, onClose, existing }) {
                     {[
                       { z: "Z1", label: "Récup", pct: 50, color: "#555" },
                       { z: "Z2", label: "Endurance", pct: 60, color: "#39ff80" },
-                      { z: "Z3", label: "Tempo", pct: 70, color: "#e8ff47" },
+                      { z: "Z3", label: "Tempo", pct: 70, color: "#007AFF" },
                       { z: "Z4", label: "Seuil", pct: 80, color: "#ff9a3c" },
                       { z: "Z5", label: "VO2max", pct: 90, color: "#ff4747" },
                     ].map(z => (
@@ -2316,10 +2316,10 @@ function WeeklySummaryCard({ profile }) {
   const scoreColor = summary.count >= 4 ? "var(--green)" : summary.count >= 2 ? "var(--yellow)" : "var(--orange)";
 
   return (
-    <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.04) 0%, rgba(0,0,0,0) 100%)", border: "1.5px solid rgba(232,255,71,0.15)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+    <div style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.04) 0%, rgba(0,0,0,0) 100%)", border: "1.5px solid rgba(0,122,255,0.15)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 10, color: "rgba(232,255,71,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>📅 Semaine {week} en cours</div>
+          <div style={{ fontSize: 10, color: "rgba(0,122,255,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>📅 Semaine {week} en cours</div>
           <div className="bebas" style={{ fontSize: 32, color: scoreColor, lineHeight: 1 }}>{summary.count} <span style={{ fontSize: 16, color: "#555" }}>séances</span></div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -2342,7 +2342,7 @@ function WeeklySummaryCard({ profile }) {
               <div style={{
                 width: "100%", aspectRatio: "1", borderRadius: 7,
                 background: s ? `${ressentiColor}20` : isPast ? "rgba(0,0,0,0.02)" : "rgba(255,255,255,0.01)",
-                border: s ? `1.5px solid ${ressentiColor}66` : isToday ? "1.5px solid rgba(232,255,71,0.4)" : `1px solid rgba(0,0,0,0.04)`,
+                border: s ? `1.5px solid ${ressentiColor}66` : isToday ? "1.5px solid rgba(0,122,255,0.4)" : `1px solid rgba(0,0,0,0.04)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 12,
               }}>
@@ -2483,7 +2483,7 @@ function TrainingMixChart({ profile }) {
 
   const TYPE_CONFIG = {
     running_zone2:     { label: "Zone 2",   color: "#39ff80", icon: "🏃" },
-    force_stations:    { label: "Force",    color: "#e8ff47", icon: "💪" },
+    force_stations:    { label: "Force",    color: "#007AFF", icon: "💪" },
     running_qualite:   { label: "Qualité",  color: "#ff9a3c", icon: "⚡" },
     hybride_compromis: { label: "Hybride",  color: "#a78bfa", icon: "🔀" },
     coach:             { label: "Coach",    color: "#38bdf8", icon: "👨‍💼" },
@@ -2610,7 +2610,7 @@ function Hyrox101Card({ profile, navigateTo }) {
 function SessionHistoryCard({ profile, haptic, navigateTo }) {
   const TYPE_CONF = {
     running_zone2: { icon: "🏃", color: "var(--green)", bg: "rgba(57,255,128,0.08)", border: "rgba(57,255,128,0.2)", label: "Zone 2" },
-    force_stations: { icon: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.2)", label: "Force" },
+    force_stations: { icon: "💪", color: "var(--yellow)", bg: "rgba(0,122,255,0.06)", border: "rgba(0,122,255,0.2)", label: "Force" },
     running_qualite: { icon: "⚡", color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.2)", label: "Qualité" },
     hybride_compromis: { icon: "🔀", color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.2)", label: "Hybride" },
   };
@@ -2671,7 +2671,7 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
       </div>
       <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
         {sessions.map((s, i) => {
-          const conf = TYPE_CONF[s.type] || { icon: "🏋️", color: "var(--yellow)", bg: "rgba(232,255,71,0.06)", border: "rgba(232,255,71,0.15)", label: "Séance" };
+          const conf = TYPE_CONF[s.type] || { icon: "🏋️", color: "var(--yellow)", bg: "rgba(0,122,255,0.06)", border: "rgba(0,122,255,0.15)", label: "Séance" };
           const rpe = s.difficulte || 5;
           const rpeColor = rpe <= 4 ? "var(--green)" : rpe <= 7 ? "var(--yellow)" : "var(--red)";
           const rpePct = rpe / 10;
@@ -2714,7 +2714,7 @@ function PourquoiCard({ session }) {
         <span style={{ color: "#555", fontWeight: 600 }}>🎓 Pourquoi cette séance ?</span>
       </button>
       {open && (
-        <div style={{ marginTop: 6, padding: "10px 12px", background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 10 }}>
+        <div style={{ marginTop: 6, padding: "10px 12px", background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.12)", borderRadius: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "var(--yellow)", marginBottom: 5 }}>{info.title}</div>
           <div style={{ fontSize: 11, color: "#666", lineHeight: 1.7 }}>{info.body}</div>
         </div>
@@ -2893,7 +2893,7 @@ function PaceCalcWidget({ profile }) {
             <div className="bebas" style={{ fontSize: 26, color: "var(--green)", lineHeight: 1 }}>{paceStr}</div>
             <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>8 × 1km entre stations</div>
           </div>
-          <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.18)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+          <div style={{ background: "rgba(0,122,255,0.06)", border: "1px solid rgba(0,122,255,0.18)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
             <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", marginBottom: 4 }}>Temps par station</div>
             <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{stationMin}:{String(stationSec).padStart(2,"0")}</div>
             <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>moy. ~{estStationsMins}min total</div>
@@ -3902,7 +3902,7 @@ JSON:
           onClick={() => setStreakMilestone(null)}>
           <div onClick={e => e.stopPropagation()} className="bounce-in" style={{ background: "#FFFFFF", border: "2px solid var(--yellow-bright)", borderRadius: 28, padding: "36px 28px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }}>
             {/* Glow */}
-            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,122,255,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
             <div style={{ fontSize: 72, marginBottom: 8, animation: "bounceIn 0.5s var(--spring) both 0.1s" }}>{streakMilestone.emoji}</div>
             <div className="bebas" style={{ fontSize: 52, color: "var(--yellow)", lineHeight: 1, letterSpacing: 2, marginBottom: 4 }}>{streakMilestone.days} JOURS</div>
             <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 16, opacity: 0.7 }}>🔥 Streak record</div>
@@ -3917,7 +3917,7 @@ JSON:
       {/* ── Toast notifications ── */}
       <div style={{ position: "fixed", bottom: 96, left: 16, right: 16, zIndex: 900, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         {toasts.map(t => {
-          const colors = { success: { bg: "rgba(57,255,128,0.95)", color: "#000", icon: "✓" }, error: { bg: "rgba(255,71,71,0.95)", color: "#fff", icon: "✕" }, info: { bg: "rgba(232,255,71,0.95)", color: "#000", icon: "ℹ" }, badge: { bg: "rgba(167,139,250,0.95)", color: "#fff", icon: "🏅" } };
+          const colors = { success: { bg: "rgba(57,255,128,0.95)", color: "#000", icon: "✓" }, error: { bg: "rgba(255,71,71,0.95)", color: "#fff", icon: "✕" }, info: { bg: "rgba(0,122,255,0.95)", color: "#000", icon: "ℹ" }, badge: { bg: "rgba(167,139,250,0.95)", color: "#fff", icon: "🏅" } };
           const c = colors[t.type] || colors.success;
           return (
             <div key={t.id} style={{ animation: "toastIn 0.3s var(--spring) both", background: c.bg, color: c.color, borderRadius: 14, padding: "11px 18px", fontSize: 14, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 10, maxWidth: 360, pointerEvents: "auto", backdropFilter: "blur(12px)" }}>
@@ -3932,7 +3932,7 @@ JSON:
       {showInstallBanner && !isInstalled && (
         <div className="slide-up" style={{ position: "fixed", bottom: 90, left: 16, right: 16, zIndex: 500, maxWidth: 480, margin: "0 auto" }}>
           <div style={{ background: "#FFFFFF", border: "1.5px solid var(--yellow-bright)", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(232,255,71,0.12)", border: "1px solid rgba(232,255,71,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📲</div>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(0,122,255,0.12)", border: "1px solid rgba(0,122,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📲</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", marginBottom: 2 }}>Installer FitRace</div>
               <div style={{ fontSize: 11, color: "#555", lineHeight: 1.4 }}>Accès rapide depuis ton écran d'accueil</div>
@@ -3966,7 +3966,7 @@ JSON:
               { n: 4, icon: "✅", text: "Appuie sur", bold: "« Ajouter »" },
             ].map(({ n, icon, text, bold }) => (
               <div key={n} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: n < 4 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{icon}</div>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{icon}</div>
                 <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.4 }}>
                   {text} <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{bold}</span>
                 </div>
@@ -3997,7 +3997,7 @@ JSON:
             {/* Header */}
             <div style={{ padding: "14px 20px 12px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(250,250,252,0.97)", backdropFilter: "blur(20px)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, rgba(232,255,71,0.2), rgba(57,255,128,0.1))", border: "1px solid rgba(232,255,71,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🤖</div>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, rgba(0,122,255,0.2), rgba(57,255,128,0.1))", border: "1px solid rgba(0,122,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🤖</div>
                 <div>
                   <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>COACH IA</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
@@ -4015,7 +4015,7 @@ JSON:
                 <div style={{ padding: "20px 0" }}>
                   {/* Bulle d'accueil du coach */}
                   <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🤖</div>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🤖</div>
                     <div style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)", borderRadius: "4px 16px 16px 16px", padding: "14px 16px", maxWidth: "85%" }}>
                       <div style={{ fontSize: 14, color: "#ccc", lineHeight: 1.7 }}>Salut <strong style={{ color: "var(--yellow)" }}>{profile.name}</strong> ! 👋 Je suis ton coach IA HYROX personnel. Connais ton profil, tes forces et tes objectifs. Pose-moi n'importe quelle question.</div>
                     </div>
@@ -4070,7 +4070,7 @@ JSON:
                         "Quelle est ta recommandation pour ce mois-ci ?",
                       ];
                     })()).map((q, i) => (
-                      <button key={i} onClick={() => setChatInput(q)} style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "11px 14px", color: "#aaa", fontSize: 13, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+                      <button key={i} onClick={() => setChatInput(q)} style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: "11px 14px", color: "#aaa", fontSize: 13, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 14, flexShrink: 0 }}>💬</span>
                         <span>{q}</span>
                       </button>
@@ -4081,12 +4081,12 @@ JSON:
               {chatMessages.map((msg, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-end" }}>
                   {msg.role === "assistant" && (
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, marginBottom: 2 }}>🤖</div>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, marginBottom: 2 }}>🤖</div>
                   )}
                   <div style={{
                     maxWidth: "82%",
                     background: msg.role === "user"
-                      ? "linear-gradient(135deg, #e8ff47, #b8cc00)"
+                      ? "linear-gradient(135deg, #007AFF, #b8cc00)"
                       : "rgba(0,0,0,0.04)",
                     color: msg.role === "user" ? "#000" : "#ddd",
                     borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
@@ -4226,7 +4226,7 @@ JSON:
             <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 20px 24px" }}>
               {/* Exercice en cours — hero */}
               {(session.exercices||[])[currentExIdx] && (
-                <div style={{ background: "rgba(232,255,71,0.04)", border: "1.5px solid rgba(232,255,71,0.18)", borderRadius: 20, padding: "18px 20px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                <div style={{ background: "rgba(0,122,255,0.04)", border: "1.5px solid rgba(0,122,255,0.18)", borderRadius: 20, padding: "18px 20px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
                   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, var(--yellow), transparent)" }} />
                   <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>⚡ En cours</div>
                   <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{(session.exercices||[])[currentExIdx].nom}</div>
@@ -4242,7 +4242,7 @@ JSON:
                 <div className="bebas" style={{
                   fontSize: 88, color: chronoRunning ? "var(--white)" : "#333",
                   lineHeight: 1, letterSpacing: 4, fontVariantNumeric: "tabular-nums",
-                  textShadow: chronoRunning ? "0 0 40px rgba(232,255,71,0.15)" : "none",
+                  textShadow: chronoRunning ? "0 0 40px rgba(0,122,255,0.15)" : "none",
                   transition: "color 0.4s, text-shadow 0.4s",
                 }}>
                   {formatChrono(chronoSeconds)}
@@ -4347,15 +4347,15 @@ JSON:
                 return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)].join(",");
               }).join(" ");
               return (
-                <div style={{ background: "linear-gradient(145deg, #0a0a00 0%, #080808 40%, #000a05 100%)", border: "1.5px solid rgba(232,255,71,0.35)", borderRadius: 24, padding: "24px 22px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
+                <div style={{ background: "linear-gradient(145deg, #0a0a00 0%, #080808 40%, #000a05 100%)", border: "1.5px solid rgba(0,122,255,0.35)", borderRadius: 24, padding: "24px 22px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
                   {/* Halos */}
-                  <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,122,255,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
                   <div style={{ position: "absolute", bottom: -40, left: -40, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(57,255,128,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
 
                   {/* Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
                     <div>
-                      <div style={{ fontSize: 9, color: "rgba(232,255,71,0.5)", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 6 }}>FITRACE · HYROX IA</div>
+                      <div style={{ fontSize: 9, color: "rgba(0,122,255,0.5)", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 6 }}>FITRACE · HYROX IA</div>
                       <div className="bebas" style={{ fontSize: 34, color: "var(--yellow)", letterSpacing: 2, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
                       <div style={{ fontSize: 11, color: "#555", marginTop: 4 }}>
                         {LEVELS[(profile.level||1)-1]?.label} · S{profile.week||1} · {profile.sessions?.length||0} séances
@@ -4378,7 +4378,7 @@ JSON:
                         const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
                         return <line key={i} x1={cx} y1={cy} x2={cx + R * Math.cos(angle)} y2={cy + R * Math.sin(angle)} stroke="rgba(0,0,0,0.06)" strokeWidth="1" />;
                       })}
-                      <polygon points={polygon} fill="rgba(232,255,71,0.12)" stroke="var(--yellow)" strokeWidth="1.5" />
+                      <polygon points={polygon} fill="rgba(0,122,255,0.12)" stroke="var(--yellow)" strokeWidth="1.5" />
                       {dims.map((d, i) => {
                         const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
                         const lx = cx + (R + 10) * Math.cos(angle); const ly = cy + (R + 10) * Math.sin(angle);
@@ -4409,7 +4409,7 @@ JSON:
                     <div style={{ flex: sc.puissance, background: "var(--red)", borderRadius: "0 99px 99px 0" }} />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                    <span style={{ fontSize: 9, color: "rgba(232,255,71,0.6)" }}>Force {sc.force}%</span>
+                    <span style={{ fontSize: 9, color: "rgba(0,122,255,0.6)" }}>Force {sc.force}%</span>
                     <span style={{ fontSize: 9, color: "rgba(57,255,128,0.6)" }}>Endurance {sc.endurance}%</span>
                     <span style={{ fontSize: 9, color: "rgba(255,71,71,0.6)" }}>Puissance {sc.puissance}%</span>
                   </div>
@@ -4459,11 +4459,11 @@ JSON:
         const step = STEPS[tourStep] || STEPS[0];
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 20 }}>
-            <div className="slide-up" style={{ width: "100%", maxWidth: 440, background: "linear-gradient(145deg, #131500 0%, #0a0f00 100%)", border: "1.5px solid rgba(232,255,71,0.4)", borderRadius: 24, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}>
+            <div className="slide-up" style={{ width: "100%", maxWidth: 440, background: "linear-gradient(145deg, #131500 0%, #0a0f00 100%)", border: "1.5px solid rgba(0,122,255,0.4)", borderRadius: 24, padding: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}>
               {/* Dots de progression */}
               <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 20 }}>
                 {STEPS.map((_, i) => (
-                  <div key={i} style={{ width: i === tourStep ? 20 : 6, height: 6, borderRadius: 99, background: i === tourStep ? "var(--yellow)" : i < tourStep ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.08)", transition: "all 0.3s" }} />
+                  <div key={i} style={{ width: i === tourStep ? 20 : 6, height: 6, borderRadius: 99, background: i === tourStep ? "var(--yellow)" : i < tourStep ? "rgba(0,122,255,0.3)" : "rgba(0,0,0,0.08)", transition: "all 0.3s" }} />
                 ))}
               </div>
               <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -4616,7 +4616,7 @@ JSON:
               return (
                 <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, padding: "12px 16px", marginBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 11, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 11, background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
                       {lvl.icon}
                     </div>
                     <div style={{ flex: 1 }}>
@@ -4633,7 +4633,7 @@ JSON:
                     </div>
                   </div>
                   <div style={{ height: 5, background: "rgba(0,0,0,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${lvl.progress}%`, background: "linear-gradient(90deg, rgba(232,255,71,0.7), var(--yellow))", borderRadius: 99, transition: "width 1s var(--ease-out)", boxShadow: lvl.progress > 0 ? "0 0 8px rgba(232,255,71,0.4)" : "none" }} />
+                    <div style={{ height: "100%", width: `${lvl.progress}%`, background: "linear-gradient(90deg, rgba(0,122,255,0.7), var(--yellow))", borderRadius: 99, transition: "width 1s var(--ease-out)", boxShadow: lvl.progress > 0 ? "0 0 8px rgba(0,122,255,0.4)" : "none" }} />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
                     <span style={{ fontSize: 9, color: "#555" }}>{Math.round(lvl.progress)}% vers {lvl.nextName || "Max"}</span>
@@ -4850,7 +4850,7 @@ JSON:
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
                     {/* Volume semaine */}
-                    <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 14, padding: "12px 14px" }}>
+                    <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.12)", borderRadius: 14, padding: "12px 14px" }}>
                       <div style={{ fontSize: 9, color: "#555", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Charge semaine</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
                         <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{weekSessions.length}</span>
@@ -4880,7 +4880,7 @@ JSON:
               <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 400, display: "flex", alignItems: "flex-end" }}
                 onClick={() => setShowMessageModal(false)}>
                 <div className="slide-up" onClick={e => e.stopPropagation()}
-                  style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: 28, width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(232,255,71,0.2)" }}>
+                  style={{ background: "var(--bg2)", borderRadius: "20px 20px 0 0", padding: 28, width: "100%", maxWidth: 480, margin: "0 auto", border: "1px solid rgba(0,122,255,0.2)" }}>
                   <div style={{ width: 40, height: 4, borderRadius: 99, background: "#333", margin: "0 auto 20px" }} />
                   <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>
                     🤖 Message de ton coach
@@ -4902,11 +4902,11 @@ JSON:
               if (!todaySession) return null;
               const typeConf = {
                 running_zone2: { label: "Running Zone 2", icon: "🏃", color: "var(--green)", bg: "linear-gradient(135deg, rgba(57,255,128,0.08) 0%, rgba(0,0,0,0) 60%)", border: "rgba(57,255,128,0.2)" },
-                force_stations: { label: "Force Stations", icon: "🏋️", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(232,255,71,0.2)" },
+                force_stations: { label: "Force Stations", icon: "🏋️", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(0,122,255,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(0,122,255,0.2)" },
                 running_qualite: { label: "Running Qualité", icon: "⚡", color: "var(--orange)", bg: "linear-gradient(135deg, rgba(255,154,60,0.07) 0%, rgba(0,0,0,0) 60%)", border: "rgba(255,154,60,0.2)" },
                 hybride_compromis: { label: "Hybride HYROX", icon: "🔀", color: "var(--purple)", bg: "linear-gradient(135deg, rgba(167,139,250,0.07) 0%, rgba(0,0,0,0) 60%)", border: "rgba(167,139,250,0.2)" },
               };
-              const conf = typeConf[todaySession.type] || { label: "Séance", icon: "💪", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(232,255,71,0.15)" };
+              const conf = typeConf[todaySession.type] || { label: "Séance", icon: "💪", color: "var(--yellow)", bg: "linear-gradient(135deg, rgba(0,122,255,0.06) 0%, rgba(0,0,0,0) 60%)", border: "rgba(0,122,255,0.15)" };
               const exs = todaySession.exercices || [];
               return (
                 <div className="card-hover" style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "18px 18px 16px", marginBottom: 16, position: "relative" }}
@@ -4966,7 +4966,7 @@ JSON:
                 cta: "Séance légère ou repos",
               } : !isRested ? {
                 icon: "🌤️", label: "Journée de transition", color: "var(--yellow)",
-                bg: "rgba(232,255,71,0.04)", border: "rgba(232,255,71,0.12)",
+                bg: "rgba(0,122,255,0.04)", border: "rgba(0,122,255,0.12)",
                 detail: "Séance hier · Corps en récupération",
                 cta: "Zone 2 ou technique",
               } : isOptimalHour ? {
@@ -5106,7 +5106,7 @@ JSON:
               const LEVELS = [
                 { min: 0,    max: 200,  name: "Rookie",     icon: "🥉", color: "#cd7f32", gradient: "linear-gradient(135deg,#2a1800,#080808)" },
                 { min: 200,  max: 500,  name: "Challenger", icon: "🥈", color: "#adb5bd", gradient: "linear-gradient(135deg,#141414,#080808)" },
-                { min: 500,  max: 1000, name: "Compétiteur",icon: "🥇", color: "#e8ff47", gradient: "linear-gradient(135deg,#131500,#080808)" },
+                { min: 500,  max: 1000, name: "Compétiteur",icon: "🥇", color: "#007AFF", gradient: "linear-gradient(135deg,#131500,#080808)" },
                 { min: 1000, max: 2000, name: "Athlète",    icon: "⚡", color: "#ff9a3c", gradient: "linear-gradient(135deg,#120800,#080808)" },
                 { min: 2000, max: 4000, name: "Pro",        icon: "🔥", color: "#ff4747", gradient: "linear-gradient(135deg,#1a0000,#080808)" },
                 { min: 4000, max: 9999, name: "ÉLITE",      icon: "🏆", color: "#a78bfa", gradient: "linear-gradient(135deg,#120020,#080808)" },
@@ -5220,7 +5220,7 @@ JSON:
                 : avgRPE >= 7 ? "charge" : "normal";
               const formeConf = {
                 top:     { label: "Forme optimale",    emoji: "🚀", color: "var(--green)",  bg: "rgba(57,255,128,0.06)",  border: "rgba(57,255,128,0.18)",  msg: "Intensité max autorisée." },
-                normal:  { label: "Bonne forme",       emoji: "💪", color: "var(--yellow)", bg: "rgba(232,255,71,0.04)",  border: "rgba(232,255,71,0.15)",  msg: "Continue sur ta lancée." },
+                normal:  { label: "Bonne forme",       emoji: "💪", color: "var(--yellow)", bg: "rgba(0,122,255,0.04)",  border: "rgba(0,122,255,0.15)",  msg: "Continue sur ta lancée." },
                 charge:  { label: "Charge élevée",     emoji: "⚠️", color: "var(--orange)", bg: "rgba(255,154,60,0.05)",  border: "rgba(255,154,60,0.18)",  msg: "Pense à la récup active." },
                 fatigue: { label: "Récupération",      emoji: "😴", color: "var(--red)",    bg: "rgba(255,71,71,0.05)",   border: "rgba(255,71,71,0.18)",   msg: "Zone 2 ou repos conseillé." },
               }[forme];
@@ -5250,9 +5250,9 @@ JSON:
               const tw = totalWeeksFromDate(profile.raceDate);
               const cw = profile.week || 1;
               return (
-                <div className="float-up" style={{ background: "linear-gradient(145deg, #0f1200 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(232,255,71,0.12)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                <div className="float-up" style={{ background: "linear-gradient(145deg, #0f1200 0%, #080808 50%, #001208 100%)", border: "1.5px solid rgba(0,122,255,0.12)", borderRadius: 24, padding: "22px 20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
                   {/* Halo */}
-                  <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(232,255,71,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)", width: 300, height: 200, background: "radial-gradient(ellipse, rgba(0,122,255,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
 
                   {/* Top row: name + share */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -5261,7 +5261,7 @@ JSON:
                       <div className="bebas" style={{ fontSize: 34, color: "var(--white)", letterSpacing: 1, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
                       <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>{LEVELS[(profile.level || 1) - 1]?.label} · S{cw}/{tw || "?"}</div>
                     </div>
-                    <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                    <button onClick={() => setShowShareCard(true)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 10, padding: "8px 12px", color: "var(--yellow)", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                       📤 Partager
                     </button>
                   </div>
@@ -5275,7 +5275,7 @@ JSON:
                         <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="10" />
                         {/* colored ring */}
                         <circle cx="70" cy="70" r={r} fill="none"
-                          stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}
+                          stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}
                           strokeWidth="10" strokeLinecap="round"
                           strokeDasharray={circ} strokeDashoffset={offset}
                           transform="rotate(-90 70 70)"
@@ -5283,13 +5283,13 @@ JSON:
                         />
                         {/* inner glow ring */}
                         <circle cx="70" cy="70" r={r} fill="none"
-                          stroke={sc.global >= 75 ? "rgba(57,255,128,0.15)" : sc.global >= 50 ? "rgba(232,255,71,0.15)" : "rgba(255,154,60,0.15)"}
+                          stroke={sc.global >= 75 ? "rgba(57,255,128,0.15)" : sc.global >= 50 ? "rgba(0,122,255,0.15)" : "rgba(255,154,60,0.15)"}
                           strokeWidth="18" strokeLinecap="round"
                           strokeDasharray={circ} strokeDashoffset={offset}
                           transform="rotate(-90 70 70)"
                         />
                         {/* Score text */}
-                        <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#e8ff47" : "#ff9a3c"}>{sc.global}</text>
+                        <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}>{sc.global}</text>
                         <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#444" letterSpacing="2">/ 100</text>
                         <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#333" letterSpacing="1">SCORE FITNESS</text>
                       </svg>
@@ -5328,7 +5328,7 @@ JSON:
                           const w = Math.floor(i * ratio) + 1;
                           const isPast = cw > Math.floor((i + 1) * ratio);
                           const isActive = !isPast && cw >= w;
-                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(232,255,71,0.5)" : "rgba(0,0,0,0.05)", border: isActive ? "1px solid rgba(232,255,71,0.6)" : "none" }} />;
+                          return <div key={i} style={{ flex: 1, height: 5, borderRadius: 99, background: isPast ? "var(--yellow)" : isActive ? "rgba(0,122,255,0.5)" : "rgba(0,0,0,0.05)", border: isActive ? "1px solid rgba(0,122,255,0.6)" : "none" }} />;
                         })}
                       </div>
                     </div>
@@ -5386,7 +5386,7 @@ JSON:
 
             {/* Séance coach dispo */}
             {coachSession && (
-              <div onClick={() => setTab("today")} className="card-hover" style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.08) 0%, rgba(232,255,71,0.03) 100%)", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+              <div onClick={() => setTab("today")} className="card-hover" style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.08) 0%, rgba(0,122,255,0.03) 100%)", border: "1.5px solid rgba(0,122,255,0.25)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--yellow)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📋</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Séance du coach disponible</div>
@@ -5397,7 +5397,7 @@ JSON:
             )}
 
             {/* CTA séance — GRAND BOUTON */}
-            <button onClick={() => { haptic([10]); navigateTo("today"); }} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(232,255,71,0.25)" }}>
+            <button onClick={() => { haptic([10]); navigateTo("today"); }} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,122,255,0.25)" }}>
               {/* Shine effect */}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 30%, rgba(0,0,0,0.12) 50%, transparent 70%)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", right: 60, top: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(0,0,0,0.06)", pointerEvents: "none" }} />
@@ -5535,7 +5535,7 @@ JSON:
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {ROADMAP.map((r, i) => (
                       <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, opacity: r.done ? 1 : r === nextStep ? 1 : 0.4 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: r.done ? "rgba(57,255,128,0.12)" : r === nextStep ? "rgba(232,255,71,0.1)" : "rgba(0,0,0,0.02)", border: `1.5px solid ${r.done ? "rgba(57,255,128,0.4)" : r === nextStep ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 10, background: r.done ? "rgba(57,255,128,0.12)" : r === nextStep ? "rgba(0,122,255,0.1)" : "rgba(0,0,0,0.02)", border: `1.5px solid ${r.done ? "rgba(57,255,128,0.4)" : r === nextStep ? "rgba(0,122,255,0.3)" : "rgba(0,0,0,0.06)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
                           {r.done ? "✅" : r.icon}
                         </div>
                         <div style={{ flex: 1 }}>
@@ -5566,7 +5566,7 @@ JSON:
                       const earned = b.check(profile);
                       return (
                         <div key={b.id} title={b.desc} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, width: 52, opacity: earned ? 1 : 0.3 }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 13, background: earned ? "rgba(232,255,71,0.1)" : "rgba(0,0,0,0.03)", border: `1.5px solid ${earned ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "all 0.2s" }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 13, background: earned ? "rgba(0,122,255,0.1)" : "rgba(0,0,0,0.03)", border: `1.5px solid ${earned ? "rgba(0,122,255,0.3)" : "rgba(0,0,0,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "all 0.2s" }}>
                             {earned ? b.icon : "🔒"}
                           </div>
                           <div style={{ fontSize: 7, color: earned ? "#888" : "#333", textAlign: "center", lineHeight: 1.2, maxWidth: 52 }}>{b.name}</div>
@@ -5586,7 +5586,7 @@ JSON:
             {/* Bouton Mon Profil */}
             <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg, rgba(232,255,71,0.15), rgba(232,255,71,0.05))", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: "linear-gradient(135deg, rgba(0,122,255,0.15), rgba(0,122,255,0.05))", border: "1px solid rgba(0,122,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
                 <div style={{ textAlign: "left" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>Mon profil</div>
                   <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>
@@ -5609,7 +5609,7 @@ JSON:
 
             {/* ── BACKGROUND GENERATION INDICATOR ── */}
             {generatingSilently && !session && (
-              <div className="fade-in" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 12, marginBottom: 10 }}>
+              <div className="fade-in" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.1)", borderRadius: 12, marginBottom: 10 }}>
                 <div style={{ display: "flex", gap: 3 }}>
                   {[0,1,2].map(j => <div key={j} style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)", animation: `pulse 1s ${j*0.2}s ease infinite` }} />)}
                 </div>
@@ -5686,12 +5686,12 @@ JSON:
                           <div style={{ fontSize: 8, color: isToday ? "var(--yellow)" : "#333", fontWeight: isToday ? 700 : 400 }}>{dayLabel}</div>
                           <div style={{
                             width: 36, height: 36, borderRadius: "50%",
-                            background: doneSession ? `${color}20` : isToday ? "rgba(232,255,71,0.08)" : "transparent",
+                            background: doneSession ? `${color}20` : isToday ? "rgba(0,122,255,0.08)" : "transparent",
                             border: `1.5px ${borderStyle} ${borderColor}`,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: doneSession ? 14 : 11,
                             position: "relative",
-                            boxShadow: isToday ? "0 0 10px rgba(232,255,71,0.2)" : "none",
+                            boxShadow: isToday ? "0 0 10px rgba(0,122,255,0.2)" : "none",
                           }}>
                             {doneSession
                               ? (typeIcons[doneSession.type] || "✓")
@@ -5931,7 +5931,7 @@ JSON:
                   {!showSeancePerso ? (
                     <Btn size="lg" onClick={() => setShowSeancePerso(true)} style={{ width: "100%" }}>✏️ Créer ma séance perso</Btn>
                   ) : (
-                    <div style={{ background: "var(--bg2)", border: "1.5px solid rgba(232,255,71,0.25)", borderRadius: 14, padding: 18 }}>
+                    <div style={{ background: "var(--bg2)", border: "1.5px solid rgba(0,122,255,0.25)", borderRadius: 14, padding: 18 }}>
                       <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", marginBottom: 14 }}>MA SÉANCE PERSO</div>
                       <div style={{ marginBottom: 14 }}>
                         <Input label="Titre de la séance" value={seancePerso.titre} onChange={v => setSeancePerso(s => ({ ...s, titre: v }))} placeholder="ex: Force Lower Body" />
@@ -5989,11 +5989,11 @@ JSON:
             {loadingSession && (
               <div className="fade-in">
                 {/* Premium loading card */}
-                <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.04) 0%, rgba(8,8,8,0) 60%)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 22, padding: "22px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+                <div style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.04) 0%, rgba(8,8,8,0) 60%)", border: "1px solid rgba(0,122,255,0.1)", borderRadius: 22, padding: "22px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
                   {/* Animated glow */}
-                  <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", animation: "pulse 2s ease infinite" }} />
+                  <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,122,255,0.08) 0%, transparent 70%)", animation: "pulse 2s ease infinite" }} />
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s ease infinite" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s ease infinite" }}>
                       <span style={{ fontSize: 18 }}>🤖</span>
                     </div>
                     <div>
@@ -6136,10 +6136,10 @@ JSON:
                 {(() => {
                   const typeConf = {
                     running_zone2: { label: "Running Zone 2", color: "var(--green)", bg: "linear-gradient(135deg, #003318 0%, #080808 60%)", border: "rgba(57,255,128,0.25)", icon: "🏃" },
-                    force_stations: { label: "Force Stations", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(232,255,71,0.25)", icon: "🏋️" },
+                    force_stations: { label: "Force Stations", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(0,122,255,0.25)", icon: "🏋️" },
                     running_qualite: { label: "Running Qualité", color: "var(--orange)", bg: "linear-gradient(135deg, #1a0a00 0%, #080808 60%)", border: "rgba(255,154,60,0.25)", icon: "⚡" },
                     hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", bg: "linear-gradient(135deg, #0d0020 0%, #080808 60%)", border: "rgba(167,139,250,0.25)", icon: "🔀" },
-                    coach: { label: "Séance Coach", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(232,255,71,0.25)", icon: "👨‍💼" },
+                    coach: { label: "Séance Coach", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #080808 60%)", border: "rgba(0,122,255,0.25)", icon: "👨‍💼" },
                     perso: { label: "Séance Perso", color: "#888", bg: "linear-gradient(135deg, #111 0%, #080808 60%)", border: "rgba(0,0,0,0.08)", icon: "✏️" },
                   };
                   const conf = typeConf[session.type] || typeConf.force_stations;
@@ -6160,7 +6160,7 @@ JSON:
                       <div className="bebas" style={{ fontSize: 30, color: "var(--white)", lineHeight: 1, letterSpacing: 0.5, marginBottom: 10 }}>{session.titre}</div>
                       {/* Objectif séance */}
                       {session.objectif && (
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "4px 10px", marginBottom: 8 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 8, padding: "4px 10px", marginBottom: 8 }}>
                           <span style={{ fontSize: 10, color: "var(--yellow)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" }}>🎯 {session.objectif}</span>
                         </div>
                       )}
@@ -6260,7 +6260,7 @@ JSON:
                             {ex.rpe && <div style={{ fontSize: 10, color: "#555", background: "rgba(0,0,0,0.04)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>RPE {ex.rpe}</div>}
                             {findVideoForExercice(ex.nom) && (
                               <button onClick={e => { e.stopPropagation(); setVideoModal(findVideoForExercice(ex.nom)); }} style={{
-                                background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)",
+                                background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)",
                                 borderRadius: 6, padding: "2px 8px", fontSize: 10, color: "var(--yellow)",
                                 cursor: "pointer", fontWeight: 700,
                               }}>▶</button>
@@ -6324,7 +6324,7 @@ JSON:
                 )}
 
                 {(session.metrique || session.charge_seance) && (
-                  <div style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                  <div style={{ background: "rgba(0,122,255,0.05)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
                     {session.charge_seance && <div style={{ fontSize: 11, color: "#888", marginBottom: session.metrique ? 4 : 0 }}>📊 {session.charge_seance}</div>}
                     {session.metrique && <div style={{ fontSize: 12, color: "var(--yellow)", display: "flex", gap: 8, alignItems: "flex-start", lineHeight: 1.5 }}><span>🎯</span><span>À noter : {session.metrique}</span></div>}
                   </div>
@@ -6548,7 +6548,7 @@ JSON:
                       ].map(e => (
                         <button key={e.v} onClick={() => setFeedbackData(d => ({ ...d, energie: e.v }))} style={{
                           flex: 1, padding: "8px 4px", borderRadius: 10, textAlign: "center",
-                          background: feedbackData.energie === e.v ? "rgba(232,255,71,0.1)" : "var(--bg3)",
+                          background: feedbackData.energie === e.v ? "rgba(0,122,255,0.1)" : "var(--bg3)",
                           border: feedbackData.energie === e.v ? "2px solid var(--yellow)" : "1.5px solid transparent",
                           color: "var(--white)", cursor: "pointer",
                         }}>
@@ -6629,7 +6629,7 @@ JSON:
                                 {[{ v: "facile", label: "😴 Facile" }, { v: "bien", label: "✓ OK" }, { v: "dur", label: "🔥 Dur" }].map(r => (
                                   <button key={r.v} onClick={() => updateLog("ressenti", r.v)} style={{
                                     flex: 1, padding: "5px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                    background: log.ressenti === r.v ? "rgba(232,255,71,0.1)" : "var(--bg2)",
+                                    background: log.ressenti === r.v ? "rgba(0,122,255,0.1)" : "var(--bg2)",
                                     border: log.ressenti === r.v ? "1.5px solid var(--yellow)" : "1px solid transparent",
                                     color: log.ressenti === r.v ? "var(--yellow)" : "#555", cursor: "pointer",
                                   }}>{r.label}</button>
@@ -6709,7 +6709,7 @@ JSON:
                         <div style={{ fontSize: 36, marginBottom: 8 }}>{ressentiEmoji}</div>
                         <div className="bebas" style={{ fontSize: 32, color: "var(--green)", letterSpacing: 2, lineHeight: 1 }}>SÉANCE TERMINÉE</div>
                         {isMilestone && (
-                          <div style={{ marginTop: 8, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.3)", borderRadius: 10, padding: "6px 16px", display: "inline-block" }}>
+                          <div style={{ marginTop: 8, background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.3)", borderRadius: 10, padding: "6px 16px", display: "inline-block" }}>
                             <span className="bebas" style={{ fontSize: 16, color: "var(--yellow)", letterSpacing: 1 }}>{milestoneLabel}</span>
                           </div>
                         )}
@@ -6773,7 +6773,7 @@ JSON:
                   )}
 
                   {/* Adaptation résumé */}
-                  <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: 10 }}>
+                  <div style={{ background: "rgba(0,122,255,0.06)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 8, padding: 10 }}>
                     <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, marginBottom: 4 }}>📋 Adaptation pour la prochaine séance</div>
                     <div style={{ fontSize: 12, color: "#ccc", lineHeight: 1.6 }}>{feedback.adaptation}</div>
                   </div>
@@ -6781,7 +6781,7 @@ JSON:
 
                 {/* Prochaine séance prête */}
                 {feedback.prochaine_seance && (
-                  <Card style={{ border: "1.5px solid rgba(232,255,71,0.3)", marginBottom: 12 }}>
+                  <Card style={{ border: "1.5px solid rgba(0,122,255,0.3)", marginBottom: 12 }}>
                     <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 4 }}>⚡ PROCHAINE SÉANCE PRÊTE</div>
                     <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>{feedback.prochaine_seance.titre}</div>
                     {(feedback.prochaine_seance.exercices || []).filter(ex => ex?.nom).map((ex, i) => (
@@ -7136,7 +7136,7 @@ JSON:
                       const isPast = i + 1 <= dayOfWeek;
                       return (
                         <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: dayHadSession ? "rgba(232,255,71,0.15)" : isPast ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.015)", border: `1px solid ${dayHadSession ? "rgba(232,255,71,0.3)" : "rgba(0,0,0,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: dayHadSession ? "rgba(0,122,255,0.15)" : isPast ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.015)", border: `1px solid ${dayHadSession ? "rgba(0,122,255,0.3)" : "rgba(0,0,0,0.05)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             {dayHadSession && <span style={{ fontSize: 12 }}>✓</span>}
                           </div>
                           <div style={{ fontSize: 8, color: i + 1 === dayOfWeek ? "var(--yellow)" : "#333", fontWeight: i + 1 === dayOfWeek ? 700 : 400 }}>{d}</div>
@@ -7181,7 +7181,7 @@ JSON:
                       const x = 10 + i * ((W - 20) / weeks.length);
                       const barH = maxCount > 0 ? Math.max(8, (v.count / maxCount) * (H - 20)) : 8;
                       const avgRPE = v.rpeSum / v.count;
-                      const col = avgRPE <= 4 ? "#39ff80" : avgRPE <= 7 ? "#e8ff47" : "#ff4747";
+                      const col = avgRPE <= 4 ? "#39ff80" : avgRPE <= 7 ? "#007AFF" : "#ff4747";
                       const isLast = i === weeks.length - 1;
                       return (
                         <g key={i}>
@@ -7196,7 +7196,7 @@ JSON:
                     })}
                   </svg>
                   <div style={{ display: "flex", gap: 10, marginTop: 4, justifyContent: "center" }}>
-                    {[["#39ff80","RPE ≤4"],["#e8ff47","RPE 5-7"],["#ff4747","RPE ≥8"]].map(([c,l])=>(
+                    {[["#39ff80","RPE ≤4"],["#007AFF","RPE 5-7"],["#ff4747","RPE ≥8"]].map(([c,l])=>(
                       <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
                         <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
                       </div>
@@ -7524,7 +7524,7 @@ JSON:
                       return (
                         <div key={wk} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 2, height: "100%", position: "relative" }}>
                           {/* Target line indicator */}
-                          <div style={{ position: "absolute", bottom: `${Math.round(targetPct * 60)}px`, left: 0, right: 0, height: 1, background: "rgba(232,255,71,0.3)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
+                          <div style={{ position: "absolute", bottom: `${Math.round(targetPct * 60)}px`, left: 0, right: 0, height: 1, background: "rgba(0,122,255,0.3)", borderTop: "1px dashed rgba(0,122,255,0.4)" }} />
                           {/* Bar */}
                           <div style={{ width: "80%", height: `${Math.round(pct * 60)}px`, background: overTarget ? "var(--green)" : "var(--orange)", borderRadius: "3px 3px 0 0", opacity: i === weeks.length - 1 ? 1 : 0.7, minHeight: 3 }} />
                           <div style={{ fontSize: 7, color: "#555" }}>S{i+1}</div>
@@ -7536,7 +7536,7 @@ JSON:
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                     <div style={{ display: "flex", gap: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
-                        <div style={{ width: 10, height: 3, background: "rgba(232,255,71,0.5)", borderTop: "1px dashed rgba(232,255,71,0.4)" }} />
+                        <div style={{ width: 10, height: 3, background: "rgba(0,122,255,0.5)", borderTop: "1px dashed rgba(0,122,255,0.4)" }} />
                         Objectif {target} séances
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#777" }}>
@@ -7554,7 +7554,7 @@ JSON:
               <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {[
-                  { label: "Séances", value: profile.sessions?.length || 0, unit: "réalisées", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #0a0a00 100%)", border: "rgba(232,255,71,0.2)", icon: "📅" },
+                  { label: "Séances", value: profile.sessions?.length || 0, unit: "réalisées", color: "var(--yellow)", bg: "linear-gradient(135deg, #131500 0%, #0a0a00 100%)", border: "rgba(0,122,255,0.2)", icon: "📅" },
                   { label: "Niveau", value: profile.level || "?", unit: LEVELS[(profile.level||1)-1]?.label || "HYROX", color: LEVELS[(profile.level||1)-1]?.color || "var(--green)", bg: "linear-gradient(135deg, #001a0a 0%, #000a05 100%)", border: "rgba(57,255,128,0.2)", icon: "🏆" },
                   { label: "VMA", value: profile.vmaKmh || "—", unit: "km/h", color: "var(--green)", bg: "linear-gradient(135deg, #001a0a 0%, #000a05 100%)", border: "rgba(57,255,128,0.15)", icon: "🏃" },
                   { label: "Squat 1RM", value: profile.squat1RM_final || "—", unit: "kg", color: "var(--orange)", bg: "linear-gradient(135deg, #1a0800 0%, #0a0400 100%)", border: "rgba(255,154,60,0.2)", icon: "🏋️" },
@@ -7574,7 +7574,7 @@ JSON:
               const TYPE_CONF_J = {
                 running_zone2:     { icon: "🏃", label: "Zone 2",    color: "var(--green)",  bg: "rgba(57,255,128,0.08)",  border: "rgba(57,255,128,0.25)" },
                 force_stations:    { icon: "🏋️", label: "Force",     color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.25)" },
-                running_qualite:   { icon: "⚡",  label: "Qualité",   color: "var(--yellow)", bg: "rgba(232,255,71,0.06)",  border: "rgba(232,255,71,0.2)"  },
+                running_qualite:   { icon: "⚡",  label: "Qualité",   color: "var(--yellow)", bg: "rgba(0,122,255,0.06)",  border: "rgba(0,122,255,0.2)"  },
                 hybride_compromis: { icon: "🔀",  label: "Hybride",   color: "var(--purple)", bg: "rgba(167,139,250,0.08)", border: "rgba(167,139,250,0.25)" },
               };
               const FILTER_CHIPS = [
@@ -7612,7 +7612,7 @@ JSON:
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
                         {[
                           { label: "Facile",  emoji: "😊", count: allSessions.filter(s=>s.ressenti==="facile").length, color: "var(--green)",  bg: "rgba(57,255,128,0.06)" },
-                          { label: "Calibré", emoji: "💪", count: allSessions.filter(s=>s.ressenti==="bien").length,   color: "var(--yellow)", bg: "rgba(232,255,71,0.05)"  },
+                          { label: "Calibré", emoji: "💪", count: allSessions.filter(s=>s.ressenti==="bien").length,   color: "var(--yellow)", bg: "rgba(0,122,255,0.05)"  },
                           { label: "Dur",     emoji: "🔥", count: allSessions.filter(s=>s.ressenti==="dur").length,    color: "var(--red)",    bg: "rgba(255,71,71,0.06)"  },
                         ].map(item => (
                           <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.color}22`, borderRadius: 12, padding: "12px 6px", textAlign: "center" }}>
@@ -7724,7 +7724,7 @@ JSON:
                                   </div>
                                 )}
                                 {adapt && (
-                                  <div style={{ background: "rgba(232,255,71,0.05)", border: "1px solid rgba(232,255,71,0.12)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--yellow)", lineHeight: 1.5 }}>
+                                  <div style={{ background: "rgba(0,122,255,0.05)", border: "1px solid rgba(0,122,255,0.12)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--yellow)", lineHeight: 1.5 }}>
                                     🤖 <strong>Adaptation IA :</strong> {adapt.adaptation}
                                   </div>
                                 )}
@@ -8315,7 +8315,7 @@ JSON:
       {/* Swipe hint */}
       {showSwipeHint && (
         <div style={{ position: "fixed", bottom: 92, left: "50%", transform: "translateX(-50%)", zIndex: 99, animation: "slideUp 0.4s var(--ease-out) 1.5s both", pointerEvents: "none" }}>
-          <div style={{ background: "rgba(232,255,71,0.9)", borderRadius: 20, padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#000", fontWeight: 700, backdropFilter: "blur(8px)", whiteSpace: "nowrap" }}>
+          <div style={{ background: "rgba(0,122,255,0.9)", borderRadius: 20, padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#000", fontWeight: 700, backdropFilter: "blur(8px)", whiteSpace: "nowrap" }}>
             <span style={{ animation: "pulse 1.5s ease infinite" }}>←</span> Glisse pour naviguer <span style={{ animation: "pulse 1.5s 0.3s ease infinite" }}>→</span>
           </div>
         </div>
@@ -8406,13 +8406,13 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
       )}
 
       {/* ── HERO CARD ── */}
-      <div style={{ background: "linear-gradient(145deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.15)", borderRadius: 20, padding: "20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+      <div style={{ background: "linear-gradient(145deg, rgba(0,122,255,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(0,122,255,0.15)", borderRadius: 20, padding: "20px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
         {/* Glow */}
-        <div style={{ position: "absolute", top: -30, right: -30, width: 150, height: 150, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: -30, right: -30, width: 150, height: 150, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,122,255,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
           {/* Avatar large */}
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, var(--yellow) 0%, #b8cc00 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue',sans-serif", fontSize: 30, color: "#000", flexShrink: 0, boxShadow: "0 0 20px rgba(232,255,71,0.3)" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, var(--yellow) 0%, #b8cc00 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Bebas Neue',sans-serif", fontSize: 30, color: "#000", flexShrink: 0, boxShadow: "0 0 20px rgba(0,122,255,0.3)" }}>
             {profile.name[0].toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
@@ -8546,7 +8546,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         }
         const hasGoals = profile.goalTargetTime || profile.goalWeakStation || profile.goalTargetLevel;
         return (
-          <div style={{ background: "rgba(232,255,71,0.03)", border: "1px solid rgba(232,255,71,0.1)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
+          <div style={{ background: "rgba(0,122,255,0.03)", border: "1px solid rgba(0,122,255,0.1)", borderRadius: 16, padding: "14px 16px", marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: editGoals || hasGoals ? 14 : 0 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Mes Objectifs HYROX</div>
               <button onClick={editGoals ? saveGoals : () => setEditGoals(true)} style={{ background: editGoals ? "rgba(57,255,128,0.15)" : "rgba(0,0,0,0.04)", border: editGoals ? "1px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.08)", borderRadius: 8, padding: "5px 12px", fontSize: 11, color: editGoals ? "var(--green)" : "#666", cursor: "pointer", fontWeight: 700 }}>{editGoals ? "✓ Sauver" : hasGoals ? "Modifier" : "Définir"}</button>
@@ -8573,7 +8573,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
             ) : hasGoals ? (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 {profile.goalTargetLevel && (
-                  <div style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 12, padding: "10px 14px", flex: 1, minWidth: 120 }}>
+                  <div style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 12, padding: "10px 14px", flex: 1, minWidth: 120 }}>
                     <div style={{ fontSize: 9, color: "#777", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Objectif temps</div>
                     <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", lineHeight: 1 }}>{profile.goalTargetLevel}</div>
                   </div>
@@ -8629,9 +8629,9 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
       {/* Bouton batterie de tests */}
       <Section title="Batterie de tests">
-        <button onClick={() => setShowTests(true)} style={{ width: "100%", background: "var(--bg2)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+        <button onClick={() => setShowTests(true)} style={{ width: "100%", background: "var(--bg2)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(232,255,71,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🧪</div>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(0,122,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🧪</div>
             <div style={{ textAlign: "left" }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)" }}>Compléter mes tests</div>
               <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
@@ -8664,7 +8664,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
       {/* ── CODE ACCÈS HYBRIDE COACHING ── */}
       <Section title="Hybride Coaching">
-        <Card style={{ border: "1.5px solid var(--yellow)55", background: "rgba(232,255,71,0.04)" }}>
+        <Card style={{ border: "1.5px solid var(--yellow)55", background: "rgba(0,122,255,0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
             <div style={{ fontSize: 32 }}>🔑</div>
             <div>
@@ -8672,7 +8672,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>Débloque le générateur de programmes sur hybride-coaching.fr</div>
             </div>
           </div>
-          <div style={{ background: "var(--bg)", border: "2px dashed rgba(232,255,71,0.4)", borderRadius: 10, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ background: "var(--bg)", border: "2px dashed rgba(0,122,255,0.4)", borderRadius: 10, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span className="bebas" style={{ fontSize: 28, color: "var(--yellow)", letterSpacing: 4 }}>HYBRIDE2026</span>
             <button
               onClick={() => { navigator.clipboard.writeText("HYBRIDE2026"); }}
@@ -8754,8 +8754,8 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
           {/* Install PWA */}
           {!isInstalled ? (
-            <button onClick={triggerInstall} style={{ display: "flex", alignItems: "center", gap: 14, background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 14, padding: "14px 16px", cursor: "pointer", width: "100%", textAlign: "left" }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📲</div>
+            <button onClick={triggerInstall} style={{ display: "flex", alignItems: "center", gap: 14, background: "linear-gradient(135deg, rgba(0,122,255,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(0,122,255,0.2)", borderRadius: 14, padding: "14px 16px", cursor: "pointer", width: "100%", textAlign: "left" }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(0,122,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>📲</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--yellow)", marginBottom: 2 }}>Installer l'app</div>
                 <div style={{ fontSize: 11, color: "#777" }}>{isIOS ? "Guide d'installation iPhone →" : installPrompt ? "Ajouter à l'écran d'accueil" : "Ouvre dans Chrome → ⋮ → Installer"}</div>
@@ -8977,9 +8977,9 @@ function VideoModal({ mouvement, onClose }) {
         )}
 
         {/* Points clés */}
-        <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+        <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>✅ Points clés</div>
-          {mouvement.cles.map((c, i) => <div key={i} style={{ fontSize: 13, color: "#ccc", marginBottom: 6, paddingLeft: 8, borderLeft: "2px solid rgba(232,255,71,0.3)" }}>{c}</div>)}
+          {mouvement.cles.map((c, i) => <div key={i} style={{ fontSize: 13, color: "#ccc", marginBottom: 6, paddingLeft: 8, borderLeft: "2px solid rgba(0,122,255,0.3)" }}>{c}</div>)}
         </div>
 
         {/* Erreurs communes */}
@@ -9047,7 +9047,7 @@ function TechniqueTab({ profile = {} }) {
       {activeStation && <VideoModal mouvement={activeStation} onClose={() => setActiveStation(null)} />}
 
       {/* ── HERO ── */}
-      <div style={{ background: "linear-gradient(145deg, #131500 0%, #080808 55%, #001308 100%)", border: "1.5px solid rgba(232,255,71,0.15)", borderRadius: 20, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+      <div style={{ background: "linear-gradient(145deg, #131500 0%, #080808 55%, #001308 100%)", border: "1.5px solid rgba(0,122,255,0.15)", borderRadius: 20, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -30, right: -20, fontSize: 120, opacity: 0.04 }}>🏋️</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
@@ -9060,7 +9060,7 @@ function TechniqueTab({ profile = {} }) {
             <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(0,0,0,0.05)" strokeWidth="6"/>
             <circle cx="36" cy="36" r="28" fill="none" stroke={pct === 100 ? "var(--green)" : "var(--yellow)"} strokeWidth="6" strokeLinecap="round"
               strokeDasharray={2*Math.PI*28} strokeDashoffset={2*Math.PI*28*(1-pct/100)} transform="rotate(-90 36 36)" style={{transition:"stroke-dashoffset 0.8s"}}/>
-            <text x="36" y="40" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="16" fill={pct===100?"#39ff80":"#e8ff47"}>{viewedCount}/{stations.length}</text>
+            <text x="36" y="40" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="16" fill={pct===100?"#39ff80":"#007AFF"}>{viewedCount}/{stations.length}</text>
           </svg>
         </div>
         {/* Barre progression */}
@@ -9108,12 +9108,12 @@ function TechniqueTab({ profile = {} }) {
             {FAQ.map((item, i) => (
               <div key={i} style={{ marginBottom: 6 }}>
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{ width: "100%", background: openFaq === i ? "rgba(232,255,71,0.05)" : "rgba(0,0,0,0.02)", border: `1px solid ${openFaq === i ? "rgba(232,255,71,0.2)" : "rgba(0,0,0,0.05)"}`, borderRadius: 10, padding: "10px 12px", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  style={{ width: "100%", background: openFaq === i ? "rgba(0,122,255,0.05)" : "rgba(0,0,0,0.02)", border: `1px solid ${openFaq === i ? "rgba(0,122,255,0.2)" : "rgba(0,0,0,0.05)"}`, borderRadius: 10, padding: "10px 12px", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 12, color: openFaq === i ? "var(--yellow)" : "#888", fontWeight: openFaq === i ? 700 : 500, flex: 1 }}>{item.q}</span>
                   <span style={{ color: "#777", transition: "transform 0.2s", display: "inline-block", transform: openFaq === i ? "rotate(180deg)" : "none" }}>▼</span>
                 </button>
                 {openFaq === i && (
-                  <div style={{ padding: "10px 12px", background: "rgba(232,255,71,0.03)", borderRadius: "0 0 10px 10px", borderLeft: "2px solid rgba(232,255,71,0.2)", margin: "-2px 0 0 0" }}>
+                  <div style={{ padding: "10px 12px", background: "rgba(0,122,255,0.03)", borderRadius: "0 0 10px 10px", borderLeft: "2px solid rgba(0,122,255,0.2)", margin: "-2px 0 0 0" }}>
                     <div style={{ fontSize: 12, color: "#888", lineHeight: 1.7 }}>{item.a}</div>
                   </div>
                 )}
@@ -9128,8 +9128,8 @@ function TechniqueTab({ profile = {} }) {
         {cats.map(c => (
           <button key={c} onClick={() => setFilterCat(c)} style={{
             flexShrink: 0, padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer",
-            background: filterCat === c ? "rgba(232,255,71,0.12)" : "rgba(0,0,0,0.03)",
-            border: filterCat === c ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid rgba(0,0,0,0.06)",
+            background: filterCat === c ? "rgba(0,122,255,0.12)" : "rgba(0,0,0,0.03)",
+            border: filterCat === c ? "1.5px solid rgba(0,122,255,0.4)" : "1px solid rgba(0,0,0,0.06)",
             color: filterCat === c ? "var(--yellow)" : "#444", transition: "all 0.2s",
           }}>{c === "all" ? `Toutes (${stations.length})` : c === "⭐ Favoris" ? `⭐ Favoris${favsCount > 0 ? ` (${favsCount})` : ""}` : c}</button>
         ))}
@@ -9170,10 +9170,10 @@ function TechniqueTab({ profile = {} }) {
                 <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>{s.muscles}</div>
               </div>
               {/* Fav star */}
-              <button onClick={(e) => toggleFav(s.nom, e)} style={{ width: 32, height: 32, borderRadius: "50%", background: isFav ? "rgba(232,255,71,0.1)" : "transparent", border: isFav ? "1px solid rgba(232,255,71,0.3)" : "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isFav ? "var(--yellow)" : "#333", cursor: "pointer", flexShrink: 0 }}>
+              <button onClick={(e) => toggleFav(s.nom, e)} style={{ width: 32, height: 32, borderRadius: "50%", background: isFav ? "rgba(0,122,255,0.1)" : "transparent", border: isFav ? "1px solid rgba(0,122,255,0.3)" : "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isFav ? "var(--yellow)" : "#333", cursor: "pointer", flexShrink: 0 }}>
                 {isFav ? "⭐" : "☆"}
               </button>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: isViewed ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", border: `1.5px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(232,255,71,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: isViewed ? "rgba(57,255,128,0.12)" : "rgba(0,122,255,0.08)", border: `1.5px solid ${isViewed ? "rgba(57,255,128,0.3)" : "rgba(0,122,255,0.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: isViewed ? "var(--green)" : "var(--yellow)", flexShrink: 0 }}>
                 {isViewed ? "↺" : "▶"}
               </div>
             </div>
@@ -9258,7 +9258,7 @@ function TechniqueTab({ profile = {} }) {
 const JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const JOURS_FULL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const TYPE_COLORS = {
-  force_stations: { color: "#e8ff47", bg: "rgba(232,255,71,0.1)", label: "Force", icon: "🏋️" },
+  force_stations: { color: "#007AFF", bg: "rgba(0,122,255,0.1)", label: "Force", icon: "🏋️" },
   running_zone2: { color: "#39ff80", bg: "rgba(57,255,128,0.08)", label: "Zone 2", icon: "🏃" },
   running_qualite: { color: "#39ff80", bg: "rgba(57,255,128,0.08)", label: "Run", icon: "🎯" },
   hybride_compromis: { color: "#ff9a3c", bg: "rgba(255,154,60,0.08)", label: "Hybride", icon: "⚡" },
@@ -9528,7 +9528,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                     <div style={{
                       width: "100%", aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 9, fontWeight: isToday ? 700 : 400,
-                      background: done ? "rgba(57,255,128,0.15)" : isToday ? "rgba(232,255,71,0.12)" : "transparent",
+                      background: done ? "rgba(57,255,128,0.15)" : isToday ? "rgba(0,122,255,0.12)" : "transparent",
                       border: done ? "1px solid rgba(57,255,128,0.3)" : isToday ? "1.5px solid var(--yellow)" : "none",
                       color: done ? "var(--green)" : isToday ? "var(--yellow)" : isPast ? "#2a2a2a" : "#444",
                     }}>{d}</div>
@@ -9642,12 +9642,12 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowPrefs(true)} style={{ background: "rgba(0,0,0,0.04)", border: "1px solid #222", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#888", cursor: "pointer" }}>⚙️</button>
-          <button onClick={() => refreshPlanning(prefs)} style={{ background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>↺</button>
+          <button onClick={() => refreshPlanning(prefs)} style={{ background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 12, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>↺</button>
         </div>
       </div>
 
       {loadingPlanning ? (
-        <div className="fade-in" style={{ textAlign: "center", padding: "40px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(232,255,71,0.12)" }}>
+        <div className="fade-in" style={{ textAlign: "center", padding: "40px 20px", background: "var(--bg2)", borderRadius: 14, border: "1.5px solid rgba(0,122,255,0.12)" }}>
           <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
           <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)", marginBottom: 8 }}>{streamText || "Coach IA planifie ta semaine..."}</div>
           <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
@@ -9660,12 +9660,12 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
       ) : planningWeek ? (
         <>
           {/* Header charge semaine + conseil */}
-          <div style={{ background: "rgba(232,255,71,0.04)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: planningWeek.conseil ? 8 : 0 }}>
               <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Charge semaine</div>
               <div style={{
                 fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                background: planningWeek.charge_semaine === "élevée" ? "rgba(255,71,71,0.15)" : planningWeek.charge_semaine === "faible" ? "rgba(57,255,128,0.15)" : "rgba(232,255,71,0.12)",
+                background: planningWeek.charge_semaine === "élevée" ? "rgba(255,71,71,0.15)" : planningWeek.charge_semaine === "faible" ? "rgba(57,255,128,0.15)" : "rgba(0,122,255,0.12)",
                 color: planningWeek.charge_semaine === "élevée" ? "var(--red)" : planningWeek.charge_semaine === "faible" ? "var(--green)" : "var(--yellow)",
               }}>{planningWeek.charge_semaine || "modérée"}</div>
             </div>
@@ -9684,8 +9684,8 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
               const isDone = joursFaits[j.jour];
               return (
                 <button key={i} onClick={() => setSelectedJour(isSelected ? null : j)} style={{
-                  background: isDone ? "rgba(57,255,128,0.05)" : isSelected ? t.bg : isToday ? "rgba(232,255,71,0.04)" : "rgba(0,0,0,0.02)",
-                  border: isDone ? "1.5px solid rgba(57,255,128,0.3)" : isSelected ? `1.5px solid ${t.color}88` : isToday ? "1.5px solid rgba(232,255,71,0.35)" : "1px solid rgba(0,0,0,0.05)",
+                  background: isDone ? "rgba(57,255,128,0.05)" : isSelected ? t.bg : isToday ? "rgba(0,122,255,0.04)" : "rgba(0,0,0,0.02)",
+                  border: isDone ? "1.5px solid rgba(57,255,128,0.3)" : isSelected ? `1.5px solid ${t.color}88` : isToday ? "1.5px solid rgba(0,122,255,0.35)" : "1px solid rgba(0,0,0,0.05)",
                   borderRadius: 14, padding: "12px 4px 10px", textAlign: "center", cursor: "pointer",
                   position: "relative", overflow: "hidden", transition: "all 0.2s",
                 }}>
@@ -9778,7 +9778,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
                   onClick={() => setSelectedJour(isSelected ? null : j)}
                   style={{
                     background: isFait ? "rgba(57,255,128,0.04)" : "var(--bg2)",
-                    border: isSelected ? `1.5px solid ${t.color}66` : isFait ? "1.5px solid rgba(57,255,128,0.25)" : isToday ? "1.5px solid rgba(232,255,71,0.4)" : "1px solid var(--bg3)",
+                    border: isSelected ? `1.5px solid ${t.color}66` : isFait ? "1.5px solid rgba(57,255,128,0.25)" : isToday ? "1.5px solid rgba(0,122,255,0.4)" : "1px solid var(--bg3)",
                     borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12,
                     cursor: "pointer", opacity: isFait ? 0.7 : 1, transition: "all 0.2s",
                   }}>
@@ -10205,7 +10205,7 @@ JSON: {
       })()}
 
       {/* ── HERO CALORIES ── */}
-      <div style={{ background: "linear-gradient(145deg, #001a00 0%, #080808 60%)", border: `1.5px solid ${kcalColor === "var(--green)" ? "rgba(57,255,128,0.2)" : kcalColor === "var(--yellow)" ? "rgba(232,255,71,0.2)" : "rgba(255,71,71,0.2)"}`, borderRadius: 20, padding: "20px 20px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+      <div style={{ background: "linear-gradient(145deg, #001a00 0%, #080808 60%)", border: `1.5px solid ${kcalColor === "var(--green)" ? "rgba(57,255,128,0.2)" : kcalColor === "var(--yellow)" ? "rgba(0,122,255,0.2)" : "rgba(255,71,71,0.2)"}`, borderRadius: 20, padding: "20px 20px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -30, right: -20, fontSize: 110, opacity: 0.04 }}>🥗</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
@@ -10259,8 +10259,8 @@ JSON: {
         ].map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{
             flex: 1, padding: "10px 4px", borderRadius: 10, fontSize: 12, fontWeight: 700,
-            background: subTab === t.id ? "rgba(232,255,71,0.12)" : "transparent",
-            border: subTab === t.id ? "1.5px solid rgba(232,255,71,0.3)" : "1.5px solid transparent",
+            background: subTab === t.id ? "rgba(0,122,255,0.12)" : "transparent",
+            border: subTab === t.id ? "1.5px solid rgba(0,122,255,0.3)" : "1.5px solid transparent",
             color: subTab === t.id ? "var(--yellow)" : "#444", cursor: "pointer", transition: "all 0.2s",
           }}>{t.label}</button>
         ))}
@@ -10312,7 +10312,7 @@ JSON: {
               <div style={{ background: "rgba(0,0,0,0.02)", border: "1px dashed rgba(0,0,0,0.07)", borderRadius: 16, padding: "32px 20px", textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🍽️</div>
                 <div style={{ fontSize: 13, color: "#777", lineHeight: 1.7 }}>Aucun aliment aujourd'hui.<br/>Commence par ton petit-déjeuner !</div>
-                <button onClick={() => setShowAdd(true)} style={{ marginTop: 14, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 10, padding: "10px 20px", fontSize: 13, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>
+                <button onClick={() => setShowAdd(true)} style={{ marginTop: 14, background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 10, padding: "10px 20px", fontSize: 13, color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>
                   Ajouter un aliment
                 </button>
               </div>
@@ -10360,7 +10360,7 @@ JSON: {
 
                 <div style={{ padding: "0 16px" }}>
                   {/* PHOTO */}
-                  <label style={{ display: "block", background: "rgba(232,255,71,0.04)", border: "1.5px dashed rgba(232,255,71,0.25)", borderRadius: 14, padding: 16, textAlign: "center", cursor: "pointer", marginBottom: 14 }}>
+                  <label style={{ display: "block", background: "rgba(0,122,255,0.04)", border: "1.5px dashed rgba(0,122,255,0.25)", borderRadius: 14, padding: 16, textAlign: "center", cursor: "pointer", marginBottom: 14 }}>
                     <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
@@ -10392,7 +10392,7 @@ JSON: {
                       </div>
                     ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(232,255,71,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📸</div>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(0,122,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📸</div>
                         <div style={{ textAlign: "left" }}>
                           <div style={{ fontSize: 14, color: "var(--yellow)", fontWeight: 700 }}>Photo du repas</div>
                           <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>L'IA estime les macros automatiquement</div>
@@ -10674,7 +10674,7 @@ JSON: {
           {!recetteIA && !loadingRecette && (
             <div>
               {/* CTA principal */}
-              <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(232,255,71,0.2)", borderRadius: 18, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+              <div style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(0,122,255,0.2)", borderRadius: 18, padding: "20px 18px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
                 <div style={{ position: "absolute", top: -20, right: -10, fontSize: 80, opacity: 0.05 }}>👨‍🍳</div>
                 <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", letterSpacing: 1, marginBottom: 6 }}>RECETTE IA PERSO</div>
                 <div style={{ fontSize: 13, color: "#555", lineHeight: 1.6, marginBottom: 14 }}>
@@ -10710,9 +10710,9 @@ JSON: {
             <div className="float-up">
               {/* Header recette */}
               <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, overflow: "hidden", marginBottom: 10 }}>
-                <div style={{ background: "linear-gradient(135deg, rgba(232,255,71,0.06) 0%, rgba(0,0,0,0) 60%)", padding: "18px 18px 14px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                <div style={{ background: "linear-gradient(135deg, rgba(0,122,255,0.06) 0%, rgba(0,0,0,0) 60%)", padding: "18px 18px 14px", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                   <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                    <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>{recetteIA.emoji || "🍽️"}</div>
+                    <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>{recetteIA.emoji || "🍽️"}</div>
                     <div style={{ flex: 1 }}>
                       <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1.1, marginBottom: 4 }}>{recetteIA.nom}</div>
                       <div style={{ display: "flex", gap: 8 }}>
@@ -10781,7 +10781,7 @@ JSON: {
           {/* Recap macros */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
             {[
-              { label: "Calories", val: totaux.kcal, obj: objectifs.kcal, unit: "kcal", color: kcalColor, bg: "rgba(232,255,71,0.05)", border: "rgba(232,255,71,0.15)" },
+              { label: "Calories", val: totaux.kcal, obj: objectifs.kcal, unit: "kcal", color: kcalColor, bg: "rgba(0,122,255,0.05)", border: "rgba(0,122,255,0.15)" },
               { label: "Protéines", val: totaux.p, obj: objectifs.p, unit: "g", color: "var(--green)", bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.15)" },
               { label: "Glucides", val: totaux.g, obj: objectifs.g, unit: "g", color: "#aaa", bg: "rgba(0,0,0,0.02)", border: "rgba(0,0,0,0.06)" },
               { label: "Lipides", val: totaux.l, obj: objectifs.l, unit: "g", color: "var(--orange)", bg: "rgba(255,154,60,0.05)", border: "rgba(255,154,60,0.15)" },
@@ -10829,7 +10829,7 @@ JSON: {
             <div className="float-up">
               {/* Score note */}
               <div style={{ background: "linear-gradient(135deg, rgba(57,255,128,0.06) 0%, rgba(0,0,0,0) 60%)", border: "1.5px solid rgba(57,255,128,0.2)", borderRadius: 18, padding: "18px", marginBottom: 10, display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 60, height: 60, borderRadius: "50%", background: bilanIA.note >= 7 ? "rgba(57,255,128,0.12)" : bilanIA.note >= 5 ? "rgba(232,255,71,0.1)" : "rgba(255,71,71,0.1)", border: `2px solid ${bilanIA.note >= 7 ? "rgba(57,255,128,0.4)" : bilanIA.note >= 5 ? "rgba(232,255,71,0.3)" : "rgba(255,71,71,0.3)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 60, height: 60, borderRadius: "50%", background: bilanIA.note >= 7 ? "rgba(57,255,128,0.12)" : bilanIA.note >= 5 ? "rgba(0,122,255,0.1)" : "rgba(255,71,71,0.1)", border: `2px solid ${bilanIA.note >= 7 ? "rgba(57,255,128,0.4)" : bilanIA.note >= 5 ? "rgba(0,122,255,0.3)" : "rgba(255,71,71,0.3)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <div className="bebas" style={{ fontSize: 26, color: bilanIA.note >= 7 ? "var(--green)" : bilanIA.note >= 5 ? "var(--yellow)" : "var(--red)", lineHeight: 1 }}>{bilanIA.note}</div>
                   <div style={{ fontSize: 9, color: "#777" }}>/10</div>
                 </div>
@@ -10843,7 +10843,7 @@ JSON: {
               {[
                 { key: "top", label: "✅ Point positif", color: "var(--green)", bg: "rgba(57,255,128,0.05)", border: "rgba(57,255,128,0.15)" },
                 { key: "manque", label: "⚠️ Ce qui manque", color: "var(--red)", bg: "rgba(255,71,71,0.05)", border: "rgba(255,71,71,0.12)" },
-                { key: "conseil_demain", label: "💡 Demain matin", color: "var(--yellow)", bg: "rgba(232,255,71,0.04)", border: "rgba(232,255,71,0.12)" },
+                { key: "conseil_demain", label: "💡 Demain matin", color: "var(--yellow)", bg: "rgba(0,122,255,0.04)", border: "rgba(0,122,255,0.12)" },
                 { key: "aliment_recommande", label: "🛒 À ajouter maintenant", color: "var(--orange)", bg: "rgba(255,154,60,0.05)", border: "rgba(255,154,60,0.12)" },
               ].filter(f => bilanIA[f.key]).map(f => (
                 <div key={f.key} style={{ background: f.bg, border: `1px solid ${f.border}`, borderRadius: 14, padding: "12px 14px", marginBottom: 8 }}>
@@ -10871,7 +10871,7 @@ function ChecklistJDay({ items }) {
   const toggle = (i) => setChecked(c => ({ ...c, [i]: !c[i] }));
   const done = Object.values(checked).filter(Boolean).length;
   return (
-    <Card style={{ border: "1.5px solid rgba(232,255,71,0.2)", marginBottom: 12 }}>
+    <Card style={{ border: "1.5px solid rgba(0,122,255,0.2)", marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)" }}>✅ CHECKLIST J-DAY</div>
         <div style={{ fontSize: 11, color: "#555" }}>{done}/{items.length}</div>
@@ -11034,7 +11034,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
         {phase === "running" && (
           <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 16 }}>
             {/* Segment actuel — GRAND */}
-            <div className="fade-in" style={{ background: seg.type === "run" ? "rgba(57,255,128,0.06)" : "rgba(232,255,71,0.06)", border: `2px solid ${seg.color}44`, borderRadius: 18, padding: "28px 20px", textAlign: "center" }}>
+            <div className="fade-in" style={{ background: seg.type === "run" ? "rgba(57,255,128,0.06)" : "rgba(0,122,255,0.06)", border: `2px solid ${seg.color}44`, borderRadius: 18, padding: "28px 20px", textAlign: "center" }}>
               <div style={{ fontSize: 48, marginBottom: 8 }}>{seg.icon}</div>
               <div className="bebas" style={{ fontSize: 30, color: seg.color, letterSpacing: 1, lineHeight: 1 }}>{seg.label}</div>
               <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>{seg.distance}</div>
@@ -11087,7 +11087,7 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
                   <div style={{ fontSize: 10, color: "var(--green)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Course</div>
                   <div className="bebas" style={{ fontSize: 22, color: "var(--green)" }}>{fmtTime(totalRun)}</div>
                 </div>
-                <div style={{ flex: totalStation, background: "rgba(232,255,71,0.08)", border: "1px solid rgba(232,255,71,0.2)", borderRadius: 8, padding: "8px 0", textAlign: "center" }}>
+                <div style={{ flex: totalStation, background: "rgba(0,122,255,0.08)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 8, padding: "8px 0", textAlign: "center" }}>
                   <div style={{ fontSize: 10, color: "var(--yellow)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Stations</div>
                   <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>{fmtTime(totalStation)}</div>
                 </div>
@@ -11103,15 +11103,15 @@ Points forts, points à améliorer, conseil concret pour la vraie race. 150 mots
                 const t = splits[s.id] || 0;
                 const isRun = s.type === "run";
                 const col = isRun ? "var(--green)" : "var(--yellow)";
-                const bg = isRun ? "rgba(57,255,128,0.03)" : "rgba(232,255,71,0.03)";
+                const bg = isRun ? "rgba(57,255,128,0.03)" : "rgba(0,122,255,0.03)";
                 // Calcul pct relatif au total
                 const pct = totalSecs > 0 ? (t / totalSecs) * 100 : 0;
                 return (
                   <div key={s.id} style={{ background: bg, borderBottom: i < HYROX_SEGMENTS.length - 1 ? "1px solid rgba(0,0,0,0.03)" : "none", position: "relative", overflow: "hidden" }}>
                     {/* Barre de fond proportionnelle */}
-                    <div style={{ position: "absolute", inset: 0, width: `${pct}%`, background: isRun ? "rgba(57,255,128,0.05)" : "rgba(232,255,71,0.04)" }} />
+                    <div style={{ position: "absolute", inset: 0, width: `${pct}%`, background: isRun ? "rgba(57,255,128,0.05)" : "rgba(0,122,255,0.04)" }} />
                     <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "10px 16px" }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 8, background: isRun ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{s.icon}</div>
+                      <div style={{ width: 26, height: 26, borderRadius: 8, background: isRun ? "rgba(57,255,128,0.12)" : "rgba(0,122,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{s.icon}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, color: col, fontWeight: 700, lineHeight: 1.2 }}>{s.label}</div>
                         <div style={{ fontSize: 10, color: "#555" }}>{s.distance}</div>
@@ -11332,7 +11332,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
               const isRun = i % 2 === 0;
               const col = isRun ? "var(--green)" : "var(--yellow)";
               return (
-                <div key={i} style={{ background: isRun ? "rgba(57,255,128,0.03)" : "rgba(232,255,71,0.03)", border: `1px solid ${isRun ? "rgba(57,255,128,0.12)" : "rgba(232,255,71,0.1)"}`, borderLeft: `3px solid ${col}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+                <div key={i} style={{ background: isRun ? "rgba(57,255,128,0.03)" : "rgba(0,122,255,0.03)", border: `1px solid ${isRun ? "rgba(57,255,128,0.12)" : "rgba(0,122,255,0.1)"}`, borderLeft: `3px solid ${col}`, borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
@@ -11382,8 +11382,8 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           { label: "Elite F", time: "4:15", mins: 255, color: "#ff4747" },
           { label: "Pro H", time: "4:30", mins: 270, color: "#ff9a3c" },
           { label: "Pro F", time: "5:00", mins: 300, color: "#ff9a3c" },
-          { label: "Semi-Pro H", time: "5:30", mins: 330, color: "#e8ff47" },
-          { label: "Semi-Pro F", time: "6:15", mins: 375, color: "#e8ff47" },
+          { label: "Semi-Pro H", time: "5:30", mins: 330, color: "#007AFF" },
+          { label: "Semi-Pro F", time: "6:15", mins: 375, color: "#007AFF" },
           { label: "Amateur H", time: "6:00", mins: 360, color: "#39ff80" },
           { label: "Amateur F", time: "7:00", mins: 420, color: "#39ff80" },
         ];
@@ -11406,7 +11406,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div style={{ flex: 1, position: "relative", height: 6, background: "rgba(0,0,0,0.05)", borderRadius: 3 }}>
                       <div style={{ position: "absolute", left: 0, top: 0, width: `${pct}%`, height: "100%", background: ref.color, borderRadius: 3, opacity: 0.6 }} />
                       {objMins && Math.abs(objMins - ref.mins) <= 15 && (
-                        <div style={{ position: "absolute", top: -14, left: `${pct}%`, transform: "translateX(-50%)", fontSize: 14, filter: "drop-shadow(0 0 4px #e8ff47)" }}>🎯</div>
+                        <div style={{ position: "absolute", top: -14, left: `${pct}%`, transform: "translateX(-50%)", fontSize: 14, filter: "drop-shadow(0 0 4px #007AFF)" }}>🎯</div>
                       )}
                     </div>
                     <div style={{ width: 36, fontSize: 11, fontWeight: 700, color: ref.color, flexShrink: 0 }}>{ref.time}</div>
@@ -11463,7 +11463,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏅 Mes Résultats de Courses</div>
-              <button onClick={() => setShowAddRace(true)} style={{ background: "rgba(232,255,71,0.1)", border: "1px solid rgba(232,255,71,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11, color: "var(--yellow)", cursor: "pointer", fontWeight: 700 }}>+ Ajouter</button>
+              <button onClick={() => setShowAddRace(true)} style={{ background: "rgba(0,122,255,0.1)", border: "1px solid rgba(0,122,255,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11, color: "var(--yellow)", cursor: "pointer", fontWeight: 700 }}>+ Ajouter</button>
             </div>
 
             {/* Add race modal */}
@@ -11493,7 +11493,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div style={{ display: "flex", gap: 6 }}>
                       {["Open","Pro","Mixed Relay","Doubles"].map(cat => (
                         <button key={cat} onClick={() => setNewRace(r => ({ ...r, category: cat.toLowerCase() }))}
-                          style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, background: newRace.category === cat.toLowerCase() ? "rgba(232,255,71,0.15)" : "var(--bg3)", border: `1.5px solid ${newRace.category === cat.toLowerCase() ? "var(--yellow)" : "transparent"}`, color: newRace.category === cat.toLowerCase() ? "var(--yellow)" : "#555", cursor: "pointer" }}>
+                          style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, background: newRace.category === cat.toLowerCase() ? "rgba(0,122,255,0.15)" : "var(--bg3)", border: `1.5px solid ${newRace.category === cat.toLowerCase() ? "var(--yellow)" : "transparent"}`, color: newRace.category === cat.toLowerCase() ? "var(--yellow)" : "#555", cursor: "pointer" }}>
                           {cat}
                         </button>
                       ))}
@@ -11549,7 +11549,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
             ) : (
               <>
                 {bestTime && (
-                  <div style={{ background: "linear-gradient(135deg, rgba(255,71,71,0.08), rgba(232,255,71,0.04))", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ background: "linear-gradient(135deg, rgba(255,71,71,0.08), rgba(0,122,255,0.04))", border: "1.5px solid rgba(255,71,71,0.2)", borderRadius: 16, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 14 }}>
                     <div style={{ fontSize: 32 }}>🏆</div>
                     <div>
                       <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Meilleur temps</div>
@@ -11636,7 +11636,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 </div>
 
                 {/* Résumé running */}
-                <div style={{ background: "rgba(232,255,71,0.06)", border: "1px solid rgba(232,255,71,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+                <div style={{ background: "rgba(0,122,255,0.06)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <span style={{ fontSize: 12, color: "#777" }}>🏃 Allure running (8 × 1km)</span>
                     <span className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>{paceMin}:{String(paceSec).padStart(2,"0")} /km</span>
@@ -11663,7 +11663,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 11, color: "#777", marginBottom: 2 }}>{st.label} <span style={{ color: "#555" }}>· {st.dist}</span></div>
                           <div style={{ height: 3, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${(refSecs/Math.max(...STATIONS_SPLITS.map(s=>gender==="H"?s.refH:s.refF)))*100}%`, background: "rgba(232,255,71,0.4)", borderRadius: 99 }} />
+                            <div style={{ height: "100%", width: `${(refSecs/Math.max(...STATIONS_SPLITS.map(s=>gender==="H"?s.refH:s.refF)))*100}%`, background: "rgba(0,122,255,0.4)", borderRadius: 99 }} />
                           </div>
                         </div>
                         <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", minWidth: 42, textAlign: "right" }}>{fmtSplit(allocated)}</div>
@@ -12221,15 +12221,15 @@ export default function App() {
       {/* Logo animé */}
       <div style={{ position: "relative", marginBottom: 24 }}>
         <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="50" fill="rgba(232,255,71,0.06)" />
-          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(232,255,71,0.08)" strokeWidth="6"/>
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#e8ff47" strokeWidth="6" strokeLinecap="round"
+          <circle cx="60" cy="60" r="50" fill="rgba(0,122,255,0.06)" />
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,122,255,0.08)" strokeWidth="6"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#007AFF" strokeWidth="6" strokeLinecap="round"
             strokeDasharray="352" strokeDashoffset="352"
             transform="rotate(-90 60 60)"
             style={{ animation: "splashRing 1.4s cubic-bezier(0.16,1,0.3,1) 0.2s forwards" }}/>
         </svg>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, color: "#e8ff47", letterSpacing: 3, lineHeight: 1, animation: "splashFade 0.6s 0.5s both" }}>FIT<span style={{ color: "#f0f0f0" }}>RACE</span></div>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, color: "#007AFF", letterSpacing: 3, lineHeight: 1, animation: "splashFade 0.6s 0.5s both" }}>FIT<span style={{ color: "#f0f0f0" }}>RACE</span></div>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#39ff80", marginTop: 4, animation: "splashPulse 1.2s 0.8s ease-in-out infinite" }}/>
         </div>
       </div>
