@@ -3439,38 +3439,103 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     const allAdaptations = profile.adaptations || [];
     const nbSessions = allSessions.length;
 
-    // Résumé des 5 dernières séances
+    // ── ANALYSE APPROFONDIE DES FEEDBACKS ──────────────────────────────
+
+    // 1. Séances récentes enrichies (exercicesLog + douleurs + énergie)
     const recentSessionsText = allSessions.slice(-5).map((s, i) => {
       const num = allSessions.length - Math.min(5, allSessions.length) + i + 1;
-      return `  S${num}: "${s.titre}" | ressenti: ${s.ressenti} | ${s.performances ? `perfs: ${s.performances}` : "performances non saisies"} | ${new Date(s.date).toLocaleDateString("fr-FR")}`;
-    }).join("\n");
+      const log = (s.exercicesLog || []).filter(e => e?.nom).map(e =>
+        `    → ${e.nom}: ${e.charge ? e.charge+"kg" : "—"} × ${e.reps || "—"} reps × ${e.sets || "—"} sets [ressenti: ${e.ressenti || "?"}]`
+      ).join("\n");
+      const daysSince = s.date ? Math.round((Date.now() - new Date(s.date)) / 86400000) : "?";
+      return `  S${num} (il y a ${daysSince}j) — "${s.titre}" [${s.type || "?"}]
+    RPE: ${s.difficulte || "?"}/10 | Ressenti: ${s.ressenti || "?"} | Énergie post: ${s.energie || "?"}/5 | Temps réel: ${s.tempsReel || "?"}min
+    Douleurs: ${s.douleurs || "aucune"}
+    Notes: ${s.notes || "—"}
+${log || "    (performances non saisies)"}`;
+    }).join("\n\n");
 
-    // Toutes les adaptations IA depuis le début
-    const allAdaptationsText = allAdaptations.map((a, i) =>
-      `  Adapt.${i + 1} (${new Date(a.date).toLocaleDateString("fr-FR")}): ${a.adaptation}`
-    ).join("\n");
+    // 2. Historique des charges par exercice (toutes séances)
+    const chargesParExercice = {};
+    allSessions.forEach(s => {
+      (s.exercicesLog || []).filter(e => e?.nom && e.charge).forEach(e => {
+        if (!chargesParExercice[e.nom]) chargesParExercice[e.nom] = [];
+        chargesParExercice[e.nom].push({ charge: parseFloat(e.charge) || 0, date: s.date, reps: e.reps, sets: e.sets });
+      });
+    });
+    // Calculer la progression pour les exercices clés
+    const progressionCharges = Object.entries(chargesParExercice)
+      .filter(([, vals]) => vals.length >= 2)
+      .map(([nom, vals]) => {
+        const sorted = vals.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const first = sorted[0].charge;
+        const last = sorted[sorted.length - 1].charge;
+        const diff = last - first;
+        return `  ${nom}: ${first}kg → ${last}kg (${diff >= 0 ? "+" : ""}${diff}kg sur ${vals.length} séances)`;
+      })
+      .join("\n");
 
-    // Détection de patterns automatique
+    // 3. Séances du même type — analyse spécifique
+    const sameTypeSessions = allSessions.filter(s => s.type === sessionType).slice(-3);
+    const sameTypeText = sameTypeSessions.length > 0
+      ? sameTypeSessions.map((s, i) => {
+          const log = (s.exercicesLog || []).filter(e => e?.nom).slice(0, 4).map(e =>
+            `${e.nom}: ${e.charge || "—"}kg×${e.reps || "—"}reps`
+          ).join(", ");
+          return `  [${new Date(s.date).toLocaleDateString("fr-FR")}] RPE:${s.difficulte}/10 ${s.ressenti} — ${log || "pas de log"}`;
+        }).join("\n")
+      : "  Aucune séance de ce type encore";
+
+    // 4. Signaux douleur/blessure récents
+    const douloursRecentes = allSessions.slice(-5)
+      .filter(s => s.douleurs && s.douleurs.trim() && s.douleurs.toLowerCase() !== "aucune" && s.douleurs !== "non renseigné")
+      .map(s => `  [${new Date(s.date).toLocaleDateString("fr-FR")}] ${s.douleurs}`);
+
+    // 5. Recommandations IA des feedbacks précédents (prochaine séance suggérée)
+    const lastFeedbackRecos = allAdaptations.slice(-3)
+      .filter(a => a.adaptation)
+      .map((a, i) => `  Reco IA #${i+1} (${new Date(a.date).toLocaleDateString("fr-FR")}): ${a.adaptation}${a.progressions?.length ? " | Progressions: " + a.progressions.join(", ") : ""}`)
+      .join("\n");
+
+    // 6. Patterns automatiques enrichis
     const dernierRessentis = allSessions.slice(-3).map(s => s.ressenti);
-    const pattern = dernierRessentis.length === 0 ? "première séance"
-      : dernierRessentis.every(r => r === "facile") ? "STAGNATION — séances trop faciles, augmenter intensité"
-      : dernierRessentis.every(r => r === "dur") ? "SURCHARGE — séances trop dures, réduire le volume"
-      : dernierRessentis.filter(r => r === "bien").length >= 2 ? "PROGRESSION STABLE — continuer à progresser"
+    const derniersRPE = allSessions.slice(-5).map(s => s.difficulte || 5);
+    const avgRPE5 = derniersRPE.length ? (derniersRPE.reduce((a,b) => a+b,0) / derniersRPE.length).toFixed(1) : "?";
+    const dernierEnergie = allSessions.slice(-3).map(s => s.energie || 3);
+    const avgEnergie = dernierEnergie.length ? (dernierEnergie.reduce((a,b) => a+b,0) / dernierEnergie.length).toFixed(1) : "?";
+
+    const pattern = dernierRessentis.length === 0 ? "PREMIÈRE SÉANCE"
+      : dernierRessentis.every(r => r === "facile") ? "STAGNATION — 3 séances trop faciles → AUGMENTER INTENSITÉ +10-15%"
+      : dernierRessentis.every(r => r === "dur") ? "SURCHARGE — 3 séances trop dures → RÉDUIRE VOLUME -20%, maintenir intensité"
+      : dernierRessentis.filter(r => r === "dur").length >= 2 ? "FATIGUE ACCUMULATIVE → séance plus légère aujourd'hui"
+      : dernierRessentis.filter(r => r === "facile").length >= 2 ? "SOUS-STIMULATION → augmenter la charge de travail"
+      : dernierRessentis.filter(r => r === "bien").length >= 2 ? "PROGRESSION STABLE → continuer à progresser légèrement"
       : "VARIABLE — adapter au cas par cas";
 
     const adaptationContext = nbSessions === 0
       ? "PREMIÈRE SÉANCE — pas d'historique, calibrer sur le profil de base."
-      : `HISTORIQUE COMPLET (${nbSessions} séances réalisées):
+      : `ANALYSE COMPLÈTE DES ${nbSessions} SÉANCES RÉALISÉES:
 
-DERNIÈRES SÉANCES:
+━━ DERNIÈRES SÉANCES DÉTAILLÉES (charges, ressenti, énergie) ━━
 ${recentSessionsText}
 
-TOUTES LES ADAPTATIONS IA DÉCIDÉES DEPUIS LE DÉBUT:
-${allAdaptationsText || "  Aucune encore"}
+━━ PROGRESSION DES CHARGES (évolution réelle) ━━
+${progressionCharges || "  Pas encore de données de charges saisies"}
 
-PATTERN DÉTECTÉ sur les 3 derniers ressentis (${dernierRessentis.join(", ") || "—"}): ${pattern}
+━━ HISTORIQUE SÉANCES MÊME TYPE [${sessionType}] ━━
+${sameTypeText}
 
-ADAPTATION À APPLIQUER OBLIGATOIREMENT AUJOURD'HUI: ${allAdaptations.slice(-1)[0]?.adaptation || "Aucune — calibrer sur profil de base"}`;
+━━ SIGNAUX DOULEURS/BLESSURES RÉCENTS ━━
+${douloursRecentes.length > 0 ? douloursRecentes.join("\n") + "\n  ⚠️ ADAPTER LES EXERCICES EN CONSÉQUENCE" : "  Aucune douleur signalée récemment"}
+
+━━ RECOMMANDATIONS IA PRÉCÉDENTES (à honorer) ━━
+${lastFeedbackRecos || "  Aucune encore"}
+
+━━ PATTERN & TENDANCES ━━
+Pattern 3 derniers ressentis (${dernierRessentis.join(", ") || "—"}): ${pattern}
+RPE moyen 5 dernières séances: ${avgRPE5}/10
+Énergie post-séance moyenne: ${avgEnergie}/5
+→ DIRECTIVE PRINCIPALE AUJOURD'HUI: ${allAdaptations.slice(-1)[0]?.adaptation || "Calibrer sur profil de base"}`;
     // ─────────────────────────────────────────────────────────────────
 
     // Déterminer le type de séance — logique intelligente basée sur le jour + historique
@@ -3748,6 +3813,9 @@ MÉTHODOLOGIE QUE TU APPLIQUES TOUJOURS:
 5. COMPROMISED RUNNING: entraîner à courir avec les jambes fatiguées = compétence #1 HYROX
 6. PROGRESSION LOGIQUE: chaque séance prépare la suivante
 7. TECHNIQUE AVANT CHARGE: utilise les cues techniques de la base de données pour les cle_technique
+8. CONTINUITÉ: si des charges réelles sont dans l'historique, calibre sur ces chiffres réels + progression logique
+9. MÉMOIRE DES DOULEURS: si une zone douloureuse est signalée, évite ou remplace les exercices correspondants
+10. PROGRESSION RÉELLE: propose +2.5 à 5kg sur un exercice déjà logué si le ressenti était "bien" ou "facile"
 
 ZONES RUNNING (à utiliser avec allures calculées, pas des RPE vagues):
 - Zone 1 (<60% VMA): récupération active — uniquement entre blocs très intenses
@@ -3798,9 +3866,18 @@ Zone 4 (intervalles): ${paceZ4 || "?"}/km
 Wall Balls: ${wallBallKg}kg standard | Farmers Carry: ${farmersKg}kg/main | Sandbag: ${sandbagKg}kg
 ${squatWork ? `Goblet Squat: ${Math.round(squatWork * 0.45)}kg | Bulgarian Split: ${Math.round(squatWork * 0.35)}kg/côté` : ""}
 
-═══ HISTORIQUE & CONTEXTE ═══
+═══ HISTORIQUE & FEEDBACK ANALYSÉS ═══
 Phase: ${phase} | Semaine: ${week}/${totalWeeksP || "?"} | Séances réalisées: ${nbSessions}${isDeloadWeek ? " | ⚠️ SEMAINE DE DÉCHARGE : réduire le volume de 40%, maintenir l'intensité sur les séries clés" : ""}
+
 ${adaptationContext}
+
+═══ RÈGLES D'UTILISATION DES FEEDBACKS ═══
+1. Si des charges réelles sont connues → utilise-les comme BASE pour calibrer (+5-10% si ressenti "facile", -10% si "dur")
+2. Si des douleurs sont signalées → évite les exercices sur les zones douloureuses, propose des alternatives
+3. Si RPE moyen > 8 sur 3 séances → réduire le volume total de 15-20%
+4. Si énergie post-séance < 2/5 → la séance était trop longue ou trop intense, adapter
+5. Honore les recommandations IA précédentes sauf si les données du jour contredisent
+6. Fais progresser les charges des exercices déjà pratiqués de façon logique (+2.5-5kg max par séance)
 
 ═══ TYPE DE SÉANCE À GÉNÉRER ═══
 ${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
