@@ -4295,7 +4295,7 @@ JSON:
     { id: "today", label: "Séance", icon: "⚡", badge: coachSession && !session },
     { id: "planning", label: "Planning", icon: "📅" },
     { id: "progress", label: "Stats", icon: "📈" },
-    { id: "profil", label: "Profil", icon: "👤" },
+    { id: "forme", label: "Forme", icon: "◎" },
   ];
 
   // ── Swipe gesture state — useRef pour éviter les re-renders sur chaque toucher ──
@@ -4304,7 +4304,7 @@ JSON:
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
     try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
   });
-  const BOTTOM_TABS = ["home","today","planning","progress","profil"];
+  const BOTTOM_TABS = ["home","today","planning","progress","forme"];
 
   function handleTouchStart(e) {
     touchStartX.current = e.touches[0].clientX;
@@ -4968,6 +4968,13 @@ JSON:
                     <div style={{ fontSize: 7, color: "#555", letterSpacing: "0.06em" }}>jours</div>
                   </div>
                 )}
+                {/* Bouton Profil haut droite */}
+                <button onClick={() => navigateTo("profil")} style={{ width: 34, height: 34, borderRadius: "50%", background: tab === "profil" ? "var(--yellow)" : "rgba(0,0,0,0.06)", border: tab === "profil" ? "none" : "1px solid rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tab === "profil" ? "#000" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
