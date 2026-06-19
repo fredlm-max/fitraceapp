@@ -3298,12 +3298,34 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
 
   const days = daysUntil(profile.raceDate);
 
-  // Charger la séance coach du jour
+  // Charger la séance coach du jour (+ sync planning hebdomadaire)
   useEffect(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
     storage.get("coach_session_today").then(s => {
-      if (s && s.date === new Date().toISOString().split("T")[0]) setCoachSession(s);
+      if (s && s.date === todayStr) {
+        setCoachSession(s);
+      } else if (planningWeek?.jours) {
+        // Chercher la séance du jour dans le planning hebdomadaire
+        const JOURS_FR = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+        const todayJourFR = JOURS_FR[new Date().getDay()];
+        const planDay = planningWeek.jours.find(j => j.jour === todayJourFR || j.jour?.toLowerCase() === todayJourFR.toLowerCase());
+        if (planDay && planDay.type !== "repos" && planDay.titre) {
+          const planSession = {
+            titre: planDay.titre,
+            type: planDay.type || "force_stations",
+            duree: planDay.duree || 60,
+            description: planDay.description || "",
+            objectif: planDay.objectif || "",
+            explication: planDay.description || "",
+            exercices: (planDay.exercices || []).map(e => typeof e === "string" ? { nom: e, detail: "", rpe: "", note: "" } : { nom: e.nom || e, detail: e.detail || "", rpe: e.rpe || "", note: e.note || "" }),
+            fromPlanning: true,
+            date: todayStr,
+          };
+          setCoachSession(planSession);
+        }
+      }
     });
-  }, []);
+  }, [planningWeek]);
 
   // Auto-génération en arrière-plan si pas encore de séance aujourd'hui
   useEffect(() => {
@@ -3353,7 +3375,23 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
         if (!r) return null;
         const next = r.secs - 1;
         if (next <= 0) {
-          if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+          // Son bip via AudioContext
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [0, 0.15, 0.35].forEach(delay => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.frequency.value = 880;
+              osc.type = "sine";
+              gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.12);
+              osc.start(ctx.currentTime + delay);
+              osc.stop(ctx.currentTime + delay + 0.15);
+            });
+          } catch {}
           return null; // timer done, dismiss
         }
         return { ...r, secs: next };
@@ -6543,33 +6581,49 @@ JSON:
                   </div>
                   {/* ── MINI REST TIMER ── */}
                   {miniRestTimer && (
-                    <div className="slide-up" style={{ margin: "0 18px 0", padding: "12px 16px", background: miniRestTimer.secs <= 10 ? "rgba(255,71,71,0.12)" : "rgba(167,139,250,0.12)", border: `1.5px solid ${miniRestTimer.secs <= 10 ? "rgba(255,71,71,0.4)" : "rgba(167,139,250,0.4)"}`, borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
-                      {/* Arc progress */}
-                      <div style={{ position: "relative", flexShrink: 0 }}>
-                        <svg width="48" height="48" style={{ transform: "rotate(-90deg)" }}>
-                          <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="4" />
-                          <circle cx="24" cy="24" r="20" fill="none"
-                            stroke={miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa"}
-                            strokeWidth="4"
-                            strokeDasharray={`${2 * Math.PI * 20}`}
-                            strokeDashoffset={`${2 * Math.PI * 20 * (1 - miniRestTimer.secs / miniRestTimer.initial)}`}
-                            strokeLinecap="round"
-                            style={{ transition: "stroke-dashoffset 0.9s linear" }}
-                          />
-                        </svg>
-                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span className="bebas" style={{ fontSize: 14, color: miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa", lineHeight: 1 }}>{miniRestTimer.secs}</span>
+                    <div className="slide-up" style={{ margin: "0 18px 0", padding: "12px 16px", background: miniRestTimer.secs <= 10 ? "rgba(255,71,71,0.12)" : "rgba(167,139,250,0.12)", border: `1.5px solid ${miniRestTimer.secs <= 10 ? "rgba(255,71,71,0.4)" : "rgba(167,139,250,0.4)"}`, borderRadius: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                        {/* Arc progress */}
+                        <div style={{ position: "relative", flexShrink: 0 }}>
+                          <svg width="48" height="48" style={{ transform: "rotate(-90deg)" }}>
+                            <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="4" />
+                            <circle cx="24" cy="24" r="20" fill="none"
+                              stroke={miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa"}
+                              strokeWidth="4"
+                              strokeDasharray={`${2 * Math.PI * 20}`}
+                              strokeDashoffset={`${2 * Math.PI * 20 * (1 - miniRestTimer.secs / miniRestTimer.initial)}`}
+                              strokeLinecap="round"
+                              style={{ transition: "stroke-dashoffset 0.9s linear" }}
+                            />
+                          </svg>
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span className="bebas" style={{ fontSize: 14, color: miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa", lineHeight: 1 }}>{miniRestTimer.secs}</span>
+                          </div>
                         </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa", marginBottom: 2 }}>
+                            {miniRestTimer.secs <= 10 ? "⚡ C'est reparti !" : `⏱ Repos${miniRestTimer.serie ? ` · Série ${miniRestTimer.serie.current}/${miniRestTimer.serie.total}` : ""}`}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#666" }}>
+                            {miniRestTimer.secs <= 10 ? "Prépare-toi pour la prochaine série" : `${miniRestTimer.secs}s restantes`}
+                          </div>
+                        </div>
+                        <button onClick={() => setMiniRestTimer(null)} style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 8, width: 28, height: 28, color: "#555", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: miniRestTimer.secs <= 10 ? "var(--red)" : "#a78bfa", marginBottom: 2 }}>
-                          {miniRestTimer.secs <= 10 ? "⚡ C'est reparti !" : "⏱ Repos"}
-                        </div>
-                        <div style={{ fontSize: 11, color: "#666" }}>
-                          {miniRestTimer.secs <= 10 ? "Prépare-toi pour la prochaine série" : `${miniRestTimer.secs}s restantes`}
-                        </div>
+                      {/* Presets rapides + +30s */}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {[{ label: "+30s", delta: 30 }, { label: "1min", secs: 60 }, { label: "90s", secs: 90 }, { label: "2min", secs: 120 }, { label: "3min", secs: 180 }].map(p => (
+                          <button key={p.label} onClick={() => setMiniRestTimer(r => {
+                            if (!r) return null;
+                            const newSecs = p.delta ? r.secs + p.delta : p.secs;
+                            return { ...r, secs: newSecs, initial: Math.max(r.initial, newSecs) };
+                          })} style={{
+                            flex: 1, minWidth: 44, padding: "5px 6px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                            background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.3)",
+                            color: "#a78bfa", cursor: "pointer",
+                          }}>{p.label}</button>
+                        ))}
                       </div>
-                      <button onClick={() => setMiniRestTimer(null)} style={{ background: "rgba(0,0,0,0.06)", border: "none", borderRadius: 8, width: 28, height: 28, color: "#555", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
                     </div>
                   )}
                   <div style={{ padding: "16px 18px 16px" }}>
@@ -9400,6 +9454,8 @@ const VIDEOS_HYROX = {
     nom: "SkiErg", emoji: "⛷️", station: 1, distance: "1000m",
     muscles: "Dos, épaules, core, jambes",
     cles: ["Tirer fort vers le bas", "Pousser les hanches en arrière", "Dos plat, genoux légèrement fléchis", "Rythme régulier — ne pas sprinter"],
+    sequence: ["Position haute bras levés", "Traction explosive vers le bas", "Extension hanche et genoux", "Retour bras en haut contrôlé"],
+    erreurComune: { erreur: "Rester trop vertical, ne tirer qu'avec les bras", correction: "Fléchir les genoux et pousser les hanches en arrière pour engager tout le corps" },
     erreurs: ["Rester trop droit", "Ne pas engager le bas du corps", "Partir trop vite"],
     videos: [
       { id: "9RJiSvgaiJU", titre: "Mat Fraser — Tips & Tricks SkiErg", niveau: "Tous niveaux", duree: "8 min" },
@@ -9412,6 +9468,8 @@ const VIDEOS_HYROX = {
     nom: "Sled Push", emoji: "🛷", station: 2, distance: "50m",
     muscles: "Quadriceps, fessiers, mollets, core",
     cles: ["Corps incliné vers l'avant à 45°", "Avant-bras sur les barres (pas les mains)", "Petits pas rapides", "Ne jamais s'arrêter — repartir coûte plus d'énergie"],
+    sequence: ["Saisir les barres, corps incliné 45°", "Petits pas rapides et puissants", "Poussée continue sans s'arrêter", "Sprint final sur les 5 derniers mètres"],
+    erreurComune: { erreur: "Corps trop vertical, grands pas lents", correction: "S'incliner davantage et multiplier les petits pas rapides pour maximiser la force de poussée" },
     erreurs: ["Rester trop droit", "Grandes enjambées", "S'épuiser trop tôt", "Mauvaises chaussures"],
     videos: [
       { id: "HvjeefVELGg", titre: "Sled Push — Technique & Standards", niveau: "Tous niveaux", duree: "9 min" },
@@ -9424,6 +9482,8 @@ const VIDEOS_HYROX = {
     nom: "Sled Pull", emoji: "🔗", station: 3, distance: "50m",
     muscles: "Dos, biceps, épaules, jambes",
     cles: ["Reculer en tirant la corde", "Dos plat, core engagé", "Utiliser les jambes — pas que les bras", "Gérer la corde au sol pour éviter de trébucher"],
+    sequence: ["Dos au sled, saisir la corde à hauteur hanches", "Reculer en fléchissant les jambes", "Tirer la corde main par main vers les hanches", "Gérer la corde au sol pour avancer proprement"],
+    erreurComune: { erreur: "Tirer uniquement avec les bras, dos arrondi", correction: "Engager les jambes à chaque traction et garder le dos plat pour protéger les lombaires" },
     erreurs: ["Tirer uniquement avec les bras", "Dos arrondi", "Trop de corde au sol", "Bloquer la respiration"],
     videos: [
       { id: "eziTXjH9yw8", titre: "Mat Fraser — Sleds, Farmers, Burpees", niveau: "Tous niveaux", duree: "15 min" },
@@ -9434,6 +9494,8 @@ const VIDEOS_HYROX = {
     nom: "Burpee Broad Jump", emoji: "💥", station: 4, distance: "80m",
     muscles: "Full body — cardio + explosivité",
     cles: ["Avancer les pieds un par un (économiser l'énergie)", "Saut en longueur — pas en hauteur", "Pieds parallèles au décollage ET à l'atterrissage", "Rythme constant — ne pas sprinter"],
+    sequence: ["Descente au sol, poitrine touche le sol", "Ramener les pieds un par un vers les mains", "Sauter en longueur, pieds parallèles", "Atterrir et enchaîner immédiatement le suivant"],
+    erreurComune: { erreur: "Pieds décalés au saut (pénalité 10 burpees) + sprinter puis s'effondrer", correction: "Maintenir un rythme soutenable constant, vérifier l'alignement des pieds avant chaque saut" },
     erreurs: ["Sauter avec les pieds décalés (pénalité)", "Sprinter et s'épuiser", "Chest qui ne touche pas le sol", "Mains trop loin des pieds"],
     videos: [
       { id: "W5gc1Inyha0", titre: "Burpee Broad Jump Technique HYROX", niveau: "Débutant", duree: "5 min" },
@@ -9446,6 +9508,8 @@ const VIDEOS_HYROX = {
     nom: "Rowing", emoji: "🚣", station: 5, distance: "1000m",
     muscles: "Jambes, dos, core, bras",
     cles: ["Jambes d'abord — puis dos — puis bras", "Retour : bras — dos — jambes", "Assis droit, tirer vers le sternum", "Station active récup — ne pas sprinter"],
+    sequence: ["Position catch : bras tendus, dos droit, genoux fléchis", "Poussée jambes en premier jusqu'à extension", "Ouverture du dos en arrière", "Traction des bras vers le sternum"],
+    erreurComune: { erreur: "Tirer avec les bras en premier au lieu des jambes", correction: "Séquence stricte : JAMBES → DOS → BRAS. Les jambes génèrent 60% de la puissance totale" },
     erreurs: ["Tirer avec les bras en premier", "Dos arrondi", "Partir trop vite (gros impact sur la suite)", "Pieds mal attachés"],
     videos: [
       { id: "eziTXjH9yw8", titre: "Mat Fraser — All HYROX Stations", niveau: "Tous niveaux", duree: "15 min" },
@@ -9456,6 +9520,8 @@ const VIDEOS_HYROX = {
     nom: "Farmers Carry", emoji: "🧳", station: 6, distance: "200m",
     muscles: "Grip, trapèzes, core, posture",
     cles: ["Épaules en arrière et basses", "Regard droit devant", "Pas rapides et réguliers", "Unbroken si possible — poser coûte du temps"],
+    sequence: ["Saisir les kettlebells, se redresser complètement", "Épaules rétractées, core engagé en permanence", "Pas courts et rapides, regard fixe devant", "Si pause : poser proprement, reprendre vite"],
+    erreurComune: { erreur: "Épaules qui s'affaissent et pencher d'un côté", correction: "Contracter activement les trapèzes et le core pour garder le buste droit tout au long du 200m" },
     erreurs: ["Épaules qui s'affaissent", "Pencher sur le côté", "Poser trop souvent", "Oublier le core"],
     videos: [
       { id: "eziTXjH9yw8", titre: "Mat Fraser — Farmers Carry Tips", niveau: "Tous niveaux", duree: "15 min" },
@@ -9466,6 +9532,8 @@ const VIDEOS_HYROX = {
     nom: "Sandbag Lunges", emoji: "🎒", station: 7, distance: "100m",
     muscles: "Quadriceps, fessiers, stabilisateurs",
     cles: ["Genou arrière DOIT toucher le sol (pénalité sinon)", "Alterner les genoux obligatoirement", "Coudes hauts pour dégager les poumons", "Corps droit — pas de penché"],
+    sequence: ["Sac sur les épaules, coudes hauts devant", "Fente avant, genou arrière touche le sol", "Se relever en poussant sur le pied avant", "Alterner côté gauche/droit à chaque pas"],
+    erreurComune: { erreur: "Genou arrière ne touche pas le sol → no rep", correction: "Descendre consciemment jusqu'au contact sol à chaque répétition, même si ça ralentit le rythme" },
     erreurs: ["Genou qui ne touche pas le sol", "Mêmes genoux deux fois de suite", "Corps penché en avant", "Poser le sac (disqualification au 2e)"],
     videos: [
       { id: "eziTXjH9yw8", titre: "Mat Fraser — All Stations", niveau: "Tous niveaux", duree: "15 min" },
@@ -9476,6 +9544,8 @@ const VIDEOS_HYROX = {
     nom: "Wall Balls", emoji: "🏀", station: 8, distance: "100 reps",
     muscles: "Cuisses, fessiers, épaules, core",
     cles: ["Squat profond — utiliser le rebond pour propulser", "Lancer vers le CENTRE de la cible", "Attraper en amorçant le squat suivant", "Séries de 20-30 au début — puis 10"],
+    sequence: ["Balle tenue à hauteur poitrine, pieds écartés", "Squat profond sous la parallèle", "Rebond du squat → propulsion balle vers la cible", "Attraper la balle en démarrant le squat suivant"],
+    erreurComune: { erreur: "Squat pas assez profond (no rep) + rater la cible (pénalité 15s)", correction: "Toujours descendre sous la parallèle et viser le centre de la cible, pas le bas ni les bords" },
     erreurs: ["Squat pas assez profond (no rep)", "Rater la cible (15s de pénalité)", "Trop s'épuiser sur les premières séries", "Lâcher la balle au sol"],
     videos: [
       { id: "XFbGAhXcyoQ", titre: "Wall Balls Training — Elite Methods", niveau: "Avancé", duree: "12 min" },
@@ -9562,11 +9632,44 @@ function VideoModal({ mouvement, onClose }) {
           </div>
         )}
 
+        {/* Séquence mouvement */}
+        {mouvement.sequence && (
+          <div style={{ background: "rgba(57,255,128,0.04)", border: "1px solid rgba(57,255,128,0.15)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", marginBottom: 12 }}>🔄 Séquence mouvement</div>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+              {mouvement.sequence.map((step, i) => {
+                const nums = ["①","②","③","④","⑤","⑥"];
+                return (
+                  <div key={i} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, maxWidth: 90 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(57,255,128,0.15)", border: "1.5px solid rgba(57,255,128,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "var(--green)", fontWeight: 900, flexShrink: 0 }}>{nums[i]}</div>
+                    {i < mouvement.sequence.length - 1 && <div style={{ display: "none" }}></div>}
+                    <div style={{ fontSize: 10, color: "#aaa", textAlign: "center", lineHeight: 1.4 }}>{step}</div>
+                  </div>
+                );
+              }).reduce((acc, el, i, arr) => {
+                acc.push(el);
+                if (i < arr.length - 1) acc.push(<div key={`arrow-${i}`} style={{ flexShrink: 0, color: "#444", fontSize: 16, alignSelf: "flex-start", marginTop: 8 }}>→</div>);
+                return acc;
+              }, [])}
+            </div>
+          </div>
+        )}
+
         {/* Points clés */}
         <div style={{ background: "rgba(0,122,255,0.04)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>✅ Points clés</div>
           {mouvement.cles.map((c, i) => <div key={i} style={{ fontSize: 13, color: "#ccc", marginBottom: 6, paddingLeft: 8, borderLeft: "2px solid rgba(0,122,255,0.3)" }}>{c}</div>)}
         </div>
+
+        {/* Erreur commune avec correction */}
+        {mouvement.erreurComune && (
+          <div style={{ background: "rgba(255,71,71,0.04)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>❌ Erreur commune</div>
+            <div style={{ fontSize: 13, color: "#ef4444", marginBottom: 10, paddingLeft: 8, borderLeft: "2px solid rgba(255,71,71,0.4)" }}>{mouvement.erreurComune.erreur}</div>
+            <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>✅ Correction</div>
+            <div style={{ fontSize: 13, color: "#ccc", paddingLeft: 8, borderLeft: "2px solid rgba(57,255,128,0.4)" }}>{mouvement.erreurComune.correction}</div>
+          </div>
+        )}
 
         {/* Erreurs communes */}
         <div style={{ background: "rgba(255,71,71,0.04)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 12, padding: 14 }}>
@@ -10062,15 +10165,56 @@ function HyroxBenchmarkTab({ profile }) {
               <div style={{ fontSize: 11, color: "#888" }}>
                 Stations: {Math.floor(stationScores.reduce((a,s)=>a+(s.userSec||0),0)/60)}min · Running: {Math.floor(runTotalUser/60)}min
               </div>
-              {/* vs médiane */}
+              {/* vs médiane + percentile */}
               {benchTotal.median && (() => {
                 const diff = grandTotalUser - benchTotal.median;
-                const sign = diff <= 0 ? "+" : "";
                 const mColor = diff <= 0 ? "#22c55e" : "#f59e0b";
+                // Estimation percentile basée sur p25/médiane/p75
+                const p25 = benchTotal.p25 || benchTotal.median * 0.85;
+                const p75 = benchTotal.p75 || benchTotal.median * 1.15;
+                let percentileEst, percentileLabel, percentileColor;
+                if (grandTotalUser <= p25) {
+                  percentileEst = Math.max(5, Math.round(25 * (grandTotalUser - (p25 * 0.7)) / (p25 - p25 * 0.7)));
+                  percentileLabel = "TOP " + percentileEst + "%";
+                  percentileColor = "#22c55e";
+                } else if (grandTotalUser <= benchTotal.median) {
+                  percentileEst = Math.round(25 + 25 * (grandTotalUser - p25) / (benchTotal.median - p25));
+                  percentileLabel = "TOP " + percentileEst + "%";
+                  percentileColor = "#007AFF";
+                } else if (grandTotalUser <= p75) {
+                  percentileEst = Math.round(50 + 25 * (grandTotalUser - benchTotal.median) / (p75 - benchTotal.median));
+                  percentileLabel = "TOP " + percentileEst + "%";
+                  percentileColor = "#f59e0b";
+                } else {
+                  percentileEst = Math.min(90, Math.round(75 + 15 * (grandTotalUser - p75) / (p75 * 0.2)));
+                  percentileLabel = "Top " + percentileEst + "%";
+                  percentileColor = "#ef4444";
+                }
                 return (
-                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: mColor }}>
-                    {diff <= 0 ? `${Math.abs(Math.floor(diff/60))}min sous la médiane 🔥` : `${Math.floor(diff/60)}min au-dessus de la médiane`}
-                  </div>
+                  <>
+                    <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: mColor }}>
+                      {diff <= 0 ? `${Math.abs(Math.floor(diff/60))}min sous la médiane 🔥` : `${Math.floor(diff/60)}min au-dessus de la médiane`}
+                    </div>
+                    <div style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 8, background: `${percentileColor}15`, border: `1.5px solid ${percentileColor}40`, borderRadius: 12, padding: "8px 16px" }}>
+                      <span style={{ fontSize: 20 }}>{percentileEst <= 25 ? "🏆" : percentileEst <= 50 ? "💪" : "📈"}</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: percentileColor }}>Tu serais dans le {percentileLabel}</div>
+                        <div style={{ fontSize: 10, color: "#777" }}>de ta catégorie {catObj.label}</div>
+                      </div>
+                    </div>
+                    {/* Barre percentile visuelle */}
+                    <div style={{ marginTop: 12, position: "relative" }}>
+                      <div style={{ height: 8, background: "rgba(0,0,0,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${100 - percentileEst}%`, background: `linear-gradient(90deg, #22c55e, ${percentileColor})`, borderRadius: 4, transition: "width 0.8s ease" }} />
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                        <span style={{ fontSize: 9, color: "#22c55e" }}>Elite</span>
+                        <span style={{ fontSize: 9, color: "#007AFF" }}>p25</span>
+                        <span style={{ fontSize: 9, color: catObj.color }}>Médiane</span>
+                        <span style={{ fontSize: 9, color: "#f59e0b" }}>p75</span>
+                      </div>
+                    </div>
+                  </>
                 );
               })()}
             </div>
@@ -11655,6 +11799,7 @@ JSON: {
       <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "rgba(0,0,0,0.02)", borderRadius: 14, padding: 4 }}>
         {[
           { id: "journal", label: "📋 Journal" },
+          { id: "7jours", label: "📅 7 Jours" },
           { id: "timing", label: "⏱️ Timing" },
           { id: "recettes", label: "👨‍🍳 Recettes" },
           { id: "bilan", label: "🤖 Bilan IA" },
@@ -11667,6 +11812,118 @@ JSON: {
           }}>{t.label}</button>
         ))}
       </div>
+
+      {/* ══ 7 JOURS ══ */}
+      {subTab === "7jours" && (() => {
+        const [data7j, setData7j] = React.useState(null);
+        React.useEffect(() => {
+          const load = async () => {
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date();
+              d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().split("T")[0];
+              const key = `nutri_${profile.name}_${dateStr}`;
+              const repas = await storage.get(key).catch(() => null);
+              const tot = (repas || []).reduce((acc, r) => ({
+                kcal: acc.kcal + (r.kcal||0), p: acc.p + (r.p||0),
+                g: acc.g + (r.g||0), l: acc.l + (r.l||0),
+              }), { kcal: 0, p: 0, g: 0, l: 0 });
+              days.push({ date: dateStr, label: d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }), ...tot, hasData: (repas||[]).length > 0 });
+            }
+            setData7j(days);
+          };
+          load();
+        }, []);
+
+        if (!data7j) return <div style={{ padding: 40, textAlign: "center", color: "#555" }}>Chargement...</div>;
+
+        const obj = OBJECTIFS_NUTRI(profile.poids || 75);
+        const avg = (key) => Math.round(data7j.reduce((a, d) => a + d[key], 0) / 7);
+        const totalKcal7 = data7j.reduce((a, d) => a + d.kcal, 0);
+        const objectifKcal7 = obj.kcal * 7;
+        const bilan = totalKcal7 - objectifKcal7;
+        const maxKcal = Math.max(...data7j.map(d => d.kcal), obj.kcal);
+
+        return (
+          <div className="fade-in">
+            {/* Sparkline barres */}
+            <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "16px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Calories · 7 derniers jours</div>
+              <svg width="100%" height="80" viewBox={`0 0 ${data7j.length * 40} 80`} preserveAspectRatio="none" style={{ display: "block" }}>
+                {data7j.map((d, i) => {
+                  const barH = maxKcal > 0 ? Math.round((d.kcal / maxKcal) * 60) : 0;
+                  const objH = Math.round((obj.kcal / maxKcal) * 60);
+                  const x = i * 40 + 8;
+                  const color = d.kcal >= obj.kcal * 0.9 ? "#39ff80" : d.kcal >= obj.kcal * 0.6 ? "#007AFF" : "#ff9a3c";
+                  return (
+                    <g key={i}>
+                      {/* Barre objectif ligne */}
+                      <line x1={x} y1={80 - objH} x2={x + 24} y2={80 - objH} stroke="rgba(0,122,255,0.3)" strokeWidth="1" strokeDasharray="3,2" />
+                      {/* Barre kcal */}
+                      <rect x={x} y={80 - barH} width={24} height={barH} rx={4} fill={color} opacity={d.hasData ? 1 : 0.25} />
+                      {/* Label jour */}
+                      <text x={x + 12} y={78} textAnchor="middle" fontSize="7" fill="#666" fontFamily="system-ui">{d.label.slice(0,3)}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <div style={{ fontSize: 9, color: "#555", marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 20, height: 1, background: "rgba(0,122,255,0.5)", borderTop: "1px dashed rgba(0,122,255,0.5)" }} />
+                <span>Objectif {obj.kcal} kcal/j</span>
+              </div>
+            </div>
+
+            {/* Moyennes */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+              {[
+                { label: "Kcal moy.", val: avg("kcal"), unit: "", color: "var(--yellow)" },
+                { label: "Prot.", val: avg("p"), unit: "g", color: "var(--green)" },
+                { label: "Gluc.", val: avg("g"), unit: "g", color: "#38bdf8" },
+                { label: "Lip.", val: avg("l"), unit: "g", color: "var(--orange)" },
+              ].map(m => (
+                <div key={m.label} style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 14, padding: "12px 8px", textAlign: "center" }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: m.color }}>{m.val}<span style={{ fontSize: 10, color: "#555" }}>{m.unit}</span></div>
+                  <div style={{ fontSize: 9, color: "#777", marginTop: 2 }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Détail par jour */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {data7j.map((d, i) => {
+                const pct = Math.min(100, obj.kcal > 0 ? Math.round((d.kcal / obj.kcal) * 100) : 0);
+                const col = pct >= 90 ? "var(--green)" : pct >= 60 ? "var(--yellow)" : "var(--orange)";
+                const isToday = d.date === today;
+                return (
+                  <div key={i} style={{ background: isToday ? "rgba(0,122,255,0.04)" : "rgba(0,0,0,0.02)", border: `1px solid ${isToday ? "rgba(0,122,255,0.2)" : "rgba(0,0,0,0.05)"}`, borderRadius: 14, padding: "10px 14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: isToday ? "var(--yellow)" : "var(--white)" }}>{d.label}{isToday ? " · Aujourd'hui" : ""}</div>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: d.hasData ? col : "#444" }}>{d.hasData ? `${d.kcal} kcal` : "—"}</div>
+                    </div>
+                    {d.hasData && (
+                      <div style={{ height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: col, borderRadius: 99, transition: "width 0.5s" }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bilan semaine */}
+            <div style={{ background: bilan > 0 ? "rgba(57,255,128,0.06)" : "rgba(255,154,60,0.06)", border: `1px solid ${bilan > 0 ? "rgba(57,255,128,0.2)" : "rgba(255,154,60,0.2)"}`, borderRadius: 16, padding: "14px 16px", textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Bilan semaine</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: bilan > 0 ? "var(--green)" : "var(--orange)" }}>
+                {bilan > 0 ? "Surplus" : "Déficit"} de {Math.abs(bilan)} kcal
+              </div>
+              <div style={{ fontSize: 11, color: "#777", marginTop: 4 }}>
+                {bilan > 0 ? "Tu as mangé plus que tes besoins cette semaine" : "Tu es en dessous de tes besoins caloriques"}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ══ JOURNAL ══ */}
       {subTab === "journal" && (
