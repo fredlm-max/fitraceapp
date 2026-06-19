@@ -3064,6 +3064,42 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
       if (saved) setDailyData(d => ({ ...d, ...saved }));
     });
   }, []);
+
+  // ─── VFC BASELINE 7 JOURS (science: SWC = 0.5 × SD) ─────────────────
+  const [vfcHistory, setVfcHistory] = useState([]); // [{date, val}] 30 derniers jours
+  useEffect(() => {
+    const loads = [];
+    for (let i = 1; i <= 30; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split("T")[0];
+      loads.push(storage.get(getDailyLogKey(profile.name, ds)).then(v => v?.hrv ? { date: ds, val: parseInt(v.hrv) } : null));
+    }
+    Promise.all(loads).then(results => setVfcHistory(results.filter(Boolean).sort((a,b) => a.date.localeCompare(b.date))));
+  }, []);
+
+  // Calcul baseline VFC scientifique
+  const vfcAnalysis = React.useMemo(() => {
+    const todayVal = parseInt(dailyData.hrv) || 0;
+    const last7 = vfcHistory.slice(-7);
+    if (last7.length < 3) return { baseline: null, sd: null, swc: null, zone: todayVal > 0 ? "unknown" : null, todayVal, trend: null };
+    const baseline = last7.reduce((a, l) => a + l.val, 0) / last7.length;
+    const sd = Math.sqrt(last7.reduce((a, l) => a + Math.pow(l.val - baseline, 2), 0) / last7.length);
+    const swc = Math.max(sd * 0.5, 3); // minimum 3ms pour éviter sur-sensibilité
+    let zone = null;
+    if (todayVal > 0) {
+      if (todayVal >= baseline - swc) zone = "green";
+      else if (todayVal >= baseline - 2 * swc) zone = "yellow";
+      else zone = "red";
+    }
+    // Tendance : comparaison 3 derniers jours vs 3 jours avant
+    const recent3 = last7.slice(-3).map(l => l.val);
+    const prev3 = last7.slice(0, 3).map(l => l.val);
+    const recentAvg = recent3.length ? recent3.reduce((a,b) => a+b,0)/recent3.length : null;
+    const prevAvg = prev3.length ? prev3.reduce((a,b) => a+b,0)/prev3.length : null;
+    const trend = recentAvg && prevAvg ? (recentAvg - prevAvg > 2 ? "up" : recentAvg - prevAvg < -2 ? "down" : "stable") : null;
+    return { baseline: Math.round(baseline), sd: Math.round(sd * 10) / 10, swc: Math.round(swc * 10) / 10, zone, todayVal, trend, last7 };
+  }, [vfcHistory, dailyData.hrv]);
+  // ─────────────────────────────────────────────────────────────────────
   // Save daily log whenever dailyData changes (debounced)
   const saveDailyLog = React.useCallback(async (data) => {
     const key = getDailyLogKey(profile.name, todayStr);
@@ -3619,14 +3655,28 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
     const fatigueLabels = ["","Épuisé(e)","Fatigué(e)","Bien","Frais/Fraîche"];
     const sommeilLabels = ["","Mauvais","Moyen","Bien","Excellent"];
 
-    // Calcul adaptation intensité basée sur HRV + fatigue + sommeil
+    // Calcul adaptation intensité — science VFC : baseline personnelle (7j rolling avg) + SWC
     let intensityModifier = "NORMALE";
     let intensityNote = "";
-    if (hrv !== null && hrv < 40) { intensityModifier = "RÉDUITE -20%"; intensityNote = `VFC très basse (${hrv}) → récupération insuffisante`; }
-    else if (hrv !== null && hrv > 70) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = `VFC élevée (${hrv}) → système nerveux bien récupéré`; }
-    else if (fatigueVal <= 1) { intensityModifier = "RÉDUITE -30%"; intensityNote = "Épuisement déclaré → séance récupération active uniquement"; }
-    else if (fatigueVal <= 2 || sleepH < 6) { intensityModifier = "RÉDUITE -15%"; intensityNote = `Fatigue élevée (${sleepH < 6 ? `sommeil seulement ${sleepH}h` : "ressenti fatigué"}) → volume réduit`; }
-    else if (fatigueVal === 4 && sleepH >= 7.5) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = "Forme optimale → possibilité de pousser"; }
+    const vfcZone = vfcAnalysis.zone;
+    const vfcBaseline = vfcAnalysis.baseline;
+    // VFC : utiliser la déviation par rapport à la baseline personnelle (plus fiable que seuils fixes)
+    if (hrv !== null && vfcBaseline) {
+      const deviation = hrv - vfcBaseline;
+      if (vfcZone === "red") { intensityModifier = "RÉDUITE -25%"; intensityNote = `VFC ${hrv}ms — ZONE ROUGE (${Math.round(Math.abs(deviation))}ms sous la baseline personnelle ${vfcBaseline}ms) → récupération insuffisante, séance légère`; }
+      else if (vfcZone === "yellow") { intensityModifier = "RÉDUITE -15%"; intensityNote = `VFC ${hrv}ms — ZONE JAUNE (légèrement sous baseline ${vfcBaseline}ms) → réduire volume mais maintenir intensité`; }
+      else if (vfcZone === "green" && deviation > vfcAnalysis.swc) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = `VFC ${hrv}ms — ZONE VERTE haute (+${Math.round(deviation)}ms au-dessus baseline ${vfcBaseline}ms) → système nerveux optimal, possibilité de pousser`; }
+    } else if (hrv !== null && !vfcBaseline) {
+      // Pas encore de baseline — utiliser seuils absolus par défaut
+      if (hrv < 40) { intensityModifier = "RÉDUITE -20%"; intensityNote = `VFC ${hrv}ms — bas (seuil absolu, baseline en cours de construction) → prudence`; }
+      else if (hrv > 70) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = `VFC ${hrv}ms — élevé (seuil absolu) → bonne récupération`; }
+    }
+    // Autres signaux si VFC non disponible
+    if (intensityModifier === "NORMALE") {
+      if (fatigueVal <= 1) { intensityModifier = "RÉDUITE -30%"; intensityNote = "Épuisement déclaré → séance récupération active uniquement"; }
+      else if (fatigueVal <= 2 || sleepH < 6) { intensityModifier = "RÉDUITE -15%"; intensityNote = `Fatigue élevée (${sleepH < 6 ? `sommeil seulement ${sleepH}h` : "ressenti fatigué"}) → volume réduit`; }
+      else if (fatigueVal === 4 && sleepH >= 7.5) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = "Forme optimale → possibilité de pousser"; }
+    }
 
     // Calculs charges précises basées sur les 1RM
     const deadliftWork = profile.deadlift1RM_final ? Math.round(profile.deadlift1RM_final * 0.72) : null;
@@ -3853,7 +3903,7 @@ Objectif: ${profile.objectifPrincipal || "Finir HYROX"} | Course dans: ${daysUnt
 ═══ DONNÉES FORME DU JOUR ═══
 Énergie: ${fatigueLabels[fatigueVal]} (${fatigueVal}/4)
 Qualité sommeil: ${sommeilLabels[parseInt(dailyData.sommeil)||3]} | Durée: ${sleepH}h
-VFC: ${hrv !== null ? hrv+" ms" : "non mesurée"}
+VFC: ${hrv !== null ? hrv+" ms" : "non mesurée"}${vfcBaseline ? ` | Baseline personnelle 7j: ${vfcBaseline}ms | Zone: ${vfcZone === "green" ? "🟢 VERTE (récup optimale)" : vfcZone === "yellow" ? "🟡 JAUNE (récup partielle)" : vfcZone === "red" ? "🔴 ROUGE (récup insuffisante)" : "en cours"} | Tendance: ${vfcAnalysis.trend === "up" ? "↑ en hausse" : vfcAnalysis.trend === "down" ? "↓ en baisse" : "→ stable"}` : " (baseline en construction — continuer à mesurer chaque matin)"}
 Hydratation: ${hydration}/8 verres
 ⚡ INTENSITÉ AJUSTÉE: ${intensityModifier}${intensityNote ? " — " + intensityNote : ""}
 
@@ -8496,36 +8546,128 @@ JSON:
                 </div>
               </div>
 
-              {/* HRV */}
-              <div style={{ marginBottom: 16, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#555", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>VFC matin (ms)</div>
-                    <div style={{ fontSize: 9, color: "#555", marginTop: 2 }}>Variabilité cardiaque au réveil</div>
+              {/* VFC — widget scientifique avec baseline personnelle */}
+              {(()=>{
+                const { baseline, sd, swc, zone, todayVal, trend, last7 } = vfcAnalysis;
+                const zoneConf = {
+                  green:   { color: "var(--green)",  label: "ZONE VERTE",  emoji: "🟢", conseil: "Récupération optimale — séance intense possible" },
+                  yellow:  { color: "var(--orange)", label: "ZONE JAUNE",  emoji: "🟡", conseil: "Récupération partielle — réduire le volume, maintenir l'intensité" },
+                  red:     { color: "var(--red)",    label: "ZONE ROUGE",  emoji: "🔴", conseil: "Récupération insuffisante — récupération active ou repos" },
+                  unknown: { color: "var(--yellow)", label: "BASELINE EN CONSTRUCTION", emoji: "⏳", conseil: "Mesure encore quelques jours pour établir ta baseline personnelle" },
+                };
+                const zc = zone ? (zoneConf[zone] || zoneConf.unknown) : null;
+                const trendIcon = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
+                const trendColor = trend === "up" ? "var(--green)" : trend === "down" ? "var(--red)" : "var(--gray)";
+                return (
+                  <div style={{ marginBottom: 16, background: "var(--bg2)", border: `1.5px solid ${zc ? zc.color + "30" : "rgba(0,0,0,0.07)"}`, borderRadius: 18, overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+                    {/* Header */}
+                    <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray)" }}>💓 VFC matin (RMSSD ms)</div>
+                          <div style={{ fontSize: 10, color: "var(--gray)", marginTop: 2 }}>Mesurer allongé, au réveil, 60 secondes</div>
+                        </div>
+                        {todayVal > 0 && zc && (
+                          <div style={{ textAlign: "right" }}>
+                            <div className="bebas" style={{ fontSize: 28, color: zc.color, lineHeight: 1 }}>{todayVal}</div>
+                            <div style={{ fontSize: 9, color: zc.color, fontWeight: 800, textTransform: "uppercase" }}>{zc.emoji} {zc.label}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Saisie */}
+                    <div style={{ padding: "10px 16px" }}>
+                      <input type="number" min="20" max="180" step="1"
+                        value={dailyData.hrv}
+                        onChange={e => { haptic([4]); setDailyData(d => ({ ...d, hrv: e.target.value })); }}
+                        placeholder="Ex: 65"
+                        style={{ width: "100%", background: "var(--bg3)", border: `1.5px solid ${zc ? zc.color+"40" : "rgba(0,0,0,0.08)"}`, borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 18, outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box", fontWeight: 700 }} />
+                    </div>
+
+                    {/* Baseline + zones personnelles */}
+                    {baseline ? (
+                      <div style={{ padding: "0 16px 14px" }}>
+                        {/* Barre baseline */}
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 10, color: "var(--gray)" }}>
+                            <span>Baseline 7j : <strong style={{ color: "var(--white)" }}>{baseline} ms</strong></span>
+                            <span>SWC : ±{swc} ms</span>
+                            {trend && <span style={{ color: trendColor, fontWeight: 700 }}>{trendIcon} {trend === "up" ? "en hausse" : trend === "down" ? "en baisse" : "stable"}</span>}
+                          </div>
+                          {/* Barre de position relative */}
+                          {todayVal > 0 && (
+                            <div style={{ position: "relative", height: 8, borderRadius: 99, background: "rgba(0,0,0,0.07)", overflow: "visible" }}>
+                              {/* Zones colorées */}
+                              <div style={{ position: "absolute", inset: 0, display: "flex", borderRadius: 99, overflow: "hidden" }}>
+                                <div style={{ flex: 1, background: "rgba(255,59,48,0.2)" }} />
+                                <div style={{ flex: 1, background: "rgba(224,122,0,0.2)" }} />
+                                <div style={{ flex: 1, background: "rgba(40,167,69,0.2)" }} />
+                              </div>
+                              {/* Marqueur baseline */}
+                              <div style={{ position: "absolute", left: "50%", top: -2, width: 2, height: 12, background: "var(--gray)", borderRadius: 1, transform: "translateX(-50%)" }} />
+                              {/* Marqueur valeur actuelle */}
+                              {(() => {
+                                const range = (swc || 10) * 4;
+                                const pos = Math.max(5, Math.min(95, 50 + ((todayVal - baseline) / range) * 100));
+                                return <div style={{ position: "absolute", left: `${pos}%`, top: "50%", width: 14, height: 14, borderRadius: "50%", background: zc?.color || "var(--gray)", border: "2px solid #fff", transform: "translate(-50%, -50%)", boxShadow: `0 2px 6px ${zc?.color || "#888"}60` }} />;
+                              })()}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Mini graphe 7 derniers jours */}
+                        {last7 && last7.length >= 3 && (
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 9, color: "var(--gray)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>7 derniers jours</div>
+                            <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 32 }}>
+                              {last7.map((l, i) => {
+                                const minV = Math.min(...last7.map(x => x.val)) - 5;
+                                const maxV = Math.max(...last7.map(x => x.val)) + 5;
+                                const h = Math.max(4, ((l.val - minV) / (maxV - minV)) * 28);
+                                const col = l.val >= baseline - (swc||5) ? "var(--green)" : l.val >= baseline - 2*(swc||5) ? "var(--orange)" : "var(--red)";
+                                return <div key={i} style={{ flex: 1, height: h, borderRadius: 3, background: col, opacity: 0.8, position: "relative" }} title={`${l.date}: ${l.val}ms`} />;
+                              })}
+                              {todayVal > 0 && (
+                                <div style={{ flex: 1, height: Math.max(4, ((todayVal - (Math.min(...last7.map(x => x.val))-5)) / ((Math.max(...last7.map(x => x.val))+5) - (Math.min(...last7.map(x => x.val))-5))) * 28), borderRadius: 3, background: zc?.color || "var(--gray)", border: "2px solid var(--white)", boxSizing: "border-box" }} />
+                              )}
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "var(--gray)", marginTop: 2 }}>
+                              <span>{last7[0]?.date?.slice(5)}</span>
+                              <span>Auj.</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Conseil du jour */}
+                        {zc && (
+                          <div style={{ padding: "9px 12px", borderRadius: 11, background: `${zc.color}10`, border: `1px solid ${zc.color}25`, fontSize: 11, color: zc.color, fontWeight: 600, lineHeight: 1.45 }}>
+                            {zc.emoji} {zc.conseil}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Pas encore de baseline — guide pour construire */
+                      <div style={{ padding: "0 16px 14px" }}>
+                        <div style={{ background: "rgba(0,122,255,0.06)", border: "1px solid rgba(0,122,255,0.15)", borderRadius: 11, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700, marginBottom: 4 }}>📊 Baseline personnelle en construction</div>
+                          <div style={{ fontSize: 10, color: "var(--gray)", lineHeight: 1.5 }}>
+                            Mesure ta VFC chaque matin pendant 7 jours pour établir ta baseline. Après, l'app analysera chaque lecture par rapport à <strong>ta propre norme</strong> (méthode SWC — science 2024).
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 10, color: "var(--gray2)", lineHeight: 1.5 }}>
+                            <strong>Protocole :</strong> Allongé·e au réveil · App type HRV4Training ou EliteHRV · 60 secondes · Avant café/sport
+                          </div>
+                        </div>
+                        {todayVal > 0 && (
+                          <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(0,0,0,0.04)", fontSize: 10, color: "var(--gray)" }}>
+                            {todayVal >= 70 ? "🟢 Valeur absolue élevée — bonne récupération" : todayVal >= 55 ? "🟡 Valeur absolue correcte" : todayVal >= 40 ? "🟠 Valeur absolue modérée" : "🔴 Valeur absolue basse — écoute ton corps"}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {hrv > 0 && <div style={{ textAlign: "right" }}>
-                    <div className="bebas" style={{ fontSize: 22, color: hrvColor, lineHeight: 1 }}>{hrv}</div>
-                    <div style={{ fontSize: 9, color: hrvColor, fontWeight: 700, textTransform: "uppercase" }}>{hrvLabel}</div>
-                  </div>}
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="number" min="20" max="120" step="1"
-                    value={dailyData.hrv}
-                    onChange={e => { haptic([4]); setDailyData(d => ({ ...d, hrv: e.target.value })); }}
-                    placeholder="Ex: 65"
-                    style={{ flex: 1, background: "rgba(0,0,0,0.05)", border: `1.5px solid ${hrv>0?hrvColor+"40":"rgba(0,0,0,0.08)"}`, borderRadius: 12, padding: "12px 16px", color: "var(--white)", fontSize: 16, outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    {[{r:"<40",l:"Bas",c:"var(--red)"},{r:"40-55",l:"Modéré",c:"var(--orange)"},{r:"55-70",l:"Bon",c:"var(--yellow)"},{r:">70",l:"Top",c:"var(--green)"}].map(z=>(
-                      <div key={z.r} style={{ fontSize: 8, color: z.c, lineHeight: 1.2 }}>{z.r} {z.l}</div>
-                    ))}
-                  </div>
-                </div>
-                {hrv > 0 && (
-                  <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, background: `${hrvColor}10`, border: `1px solid ${hrvColor}20`, fontSize: 10, color: hrvColor }}>
-                    {hrv>=70?"Récupération optimale — séance intense possible":hrv>=55?"Bonne forme — entraînement normal recommandé":hrv>=40?"Fatigue modérée — réduis l'intensité aujourd'hui":"VFC basse — privilégie la récupération active"}
-                  </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Nutrition */}
               <button onClick={() => setTab("nutri")} style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, cursor: "pointer", textAlign: "left" }}>
