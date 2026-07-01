@@ -11408,6 +11408,96 @@ JSON:
                 );
               })()}
 
+              {/* ── BREATHING PROTOCOL ── */}
+              {(() => {
+                const PROTOCOLS = [
+                  { id: "box", name: "Box Breathing", desc: "Cohérence cardiaque — avant la course", color: "#38bdf8", phases: [{ l: "Inspire", t: 4 }, { l: "Retiens", t: 4 }, { l: "Expire", t: 4 }, { l: "Pause", t: 4 }] },
+                  { id: "478", name: "4-7-8", desc: "Relaxation profonde — avant de dormir", color: "#BF5AF2", phases: [{ l: "Inspire", t: 4 }, { l: "Retiens", t: 7 }, { l: "Expire", t: 8 }, { l: "Pause", t: 1 }] },
+                  { id: "power", name: "Activation", desc: "Boost d'énergie — avant la séance", color: "#FF9F0A", phases: [{ l: "Inspire", t: 2 }, { l: "Expire", t: 2 }, { l: "Inspire", t: 2 }, { l: "Retiens", t: 4 }] },
+                ];
+                const [activeProtocol, setActiveProtocol] = React.useState(null);
+                const [phase, setPhase] = React.useState(0);
+                const [timer, setTimer] = React.useState(0);
+                const [running, setRunning] = React.useState(false);
+                const [cycles, setCycles] = React.useState(0);
+
+                const proto = PROTOCOLS.find(p => p.id === activeProtocol);
+
+                React.useEffect(() => {
+                  if (!running || !proto) return;
+                  const interval = setInterval(() => {
+                    setTimer(t => {
+                      if (t <= 1) {
+                        const nextPhase = (phase + 1) % proto.phases.length;
+                        if (nextPhase === 0) setCycles(c => c + 1);
+                        setPhase(nextPhase);
+                        return proto.phases[nextPhase].t;
+                      }
+                      return t - 1;
+                    });
+                  }, 1000);
+                  return () => clearInterval(interval);
+                }, [running, phase, proto]);
+
+                const startProtocol = (id) => {
+                  const p = PROTOCOLS.find(x => x.id === id);
+                  setActiveProtocol(id);
+                  setPhase(0);
+                  setTimer(p.phases[0].t);
+                  setCycles(0);
+                  setRunning(true);
+                };
+
+                const stopProtocol = () => { setRunning(false); setActiveProtocol(null); setCycles(0); };
+
+                const circlePct = proto ? (timer / proto.phases[phase]?.t) * 100 : 0;
+                const R = 36, circ = 2 * Math.PI * R;
+
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🌬️ Protocoles de Respiration</div>
+
+                    {!running ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {PROTOCOLS.map(p => (
+                          <button key={p.id} onClick={() => startProtocol(p.id)}
+                            style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: `${p.color}08`, border: `1px solid ${p.color}20`, borderRadius: 12, cursor: "pointer", textAlign: "left", outline: "none" }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${p.color}15`, border: `1.5px solid ${p.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                              {p.id === "box" ? "🔵" : p.id === "478" ? "💜" : "⚡"}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: p.color }}>{p.name}</div>
+                              <div style={{ fontSize: 10, color: "#636366" }}>{p.desc}</div>
+                            </div>
+                            <div style={{ fontSize: 11, color: p.color, fontWeight: 700 }}>▶</div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : proto ? (
+                      <div style={{ background: `${proto.color}08`, border: `1.5px solid ${proto.color}30`, borderRadius: 18, padding: "20px", textAlign: "center" }}>
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 12, color: proto.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{proto.name}</div>
+                          <div style={{ fontSize: 10, color: "#636366" }}>Cycle {cycles + 1}</div>
+                        </div>
+                        <div style={{ position: "relative", width: 100, height: 100, margin: "0 auto 12px" }}>
+                          <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+                            <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+                            <circle cx="50" cy="50" r={R} fill="none" stroke={proto.color} strokeWidth="6"
+                              strokeDasharray={circ} strokeDashoffset={circ * (1 - circlePct / 100)}
+                              strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+                          </svg>
+                          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                            <div className="bebas" style={{ fontSize: 28, color: proto.color, lineHeight: 1 }}>{timer}</div>
+                          </div>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 22, color: "#F2F2F7", letterSpacing: 2, marginBottom: 16 }}>{proto.phases[phase]?.l}</div>
+                        <button onClick={stopProtocol} style={{ background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.3)", borderRadius: 20, padding: "8px 20px", color: "#FF453A", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>⏹ Arrêter</button>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+
               {/* ── JOURNAL DOULEURS / BLESSURES ── */}
               {(() => {
                 const injuryKey = `fitrace_injuries_${profile.name}`;
