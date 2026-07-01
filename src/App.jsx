@@ -14712,6 +14712,90 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── STATION BEST TIMES BOARD ── */}
+      {(() => {
+        let times = {};
+        try { times = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch {}
+        const STATION_DEFS = [
+          { id: "skierg",    label: "SkiErg",    sub: "1000m",   icon: "⛷️",  color: "#C9A840", elite: 210, open: 330 },
+          { id: "sled_push", label: "Sled Push",  sub: "50m",    icon: "🛷",   color: "#FF9F0A", elite: 120, open: 210 },
+          { id: "sled_pull", label: "Sled Pull",  sub: "50m",    icon: "🔗",   color: "#FF453A", elite: 150, open: 240 },
+          { id: "burpee",    label: "Burpee BBJ", sub: "80m",    icon: "💪",  color: "#BF5AF2", elite: 180, open: 300 },
+          { id: "rowing",    label: "Rowing",     sub: "1000m",  icon: "🚣",   color: "#30D158", elite: 220, open: 320 },
+          { id: "farmers",   label: "Farmers",    sub: "200m",   icon: "🏋️",  color: "#FF9F0A", elite: 100, open: 160 },
+          { id: "sandbag",   label: "Sandbag",    sub: "100m",   icon: "🧱",   color: "#8E8E93", elite: 240, open: 380 },
+          { id: "wall_balls",label: "Wall Balls", sub: "100 reps",icon: "🏀",  color: "#C9A840", elite: 210, open: 360 },
+        ];
+        const recorded = STATION_DEFS.filter(s => times[s.id]);
+        if (recorded.length === 0) return null;
+
+        const fmtT = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+        const totalBest = recorded.reduce((a, s) => a + times[s.id], 0);
+
+        return (
+          <div style={{ background: "linear-gradient(145deg, rgba(28,28,30,1) 0%, rgba(10,10,10,1) 100%)", border: "1px solid rgba(201,168,64,0.15)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>🏆 Meilleurs Temps Stations</div>
+                <div style={{ fontSize: 10, color: "#636366" }}>Personal bests · Mode Course & Simulation</div>
+              </div>
+              {recorded.length >= 4 && (
+                <div style={{ textAlign: "right" }}>
+                  <div className="bebas" style={{ fontSize: 18, color: "#C9A840", lineHeight: 1 }}>{fmtT(totalBest)}</div>
+                  <div style={{ fontSize: 9, color: "#636366" }}>{recorded.length} stations</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {STATION_DEFS.map((s) => {
+                const t = times[s.id];
+                if (!t) return (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", opacity: 0.4 }}>
+                    <span style={{ fontSize: 16, width: 24, textAlign: "center" }}>{s.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 11, color: "#636366" }}>{s.label}</span>
+                      <span style={{ fontSize: 9, color: "#444", marginLeft: 6 }}>{s.sub}</span>
+                    </div>
+                    <span style={{ fontSize: 10, color: "#444" }}>—:——</span>
+                  </div>
+                );
+
+                const pct = Math.max(0, Math.min(100, Math.round(((s.open - t) / (s.open - s.elite)) * 100)));
+                const perfColor = pct >= 80 ? "#BF5AF2" : pct >= 55 ? "#FF9F0A" : pct >= 25 ? "#30D158" : "#8E8E93";
+                const perfLabel = pct >= 80 ? "ELITE" : pct >= 55 ? "PRO" : pct >= 25 ? "OPEN" : "EN DEV";
+
+                return (
+                  <div key={s.id} style={{ padding: "10px 12px", borderRadius: 12, background: `${s.color}08`, border: `1px solid ${s.color}20` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{s.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{s.label}</span>
+                        <span style={{ fontSize: 9, color: "#636366", marginLeft: 6 }}>{s.sub}</span>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div className="bebas" style={{ fontSize: 20, color: s.color, lineHeight: 1 }}>{fmtT(t)}</div>
+                        <div style={{ fontSize: 8, color: perfColor, fontWeight: 700 }}>{perfLabel}</div>
+                      </div>
+                    </div>
+                    {/* Performance bar */}
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${s.color}60, ${s.color})`, borderRadius: 99, transition: "width 0.8s ease" }}/>
+                      <div style={{ position: "absolute", top: 0, left: "33%", width: 1, height: "100%", background: "rgba(255,255,255,0.15)" }}/>
+                      <div style={{ position: "absolute", top: 0, left: "66%", width: 1, height: "100%", background: "rgba(255,255,255,0.15)" }}/>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                      <span style={{ fontSize: 8, color: "#444" }}>Open {fmtT(s.open)}</span>
+                      <span style={{ fontSize: 8, color: "#444" }}>Elite {fmtT(s.elite)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── RACE PACING PLANNER ── */}
       <button onClick={() => setShowPacer(v => !v)} style={{ width: "100%", background: showPacer ? "rgba(57,255,128,0.08)" : "rgba(255,255,255,0.04)", border: showPacer ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.07)", borderRadius: 16, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
         <div style={{ textAlign: "left" }}>
