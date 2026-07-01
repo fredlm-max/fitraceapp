@@ -17863,6 +17863,108 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RACE TIME BREAKDOWN ── */}
+      {(() => {
+        const fmtT = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+        const [targetMin, setTargetMin] = React.useState(75);
+        const [showBreakdown, setShowBreakdown] = React.useState(false);
+        const STATIONS = [
+          { id: "skierg",   label: "SkiErg",        icon: "⛷️",  runBefore: true,  eliteSec: 200, openSec: 290, pct: 0.080 },
+          { id: "sled_push",label: "Sled Push",     icon: "💪",  runBefore: true,  eliteSec: 180, openSec: 280, pct: 0.075 },
+          { id: "sled_pull",label: "Sled Pull",     icon: "🔗",  runBefore: true,  eliteSec: 160, openSec: 260, pct: 0.068 },
+          { id: "burpee",   label: "Burpee BJ",     icon: "🤸",  runBefore: true,  eliteSec: 170, openSec: 280, pct: 0.073 },
+          { id: "rowing",   label: "Rowing",         icon: "🚣",  runBefore: true,  eliteSec: 220, openSec: 320, pct: 0.090 },
+          { id: "farmers",  label: "Farmers Carry",  icon: "🏋️", runBefore: true,  eliteSec: 100, openSec: 160, pct: 0.043 },
+          { id: "sandbag",  label: "Sandbag Lunges", icon: "🧱",  runBefore: true,  eliteSec: 240, openSec: 380, pct: 0.100 },
+          { id: "wall_balls",label: "Wall Balls",   icon: "🏀",  runBefore: true,  eliteSec: 210, openSec: 360, pct: 0.090 },
+        ];
+        const RUN_PCT = (1 - STATIONS.reduce((a, s) => a + s.pct, 0)) / 8;
+        const totalSec = targetMin * 60;
+        const presets = [{ label: "60'", v: 60 }, { label: "75'", v: 75 }, { label: "90'", v: 90 }, { label: "100'", v: 100 }, { label: "120'", v: 120 }];
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, marginBottom: 12, overflow: "hidden" }}>
+            <button onClick={() => setShowBreakdown(v => !v)} style={{ width: "100%", background: "none", border: "none", padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ textAlign: "left" }}>
+                <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>🎯 DÉCOUPAGE TEMPS COURSE</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>Budget par station selon objectif</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)" }}>{Math.floor(targetMin)}'{targetMin % 1 ? "30\"" : ""}</div>
+                <div style={{ fontSize: 12, color: "#8E8E93" }}>{showBreakdown ? "▲" : "▼"}</div>
+              </div>
+            </button>
+            {showBreakdown && (
+              <div style={{ padding: "0 16px 16px" }}>
+                {/* Preset buttons */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {presets.map(p => (
+                    <button key={p.v} onClick={() => setTargetMin(p.v)}
+                      style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 700, background: targetMin === p.v ? "var(--yellow)" : "rgba(255,255,255,0.07)", color: targetMin === p.v ? "#000" : "#8E8E93", border: "none", cursor: "pointer" }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Slider */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <input type="range" min="55" max="150" step="5" value={targetMin} onChange={e => setTargetMin(Number(e.target.value))}
+                    style={{ flex: 1, accentColor: "#C9A840" }} />
+                  <div style={{ fontSize: 13, color: "var(--yellow)", fontWeight: 700, minWidth: 40 }}>{targetMin}'</div>
+                </div>
+                {/* Breakdown table */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {STATIONS.map((st, i) => {
+                    const stSec = Math.round(totalSec * st.pct);
+                    const runSec = Math.round(totalSec * RUN_PCT);
+                    const barPct = Math.min(100, Math.round((stSec / 360) * 100));
+                    return (
+                      <React.Fragment key={st.id}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                          <div style={{ fontSize: 14, width: 24, textAlign: "center" }}>🏃</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                              <div style={{ fontSize: 11, color: "#8E8E93" }}>Run {i+1} (1 km)</div>
+                              <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700 }}>{fmtT(runSec)}</div>
+                            </div>
+                            <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                              <div style={{ width: `${Math.round((runSec/90)*100)}%`, height: "100%", background: "var(--green)", borderRadius: 99, opacity: 0.7 }} />
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", background: "rgba(201,168,64,0.05)", borderRadius: 8 }}>
+                          <div style={{ fontSize: 14, width: 24, textAlign: "center" }}>{st.icon}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                              <div style={{ fontSize: 11, color: "var(--white)", fontWeight: 600 }}>{st.label}</div>
+                              <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>{fmtT(stSec)}</div>
+                            </div>
+                            <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                              <div style={{ width: `${barPct}%`, height: "100%", background: "var(--yellow)", borderRadius: 99 }} />
+                            </div>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, marginTop: 2 }}>
+                    <div style={{ fontSize: 14, width: 24, textAlign: "center" }}>🏃</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: 11, color: "#8E8E93" }}>Run final (1 km)</div>
+                        <div style={{ fontSize: 11, color: "var(--green)", fontWeight: 700 }}>{fmtT(Math.round(totalSec * RUN_PCT))}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(201,168,64,0.1)", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 12, color: "#8E8E93" }}>TOTAL CIBLE</div>
+                    <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>{fmtT(totalSec)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── RACE PACING PLANNER ── */}
       <button onClick={() => setShowPacer(v => !v)} style={{ width: "100%", background: showPacer ? "rgba(57,255,128,0.08)" : "rgba(255,255,255,0.04)", border: showPacer ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.07)", borderRadius: 16, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
         <div style={{ textAlign: "left" }}>
