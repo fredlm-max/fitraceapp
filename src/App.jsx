@@ -11642,6 +11642,117 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── WEIGHT & BODY COMPOSITION TRACKER ── */}
+      {(() => {
+        const weightKey = `fitrace_weight_${profile.name}`;
+        const [weightLog, setWeightLog] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(weightKey) || "[]"); } catch { return []; }
+        });
+        const [newWeight, setNewWeight] = React.useState("");
+        const [showInput, setShowInput] = React.useState(false);
+
+        const taille = parseFloat(profile.taille) || 175;
+        const startWeight = parseFloat(profile.poids) || 70;
+
+        const addEntry = () => {
+          const w = parseFloat(newWeight);
+          if (!w || w < 30 || w > 250) return;
+          const today = new Date().toISOString().slice(0, 10);
+          const existing = weightLog.findIndex(e => e.date === today);
+          const next = existing >= 0
+            ? weightLog.map((e, i) => i === existing ? { ...e, w } : e)
+            : [...weightLog, { date: today, w }].sort((a,b) => a.date.localeCompare(b.date));
+          setWeightLog(next);
+          localStorage.setItem(weightKey, JSON.stringify(next));
+          setNewWeight("");
+          setShowInput(false);
+        };
+
+        const allPoints = weightLog.slice(-12);
+        const latest = allPoints.length ? allPoints[allPoints.length - 1].w : startWeight;
+        const first = allPoints.length ? allPoints[0].w : startWeight;
+        const delta = latest - first;
+        const bmi = (latest / ((taille / 100) ** 2)).toFixed(1);
+        const bmiLabel = bmi < 18.5 ? { l: "Maigre", c: "#38bdf8" } : bmi < 25 ? { l: "Normal", c: "#30D158" } : bmi < 30 ? { l: "Surpoids", c: "#FF9F0A" } : { l: "Obésité", c: "#FF453A" };
+
+        if (allPoints.length < 2) {
+          return (
+            <Section title="⚖️ Poids & Composition" stagger={2} action={<button onClick={() => setShowInput(s => !s)} style={{ background: "rgba(201,168,64,0.1)", border: "1px solid rgba(201,168,64,0.25)", borderRadius: 20, padding: "4px 12px", fontSize: 11, color: "var(--yellow)", cursor: "pointer", fontWeight: 700 }}>+ Saisir</button>}>
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <div style={{ fontSize: 36, marginBottom: 6 }}>⚖️</div>
+                <div style={{ fontSize: 13, color: "#8E8E93" }}>Commence à suivre ton poids</div>
+                <div style={{ fontSize: 11, color: "#48484A", marginTop: 4 }}>Pour voir ta courbe et ton IMC</div>
+              </div>
+              {showInput && (
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <input type="number" value={newWeight} onChange={e => setNewWeight(e.target.value)} placeholder={`${startWeight} kg`} step="0.1"
+                    style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(201,168,64,0.3)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 14, outline: "none" }} />
+                  <button onClick={addEntry} style={{ background: "var(--yellow)", border: "none", borderRadius: 10, padding: "10px 16px", color: "#000", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>✓</button>
+                </div>
+              )}
+            </Section>
+          );
+        }
+
+        const W = 300, H = 80, pad = 10;
+        const minW = Math.min(...allPoints.map(p => p.w)) - 1;
+        const maxW = Math.max(...allPoints.map(p => p.w)) + 1;
+        const xOf = (i) => pad + (i / (allPoints.length - 1)) * (W - 2 * pad);
+        const yOf = (v) => H - pad - ((v - minW) / (maxW - minW)) * (H - 2 * pad);
+
+        const linePath = allPoints.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(1)},${yOf(p.w).toFixed(1)}`).join(" ");
+        const areaPath = `${linePath} L${xOf(allPoints.length-1).toFixed(1)},${H} L${xOf(0).toFixed(1)},${H} Z`;
+
+        return (
+          <Section title="⚖️ Poids & Composition" stagger={2} action={<button onClick={() => setShowInput(s => !s)} style={{ background: "rgba(201,168,64,0.1)", border: "1px solid rgba(201,168,64,0.25)", borderRadius: 20, padding: "4px 12px", fontSize: 11, color: "var(--yellow)", cursor: "pointer", fontWeight: 700 }}>+ Saisir</button>}>
+            {/* Stats row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+              <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 22, color: "#F2F2F7", lineHeight: 1 }}>{latest.toFixed(1)}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>kg actuel</div>
+              </div>
+              <div style={{ background: `${delta < 0 ? "rgba(48,209,88,0.08)" : delta > 0 ? "rgba(255,159,10,0.08)" : "rgba(255,255,255,0.04)"}`, border: `1px solid ${delta < 0 ? "rgba(48,209,88,0.2)" : delta > 0 ? "rgba(255,159,10,0.2)" : "rgba(255,255,255,0.07)"}`, borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 22, color: delta < 0 ? "#30D158" : delta > 0 ? "#FF9F0A" : "#8E8E93", lineHeight: 1 }}>{delta > 0 ? "+" : ""}{delta.toFixed(1)}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>Δ kg</div>
+              </div>
+              <div style={{ background: `${bmiLabel.c}10`, border: `1px solid ${bmiLabel.c}30`, borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 22, color: bmiLabel.c, lineHeight: 1 }}>{bmi}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>IMC · {bmiLabel.l}</div>
+              </div>
+            </div>
+
+            {/* SVG chart */}
+            <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 12, padding: "8px", marginBottom: 10, overflow: "hidden" }}>
+              <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block", height: 70 }}>
+                <defs>
+                  <linearGradient id="wGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#C9A840" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#C9A840" stopOpacity="0.02" />
+                  </linearGradient>
+                </defs>
+                <path d={areaPath} fill="url(#wGrad)" />
+                <path d={linePath} fill="none" stroke="#C9A840" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                {allPoints.map((p, i) => (
+                  <circle key={i} cx={xOf(i)} cy={yOf(p.w)} r="3" fill={i === allPoints.length - 1 ? "#C9A840" : "#8A6A10"} />
+                ))}
+              </svg>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#48484A", marginTop: 4, paddingLeft: pad, paddingRight: pad }}>
+                <span>{allPoints[0]?.date?.slice(5)}</span>
+                <span>{allPoints[allPoints.length-1]?.date?.slice(5)}</span>
+              </div>
+            </div>
+
+            {showInput && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input type="number" value={newWeight} onChange={e => setNewWeight(e.target.value)} placeholder={`${latest.toFixed(1)} kg`} step="0.1"
+                  style={{ flex: 1, background: "var(--bg3)", border: "1px solid rgba(201,168,64,0.3)", borderRadius: 10, padding: "10px", color: "var(--white)", fontSize: 14, outline: "none" }} />
+                <button onClick={addEntry} style={{ background: "var(--yellow)", border: "none", borderRadius: 10, padding: "10px 16px", color: "#000", fontWeight: 800, cursor: "pointer", fontSize: 14 }}>✓</button>
+              </div>
+            )}
+          </Section>
+        );
+      })()}
+
       {/* ── SMART GOAL TRACKER ── */}
       {(() => {
         const goalsKey = `fitrace_goals_${profile.name}`;
