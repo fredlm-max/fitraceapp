@@ -5953,6 +5953,76 @@ JSON:
               </div>
             )}
 
+            {/* ── RACE COUNTDOWN ALERT (J-14 to J-day) ── */}
+            {profile.raceDate && (() => {
+              const raceDate = new Date(profile.raceDate);
+              raceDate.setHours(0,0,0,0);
+              const now = new Date(); now.setHours(0,0,0,0);
+              const daysLeft = Math.ceil((raceDate - now) / 86400000);
+              if (daysLeft < 0 || daysLeft > 14) return null;
+
+              const isRaceDay = daysLeft === 0;
+              const CHECKLIST = daysLeft <= 1 ? [
+                { icon: "🍝", text: "Repas glucidique ce soir (pâtes, riz)", done: false },
+                { icon: "💧", text: "Hydratation : 2,5L aujourd'hui", done: false },
+                { icon: "😴", text: "Coucher avant 22h — 8h de sommeil", done: false },
+                { icon: "🎽", text: "Kit de course préparé & dans le sac", done: false },
+                { icon: "⏰", text: "Réveil posé — prévoir 3h avant départ", done: false },
+              ] : daysLeft <= 3 ? [
+                { icon: "🚶", text: "Séances légères uniquement — pas d'intensité", done: false },
+                { icon: "🍞", text: "Augmenter glucides (6-8g/kg/jour)", done: false },
+                { icon: "💧", text: "Hydratation optimale : 2L+/jour", done: false },
+                { icon: "😴", text: "Priorité sommeil — 8h minimum", done: false },
+              ] : [
+                { icon: "📉", text: "Réduire volume de 40% cette semaine", done: false },
+                { icon: "⚡", text: "Maintenir 1-2 séances courtes avec intensité", done: false },
+                { icon: "🍎", text: "Nutrition propre — éviter les nouveautés", done: false },
+                { icon: "🧘", text: "Visualisation de course 10 min/jour", done: false },
+              ];
+
+              const checklistKey = `fitrace_race_checklist_${profile.name}_${profile.raceDate}`;
+              const [checked, setChecked] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(checklistKey) || "{}"); } catch { return {}; }
+              });
+              const toggleCheck = (i) => {
+                const next = { ...checked, [i]: !checked[i] };
+                setChecked(next);
+                localStorage.setItem(checklistKey, JSON.stringify(next));
+              };
+
+              const color = isRaceDay ? "#BF5AF2" : daysLeft <= 1 ? "#FF453A" : daysLeft <= 3 ? "#FF9F0A" : "#C9A840";
+              const bg = isRaceDay ? "rgba(191,90,242,0.08)" : daysLeft <= 1 ? "rgba(255,69,58,0.08)" : daysLeft <= 3 ? "rgba(255,159,10,0.07)" : "rgba(201,168,64,0.07)";
+
+              return (
+                <div style={{ background: bg, border: `1.5px solid ${color}30`, borderRadius: 18, padding: "16px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <div style={{ textAlign: "center", background: `${color}15`, border: `1px solid ${color}30`, borderRadius: 12, padding: "8px 12px", minWidth: 52 }}>
+                      <div className="bebas" style={{ fontSize: 28, color, lineHeight: 1 }}>{isRaceDay ? "🏁" : daysLeft}</div>
+                      <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>{isRaceDay ? "C'est le jour" : daysLeft === 1 ? "Demain" : "Jours"}</div>
+                    </div>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 16, color, letterSpacing: 1 }}>{isRaceDay ? "🔥 JOUR J — HYROX!" : daysLeft <= 1 ? "DERNIÈRE NUIT AVANT LA COURSE" : daysLeft <= 3 ? "AFFÛTAGE FINAL" : "SEMAINE DE TAPER"}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
+                        {profile.raceDate ? new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) : ""}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {CHECKLIST.map((item, i) => (
+                      <button key={i} onClick={() => toggleCheck(i)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.2)", border: `1px solid ${checked[i] ? color + "30" : "rgba(255,255,255,0.05)"}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", textAlign: "left", outline: "none", transition: "all 0.2s" }}>
+                        <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${checked[i] ? color : "#444"}`, background: checked[i] ? color : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {checked[i] && <div style={{ fontSize: 10, color: "#000", fontWeight: 900 }}>✓</div>}
+                        </div>
+                        <span style={{ fontSize: 12, color: checked[i] ? "#636366" : "#D1D1D6", textDecoration: checked[i] ? "line-through" : "none" }}>{item.icon} {item.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── CITATION DU JOUR ── */}
             {(() => {
               const citation = getCitationDuJour();
