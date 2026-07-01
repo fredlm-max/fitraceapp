@@ -4295,7 +4295,7 @@ RPE: ${feedbackData.difficulte}/10 ${feedbackData.difficulte >= 9 ? "(⚠️ TR�
 Douleurs: ${feedbackData.douleurs || "aucune"} ${douloursGraves ? "(⚠️ POTENTIELLEMENT GRAVE)" : ""}
 
 ── PERFORMANCES EXERCICE PAR EXERCICE ──
-${feedbackData.exercicesLog ? feedbackData.exercicesLog.map(e => `${e.nom}: ${e.charge || "-"}kg × ${e.reps || "-"} reps | ${e.sets || "-"} sets | ressenti: ${e.ressenti || "/"}`).join("\n") : ""}
+${feedbackData.exercicesLog ? feedbackData.exercicesLog.map(e => `${e.nom}: ${e.charge || "-"}kg × ${e.reps || "-"} reps | ${e.sets || "-"} sets | RPE: ${e.rpe || "-"}/10 | temps: ${e.temps || "-"}min | dist: ${e.distance || "-"}m`).join("\n") : ""}
 Photo/montre analysée: ${feedbackData._photoAnalyse || "aucune photo"}
 Données extraites photo: ${feedbackData.charges || "aucune"}
 
@@ -7443,24 +7443,41 @@ JSON:
                             newLog[i] = { ...log, [field]: val };
                             setFeedbackData(d => ({ ...d, exercicesLog: newLog }));
                           };
+                          const rpeVal = parseInt(log.rpe) || 5;
+                          const rpeColor = rpeVal <= 4 ? "#30D158" : rpeVal <= 7 ? "#0A84FF" : "#FF453A";
+                          const isCardio = ex.nom?.toLowerCase().match(/ski|row|run|course|burpee/);
                           return (
-                            <div key={i} style={{ background: "var(--bg3)", borderRadius: 10, padding: "12px 14px" }}>
-                              <div style={{ fontWeight: 700, fontSize: 13, color: "var(--white)", marginBottom: 8 }}>{ex.nom}</div>
-                              <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 8 }}>Prévu: {ex.detail}</div>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-                                <Input label="Charge (kg)" value={log.charge} onChange={v => updateLog("charge", v)} type="number" placeholder="ex: 85" />
-                                <Input label="Reps" value={log.reps} onChange={v => updateLog("reps", v)} type="number" placeholder="ex: 5" />
-                                <Input label="Sets" value={log.sets} onChange={v => updateLog("sets", v)} type="number" placeholder="ex: 4" />
+                            <div key={i} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--white)" }}>{ex.nom}</div>
+                                <div style={{ fontSize: 10, color: "#8E8E93", textAlign: "right" }}>{ex.detail}</div>
                               </div>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                {[{ v: "facile", label: "😴 Facile" }, { v: "bien", label: "✓ OK" }, { v: "dur", label: "🔥 Dur" }].map(r => (
-                                  <button key={r.v} onClick={() => updateLog("ressenti", r.v)} style={{
-                                    flex: 1, padding: "5px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                    background: log.ressenti === r.v ? "rgba(0,122,255,0.1)" : "var(--bg2)",
-                                    border: log.ressenti === r.v ? "1.5px solid var(--yellow)" : "1px solid transparent",
-                                    color: log.ressenti === r.v ? "var(--yellow)" : "#555", cursor: "pointer",
-                                  }}>{r.label}</button>
-                                ))}
+                              <div style={{ display: "grid", gridTemplateColumns: isCardio ? "1fr 1fr" : "1fr 1fr 1fr", gap: 6, marginBottom: 10 }}>
+                                {isCardio ? (
+                                  <>
+                                    <Input label="Temps (min)" value={log.temps || ""} onChange={v => updateLog("temps", v)} type="number" placeholder="ex: 3:45" />
+                                    <Input label="Dist. (m)" value={log.distance || ""} onChange={v => updateLog("distance", v)} type="number" placeholder="ex: 500" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <Input label="Charge (kg)" value={log.charge} onChange={v => updateLog("charge", v)} type="number" placeholder="ex: 85" />
+                                    <Input label="Reps" value={log.reps} onChange={v => updateLog("reps", v)} type="number" placeholder="ex: 5" />
+                                    <Input label="Sets" value={log.sets} onChange={v => updateLog("sets", v)} type="number" placeholder="ex: 4" />
+                                  </>
+                                )}
+                              </div>
+                              {/* RPE slider 1-10 */}
+                              <div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                  <span style={{ fontSize: 10, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.06em" }}>RPE station</span>
+                                  <span style={{ fontSize: 13, fontWeight: 800, color: rpeColor }}>{rpeVal}/10 — {rpeVal <= 3 ? "Facile" : rpeVal <= 5 ? "Modéré" : rpeVal <= 7 ? "Difficile" : rpeVal <= 9 ? "Très dur" : "Max"}</span>
+                                </div>
+                                <input type="range" min="1" max="10" value={rpeVal} onChange={e => updateLog("rpe", e.target.value)}
+                                  style={{ width: "100%", accentColor: rpeColor, height: 4, cursor: "pointer" }} />
+                                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                  <span style={{ fontSize: 9, color: "#30D158" }}>1 Repos</span>
+                                  <span style={{ fontSize: 9, color: "#FF453A" }}>10 Max</span>
+                                </div>
                               </div>
                             </div>
                           );
