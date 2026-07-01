@@ -507,6 +507,21 @@ function buildProgressionData(profile) {
   if (profile.deadlift1RM_final) data.deadlift.push({ label: "Init", value: profile.deadlift1RM_final, session: 0 });
   if (profile.vmaKmh) data.vma.push({ label: "Init", value: Math.round(profile.vmaKmh * 10) / 10, session: 0 });
 
+  // Extraire les charges depuis les logs d'exercices (RPE + charge réels)
+  sessions.forEach((s, i) => {
+    const dateLabel = s.date ? new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : `S${i+1}`;
+    (s.exercicesLog || []).forEach(e => {
+      if (!e.charge || !e.nom) return;
+      const charge = parseFloat(e.charge);
+      const reps = parseInt(e.reps) || 1;
+      // Epley 1RM estimation from sets data
+      const est1RM = reps > 1 ? Math.round(charge * (1 + reps / 30)) : charge;
+      if (e.nom.match(/squat/i) && est1RM > 20) data.squat.push({ label: dateLabel, value: est1RM, session: i + 1 });
+      if (e.nom.match(/deadlift|soulevé/i) && est1RM > 20) data.deadlift.push({ label: dateLabel, value: est1RM, session: i + 1 });
+      if (e.nom.match(/farmer/i) && charge > 5) data.farmer.push({ label: dateLabel, value: charge, session: i + 1 });
+    });
+  });
+
   // Extraire les charges depuis les adaptations IA
   adaptations.forEach((a, i) => {
     const txt = a.adaptation || "";
@@ -519,6 +534,15 @@ function buildProgressionData(profile) {
     if (fM) data.farmer.push({ label: `S${sNum}`, value: parseFloat(fM[1]), session: sNum });
     const vM = txt.match(/([0-9]+(?:\.[0-9]+)?)\s*km\/h/i);
     if (vM) data.vma.push({ label: `S${sNum}`, value: parseFloat(vM[1]), session: sNum });
+  });
+
+  // Deduplicate — keep max per session
+  ['squat', 'deadlift', 'farmer', 'vma'].forEach(key => {
+    const bySession = {};
+    data[key].forEach(p => {
+      if (!bySession[p.session] || p.value > bySession[p.session].value) bySession[p.session] = p;
+    });
+    data[key] = Object.values(bySession).sort((a,b) => a.session - b.session);
   });
 
   return data;
@@ -589,7 +613,7 @@ function RPELineChart({ profile }) {
             {[2,4,6,8,10].map(v => (
               <g key={v}>
                 <line x1={0} y1={yScale(v)} x2={innerW} y2={yScale(v)} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
-                <text x={-4} y={yScale(v)+4} textAnchor="end" fill="#333" fontSize={8}>{v}</text>
+                <text x={-4} y={yScale(v)+4} textAnchor="end" fill="#636366" fontSize={8}>{v}</text>
               </g>
             ))}
             {/* Zone couleur RPE */}
@@ -615,12 +639,12 @@ function RPELineChart({ profile }) {
                       <rect x={cx-40} y={cy-46} width={80} height={38} rx={6} fill="var(--bg2)" stroke={color} strokeWidth={1} />
                       <text x={cx} y={cy-30} textAnchor="middle" fill={color} fontSize={11} fontWeight="700">{d.y}/10</text>
                       <text x={cx} y={cy-18} textAnchor="middle" fill="#888" fontSize={9}>{d.label}</text>
-                      <text x={cx} y={cy-8} textAnchor="middle" fill="#555" fontSize={8}>{(d.titre||"").slice(0,18)}</text>
+                      <text x={cx} y={cy-8} textAnchor="middle" fill="#636366" fontSize={8}>{(d.titre||"").slice(0,18)}</text>
                     </g>
                   )}
                   {/* Label date pour premier/dernier */}
                   {(i === 0 || i === data.length-1) && (
-                    <text x={cx} y={innerH+16} textAnchor="middle" fill="#444" fontSize={8}>{d.label}</text>
+                    <text x={cx} y={innerH+16} textAnchor="middle" fill="#636366" fontSize={8}>{d.label}</text>
                   )}
                 </g>
               );
@@ -851,8 +875,9 @@ function MultiChargesChart({ profile }) {
   const [tooltip, setTooltip] = useState(null);
 
   const datasets = [
-    { key: "squat", label: "Squat", color: "var(--yellow)", data: progression.squat },
-    { key: "deadlift", label: "Deadlift", color: "var(--green)", data: progression.deadlift },
+    { key: "squat", label: "Squat", color: "#0A84FF", data: progression.squat },
+    { key: "deadlift", label: "Deadlift", color: "#30D158", data: progression.deadlift },
+    { key: "farmer", label: "Farmers", color: "#FF9F0A", data: progression.farmer },
   ].filter(d => d.data.length >= 2);
 
   if (datasets.length === 0) return null;
@@ -873,16 +898,24 @@ function MultiChargesChart({ profile }) {
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>CHARGES (kg)</div>
-        <div style={{ display: "flex", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <div style={{ width: 3, height: 18, background: "#0A84FF", borderRadius: 99 }} />
+            <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>PROGRESSION FORCE</div>
+          </div>
+          <div style={{ fontSize: 10, color: "#8E8E93" }}>1RM estimé · extraits des séances</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
           {datasets.map(d => {
             const pct = getProgressionPct(d.data);
+            const last = d.data[d.data.length - 1]?.value;
             return (
-              <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ width: 12, height: 3, background: d.color, borderRadius: 99 }} />
+              <div key={d.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: d.color }} />
                 <span style={{ fontSize: 11, color: d.color, fontWeight: 700 }}>{d.label}</span>
-                {pct !== null && <span style={{ fontSize: 10, color: "#8E8E93" }}>+{pct}%</span>}
+                <span style={{ fontSize: 12, fontWeight: 800, color: "var(--white)" }}>{last}kg</span>
+                {pct !== null && <span style={{ fontSize: 10, color: pct >= 0 ? "#30D158" : "#FF453A", fontWeight: 700 }}>{pct >= 0 ? "+" : ""}{pct}%</span>}
               </div>
             );
           })}
@@ -897,7 +930,7 @@ function MultiChargesChart({ profile }) {
             return (
               <g key={pct}>
                 <line x1={0} y1={y} x2={innerW} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
-                <text x={-4} y={y+4} textAnchor="end" fill="#2a2a2a" fontSize={8}>{Math.round(minVal + range * pct / 100)}</text>
+                <text x={-4} y={y+4} textAnchor="end" fill="#636366" fontSize={8}>{Math.round(minVal + range * pct / 100)}</text>
               </g>
             );
           })}
@@ -922,7 +955,7 @@ function MultiChargesChart({ profile }) {
                       </g>
                     )}
                     {(i === 0 || i === d.length-1) && (
-                      <text x={xScale(i, d.length)} y={innerH+14} textAnchor="middle" fill="#444" fontSize={8}>{p.label}</text>
+                      <text x={xScale(i, d.length)} y={innerH+14} textAnchor="middle" fill="#636366" fontSize={8}>{p.label}</text>
                     )}
                   </g>
                 ))}
@@ -2632,7 +2665,7 @@ function WeeklyPerformanceCard({ profile }) {
               strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
               transform="rotate(-90 50 50)" style={{ transition: "stroke-dashoffset 1s ease, stroke 0.5s" }} />
             <text x="50" y="45" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="24" fill={scoreColor}>{score}</text>
-            <text x="50" y="60" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#444">{label}</text>
+            <text x="50" y="60" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#636366">{label}</text>
           </svg>
         </div>
 
@@ -2728,7 +2761,7 @@ function TrainingMixChart({ profile }) {
             {arcs.map((arc, i) => (
               <path key={i} d={arc.d} fill="none" stroke={arc.color} strokeWidth={stroke} strokeLinecap="butt" />
             ))}
-            <text x={cx} y={cy-4} textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#555">TOP</text>
+            <text x={cx} y={cy-4} textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#636366">TOP</text>
             <text x={cx} y={cy+8} textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="13" fill={top?.color}>{top?.label}</text>
           </svg>
         </div>
@@ -4751,7 +4784,7 @@ JSON:
                       <text x="110" y="100" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="72" fill={col} style={{ transition: "fill 0.5s" }}>
                         {reposCountdown > 0 ? reposCountdown : "GO"}
                       </text>
-                      {reposCountdown > 0 && <text x="110" y="128" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="14" fill="#333">secondes</text>}
+                      {reposCountdown > 0 && <text x="110" y="128" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="14" fill="#636366">secondes</text>}
                       {reposCountdown === 0 && <text x="110" y="136" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="24" fill={col}>C'EST PARTI !</text>}
                     </svg>
                   );
@@ -4953,7 +4986,7 @@ JSON:
                       {dims.map((d, i) => {
                         const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
                         const lx = cx + (R + 10) * Math.cos(angle); const ly = cy + (R + 10) * Math.sin(angle);
-                        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="7" fill="#555" fontFamily="'DM Sans',sans-serif">{d}</text>;
+                        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="7" fill="#636366" fontFamily="'DM Sans',sans-serif">{d}</text>;
                       })}
                     </svg>
                     {/* Stats */}
@@ -5273,8 +5306,8 @@ JSON:
                         />
                         {/* Score text */}
                         <text x="70" y="62" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="42" fill={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#007AFF" : "#ff9a3c"}>{sc.global}</text>
-                        <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#444" letterSpacing="2">/ 100</text>
-                        <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#333" letterSpacing="1">SCORE FITNESS</text>
+                        <text x="70" y="80" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="11" fill="#636366" letterSpacing="2">/ 100</text>
+                        <text x="70" y="96" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#636366" letterSpacing="1">SCORE FITNESS</text>
                       </svg>
                     </div>
 
@@ -5363,7 +5396,7 @@ JSON:
                           strokeDasharray={circ} strokeDashoffset={offset} transform="rotate(-90 40 40)"
                           style={{ transition: "stroke-dashoffset 1.2s ease" }} />
                         <text x="40" y="38" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="22" fill={color}>{readiness}</text>
-                        <text x="40" y="50" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="8" fill="#555">/ 100</text>
+                        <text x="40" y="50" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="8" fill="#636366">/ 100</text>
                       </svg>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -15039,5 +15072,6 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
 
 
