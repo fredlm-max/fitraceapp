@@ -7819,6 +7819,134 @@ JSON:
               </div>
             )}
 
+            {/* ── PERFORMANCE MANAGEMENT CHART (CTL/ATL/TSB) ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = profile.sessions || [];
+              const DAYS = 60;
+              const today = new Date(); today.setHours(0,0,0,0);
+
+              // Build daily TRIMP map
+              const dayMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                const key = s.date.slice(0,10);
+                const dur = parseInt(s.dureeReelle || s.duree || 45);
+                const rpe = parseFloat(s.rpe || s.rpeGlobal || s.difficulte || 6);
+                dayMap[key] = (dayMap[key] || 0) + Math.round(dur * rpe / 10);
+              });
+
+              // Compute CTL (42d EMA), ATL (7d EMA), TSB = CTL - ATL over 90 days history
+              const k_ctl = 2 / (42 + 1);
+              const k_atl = 2 / (7 + 1);
+              let ctl = 0, atl = 0;
+              const points = [];
+              for (let i = 89; i >= -1; i--) {
+                const d = new Date(today); d.setDate(today.getDate() - i);
+                const key = d.toISOString().slice(0,10);
+                const trimp = dayMap[key] || 0;
+                ctl = ctl + k_ctl * (trimp - ctl);
+                atl = atl + k_atl * (trimp - atl);
+                const tsb = ctl - atl;
+                if (i < DAYS) points.push({ date: d, key, ctl: Math.round(ctl*10)/10, atl: Math.round(atl*10)/10, tsb: Math.round(tsb*10)/10, trimp });
+              }
+
+              const curCTL = points[points.length-1]?.ctl || 0;
+              const curATL = points[points.length-1]?.atl || 0;
+              const curTSB = points[points.length-1]?.tsb || 0;
+
+              const W = 320, H = 100;
+              const maxVal = Math.max(...points.map(p => Math.max(p.ctl, p.atl)), 1);
+              const minTSB = Math.min(...points.map(p => p.tsb), -5);
+              const maxTSB = Math.max(...points.map(p => p.tsb), 5);
+              const tsbRange = maxTSB - minTSB || 1;
+              const tsbZero = H * 0.65; // zero line Y position
+
+              function px(i) { return Math.round((i / (points.length - 1)) * W); }
+              function pyLine(v) { return Math.round(H * 0.65 * (1 - v / maxVal)); }
+              function pyTSB(v) { return Math.round(tsbZero + (-(v / tsbRange) * H * 0.28)); }
+
+              const ctlPath = points.map((p,i) => `${i===0?"M":"L"}${px(i)},${pyLine(p.ctl)}`).join(" ");
+              const atlPath = points.map((p,i) => `${i===0?"M":"L"}${px(i)},${pyLine(p.atl)}`).join(" ");
+              const tsbPath = points.map((p,i) => `${i===0?"M":"L"}${px(i)},${pyTSB(p.tsb)}`).join(" ");
+
+              const tsbColor = curTSB > 10 ? "#30D158" : curTSB > 0 ? "#C9A840" : curTSB > -10 ? "#FF9F0A" : "#FF453A";
+              const tsbLabel = curTSB > 10 ? "FRAIS 🟢" : curTSB > 0 ? "ÉQUILIBRÉ 🟡" : curTSB > -10 ? "FATIGUÉ 🟠" : "SURCHARGE 🔴";
+              const tsbTip = curTSB > 10 ? "Corps reposé — séance intense possible" : curTSB > 0 ? "Bonne forme — maintiens le cap" : curTSB > -10 ? "Fatigue accumulée — adapte le volume" : "Récupère — repos ou sortie douce";
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>📈 Forme du moment</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>CTL · ATL · TSB · modèle TrainingPeaks</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 28, color: tsbColor, lineHeight: 1 }}>{curTSB > 0 ? "+" : ""}{curTSB}</div>
+                      <div style={{ fontSize: 9, color: tsbColor, fontWeight: 700 }}>{tsbLabel}</div>
+                    </div>
+                  </div>
+
+                  {/* KPI row */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    {[
+                      { label: "FITNESS (CTL)", value: curCTL.toFixed(1), color: "#C9A840", desc: "Forme chronique 42j" },
+                      { label: "FATIGUE (ATL)", value: curATL.toFixed(1), color: "#FF453A", desc: "Charge aiguë 7j" },
+                      { label: "FORME (TSB)", value: (curTSB > 0 ? "+" : "") + curTSB, color: tsbColor, desc: tsbTip },
+                    ].map((k, i) => (
+                      <div key={i} style={{ flex: 1, background: `${k.color}0A`, border: `1px solid ${k.color}25`, borderRadius: 12, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{k.label}</div>
+                        <div className="bebas" style={{ fontSize: 20, color: k.color, lineHeight: 1 }}>{k.value}</div>
+                        <div style={{ fontSize: 8, color: "#636366", marginTop: 2, lineHeight: 1.3 }}>{k.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* SVG chart */}
+                  <div style={{ overflowX: "hidden" }}>
+                    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block" }}>
+                      {/* Zero line for TSB */}
+                      <line x1="0" y1={tsbZero} x2={W} y2={tsbZero} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="3,3"/>
+
+                      {/* TSB area fill */}
+                      {points.map((p, i) => {
+                        if (i === 0) return null;
+                        const x1 = px(i-1), x2 = px(i);
+                        const y1 = pyTSB(points[i-1].tsb), y2 = pyTSB(p.tsb);
+                        const fillColor = p.tsb >= 0 ? "rgba(48,209,88,0.15)" : "rgba(255,69,58,0.12)";
+                        return <polygon key={i} points={`${x1},${tsbZero} ${x1},${y1} ${x2},${y2} ${x2},${tsbZero}`} fill={fillColor}/>;
+                      })}
+
+                      {/* CTL line */}
+                      <path d={ctlPath} fill="none" stroke="#C9A840" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      {/* ATL line */}
+                      <path d={atlPath} fill="none" stroke="#FF453A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4,2"/>
+                      {/* TSB line */}
+                      <path d={tsbPath} fill="none" stroke={tsbColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+
+                      {/* Today dot on CTL */}
+                      <circle cx={px(points.length-1)} cy={pyLine(curCTL)} r="3" fill="#C9A840"/>
+                      <circle cx={px(points.length-1)} cy={pyTSB(curTSB)} r="3" fill={tsbColor}/>
+                    </svg>
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                    {[
+                      { color: "#C9A840", label: "CTL Fitness", dash: false },
+                      { color: "#FF453A", label: "ATL Fatigue", dash: true },
+                      { color: tsbColor,  label: "TSB Forme",   dash: false },
+                    ].map((l, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash ? "4,2" : "none"}/></svg>
+                        <span style={{ fontSize: 9, color: "#636366" }}>{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── SCORE SEMAINE ── */}
             {(profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
