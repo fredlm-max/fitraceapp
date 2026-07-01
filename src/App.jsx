@@ -14292,6 +14292,59 @@ JSON: {
         );
       })()}
 
+      {/* ── HYDRATION TRACKER ── */}
+      {(() => {
+        const hydKey = `fitrace_hydration_${profile.name}_${today}`;
+        const [glasses, setGlasses] = React.useState(() => {
+          try { return parseInt(localStorage.getItem(hydKey) || "0"); } catch { return 0; }
+        });
+        const target = Math.round((parseFloat(profile.poids) || 75) * 0.035);
+        const glassesNeeded = Math.ceil(target / 0.25);
+        const pct = Math.min(100, (glasses / glassesNeeded) * 100);
+        const addGlass = () => {
+          const next = Math.min(glasses + 1, 20);
+          setGlasses(next);
+          localStorage.setItem(hydKey, String(next));
+        };
+        const removeGlass = () => {
+          const next = Math.max(glasses - 1, 0);
+          setGlasses(next);
+          localStorage.setItem(hydKey, String(next));
+        };
+        const color = pct >= 100 ? "#30D158" : pct >= 60 ? "#C9A840" : "#FF453A";
+        return (
+          <div style={{ background: "rgba(28,28,30,0.8)", borderRadius: 18, padding: "16px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>💧 Hydratation</div>
+                <div style={{ fontSize: 13, color: "#F2F2F7", fontWeight: 700, marginTop: 2 }}>{(glasses * 0.25).toFixed(2)}L / {target}L objectif</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={removeGlass} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", color: "#8E8E93", fontSize: 18, cursor: "pointer", fontWeight: 700, lineHeight: 1 }}>−</button>
+                <div style={{ textAlign: "center", minWidth: 36 }}>
+                  <div className="bebas" style={{ fontSize: 28, color, lineHeight: 1 }}>{glasses}</div>
+                  <div style={{ fontSize: 8, color: "#48484A" }}>verres</div>
+                </div>
+                <button onClick={addGlass} style={{ width: 32, height: 32, borderRadius: "50%", background: color + "25", border: `1px solid ${color}40`, color, fontSize: 20, cursor: "pointer", fontWeight: 700, lineHeight: 1 }}>+</button>
+              </div>
+            </div>
+            {/* Water drop grid */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
+              {Array.from({ length: glassesNeeded }).map((_, i) => (
+                <div key={i} onClick={() => { i < glasses ? removeGlass() : addGlass(); }}
+                  style={{ width: 28, height: 28, borderRadius: 8, background: i < glasses ? color + "30" : "rgba(255,255,255,0.05)", border: `1.5px solid ${i < glasses ? color : "rgba(255,255,255,0.08)"}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, transition: "all 0.15s" }}>
+                  {i < glasses ? "💧" : "○"}
+                </div>
+              ))}
+            </div>
+            <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, #007AFF, ${color})`, borderRadius: 2, transition: "width 0.4s ease" }} />
+            </div>
+            {pct >= 100 && <div style={{ marginTop: 6, fontSize: 11, color: "#30D158", fontWeight: 700 }}>✅ Objectif hydratation atteint !</div>}
+          </div>
+        );
+      })()}
+
       {/* ══ JOURNAL ══ */}
       {subTab === "journal" && (
         <div>
