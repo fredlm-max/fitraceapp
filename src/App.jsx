@@ -5320,6 +5320,78 @@ JSON:
               );
             })()}
 
+            {/* ── RACE READINESS SCORE ── */}
+            {profile.raceDate && (() => {
+              const daysLeft = daysUntil(profile.raceDate);
+              if (daysLeft === null || daysLeft < 0) return null;
+              const sc = calcFitnessScore(profile);
+              const sessions = profile.sessions || [];
+              const totalWeeks = totalWeeksFromDate(profile.raceDate);
+              const currentWeek = profile.week || 1;
+              const progressRatio = totalWeeks > 0 ? Math.min(1, currentWeek / totalWeeks) : 0.5;
+
+              // Calculate each pillar score
+              const fitnessScore = Math.min(100, sc.global);
+              const consistencyScore = Math.min(100, sessions.length >= 20 ? 100 : sessions.length * 5);
+              const timeScore = daysLeft > 90 ? 100 : daysLeft > 30 ? 70 : daysLeft > 14 ? 50 : daysLeft > 7 ? 35 : 20;
+              const progressScore = Math.round(progressRatio * 100);
+
+              const readiness = Math.round((fitnessScore * 0.35) + (consistencyScore * 0.30) + (timeScore * 0.20) + (progressScore * 0.15));
+
+              const pillars = [
+                { label: "Fitness", val: fitnessScore, color: "#0A84FF", icon: "💪" },
+                { label: "Régularité", val: consistencyScore, color: "#30D158", icon: "🔥" },
+                { label: "Temps dispo", val: timeScore, color: "#FF9F0A", icon: "⏳" },
+                { label: "Programme", val: progressScore, color: "#BF5AF2", icon: "📅" },
+              ];
+
+              const color = readiness >= 75 ? "#30D158" : readiness >= 50 ? "#0A84FF" : readiness >= 30 ? "#FF9F0A" : "#FF453A";
+              const label = readiness >= 75 ? "Prêt à concourir" : readiness >= 50 ? "En bonne voie" : readiness >= 30 ? "À renforcer" : "Phase de base";
+
+              const circ = 2 * Math.PI * 36;
+              const offset = circ - (readiness / 100) * circ;
+
+              return (
+                <div className="float-up" style={{ background: "linear-gradient(145deg, #0c0c0e, #141418)", border: `1px solid ${color}22`, borderRadius: 20, padding: "16px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: `radial-gradient(circle, ${color}10 0%, transparent 65%)`, pointerEvents: "none" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
+                    {/* Readiness ring */}
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                      <svg width="80" height="80" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
+                        <circle cx="40" cy="40" r="36" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
+                          strokeDasharray={circ} strokeDashoffset={offset} transform="rotate(-90 40 40)"
+                          style={{ transition: "stroke-dashoffset 1.2s ease" }} />
+                        <text x="40" y="38" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="22" fill={color}>{readiness}</text>
+                        <text x="40" y="50" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="8" fill="#555">/ 100</text>
+                      </svg>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Race Readiness</div>
+                      <div className="bebas" style={{ fontSize: 20, color: "var(--white)", lineHeight: 1, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93" }}>
+                        {daysLeft === 0 ? "🏁 C'est aujourd'hui !" : `J-${daysLeft} · ${daysLeft <= 14 ? "Affûtage 🎯" : daysLeft <= 30 ? "Sprint final 🚀" : "Phase de build 💪"}`}
+                      </div>
+                    </div>
+                  </div>
+                  {/* 4 pillars */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {pillars.map(p => (
+                      <div key={p.label} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "8px 10px", border: `1px solid ${p.color}18` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, color: "#8E8E93" }}>{p.icon} {p.label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: p.color }}>{p.val}%</span>
+                        </div>
+                        <div style={{ height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{ width: `${p.val}%`, height: "100%", background: p.color, borderRadius: 99, transition: "width 1s ease" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ══════════════════════════════════════════
                 COMMAND CENTER — PRO ATHLETE DASHBOARD
                 ══════════════════════════════════════════ */}
