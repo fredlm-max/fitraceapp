@@ -7717,6 +7717,68 @@ JSON:
             {/* ── MIX ENTRAÎNEMENT ── */}
             <TrainingMixChart profile={profile} />
 
+            {/* ── STATION RPE HISTORY ── */}
+            {(profile.sessions||[]).some(s => (s.exercicesLog||[]).some(e => e.rpe)) && (() => {
+              const STATION_KEYS = [
+                { key: "ski", label: "SkiErg", color: "#0A84FF", match: /ski/i },
+                { key: "sled_push", label: "Sled Push", color: "#FF9F0A", match: /sled.push|sled push/i },
+                { key: "sled_pull", label: "Sled Pull", color: "#FF453A", match: /sled.pull|sled pull/i },
+                { key: "burpee", label: "Burpee", color: "#BF5AF2", match: /burpee/i },
+                { key: "rowing", label: "Rowing", color: "#30D158", match: /row/i },
+                { key: "farmers", label: "Farmers", color: "#FF9F0A", match: /farmer/i },
+                { key: "sandbag", label: "Sandbag", color: "#8E8E93", match: /sandbag/i },
+                { key: "wall_balls", label: "Wall Balls", color: "#0A84FF", match: /wall.ball/i },
+              ];
+              // Collect RPE per station across all sessions
+              const stationHistory = {};
+              (profile.sessions||[]).forEach(s => {
+                (s.exercicesLog||[]).forEach(e => {
+                  if (!e.rpe || !e.nom) return;
+                  const st = STATION_KEYS.find(k => k.match.test(e.nom));
+                  if (!st) return;
+                  if (!stationHistory[st.key]) stationHistory[st.key] = { ...st, values: [] };
+                  stationHistory[st.key].values.push({ rpe: parseInt(e.rpe), date: s.date });
+                });
+              });
+              const stations = Object.values(stationHistory).filter(s => s.values.length >= 1);
+              if (stations.length === 0) return null;
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <div style={{ width: 3, height: 18, background: "var(--yellow)", borderRadius: 99 }} />
+                    <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>RPE PAR STATION</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>Effort ressenti · toutes séances</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {stations.map(st => {
+                      const avg = Math.round(st.values.reduce((a,b) => a + b.rpe, 0) / st.values.length * 10) / 10;
+                      const last = st.values[st.values.length - 1]?.rpe;
+                      const trend = st.values.length >= 2 ? last - st.values[st.values.length - 2]?.rpe : 0;
+                      const rpeColor = avg <= 4 ? "#30D158" : avg <= 7 ? st.color : "#FF453A";
+                      return (
+                        <div key={st.key}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                            <span style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{st.label}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: 10, color: "#8E8E93" }}>{st.values.length} séance{st.values.length > 1 ? "s" : ""}</span>
+                              {trend !== 0 && <span style={{ fontSize: 11, fontWeight: 700, color: trend < 0 ? "#30D158" : "#FF453A" }}>{trend < 0 ? "↓" : "↑"}</span>}
+                              <span style={{ fontSize: 13, fontWeight: 800, color: rpeColor }}>{avg}/10</span>
+                            </div>
+                          </div>
+                          <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                            <div style={{ width: `${(avg / 10) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${rpeColor}80, ${rpeColor})`, borderRadius: 99, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 10, color: "#8E8E93", fontStyle: "italic" }}>
+                    ↓ RPE qui baisse = station qui progresse 💪
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Graphique courbe fitness score SVG */}
             {(profile.sessions||[]).length >= 2 && (() => {
               const sessions = (profile.sessions||[]).slice(-10);
