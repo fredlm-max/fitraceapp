@@ -95,6 +95,22 @@ const GLOBAL_STYLES = `
   .card-press { transition: transform 0.1s ease, background 0.15s; }
   .card-press:active { transform: scale(0.97); }
 
+  /* ── Staggered card entrance ── */
+  @keyframes cardEnter { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .stagger-1 { animation: cardEnter 0.4s var(--ease-out) 0.05s both; }
+  .stagger-2 { animation: cardEnter 0.4s var(--ease-out) 0.10s both; }
+  .stagger-3 { animation: cardEnter 0.4s var(--ease-out) 0.15s both; }
+  .stagger-4 { animation: cardEnter 0.4s var(--ease-out) 0.20s both; }
+  .stagger-5 { animation: cardEnter 0.4s var(--ease-out) 0.25s both; }
+
+  /* ── Gold glow on interactive press ── */
+  @keyframes goldPulseOnce { 0% { box-shadow: 0 0 0 0 rgba(201,168,64,0); } 40% { box-shadow: 0 0 0 8px rgba(201,168,64,0.15); } 100% { box-shadow: 0 0 0 0 rgba(201,168,64,0); } }
+  .gold-press:active { animation: goldPulseOnce 0.4s ease; }
+
+  /* ── Scroll reveal utility ── */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
   /* ── Skeleton loader ── */
   .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%); background-size: 300px 100%; animation: shimmer 1.4s ease infinite; border-radius: 8px; }
   .skeleton-card { background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 100%); background-size: 400px 100%; animation: shimmer 1.6s ease infinite; border-radius: 18px; }
@@ -1335,9 +1351,9 @@ function ProgressBar({ value, max = 100, color = "var(--yellow)", height = 6 }) 
   );
 }
 
-function Section({ title, children, action }) {
+function Section({ title, children, action, stagger }) {
   return (
-    <div style={{ marginBottom: 28 }}>
+    <div className={stagger ? `stagger-${stagger}` : ""} style={{ marginBottom: 28 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 3, height: 20, background: "var(--yellow)", borderRadius: 99, flexShrink: 0 }} />
