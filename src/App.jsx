@@ -4447,6 +4447,33 @@ JSON:
       await storage.set(storageKey, { ...updated, email: profile.email || user?.email });
       onUpdateProfile(updated);
       setTimeout(() => calcStreak(), 500);
+
+      // ── Détection Personal Records ──
+      try {
+        const prKey = `fitrace_prs_${profile.name}`;
+        let prs = {};
+        try { prs = JSON.parse(localStorage.getItem(prKey) || "{}"); } catch {}
+        const newPRs = [];
+        (feedbackData.exercicesLog || []).forEach(e => {
+          if (!e.charge || !e.nom) return;
+          const charge = parseFloat(e.charge);
+          const reps = parseInt(e.reps) || 1;
+          const est1RM = reps > 1 ? Math.round(charge * (1 + reps / 30)) : charge;
+          const key = e.nom.toLowerCase().replace(/\s+/g, "_");
+          if (!prs[key] || est1RM > prs[key].value) {
+            if (prs[key]) newPRs.push({ nom: e.nom, value: est1RM, prev: prs[key].value });
+            prs[key] = { value: est1RM, date: new Date().toISOString(), nom: e.nom };
+          }
+        });
+        localStorage.setItem(prKey, JSON.stringify(prs));
+        if (newPRs.length > 0) {
+          setTimeout(() => {
+            newPRs.forEach((pr, i) => setTimeout(() =>
+              showToast(`🏆 PR ${pr.nom} ! ${pr.prev || "?"}→${pr.value}kg`, "badge"), i * 1200));
+          }, 1000);
+        }
+      } catch {}
+
       setFeedback(adapt);
       setShowFeedback(false);
       haptic([10, 30, 10]);
@@ -7691,6 +7718,37 @@ JSON:
 
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
+
+            {/* ── PERSONAL RECORDS ── */}
+            {(() => {
+              let prs = {};
+              try { prs = JSON.parse(localStorage.getItem(`fitrace_prs_${profile.name}`) || "{}"); } catch {}
+              const prList = Object.values(prs).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+              if (prList.length === 0) return null;
+              return (
+                <div style={{ background: "linear-gradient(145deg, #0a0800 0%, #080808 60%)", border: "1px solid rgba(191,90,242,0.2)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 18 }}>🏆</span>
+                    <div className="bebas" style={{ fontSize: 18, color: "#BF5AF2", letterSpacing: 1 }}>PERSONAL RECORDS</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{prList.length} exercice{prList.length > 1 ? "s" : ""}</div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {prList.map((pr, i) => (
+                      <div key={i} style={{ background: "rgba(191,90,242,0.06)", border: "1px solid rgba(191,90,242,0.15)", borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pr.nom}</div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                          <div className="bebas" style={{ fontSize: 24, color: "#BF5AF2", lineHeight: 1 }}>{pr.value}</div>
+                          <div style={{ fontSize: 10, color: "#8E8E93" }}>kg</div>
+                        </div>
+                        <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>
+                          {pr.date ? new Date(pr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── ACHIEVEMENTS ── */}
             <AchievementsCard profile={profile} />
