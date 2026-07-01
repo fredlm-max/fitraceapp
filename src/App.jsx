@@ -13024,12 +13024,15 @@ function searchFoodDB(query) {
   }));
 }
 
-const OBJECTIFS_NUTRI = (poids) => ({
-  kcal: Math.round(poids * 30 + 500),
-  p: Math.round(poids * 2.0),
-  g: Math.round(poids * 4.5),
-  l: Math.round(poids * 1.0),
-});
+const OBJECTIFS_NUTRI = (poids, sessionType) => {
+  const base = { kcal: Math.round(poids * 30 + 500), p: Math.round(poids * 2.0), g: Math.round(poids * 4.5), l: Math.round(poids * 1.0) };
+  if (sessionType === "force_stations") return { kcal: Math.round(poids * 32 + 600), p: Math.round(poids * 2.2), g: Math.round(poids * 4.0), l: Math.round(poids * 1.1) };
+  if (sessionType === "running_zone2") return { kcal: Math.round(poids * 31 + 550), p: Math.round(poids * 1.8), g: Math.round(poids * 5.5), l: Math.round(poids * 1.0) };
+  if (sessionType === "running_qualite") return { kcal: Math.round(poids * 33 + 700), p: Math.round(poids * 2.0), g: Math.round(poids * 6.0), l: Math.round(poids * 1.0) };
+  if (sessionType === "hybride_compromis") return { kcal: Math.round(poids * 33 + 650), p: Math.round(poids * 2.2), g: Math.round(poids * 5.5), l: Math.round(poids * 1.1) };
+  if (sessionType === "repos") return { kcal: Math.round(poids * 27 + 300), p: Math.round(poids * 1.8), g: Math.round(poids * 3.5), l: Math.round(poids * 1.0) };
+  return base;
+};
 
 function NutritionTab({ profile }) {
   const [subTab, setSubTab] = useState("journal");
@@ -13227,6 +13230,101 @@ JSON: {
 
   return (
     <div className="fade-in">
+
+      {/* ── MACRO DASHBOARD DYNAMIQUE ── */}
+      {(() => {
+        const today2 = new Date().toISOString().split("T")[0];
+        // Determine session type for today or tomorrow's planned session
+        const lastSess = (profile.sessions||[]).slice(-1)[0];
+        const todaySessType = lastSess?.date?.startsWith(today2) ? lastSess.type : null;
+        const dynObjType = todaySessType || sessionType || null;
+        const obj = OBJECTIFS_NUTRI(poids, dynObjType);
+
+        const typeLabels = {
+          running_zone2: { label: "Jour Cardio Z2", color: "#30D158", icon: "🏃" },
+          running_qualite: { label: "Jour Qualité", color: "#FF9F0A", icon: "⚡" },
+          force_stations: { label: "Jour Force", color: "#C9A840", icon: "🏋️" },
+          hybride_compromis: { label: "Jour Hybride", color: "#BF5AF2", icon: "🔀" },
+          repos: { label: "Jour de repos", color: "#636366", icon: "😴" },
+        };
+        const dayCtx = dynObjType ? typeLabels[dynObjType] : { label: "Journée standard", color: "#8E8E93", icon: "📊" };
+
+        const macros = [
+          { label: "Glucides", current: totaux.g, target: obj.g, color: "#FF9F0A", unit: "g" },
+          { label: "Protéines", current: totaux.p, target: obj.p, color: "#30D158", unit: "g" },
+          { label: "Lipides", current: totaux.l, target: obj.l, color: "#BF5AF2", unit: "g" },
+        ];
+
+        const kcalPct = Math.min(100, Math.round((totaux.kcal / obj.kcal) * 100));
+        const kcalColor = kcalPct >= 95 ? "#30D158" : kcalPct >= 70 ? "#C9A840" : kcalPct >= 40 ? "#FF9F0A" : "#FF453A";
+
+        return (
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "16px", marginBottom: 14 }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{dayCtx.icon}</span>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: dayCtx.color, textTransform: "uppercase", letterSpacing: "0.08em" }}>{dayCtx.label}</div>
+                  <div style={{ fontSize: 9, color: "#636366" }}>Objectifs adaptés · {poids}kg</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div className="bebas" style={{ fontSize: 26, color: kcalColor, lineHeight: 1 }}>{totaux.kcal}</div>
+                <div style={{ fontSize: 9, color: "#636366" }}>/ {obj.kcal} kcal</div>
+              </div>
+            </div>
+
+            {/* kcal ring bar */}
+            <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden", marginBottom: 14, position: "relative" }}>
+              <div style={{ height: "100%", width: `${kcalPct}%`, background: `linear-gradient(90deg, ${kcalColor}88, ${kcalColor})`, borderRadius: 99, transition: "width 0.8s ease" }}/>
+              {kcalPct > 5 && (
+                <div style={{ position: "absolute", top: "50%", left: `${Math.min(kcalPct - 3, 90)}%`, transform: "translateY(-50%)", fontSize: 7, color: "#000", fontWeight: 800 }}>{kcalPct}%</div>
+              )}
+            </div>
+
+            {/* Macro bars */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {macros.map((m) => {
+                const pct = Math.min(100, Math.round((m.current / m.target) * 100));
+                const over = m.current > m.target;
+                const barColor = over ? "#FF453A" : pct >= 80 ? m.color : pct >= 50 ? `${m.color}99` : "rgba(255,255,255,0.2)";
+                return (
+                  <div key={m.label}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, color: m.color, fontWeight: 600 }}>{m.label}</span>
+                      <span style={{ fontSize: 10, color: over ? "#FF453A" : "var(--white)", fontWeight: 700 }}>
+                        {m.current}{m.unit} <span style={{ color: "#636366", fontWeight: 400 }}>/ {m.target}{m.unit}</span>
+                        {over && <span style={{ color: "#FF453A", fontSize: 9, marginLeft: 4 }}>+{m.current - m.target}{m.unit}</span>}
+                      </span>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 99, transition: "width 0.6s ease" }}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tip */}
+            {totaux.kcal === 0 && (
+              <div style={{ marginTop: 10, fontSize: 10, color: "#636366", textAlign: "center" }}>
+                Ajoute tes repas ci-dessous pour suivre tes macros en temps réel
+              </div>
+            )}
+            {totaux.kcal > 0 && totaux.p < obj.p * 0.7 && (
+              <div style={{ marginTop: 10, padding: "8px 10px", background: "rgba(48,209,88,0.06)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 10, fontSize: 10, color: "#30D158" }}>
+                💡 Protéines insuffisantes — vise {obj.p - totaux.p}g de plus (ex: {Math.round((obj.p - totaux.p) / 25)} portions de poulet/thon)
+              </div>
+            )}
+            {totaux.kcal > 0 && totaux.g < obj.g * 0.6 && dynObjType === "running_qualite" && (
+              <div style={{ marginTop: 6, padding: "8px 10px", background: "rgba(255,154,60,0.06)", border: "1px solid rgba(255,154,60,0.2)", borderRadius: 10, fontSize: 10, color: "#FF9F0A" }}>
+                ⚡ Glucides faibles avant séance qualité — ajoute des pâtes/riz ({obj.g - totaux.g}g manquants)
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── NUTRITION PRE/POST SÉANCE ── */}
       {sessionNutrition && (
