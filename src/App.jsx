@@ -14314,6 +14314,25 @@ JSON: {
             <div className="bebas" style={{ fontSize: 18, color: "#30D158", letterSpacing: 1 }}>NUTRITION SÉANCE</div>
             <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{todaySession?.titre?.slice(0,20) || "Séance du jour"}</div>
           </div>
+          {/* Meal Timing Timeline */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ position: "relative", height: 40, display: "flex", alignItems: "center" }}>
+              {/* Line */}
+              <div style={{ position: "absolute", left: "10%", right: "10%", height: 2, background: "rgba(255,255,255,0.08)", borderRadius: 1 }} />
+              {[
+                { label: "-2h", sub: "Repas principal", color: "#FF9F0A", left: "10%" },
+                { label: "-30min", sub: "Gel/banane", color: "#C9A840", left: "40%" },
+                { label: "SÉANCE", sub: "Effort", color: "#FF453A", left: "65%" },
+                { label: "+45min", sub: "Récupération", color: "#30D158", left: "88%" },
+              ].map(t => (
+                <div key={t.label} style={{ position: "absolute", left: t.left, transform: "translateX(-50%)", textAlign: "center" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.color, margin: "0 auto 4px", boxShadow: `0 0 6px ${t.color}60` }} />
+                  <div style={{ fontSize: 8, color: t.color, fontWeight: 700, whiteSpace: "nowrap" }}>{t.label}</div>
+                  <div style={{ fontSize: 7, color: "#48484A", whiteSpace: "nowrap" }}>{t.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {/* PRE */}
             <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "12px" }}>
