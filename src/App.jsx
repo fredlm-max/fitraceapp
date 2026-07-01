@@ -5719,6 +5719,95 @@ JSON:
               </div>
             )}
 
+            {/* ── MINI WEEKLY CALENDAR ── */}
+            {(() => {
+              const today = new Date(); today.setHours(0,0,0,0);
+              const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Mon
+              const weekStart = new Date(today); weekStart.setDate(today.getDate() - dayOfWeek);
+
+              const DAY_LABELS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+              const TYPE_COLOR = {
+                running_zone2:     { color: "#30D158", icon: "🏃", short: "Z2" },
+                force_stations:    { color: "#C9A840", icon: "🏋️", short: "FO" },
+                running_qualite:   { color: "#FF9F0A", icon: "⚡", short: "QL" },
+                hybride_compromis: { color: "#BF5AF2", icon: "🔀", short: "HY" },
+              };
+
+              // Build map of date → session type for this week
+              const weekMap = {};
+              (profile.sessions || []).forEach(s => {
+                if (!s.date) return;
+                const d = new Date(s.date); d.setHours(0,0,0,0);
+                const diff = Math.round((d - weekStart) / 86400000);
+                if (diff >= 0 && diff < 7) weekMap[diff] = s.type || "force_stations";
+              });
+
+              // Planned session today
+              const todayIdx = dayOfWeek;
+              const hasToday = weekMap[todayIdx];
+              const sessionsThisWeek = Object.keys(weekMap).length;
+              const targetPerWeek = parseInt(profile.seancesParSemaine) || 4;
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "12px 14px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                      {weekStart.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} → {new Date(weekStart.getTime() + 6*86400000).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: sessionsThisWeek >= targetPerWeek ? "#30D158" : "#C9A840" }}>
+                      {sessionsThisWeek}/{targetPerWeek} séances
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {DAY_LABELS.map((label, i) => {
+                      const isToday = i === dayOfWeek;
+                      const sessionType = weekMap[i];
+                      const conf = sessionType ? TYPE_COLOR[sessionType] : null;
+                      const isPast = i < dayOfWeek;
+                      const isFuture = i > dayOfWeek;
+
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ fontSize: 8, color: isToday ? "var(--white)" : "#636366", fontWeight: isToday ? 700 : 400 }}>{label}</div>
+                          <div style={{
+                            width: "100%", aspectRatio: "1", borderRadius: 8,
+                            background: conf ? `${conf.color}20` : isToday ? "rgba(201,168,64,0.08)" : "rgba(255,255,255,0.03)",
+                            border: isToday ? "1.5px solid rgba(201,168,64,0.5)" : conf ? `1.5px solid ${conf.color}50` : "1px solid rgba(255,255,255,0.06)",
+                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            position: "relative", overflow: "hidden",
+                          }}>
+                            {conf ? (
+                              <>
+                                <div style={{ fontSize: 12 }}>{conf.icon}</div>
+                                <div style={{ fontSize: 7, color: conf.color, fontWeight: 700, marginTop: 1 }}>{conf.short}</div>
+                              </>
+                            ) : isToday ? (
+                              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#C9A840", opacity: 0.6 }}/>
+                            ) : isPast ? (
+                              <div style={{ fontSize: 10, color: "#333" }}>—</div>
+                            ) : (
+                              <div style={{ fontSize: 9, color: "#333" }}>·</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+                    {Object.entries(TYPE_COLOR).map(([k, v]) => (
+                      <div key={k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: v.color }}/>
+                        <span style={{ fontSize: 8, color: "#636366" }}>{k === "running_zone2" ? "Zone 2" : k === "force_stations" ? "Force" : k === "running_qualite" ? "Qualité" : "Hybride"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* WIDGET PROCHAINE SÉANCE */}
             {(() => {
               const todaySession = session || coachSession;
