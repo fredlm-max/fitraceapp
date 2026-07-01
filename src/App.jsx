@@ -12340,8 +12340,80 @@ JSON: {
   const kcalColor = getColor(totaux.kcal, objectifs.kcal);
   const kcalPct = Math.min(100, Math.round((totaux.kcal / objectifs.kcal) * 100));
 
+  // Compute session-linked nutrition recommendations
+  const lastSession = (profile.sessions||[]).slice(-1)[0];
+  const todaySession = lastSession?.date?.startsWith(today) ? lastSession : null;
+  const sessionType = todaySession?.type || null;
+  const poids = parseFloat(profile.poids) || 75;
+
+  const sessionNutrition = sessionType ? (() => {
+    const isCardio = sessionType === "running_zone2" || sessionType === "running_qualite";
+    const isHybrid = sessionType === "hybride_compromis";
+    // Pre-session (1-2h avant)
+    const preGlucides = isCardio ? Math.round(poids * 1.5) : isHybrid ? Math.round(poids * 1.2) : Math.round(poids * 0.8);
+    const preProteines = Math.round(poids * 0.2);
+    // Post-session (dans les 45min)
+    const postProteines = Math.round(poids * 0.3);
+    const postGlucides = isCardio ? Math.round(poids * 1.2) : Math.round(poids * 0.8);
+    const foods = {
+      running_zone2: { pre: ["Flocons d'avoine + banane", "Pain complet + miel", "Riz basmati + légumes"], post: ["Shake whey + lait + banane", "Poulet + riz", "Yaourt grec + fruits"] },
+      running_qualite: { pre: ["Pâtes + sauce tomate", "Riz + légumineuses", "Pommes de terre + œufs"], post: ["Saumon + quinoa", "Steak + patate douce", "Œufs + avocat + pain"] },
+      hybride_compromis: { pre: ["Riz + blanc de poulet", "Patate douce + thon", "Quinoa + légumes"], post: ["Shake whey + lait", "Cottage cheese + fruits", "Fromage blanc + miel"] },
+      force_stations: { pre: ["Riz + viande maigre", "Œufs + flocons d'avoine", "Pain complet + beurre de cacahuètes"], post: ["Shake protéiné", "Œufs + légumes", "Poulet + légumineuses"] },
+    };
+    const foodSuggestions = foods[sessionType] || foods.force_stations;
+    return { preGlucides, preProteines, postProteines, postGlucides, foodSuggestions, isCardio };
+  })() : null;
+
   return (
     <div className="fade-in">
+
+      {/* ── NUTRITION PRE/POST SÉANCE ── */}
+      {sessionNutrition && (
+        <div className="fade-in" style={{ background: "linear-gradient(145deg, #001208 0%, #080808 60%)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ width: 3, height: 18, background: "#30D158", borderRadius: 99 }} />
+            <div className="bebas" style={{ fontSize: 18, color: "#30D158", letterSpacing: 1 }}>NUTRITION SÉANCE</div>
+            <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{todaySession?.titre?.slice(0,20) || "Séance du jour"}</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {/* PRE */}
+            <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "12px" }}>
+              <div style={{ fontSize: 10, color: "#FF9F0A", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>⚡ Avant (1-2h)</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <div style={{ textAlign: "center", flex: 1 }}>
+                  <div className="bebas" style={{ fontSize: 22, color: "#FF9F0A", lineHeight: 1 }}>{sessionNutrition.preGlucides}g</div>
+                  <div style={{ fontSize: 9, color: "#8E8E93" }}>Glucides</div>
+                </div>
+                <div style={{ textAlign: "center", flex: 1 }}>
+                  <div className="bebas" style={{ fontSize: 22, color: "#0A84FF", lineHeight: 1 }}>{sessionNutrition.preProteines}g</div>
+                  <div style={{ fontSize: 9, color: "#8E8E93" }}>Protéines</div>
+                </div>
+              </div>
+              {sessionNutrition.foodSuggestions.pre.slice(0,2).map((f, i) => (
+                <div key={i} style={{ fontSize: 10, color: "#8E8E93", marginBottom: 3 }}>• {f}</div>
+              ))}
+            </div>
+            {/* POST */}
+            <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "12px" }}>
+              <div style={{ fontSize: 10, color: "#30D158", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>🔄 Après (45min)</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <div style={{ textAlign: "center", flex: 1 }}>
+                  <div className="bebas" style={{ fontSize: 22, color: "#FF9F0A", lineHeight: 1 }}>{sessionNutrition.postGlucides}g</div>
+                  <div style={{ fontSize: 9, color: "#8E8E93" }}>Glucides</div>
+                </div>
+                <div style={{ textAlign: "center", flex: 1 }}>
+                  <div className="bebas" style={{ fontSize: 22, color: "#0A84FF", lineHeight: 1 }}>{sessionNutrition.postProteines}g</div>
+                  <div style={{ fontSize: 9, color: "#8E8E93" }}>Protéines</div>
+                </div>
+              </div>
+              {sessionNutrition.foodSuggestions.post.slice(0,2).map((f, i) => (
+                <div key={i} style={{ fontSize: 10, color: "#8E8E93", marginBottom: 3 }}>• {f}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── HYDRATATION TRACKER ── */}
       {(() => {
