@@ -5793,6 +5793,76 @@ JSON:
               </div>
             )}
 
+            {/* ── SMART INSIGHTS ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const sessions = profile.sessions || [];
+              const insights = [];
+
+              // 1. TSB / Form insight
+              const k_ctl = 2/(42+1), k_atl = 2/(7+1);
+              let ctl = 0, atl = 0;
+              const last90 = Array.from({ length: 90 }, (_, i) => {
+                const d = new Date(); d.setDate(d.getDate() - (89 - i)); return d.toISOString().slice(0,10);
+              });
+              const dayMap90 = {};
+              sessions.forEach(s => { if (!s.date) return; const k = s.date.slice(0,10); const dur = parseInt(s.dureeReelle || s.duree || 45); const rpe = parseFloat(s.rpe || s.rpeGlobal || s.difficulte || 6); dayMap90[k] = (dayMap90[k] || 0) + Math.round(dur * rpe / 10); });
+              last90.forEach(d => { const t = dayMap90[d] || 0; ctl = ctl + k_ctl*(t-ctl); atl = atl + k_atl*(t-atl); });
+              const tsb = Math.round(ctl - atl);
+
+              if (tsb > 15) insights.push({ icon: "🟢", color: "#30D158", title: "Forme optimale", body: `Ton TSB est à +${tsb} — corps reposé et système nerveux frais. C'est le moment d'aller chercher une performance maximale.`, action: "Séance intense aujourd'hui", tab: "today" });
+              else if (tsb < -15) insights.push({ icon: "🔴", color: "#FF453A", title: "Surcharge détectée", body: `Ton TSB est à ${tsb} — tu accumules plus de fatigue que tu n'en récupères. Réduis le volume ou ajoute un jour de récupération.`, action: "Voir ta charge TRIMP", tab: "progress" });
+
+              // 2. Streak / consistency
+              const todayStr = new Date().toISOString().slice(0,10);
+              const last7days = Array.from({length: 7}, (_, i) => { const d = new Date(); d.setDate(d.getDate()-i); return d.toISOString().slice(0,10); });
+              const activeLast7 = last7days.filter(d => sessions.some(s => s.date?.slice(0,10) === d)).length;
+              if (activeLast7 >= 6) insights.push({ icon: "🔥", color: "#FF9F0A", title: "Semaine parfaite", body: `${activeLast7}/7 jours actifs cette semaine. Assure-toi de planifier au moins 1 jour de repos complet pour la surcompensation.`, action: null });
+              else if (activeLast7 <= 1 && sessions.length >= 5) insights.push({ icon: "📅", color: "#C9A840", title: "Régularité à reprendre", body: `Seulement ${activeLast7} séance(s) ces 7 derniers jours. La régularité est le facteur #1 de progression en HYROX.`, action: "Voir le planning", tab: "planning" });
+
+              // 3. Weak station from RPE
+              const stationRPEs = {};
+              sessions.forEach(s => (s.exercicesLog||[]).forEach(e => {
+                if (!e.rpe || !e.nom) return;
+                const nom = e.nom.toLowerCase();
+                const match = nom.match(/ski/i) ? "SkiErg" : nom.match(/sled.push/i) ? "Sled Push" : nom.match(/sled.pull/i) ? "Sled Pull" : nom.match(/burpee/i) ? "Burpee BBJ" : nom.match(/row/i) ? "Rowing" : nom.match(/farmer/i) ? "Farmers" : nom.match(/sandbag/i) ? "Sandbag" : nom.match(/wall.ball/i) ? "Wall Balls" : null;
+                if (match) { if (!stationRPEs[match]) stationRPEs[match] = []; stationRPEs[match].push(parseInt(e.rpe)); }
+              }));
+              const avgRPEs = Object.entries(stationRPEs).map(([k,v]) => ({ station: k, avg: v.reduce((a,b)=>a+b,0)/v.length })).sort((a,b) => b.avg - a.avg);
+              if (avgRPEs.length > 0 && avgRPEs[0].avg >= 7.5) insights.push({ icon: "⚠️", color: "#FF9F0A", title: `${avgRPEs[0].station} à travailler`, body: `RPE moyen de ${avgRPEs[0].avg.toFixed(1)}/10 sur cette station — c'est ta faiblesse principale. Augmente sa fréquence dans tes séances.`, action: "Voir technique", tab: "technique" });
+
+              // 4. HYROX benchmark gap
+              const vma = parseFloat(profile.vmaKmh) || 0;
+              const squat = parseFloat(profile.squat1RM_final) || 0;
+              const sexeF = (profile.sexe || "M") === "F";
+              if (vma > 0 && vma < (sexeF ? 12 : 13)) insights.push({ icon: "🏃", color: "#30D158", title: "VMA sous le seuil Open", body: `Ta VMA de ${vma} km/h est sous le seuil ${sexeF ? "Open Femme (12 km/h)" : "Open Homme (13 km/h)"}. Priorité aux séances Zone 2 et intervalles.`, action: "Voir zones", tab: "zones" });
+              if (squat > 0 && squat < (sexeF ? 60 : 80)) insights.push({ icon: "🏋️", color: "#C9A840", title: "Force à développer", body: `Ton Squat 1RM (${squat}kg) est sous le niveau Open. Les stations de force HYROX demandent ${sexeF ? "≥60kg" : "≥80kg"} de force fonctionnelle.`, action: "Voir programme force", tab: "today" });
+
+              // 5. Race countdown urgency
+              const daysLeft = profile.raceDate ? Math.round((new Date(profile.raceDate) - new Date()) / 86400000) : null;
+              if (daysLeft !== null && daysLeft <= 14 && daysLeft > 0) insights.push({ icon: "🏁", color: "#FF453A", title: `J-${daysLeft} — Phase de tapering`, body: `À ${daysLeft} jours de la course, réduis le volume de 40-50%, maintiens l'intensité. Dernière séance longue J-10, dernière séance courte J-3.`, action: "Stratégie de course", tab: "race" });
+
+              if (insights.length === 0) return null;
+              const shown = insights.slice(0, 3);
+
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#636366", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>💡 Insights</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {shown.map((ins, i) => (
+                      <div key={i} onClick={() => ins.tab && setTab(ins.tab)} style={{ background: `${ins.color}08`, border: `1px solid ${ins.color}25`, borderRadius: 14, padding: "12px 14px", cursor: ins.tab ? "pointer" : "default", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                        <span style={{ fontSize: 20, flexShrink: 0 }}>{ins.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, color: ins.color, fontWeight: 700, marginBottom: 3 }}>{ins.title}</div>
+                          <div style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1.5 }}>{ins.body}</div>
+                          {ins.action && <div style={{ fontSize: 10, color: ins.color, fontWeight: 700, marginTop: 6 }}>{ins.action} →</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MINI WEEKLY CALENDAR ── */}
             {(() => {
               const today = new Date(); today.setHours(0,0,0,0);
