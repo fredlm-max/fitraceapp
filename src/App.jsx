@@ -8704,10 +8704,10 @@ JSON:
               // Start from Monday 8 weeks ago
               const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Mon
               const startDay = new Date(today);
-              startDay.setDate(today.getDate() - dayOfWeek - 7 * 7);
+              startDay.setDate(today.getDate() - dayOfWeek - 7 * 11);
 
               const cells = [];
-              for (let i = 0; i < 56; i++) {
+              for (let i = 0; i < 84; i++) {
                 const d = new Date(startDay);
                 d.setDate(startDay.getDate() + i);
                 const key = d.toISOString().slice(0, 10);
@@ -8748,7 +8748,7 @@ JSON:
               })();
 
               const DAYS = ["L", "M", "M", "J", "V", "S", "D"];
-              const weeks = Array.from({ length: 8 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+              const weeks = Array.from({ length: 12 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
               const weekLabels = weeks.map(w => {
                 const d = w[0].date;
                 return `S${Math.ceil((d.getDate()) / 7)} ${d.toLocaleDateString("fr-FR", { month: "short" })}`;
@@ -8761,7 +8761,7 @@ JSON:
                   {/* Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>🗓 Activité — 8 semaines</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>🗓 Activité — 12 semaines</div>
                       <div style={{ fontSize: 10, color: "#636366" }}>Charge TRIMP par jour · durée × RPE</div>
                     </div>
                     <div style={{ display: "flex", gap: 12 }}>
