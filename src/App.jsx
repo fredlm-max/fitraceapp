@@ -8737,6 +8737,86 @@ JSON:
               );
             })()}
 
+            {/* ── SESSION COMPARISON ── */}
+            {(profile.sessions||[]).length >= 4 && (() => {
+              const sessions = profile.sessions || [];
+              const TYPE_CONF = {
+                running_zone2: { label: "Zone 2", color: "#30D158", icon: "🏃" },
+                force_stations: { label: "Force", color: "#C9A840", icon: "🏋️" },
+                running_qualite: { label: "Qualité", color: "#FF9F0A", icon: "⚡" },
+                hybride_compromis: { label: "Hybride", color: "#BF5AF2", icon: "🔀" },
+              };
+              const SESSION_TYPES = Object.keys(TYPE_CONF);
+              const [compareType, setCompareType] = React.useState("running_zone2");
+
+              const typeSessions = sessions.filter(s => s.type === compareType).slice(-2);
+              if (typeSessions.length < 2) return null;
+
+              const [older, newer] = typeSessions;
+              const METRICS = [
+                { key: "difficulte", label: "RPE", unit: "/10", better: "lower" },
+                { key: "trimp", label: "TRIMP", unit: "", better: "higher", fallback: (s) => Math.round((s.duration||45)*(s.difficulte||5)/10) },
+                { key: "tempsReel", label: "Durée", unit: "min", better: "higher", transform: v => parseInt(v)||45 },
+              ];
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>⚖️ Comparaison Séances</div>
+
+                  {/* Type selector */}
+                  <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto" }}>
+                    {SESSION_TYPES.filter(t => sessions.filter(s => s.type === t).length >= 2).map(t => {
+                      const c = TYPE_CONF[t];
+                      return (
+                        <button key={t} onClick={() => setCompareType(t)}
+                          style={{ background: compareType === t ? `${c.color}15` : "rgba(255,255,255,0.04)", border: `1.5px solid ${compareType === t ? c.color : "transparent"}`, borderRadius: 16, padding: "4px 10px", fontSize: 10, color: compareType === t ? c.color : "#636366", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>
+                          {c.icon} {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Comparison grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
+                    {/* Older session header */}
+                    <div style={{ textAlign: "center", fontSize: 9, color: "#636366", fontWeight: 700 }}>
+                      {new Date(older.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#48484A", textAlign: "center" }}>vs</div>
+                    <div style={{ textAlign: "center", fontSize: 9, color: "#C9A840", fontWeight: 700 }}>
+                      {new Date(newer.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} ✓
+                    </div>
+
+                    {METRICS.map(m => {
+                      const vOld = m.fallback ? m.fallback(older) : m.transform ? m.transform(older[m.key]) : parseFloat(older[m.key]) || 0;
+                      const vNew = m.fallback ? m.fallback(newer) : m.transform ? m.transform(newer[m.key]) : parseFloat(newer[m.key]) || 0;
+                      const improved = m.better === "higher" ? vNew > vOld : vNew < vOld;
+                      const same = vNew === vOld;
+                      const deltaColor = same ? "#636366" : improved ? "#30D158" : "#FF453A";
+                      const delta = vOld > 0 ? Math.round((vNew - vOld) / vOld * 100) : 0;
+
+                      return (
+                        <React.Fragment key={m.key}>
+                          <div style={{ textAlign: "center", padding: "8px 4px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                            <div className="bebas" style={{ fontSize: 20, color: "#AEAEB2", lineHeight: 1 }}>{vOld}{m.unit}</div>
+                            <div style={{ fontSize: 8, color: "#48484A" }}>{m.label}</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: 10, color: deltaColor, fontWeight: 800 }}>{same ? "=" : improved ? "↑" : "↓"}</div>
+                            {!same && <div style={{ fontSize: 8, color: deltaColor }}>{delta > 0 ? "+" : ""}{delta}%</div>}
+                          </div>
+                          <div style={{ textAlign: "center", padding: "8px 4px", background: `${deltaColor}08`, border: `1px solid ${deltaColor}20`, borderRadius: 8 }}>
+                            <div className="bebas" style={{ fontSize: 20, color: deltaColor, lineHeight: 1 }}>{vNew}{m.unit}</div>
+                            <div style={{ fontSize: 8, color: "#48484A" }}>{m.label}</div>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING DIARY ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const diaryKey = `fitrace_diary_${profile.name}`;
