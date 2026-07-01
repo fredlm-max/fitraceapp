@@ -10842,6 +10842,148 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         </Section>
       )}
 
+      {/* ── OUTILS ATHLÈTE ── */}
+      <Section title="Outils Athlète">
+        {/* 1RM Calculator */}
+        {(() => {
+          const [charge1, setCharge1] = React.useState("");
+          const [reps1, setReps1] = React.useState("");
+          const [formula, setFormula] = React.useState("epley");
+
+          const c = parseFloat(charge1) || 0;
+          const r = parseInt(reps1) || 0;
+          let rm1 = 0;
+          if (c > 0 && r > 0) {
+            if (formula === "epley") rm1 = c * (1 + r / 30);
+            else if (formula === "brzycki") rm1 = c * (36 / (37 - r));
+            else rm1 = c / (1.0278 - 0.0278 * r); // O'Conner
+          }
+          const rm1r = Math.round(rm1);
+
+          const percentages = rm1r > 0 ? [
+            { pct: 95, label: "1 rep", type: "Force max" },
+            { pct: 85, label: "3-5 reps", type: "Force" },
+            { pct: 75, label: "8-10 reps", type: "Hypertrophie" },
+            { pct: 65, label: "12-15 reps", type: "Endurance force" },
+            { pct: 55, label: "20+ reps", type: "HYROX station" },
+          ] : [];
+
+          return (
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#C9A840", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🏋️ Calculateur 1RM</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>Charge (kg)</div>
+                  <input type="number" value={charge1} onChange={e => setCharge1(e.target.value)} placeholder="80"
+                    style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "var(--white)", fontSize: 16, fontWeight: 700, outline: "none", boxSizing: "border-box", textAlign: "center" }}/>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>Reps effectuées</div>
+                  <input type="number" value={reps1} onChange={e => setReps1(e.target.value)} placeholder="5"
+                    style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "var(--white)", fontSize: 16, fontWeight: 700, outline: "none", boxSizing: "border-box", textAlign: "center" }}/>
+                </div>
+              </div>
+              {/* Formula selector */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {[["epley", "Epley"], ["brzycki", "Brzycki"], ["oconner", "O'Conner"]].map(([id, label]) => (
+                  <button key={id} onClick={() => setFormula(id)} style={{ flex: 1, padding: "5px", borderRadius: 8, fontSize: 9, fontWeight: 700, cursor: "pointer", background: formula === id ? "rgba(201,168,64,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${formula === id ? "rgba(201,168,64,0.5)" : "rgba(255,255,255,0.08)"}`, color: formula === id ? "#C9A840" : "#636366" }}>{label}</button>
+                ))}
+              </div>
+
+              {rm1r > 0 ? (
+                <>
+                  <div style={{ textAlign: "center", marginBottom: 12, padding: "12px", background: "rgba(201,168,64,0.08)", borderRadius: 12, border: "1px solid rgba(201,168,64,0.25)" }}>
+                    <div style={{ fontSize: 10, color: "#636366", marginBottom: 4 }}>1RM estimé</div>
+                    <div className="bebas" style={{ fontSize: 48, color: "#C9A840", lineHeight: 1 }}>{rm1r}<span style={{ fontSize: 18 }}> kg</span></div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {percentages.map(p => {
+                      const kg = Math.round(rm1r * p.pct / 100);
+                      return (
+                        <div key={p.pct} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 36, fontSize: 9, color: "#C9A840", fontWeight: 700, flexShrink: 0 }}>{p.pct}%</div>
+                          <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${p.pct}%`, background: `rgba(201,168,64,${p.pct/100})`, borderRadius: 99 }}/>
+                          </div>
+                          <div style={{ width: 45, fontSize: 11, fontWeight: 700, color: "var(--white)", textAlign: "right", flexShrink: 0 }}>{kg} kg</div>
+                          <div style={{ width: 80, fontSize: 9, color: "#636366", flexShrink: 0 }}>{p.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: "center", fontSize: 11, color: "#636366", padding: "8px 0" }}>Entre charge + reps pour calculer ton 1RM estimé</div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Pace Converter */}
+        {(() => {
+          const [paceInput, setPaceInput] = React.useState("");
+          const [paceMode, setPaceMode] = React.useState("kmh"); // kmh or minkm
+
+          let kmh = 0, minkm = "";
+          if (paceMode === "kmh" && parseFloat(paceInput) > 0) {
+            kmh = parseFloat(paceInput);
+            const secPerKm = 3600 / kmh;
+            minkm = `${Math.floor(secPerKm/60)}:${String(Math.round(secPerKm%60)).padStart(2,"0")}`;
+          } else if (paceMode === "minkm" && paceInput.includes(":")) {
+            const parts = paceInput.split(":");
+            const totalSec = parseInt(parts[0]||0)*60 + parseInt(parts[1]||0);
+            if (totalSec > 0) { kmh = Math.round((3600 / totalSec) * 10) / 10; minkm = paceInput; }
+          }
+
+          const distanceEstimates = kmh > 0 ? [
+            { dist: 1, label: "1 km" },
+            { dist: 5, label: "5 km" },
+            { dist: 10, label: "10 km" },
+            { dist: 21.1, label: "Semi" },
+          ].map(({ dist, label }) => {
+            const sec = Math.round((dist / kmh) * 3600);
+            const h = Math.floor(sec/3600); const m = Math.floor((sec%3600)/60); const s = sec%60;
+            return { label, time: h > 0 ? `${h}h${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}` };
+          }) : [];
+
+          return (
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#30D158", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🏃 Convertisseur d'allure</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                {[["kmh", "km/h → min/km"], ["minkm", "min/km → km/h"]].map(([id, label]) => (
+                  <button key={id} onClick={() => { setPaceMode(id); setPaceInput(""); }} style={{ flex: 1, padding: "7px", borderRadius: 8, fontSize: 10, fontWeight: 700, cursor: "pointer", background: paceMode === id ? "rgba(48,209,88,0.12)" : "rgba(255,255,255,0.04)", border: `1px solid ${paceMode === id ? "rgba(48,209,88,0.4)" : "rgba(255,255,255,0.08)"}`, color: paceMode === id ? "#30D158" : "#636366" }}>{label}</button>
+                ))}
+              </div>
+              <input value={paceInput} onChange={e => setPaceInput(e.target.value)}
+                placeholder={paceMode === "kmh" ? "Ex: 12.5" : "Ex: 5:20"}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(48,209,88,0.2)", background: "rgba(48,209,88,0.04)", color: "var(--white)", fontSize: 16, fontWeight: 700, outline: "none", boxSizing: "border-box", textAlign: "center" }}/>
+              {kmh > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <div style={{ flex: 1, textAlign: "center", background: "rgba(48,209,88,0.06)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 10, padding: "10px" }}>
+                      <div style={{ fontSize: 9, color: "#636366", marginBottom: 2 }}>Vitesse</div>
+                      <div className="bebas" style={{ fontSize: 24, color: "#30D158", lineHeight: 1 }}>{kmh} <span style={{ fontSize: 12 }}>km/h</span></div>
+                    </div>
+                    <div style={{ flex: 1, textAlign: "center", background: "rgba(48,209,88,0.06)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 10, padding: "10px" }}>
+                      <div style={{ fontSize: 9, color: "#636366", marginBottom: 2 }}>Allure</div>
+                      <div className="bebas" style={{ fontSize: 24, color: "#30D158", lineHeight: 1 }}>{minkm} <span style={{ fontSize: 12 }}>min/km</span></div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {distanceEstimates.map(d => (
+                      <div key={d.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "8px 10px", display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 10, color: "#636366" }}>{d.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--white)", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{d.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </Section>
+
       {/* ── CODE ACCÈS HYBRIDE COACHING ── */}
       <Section title="Hybride Coaching">
         <Card style={{ border: "1.5px solid var(--yellow)55", background: "rgba(201,168,64,0.04)" }}>
