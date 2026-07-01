@@ -15334,6 +15334,88 @@ JSON: {
             <div className="bebas" style={{ fontSize: 18, color: "#30D158", letterSpacing: 1 }}>NUTRITION SÉANCE</div>
             <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{todaySession?.titre?.slice(0,20) || "Séance du jour"}</div>
           </div>
+          {/* ── MACRO CALCULATOR ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 75;
+            const lastSession = (profile.sessions||[]).slice(-1)[0];
+            const todayDate = new Date().toISOString().slice(0,10);
+            const isTrainingDay = lastSession?.date === todayDate;
+            const sessionType = isTrainingDay ? (lastSession?.type || "base") : "repos";
+            const obj = OBJECTIFS_NUTRI(poids, sessionType);
+
+            // Percentages for visual ring
+            const totalEnergy = obj.p * 4 + obj.g * 4 + obj.l * 9;
+            const pPct = Math.round((obj.p * 4 / totalEnergy) * 100);
+            const gPct = Math.round((obj.g * 4 / totalEnergy) * 100);
+            const lPct = Math.round((obj.l * 9 / totalEnergy) * 100);
+
+            const [activeDay, setActiveDay] = React.useState(sessionType === "repos" ? "repos" : "training");
+            const displayObj = OBJECTIFS_NUTRI(poids, activeDay === "repos" ? "repos" : sessionType !== "repos" ? sessionType : "hybride_compromis");
+
+            // SVG donut
+            const R = 40, CX = 50, CY = 50, thick = 10;
+            const circ = 2 * Math.PI * R;
+            const macros = [
+              { label: "Protéines", key: "p", pct: pPct, color: "#30D158", unit: "g" },
+              { label: "Glucides", key: "g", pct: gPct, color: "#FF9F0A", unit: "g" },
+              { label: "Lipides", key: "l", pct: lPct, color: "#BF5AF2", unit: "g" },
+            ];
+            let offset = 0;
+            const arcs = macros.map(m => {
+              const dash = (m.pct / 100) * circ;
+              const gap = circ - dash;
+              const rotation = (offset / 100) * 360 - 90;
+              offset += m.pct;
+              return { ...m, dash, gap, rotation };
+            });
+
+            return (
+              <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px", marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>🥗 Objectifs Macros du Jour</div>
+
+                {/* Day type toggle */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {[["training", "🏋️ Entraînement"], ["repos", "💤 Repos"]].map(([k, l]) => (
+                    <button key={k} onClick={() => setActiveDay(k)}
+                      style={{ flex: 1, padding: "6px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700, background: activeDay === k ? "rgba(201,168,64,0.15)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeDay === k ? "#C9A840" : "transparent"}`, color: activeDay === k ? "#C9A840" : "#666", cursor: "pointer" }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  {/* Donut */}
+                  <svg width="100" height="100" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+                    <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={thick} />
+                    {arcs.map((a, i) => (
+                      <circle key={i} cx={CX} cy={CY} r={R} fill="none" stroke={a.color} strokeWidth={thick}
+                        strokeDasharray={`${a.dash} ${a.gap}`} strokeLinecap="butt"
+                        transform={`rotate(${a.rotation} ${CX} ${CY})`} />
+                    ))}
+                    <text x={CX} y={CY - 4} textAnchor="middle" fill="#F2F2F7" fontSize="13" fontFamily="'Bebas Neue'" letterSpacing="1">{displayObj.kcal}</text>
+                    <text x={CX} y={CY + 10} textAnchor="middle" fill="#636366" fontSize="7">kcal</text>
+                  </svg>
+
+                  {/* Macro details */}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                    {[
+                      { label: "Protéines", value: displayObj.p, color: "#30D158", icon: "🥩", per: `${(displayObj.p/poids).toFixed(1)}g/kg` },
+                      { label: "Glucides", value: displayObj.g, color: "#FF9F0A", icon: "🍞", per: `${(displayObj.g/poids).toFixed(1)}g/kg` },
+                      { label: "Lipides", value: displayObj.l, color: "#BF5AF2", icon: "🥑", per: `${(displayObj.l/poids).toFixed(1)}g/kg` },
+                    ].map(m => (
+                      <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: m.color, flexShrink: 0 }} />
+                        <div style={{ flex: 1, fontSize: 11, color: "#8E8E93" }}>{m.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: m.color }}>{m.value}g</div>
+                        <div style={{ fontSize: 9, color: "#48484A", minWidth: 36, textAlign: "right" }}>{m.per}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Meal Timing Timeline */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ position: "relative", height: 40, display: "flex", alignItems: "center" }}>
