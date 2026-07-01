@@ -11087,6 +11087,82 @@ JSON:
                 <div style={{ fontSize: 16, color: "#8E8E93" }}>›</div>
               </button>
 
+              {/* ── SLEEP TREND CHART (7 days) ── */}
+              {(() => {
+                const DAYS_FR_SHORT = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+                const past7 = Array.from({ length: 7 }, (_, i) => {
+                  const d = new Date(); d.setDate(d.getDate() - (6 - i));
+                  const key = getDailyLogKey(profile.name, d.toISOString().slice(0,10));
+                  const stored = (() => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } })();
+                  const sh = stored ? parseFloat(stored.sleepHours) || null : (i === 6 ? parseFloat(dailyData.sleepHours) || null : null);
+                  return { day: DAYS_FR_SHORT[d.getDay()], hours: sh, isToday: i === 6 };
+                });
+
+                const valid = past7.filter(d => d.hours !== null);
+                if (valid.length < 2) return null;
+
+                const avgSleep = (valid.reduce((a, d) => a + d.hours, 0) / valid.length).toFixed(1);
+                const W = 280, H = 60, pad = 10;
+                const maxH = 10, minH = 4;
+                const xOf = (i) => pad + (i / 6) * (W - 2 * pad);
+                const yOf = (v) => H - pad - ((v - minH) / (maxH - minH)) * (H - 2 * pad);
+
+                const hasAll = past7.every(d => d.hours !== null);
+
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>😴 Tendance Sommeil</div>
+                      <div style={{ fontSize: 11, color: avgSleep >= 7.5 ? "#30D158" : avgSleep >= 6.5 ? "#FF9F0A" : "#FF453A", fontWeight: 700 }}>Moy: {avgSleep}h</div>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 8px", position: "relative" }}>
+                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", height: 55, overflow: "visible" }}>
+                        {/* Reference lines */}
+                        {[7, 8].map(h => (
+                          <line key={h} x1={pad} x2={W-pad} y1={yOf(h)} y2={yOf(h)} stroke={h === 8 ? "rgba(48,209,88,0.15)" : "rgba(255,255,255,0.06)"} strokeDasharray="2 4" />
+                        ))}
+                        {/* Area */}
+                        {past7.filter(d => d.hours).length >= 2 && (() => {
+                          const pts = past7.map((d, i) => ({ x: xOf(i), y: d.hours ? yOf(d.hours) : null, i }));
+                          const connectedPts = pts.filter(p => p.y !== null);
+                          if (connectedPts.length < 2) return null;
+                          const linePath = connectedPts.map((p, j) => `${j === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+                          const areaPath = `${linePath} L${connectedPts[connectedPts.length-1].x.toFixed(1)},${H} L${connectedPts[0].x.toFixed(1)},${H} Z`;
+                          return (
+                            <>
+                              <defs>
+                                <linearGradient id="sleepGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.2" />
+                                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.02" />
+                                </linearGradient>
+                              </defs>
+                              <path d={areaPath} fill="url(#sleepGrad)" />
+                              <path d={linePath} fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </>
+                          );
+                        })()}
+                        {/* Dots */}
+                        {past7.map((d, i) => d.hours ? (
+                          <g key={i}>
+                            <circle cx={xOf(i)} cy={yOf(d.hours)} r={d.isToday ? 5 : 3.5}
+                              fill={d.hours >= 7.5 ? "#30D158" : d.hours >= 6.5 ? "#FF9F0A" : "#FF453A"}
+                              stroke={d.isToday ? "rgba(255,255,255,0.3)" : "none"} strokeWidth="2" />
+                            <text x={xOf(i)} y={yOf(d.hours) - 7} textAnchor="middle" fill="#636366" fontSize="7" fontWeight="700">{d.hours}h</text>
+                          </g>
+                        ) : null)}
+                        {/* Day labels */}
+                        {past7.map((d, i) => (
+                          <text key={i} x={xOf(i)} y={H+2} textAnchor="middle" fill={d.isToday ? "#C9A840" : "#48484A"} fontSize="8" fontWeight={d.isToday ? "800" : "600"}>{d.day}</text>
+                        ))}
+                      </svg>
+                      {/* 7h / 8h reference labels */}
+                      <div style={{ position: "absolute", right: 2, top: 10, fontSize: 8, color: "rgba(48,209,88,0.4)", fontWeight: 700 }}>8h</div>
+                      <div style={{ position: "absolute", right: 2, top: 22, fontSize: 8, color: "rgba(255,255,255,0.15)", fontWeight: 700 }}>7h</div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── JOURNAL DOULEURS / BLESSURES ── */}
               {(() => {
                 const injuryKey = `fitrace_injuries_${profile.name}`;
