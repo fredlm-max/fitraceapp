@@ -5753,6 +5753,32 @@ JSON:
                     )}
                   </div>
 
+                  {/* ── COACHING MESSAGE OF THE DAY ── */}
+                  {(() => {
+                    const sessions = profile.sessions || [];
+                    const lastSession = sessions.slice(-1)[0];
+                    const daysToRace = profile.raceDate ? Math.ceil((new Date(profile.raceDate) - new Date()) / 86400000) : null;
+                    const activeLast7 = sessions.filter(s => { const d = new Date(s.date); const w = new Date(); w.setDate(w.getDate()-7); return d >= w; }).length;
+                    const lastRpe = lastSession?.difficulte || lastSession?.rpe || 0;
+
+                    let msg = null;
+                    if (recovery >= 85) msg = { icon: "🚀", color: "#30D158", text: "Forme optimale — aujourd'hui est idéal pour une séance de qualité ou une intensité élevée. Ne laisse pas passer cette fenêtre !" };
+                    else if (recovery <= 40) msg = { icon: "😴", color: "#FF453A", text: "Signal de récupération insuffisant. Privilégie une séance Zone 2 légère ou une mobilité de 20 min. Le surmenage cassera ta progression." };
+                    else if (lastRpe >= 9) msg = { icon: "⚡", color: "#FF9F0A", text: "Ta dernière séance était très intense (RPE ≥ 9). Prends 48h avant un effort maximal — les adaptations se font pendant le repos." };
+                    else if (activeLast7 === 0 && sessions.length > 0) msg = { icon: "📅", color: "#C9A840", text: "Aucune séance cette semaine. La régularité est le facteur #1 en HYROX. Même 30 min Zone 2 aujourd'hui maintient la base aérobie." };
+                    else if (daysToRace !== null && daysToRace <= 7) msg = { icon: "🏁", color: "#FF453A", text: `J-${daysToRace} — Mode affûtage. Réduis le volume à 40%. Travaille la technique et la mentalité. Ménage tes jambes pour le jour J !` };
+                    else if (daysToRace !== null && daysToRace <= 14) msg = { icon: "🎯", color: "#C9A840", text: "2 semaines avant la course. Priorité : une dernière séance longue + sessions de simulation courte. Commence à visualiser ton pacing." };
+                    else if (lastSession?.type === "running_zone2") msg = { icon: "💙", color: "#007AFF", text: "Zone 2 bien dans les jambes — c'est l'or du HYROX. Continue de construire ton moteur aérobie. Les résultats se voient sur 8-12 semaines." };
+
+                    if (!msg) return null;
+                    return (
+                      <div style={{ background: `${msg.color}08`, border: `1px solid ${msg.color}25`, borderRadius: 14, padding: "12px 14px", marginTop: 8, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>{msg.icon}</span>
+                        <div style={{ fontSize: 12, color: "#D1D1D6", lineHeight: 1.6 }}>{msg.text}</div>
+                      </div>
+                    );
+                  })()}
+
                   {/* ── 7-DAY METRICS SPARKLINES ── */}
                   {last7Logs.some(l => l.sleepHours || l.poidsJour) && (() => {
                     const days = ["L","M","M","J","V","S","D"];
