@@ -6107,6 +6107,72 @@ JSON:
               );
             })()}
 
+            {/* ── DELOAD WEEK DETECTOR ── */}
+            {(profile.sessions||[]).length >= 5 && (() => {
+              const sessions = profile.sessions || [];
+              const last14 = sessions.filter(s => s.date && (Date.now() - new Date(s.date)) < 14*86400000);
+              const last7 = sessions.filter(s => s.date && (Date.now() - new Date(s.date)) < 7*86400000);
+              const avgRpe = last7.length > 0 ? last7.reduce((a, s) => a + (s.difficulte || 5), 0) / last7.length : 0;
+
+              // Calculate ATL quickly
+              const k_atl = 2/(7+1);
+              let atl = 0;
+              const last21 = Array.from({ length: 21 }, (_, i) => { const d = new Date(); d.setDate(d.getDate()-(20-i)); return d.toISOString().slice(0,10); });
+              const dayMap = {};
+              sessions.forEach(s => { if (!s.date) return; const k = s.date.slice(0,10); dayMap[k] = (dayMap[k]||0) + Math.round((s.duration||45)*(s.difficulte||5)/10); });
+              last21.forEach(d => { const t = dayMap[d]||0; atl = atl + k_atl*(t-atl); });
+
+              const hasInjury = (() => { try { const inj = JSON.parse(localStorage.getItem(`fitrace_injuries_${profile.name}`) || "[]"); return inj.some(x => x.sev >= 2 && (Date.now() - new Date(x.date)) < 7*86400000); } catch { return false; } })();
+              const highConsecutiveDays = last14.filter(s => (s.difficulte||5) >= 7).length;
+
+              const needsDeload = atl > 45 || avgRpe >= 7.5 || highConsecutiveDays >= 4 || hasInjury;
+              if (!needsDeload) return null;
+
+              const reasons = [];
+              if (atl > 45) reasons.push(`Charge aiguë élevée (ATL: ${Math.round(atl)})`);
+              if (avgRpe >= 7.5) reasons.push(`RPE moyen élevé cette semaine (${avgRpe.toFixed(1)}/10)`);
+              if (highConsecutiveDays >= 4) reasons.push(`${highConsecutiveDays} séances à RPE ≥7 en 14 jours`);
+              if (hasInjury) reasons.push("Douleur/blessure signalée récemment");
+
+              const DELOAD_PLAN = [
+                { day: "Lun", type: "Zone 2 léger", desc: "30 min, 65% FCmax max", icon: "🫀", color: "#30D158" },
+                { day: "Mar", type: "Repos actif", desc: "Marche, mobilité 20 min", icon: "🧘", color: "#38bdf8" },
+                { day: "Mer", type: "Force -40%", desc: "Mêmes exos, -40% volume", icon: "🏋️", color: "#C9A840" },
+                { day: "Jeu", type: "Repos complet", desc: "Récupération système nerveux", icon: "💤", color: "#636366" },
+                { day: "Ven", type: "Technique", desc: "Stations légères, focus form", icon: "🎯", color: "#FF9F0A" },
+                { day: "Sam/Dim", type: "Repos actif", desc: "Natation ou vélo très léger", icon: "🏊", color: "#38bdf8" },
+              ];
+
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(255,69,58,0.06), rgba(0,0,0,0))", border: "1.5px solid rgba(255,69,58,0.2)", borderRadius: 18, padding: "16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: 24 }}>⚠️</span>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 16, color: "#FF453A", letterSpacing: 1 }}>SEMAINE DE DÉCHARGE RECOMMANDÉE</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>Signaux détectés automatiquement</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
+                    {reasons.map((r, i) => (
+                      <div key={i} style={{ background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.2)", borderRadius: 20, padding: "3px 10px", fontSize: 10, color: "#FF453A" }}>⚡ {r}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {DELOAD_PLAN.map((d, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", background: `${d.color}08`, border: `1px solid ${d.color}15`, borderRadius: 10 }}>
+                        <span style={{ fontSize: 14 }}>{d.icon}</span>
+                        <div style={{ width: 32, fontSize: 9, color: d.color, fontWeight: 800, flexShrink: 0 }}>{d.day}</div>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 11, color: d.color, fontWeight: 700 }}>{d.type}</span>
+                          <span style={{ fontSize: 10, color: "#636366" }}> · {d.desc}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MINI WEEKLY CALENDAR ── */}
             {(() => {
               const today = new Date(); today.setHours(0,0,0,0);
