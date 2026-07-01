@@ -5380,26 +5380,45 @@ JSON:
               const sc = calcFitnessScore(profile);
               const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
               return (
-                <div style={{ paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: "#8E8E93", marginBottom: 4 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: "var(--white)", lineHeight: 1.1 }}>
-                        {greet}, <span style={{ color: "var(--yellow)" }}>{firstName}</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 4 }}>
-                        {(profile.sessions||[]).length === 0
-                          ? "Bienvenue sur APEX — commence ta première séance !"
-                          : streak >= 7 ? `${streak} jours de streak — continue comme ça !`
-                          : streak >= 3 ? `${streak} jours consécutifs — belle régularité`
-                          : `${(profile.sessions||[]).length} séances au total`}
+                <div style={{ paddingBottom: 14, borderBottom: "1px solid rgba(201,168,64,0.12)", marginBottom: 16 }}>
+                  {/* ── APEX Brand Header ── */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    {/* Logo + Name */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <svg width="36" height="36" viewBox="0 0 100 100" style={{ filter: "drop-shadow(0 0 8px rgba(201,168,64,0.5))", flexShrink: 0 }}>
+                        <defs>
+                          <linearGradient id="goldGradHome" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#F5D080"/>
+                            <stop offset="40%" stopColor="#C9A840"/>
+                            <stop offset="100%" stopColor="#8A6A10"/>
+                          </linearGradient>
+                        </defs>
+                        <polygon points="50,8 90,85 10,85" fill="none" stroke="url(#goldGradHome)" strokeWidth="8" strokeLinejoin="round"/>
+                        <line x1="28" y1="62" x2="72" y2="62" stroke="url(#goldGradHome)" strokeWidth="6" strokeLinecap="round"/>
+                        <polygon points="66,55 74,62 66,69" fill="url(#goldGradHome)"/>
+                      </svg>
+                      <div>
+                        <div className="bebas" style={{ fontSize: 22, lineHeight: 1, letterSpacing: 3, background: "linear-gradient(135deg,#F5D080,#C9A840,#8A6A10)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>APEX</div>
+                        <div style={{ fontSize: 8, color: "#8A6A10", letterSpacing: 4, textTransform: "uppercase", fontWeight: 700, marginTop: -1 }}>PERFORMANCE</div>
                       </div>
                     </div>
                     {/* Mini fitness score badge */}
-                    <div style={{ textAlign: "center", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, padding: "8px 14px" }}>
-                      <div className="bebas number-pop" style={{ fontSize: 32, color: "var(--white)", lineHeight: 1 }}>{sc.global}</div>
+                    <div style={{ textAlign: "center", background: "rgba(201,168,64,0.08)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 14, padding: "8px 14px" }}>
+                      <div className="bebas number-pop" style={{ fontSize: 32, background: "linear-gradient(135deg,#F5D080,#C9A840)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>{sc.global}</div>
                       <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em" }}>Score</div>
                     </div>
+                  </div>
+                  {/* ── Greeting + Status ── */}
+                  <div style={{ fontSize: 12, color: "#636366", marginBottom: 2 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "var(--white)", lineHeight: 1.2 }}>
+                    {greet}, <span style={{ color: "#C9A840" }}>{firstName}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 3 }}>
+                    {(profile.sessions||[]).length === 0
+                      ? "Bienvenue sur APEX — commence ta première séance !"
+                      : streak >= 7 ? `🔥 ${streak} jours de streak — keep pushing !`
+                      : streak >= 3 ? `${streak} jours consécutifs — belle régularité`
+                      : `${(profile.sessions||[]).length} séances au total`}
                   </div>
                 </div>
               );
