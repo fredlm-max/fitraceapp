@@ -8668,6 +8668,88 @@ JSON:
               );
             })()}
 
+            {/* ── PR PROGRESSION CHART ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = profile.sessions || [];
+              // Build per-exercise sorted history from all sessions
+              const exMap = {};
+              sessions.forEach(s => {
+                const dateStr = s.date || "";
+                (s.exercicesLog || []).forEach(e => {
+                  if (!e.charge || !e.nom) return;
+                  const charge = parseFloat(e.charge);
+                  const reps = parseInt(e.reps) || 1;
+                  const est1RM = reps > 1 ? Math.round(charge * (1 + reps / 30)) : charge;
+                  const key = e.nom.toLowerCase().replace(/\s+/g, "_");
+                  if (!exMap[key]) exMap[key] = { nom: e.nom, history: [] };
+                  exMap[key].history.push({ date: dateStr, v: est1RM });
+                });
+              });
+              const exList = Object.values(exMap).filter(ex => ex.history.length >= 2).map(ex => {
+                ex.history.sort((a, b) => a.date.localeCompare(b.date));
+                // running max
+                let runMax = 0;
+                ex.history = ex.history.map(p => { if (p.v > runMax) runMax = p.v; return { ...p, peak: runMax }; });
+                return ex;
+              }).sort((a, b) => b.history.length - a.history.length).slice(0, 4);
+              if (exList.length === 0) return null;
+              const [selEx, setSelEx] = React.useState(0);
+              const ex = exList[Math.min(selEx, exList.length - 1)];
+              const pts = ex.history;
+              const vals = pts.map(p => p.peak);
+              const minV = Math.min(...vals);
+              const maxV = Math.max(...vals);
+              const range = maxV - minV || 1;
+              const W = 260, H = 64, PAD = 8;
+              const cx = (i) => PAD + (i / (pts.length - 1)) * (W - PAD * 2);
+              const cy = (v) => H - PAD - ((v - minV) / range) * (H - PAD * 2);
+              const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(p.peak)}`).join(" ");
+              const areaD = pathD + ` L${cx(pts.length-1)},${H} L${PAD},${H} Z`;
+              const latest = vals[vals.length - 1];
+              const delta = vals.length >= 2 ? latest - vals[0] : 0;
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📈 PROGRESSION 1RM</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 1 }}>Évolution sur {pts.length} séances</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", lineHeight: 1 }}>{latest} <span style={{ fontSize: 12 }}>kg</span></div>
+                      {delta !== 0 && <div style={{ fontSize: 10, color: delta > 0 ? "var(--green)" : "var(--red)" }}>{delta > 0 ? "+" : ""}{delta} kg total</div>}
+                    </div>
+                  </div>
+                  {/* Exercise selector */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>
+                    {exList.map((e, i) => (
+                      <div key={i} onClick={() => setSelEx(i)}
+                        style={{ flexShrink: 0, padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: i === selEx ? "var(--yellow)" : "rgba(255,255,255,0.07)", color: i === selEx ? "#000" : "#8E8E93", cursor: "pointer" }}>
+                        {e.nom.length > 12 ? e.nom.slice(0, 12) + "…" : e.nom}
+                      </div>
+                    ))}
+                  </div>
+                  {/* SVG chart */}
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", borderRadius: 8 }}>
+                    <defs>
+                      <linearGradient id="prGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C9A840" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#C9A840" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={areaD} fill="url(#prGrad)" />
+                    <path d={pathD} fill="none" stroke="#C9A840" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    {pts.map((p, i) => (
+                      <circle key={i} cx={cx(i)} cy={cy(p.peak)} r="3" fill="#C9A840" stroke="#000" strokeWidth="1.5" />
+                    ))}
+                  </svg>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                    <div style={{ fontSize: 10, color: "#636366" }}>{pts[0].date ? new Date(pts[0].date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div>
+                    <div style={{ fontSize: 10, color: "#636366" }}>{pts[pts.length-1].date ? new Date(pts[pts.length-1].date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "Auj."}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
