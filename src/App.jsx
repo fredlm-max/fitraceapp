@@ -15833,14 +15833,38 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
               ))}
             </div>
           ) : (
-            /* Mode standard */
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 14 }}>
-              <div className="bebas number-pop" style={{ fontSize: 80, color: phaseLabel?.color || "var(--red)", lineHeight: 0.9, letterSpacing: -1 }}>{days}</div>
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 16, color: "#8E8E93" }}>jours</div>
-                <div style={{ fontSize: 11, color: "#8E8E93" }}>avant le départ</div>
-              </div>
-            </div>
+            /* Mode standard — circular progress ring */
+            (() => {
+              const firstSession = (profile.sessions||[]).length > 0 ? new Date(profile.sessions[0].date) : new Date(Date.now() - 30*86400000);
+              const rDate = new Date(profile.raceDate);
+              const total = Math.max(1, rDate - firstSession);
+              const elapsed = Math.max(0, Date.now() - firstSession);
+              const prepPct = Math.min(100, (elapsed / total) * 100);
+              const R = 56, circumference = 2 * Math.PI * R;
+              const strokeOffset = circumference * (1 - prepPct / 100);
+              const ringColor = phaseLabel?.color || "#FF453A";
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 14 }}>
+                  <div style={{ position: "relative", width: 132, height: 132, flexShrink: 0 }}>
+                    <svg width="132" height="132" viewBox="0 0 132 132" style={{ transform: "rotate(-90deg)" }}>
+                      <circle cx="66" cy="66" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                      <circle cx="66" cy="66" r={R} fill="none" stroke={ringColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeOffset} style={{ transition: "stroke-dashoffset 1.5s ease", filter: `drop-shadow(0 0 6px ${ringColor}60)` }} />
+                    </svg>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <div className="bebas number-pop" style={{ fontSize: 46, color: ringColor, lineHeight: 1, letterSpacing: -1 }}>{days}</div>
+                      <div style={{ fontSize: 9, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>jours</div>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: ringColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{Math.round(prepPct)}% de la prépa</div>
+                    <div style={{ fontSize: 13, color: "#AEAEB2", lineHeight: 1.5 }}>
+                      {days > 30 ? `${Math.ceil(days/7)} semaines restantes` : `${days} jours critiques`}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#636366", marginTop: 4 }}>{(profile.sessions||[]).length} séances réalisées</div>
+                  </div>
+                </div>
+              );
+            })()
           )}
 
           <div style={{ fontSize: 12, color: "#8E8E93", marginBottom: 14 }}>{new Date(profile.raceDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>
