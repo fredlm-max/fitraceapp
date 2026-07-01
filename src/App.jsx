@@ -2909,7 +2909,26 @@ function SessionHistoryCard({ profile, haptic, navigateTo }) {
                   <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 12 }}>
                     📅 {new Date(s.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                   </div>
+                  {/* TRIMP + Calories row */}
+                  {(s.trimp || s.calories) && (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                      {s.trimp && <div style={{ flex: 1, background: "rgba(201,168,64,0.08)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: "#C9A840" }}>{s.trimp}</div>
+                        <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>TRIMP</div>
+                      </div>}
+                      {s.calories && <div style={{ flex: 1, background: "rgba(255,59,48,0.08)", border: "1px solid rgba(255,59,48,0.2)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: "#FF453A" }}>{s.calories}</div>
+                        <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>kcal</div>
+                      </div>}
+                    </div>
+                  )}
                   {s.charges && <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#AEAEB2", lineHeight: 1.6, marginBottom: 10 }}>{s.charges}</div>}
+                  {s.aiFeedback && (
+                    <div style={{ background: "linear-gradient(135deg, rgba(201,168,64,0.08), rgba(201,168,64,0.02))", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: "#C9A840", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>🤖 Analyse Coach IA</div>
+                      <div style={{ fontSize: 12, color: "#D1D1D6", lineHeight: 1.7 }}>{s.aiFeedback}</div>
+                    </div>
+                  )}
                   {s.douleurs && s.douleurs !== "Aucune douleur" && (
                     <div style={{ background: "rgba(255,71,71,0.06)", border: "1px solid rgba(255,71,71,0.15)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--red)" }}>⚠️ {s.douleurs}</div>
                   )}
