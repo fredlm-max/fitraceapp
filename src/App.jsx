@@ -13781,6 +13781,87 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── WEEKLY CUSTOM PLAN EDITOR ── */}
+      {(() => {
+        const DAYS_FR = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+        const SESSION_TYPES = [
+          { id: "rest",             label: "Repos",     icon: "💤", color: "#48484A", bg: "rgba(72,72,74,0.15)" },
+          { id: "running_zone2",    label: "Zone 2",    icon: "🫀", color: "#30D158", bg: "rgba(48,209,88,0.1)" },
+          { id: "running_qualite",  label: "Qualité",   icon: "⚡", color: "#FF9F0A", bg: "rgba(255,159,10,0.1)" },
+          { id: "force_stations",   label: "Force",     icon: "🏋️", color: "#C9A840", bg: "rgba(201,168,64,0.1)" },
+          { id: "hybride_compromis",label: "Hybride",   icon: "🔄", color: "#BF5AF2", bg: "rgba(191,90,242,0.1)" },
+        ];
+
+        const planKey = `fitrace_custom_week_${profile.name}`;
+        const [customPlan, setCustomPlan] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(planKey) || "null") || Array(7).fill("rest"); }
+          catch { return Array(7).fill("rest"); }
+        });
+        const [editDay, setEditDay] = React.useState(null);
+
+        const setDay = (dayIdx, typeId) => {
+          const next = customPlan.map((v, i) => i === dayIdx ? typeId : v);
+          setCustomPlan(next);
+          localStorage.setItem(planKey, JSON.stringify(next));
+          setEditDay(null);
+        };
+
+        const todayDow = (new Date().getDay() + 6) % 7;
+
+        const sessionCount = customPlan.filter(t => t !== "rest").length;
+        const typeCount = {};
+        customPlan.forEach(t => { if (t !== "rest") typeCount[t] = (typeCount[t]||0) + 1; });
+
+        return (
+          <div style={{ background: "rgba(28,28,30,0.8)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>MON PLAN SEMAINE</div>
+                <div style={{ fontSize: 10, color: "#636366" }}>{sessionCount} séances planifiées · Appuie pour modifier</div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {Object.entries(typeCount).map(([t, n]) => {
+                  const st = SESSION_TYPES.find(x => x.id === t);
+                  return st ? <div key={t} style={{ background: st.bg, border: `1px solid ${st.color}40`, borderRadius: 8, padding: "3px 7px", fontSize: 9, color: st.color, fontWeight: 700 }}>{st.icon} ×{n}</div> : null;
+                })}
+              </div>
+            </div>
+
+            {/* 7-day grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+              {DAYS_FR.map((day, i) => {
+                const type = customPlan[i];
+                const st = SESSION_TYPES.find(x => x.id === type) || SESSION_TYPES[0];
+                const isToday = i === todayDow;
+                return (
+                  <button key={i} onClick={() => setEditDay(editDay === i ? null : i)}
+                    style={{ background: st.bg, border: `1.5px solid ${isToday ? st.color : st.color + "40"}`, borderRadius: 10, padding: "8px 4px", textAlign: "center", cursor: "pointer", transition: "all 0.15s", outline: "none", position: "relative" }}>
+                    {isToday && <div style={{ position: "absolute", top: 3, right: 3, width: 5, height: 5, borderRadius: "50%", background: "#C9A840" }} />}
+                    <div style={{ fontSize: 16, marginBottom: 3 }}>{st.icon}</div>
+                    <div style={{ fontSize: 8, color: isToday ? "#F2F2F7" : "#8E8E93", fontWeight: isToday ? 800 : 600 }}>{day}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Picker for selected day */}
+            {editDay !== null && (
+              <div style={{ marginTop: 10, padding: "12px", background: "rgba(0,0,0,0.3)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ fontSize: 10, color: "#636366", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>{DAYS_FR[editDay]} — Choisir le type</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {SESSION_TYPES.map(st => (
+                    <button key={st.id} onClick={() => setDay(editDay, st.id)}
+                      style={{ background: customPlan[editDay] === st.id ? st.bg : "rgba(255,255,255,0.04)", border: `1.5px solid ${customPlan[editDay] === st.id ? st.color : "transparent"}`, borderRadius: 20, padding: "6px 12px", fontSize: 11, color: customPlan[editDay] === st.id ? st.color : "#8E8E93", cursor: "pointer", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                      {st.icon} {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
