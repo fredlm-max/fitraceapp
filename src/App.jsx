@@ -9348,6 +9348,75 @@ JSON:
               );
             })()}
 
+            {/* ── HYROX WEAKNESS DETECTOR ── */}
+            {(() => {
+              let times = {};
+              try { times = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch {}
+              const isFemale = profile.sexe === "F" || profile.sexe === "femme";
+              const BENCHMARKS = {
+                skierg:    { open: isFemale ? 480 : 360, elite: isFemale ? 300 : 240, label: "SkiErg 1000m",    fix: "Skierg 4×250m, 30s récup",    icon: "🎿" },
+                sled_push: { open: isFemale ? 270 : 210, elite: isFemale ? 150 : 120, label: "Sled Push 50m",   fix: "Force quad: goblet squat 4×12", icon: "🛷" },
+                sled_pull: { open: isFemale ? 300 : 240, elite: isFemale ? 180 : 150, label: "Sled Pull 50m",   fix: "Traction 3×10 + step-ups 3×20",  icon: "⛓️" },
+                burpee:    { open: isFemale ? 420 : 360, elite: isFemale ? 270 : 210, label: "Burpee BJ 80m",   fix: "Burpees tabata 8×20s, EMOM box",  icon: "🔥" },
+                rowing:    { open: isFemale ? 420 : 360, elite: isFemale ? 270 : 210, label: "Rowing 1000m",    fix: "Intervalles 4×500m à 85% FC",     icon: "🚣" },
+                farmers:   { open: isFemale ? 180 : 150, elite: isFemale ? 120 : 90,  label: "Farmers 200m",    fix: "Farmers walk 4×50m + grip work",   icon: "💪" },
+                sandbag:   { open: isFemale ? 450 : 360, elite: isFemale ? 270 : 210, label: "Sandbag 100m",    fix: "Lunge forward 4×20 chaque jambe",   icon: "🎒" },
+                wall_balls:{ open: isFemale ? 360 : 300, elite: isFemale ? 240 : 180, label: "Wall Balls 100",  fix: "WB EMOM 10min: 10 reps/min",        icon: "🏀" },
+              };
+
+              const scored = Object.entries(BENCHMARKS).map(([id, b]) => {
+                const t = times[id];
+                if (!t) return { id, ...b, score: null };
+                const pct = Math.max(0, Math.min(100, (b.open - t) / (b.open - b.elite) * 100));
+                return { id, ...b, score: pct, t };
+              }).filter(s => s.score !== null).sort((a, b) => a.score - b.score);
+
+              if (scored.length < 2) return (
+                <div style={{ background: "rgba(28,28,30,0.6)", borderRadius: 16, padding: "16px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>🎯 HYROX Weakness Detector</div>
+                  <div style={{ fontSize: 13, color: "#636366" }}>Enregistre tes temps aux stations dans l'onglet Race pour voir tes faiblesses.</div>
+                </div>
+              );
+
+              const weak = scored.slice(0, 2);
+              const strong = scored[scored.length - 1];
+
+              return (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>🎯 HYROX Weakness Detector</div>
+                  <div style={{ background: "linear-gradient(135deg, rgba(255,59,48,0.08), rgba(255,59,48,0.02))", border: "1px solid rgba(255,59,48,0.2)", borderRadius: 16, padding: "16px", marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: "#FF453A", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>⚠️ Stations à améliorer en priorité</div>
+                    {weak.map((s, i) => (
+                      <div key={s.id} style={{ marginBottom: i < weak.length - 1 ? 12 : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 20 }}>{s.icon}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#F2F2F7" }}>{s.label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#FF453A" }}>{s.score.toFixed(0)}%</span>
+                            </div>
+                            <div style={{ height: 5, background: "#2C2C2E", borderRadius: 3, marginTop: 4, overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${s.score}%`, background: "linear-gradient(90deg, #FF453A, #FF9F0A)", borderRadius: 3 }} />
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#FF9F0A", marginLeft: 28 }}>💡 {s.fix}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {strong && (
+                    <div style={{ background: "linear-gradient(135deg, rgba(48,209,88,0.08), rgba(48,209,88,0.02))", border: "1px solid rgba(48,209,88,0.15)", borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>{strong.icon}</span>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#30D158", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>✅ Point fort</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#F2F2F7" }}>{strong.label} — {strong.score.toFixed(0)}%</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
             {profile.vmaKmh && (() => {
               const vma = parseFloat(profile.vmaKmh);
