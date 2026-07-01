@@ -17454,6 +17454,88 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── HYROX RACE CIRCUIT VISUALIZATION ── */}
+      {(() => {
+        const CIRCUIT = [
+          { n: 1, run: "Run 1km", station: "SkiErg 1000m", icon: "⛷️", color: "#a78bfa" },
+          { n: 2, run: "Run 1km", station: "Sled Push 50m", icon: "🛷", color: "#C9A840" },
+          { n: 3, run: "Run 1km", station: "Sled Pull 50m", icon: "🔗", color: "#FF9F0A" },
+          { n: 4, run: "Run 1km", station: "Burpee BJ 80m", icon: "🤸", color: "#FF453A" },
+          { n: 5, run: "Run 1km", station: "Rowing 1000m", icon: "🚣", color: "#38bdf8" },
+          { n: 6, run: "Run 1km", station: "Farmers Carry 200m", icon: "🧳", color: "#30D158" },
+          { n: 7, run: "Run 1km", station: "Sandbag Lunges 100m", icon: "🎒", color: "#FF9F0A" },
+          { n: 8, run: "Run 1km", station: "Wall Balls 100 reps", icon: "🏀", color: "#C9A840" },
+        ];
+
+        const savedTimes = (() => {
+          try { return JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch { return {}; }
+        })();
+        const timeKeys = ["skierg","sled_push","sled_pull","burpee_broad_jump","rowing","farmers_carry","sandbag_lunges","wall_balls"];
+        const runPaceSec = profile.vmaKmh ? Math.round(60 / (parseFloat(profile.vmaKmh) * 0.78) * 60) : 360;
+
+        let cumTime = 0;
+        const stationsWithTimes = CIRCUIT.map((s, i) => {
+          const stSec = savedTimes[timeKeys[i]] || 0;
+          cumTime += runPaceSec + stSec;
+          const m = Math.floor(cumTime / 60);
+          const h = Math.floor(m / 60);
+          const min = m % 60;
+          return { ...s, stSec, cumLabel: h > 0 ? `${h}h${String(min).padStart(2,"0")}` : `${min}min` };
+        });
+
+        const [expanded, setExpanded] = React.useState(false);
+
+        return (
+          <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>🗺 CIRCUIT HYROX</div>
+                <div style={{ fontSize: 10, color: "#636366" }}>8 km de running · 8 stations</div>
+              </div>
+              <button onClick={() => setExpanded(e => !e)} style={{ background: "none", border: "none", color: "#8E8E93", cursor: "pointer", fontSize: 14, padding: "4px 8px" }}>{expanded ? "▲ Réduire" : "▼ Détail"}</button>
+            </div>
+
+            {/* Compact timeline */}
+            <div style={{ display: "flex", overflowX: "auto", gap: 4, paddingBottom: 4 }}>
+              {stationsWithTimes.map((s, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                  {/* Run segment */}
+                  <div style={{ width: 28, height: 12, background: "rgba(48,209,88,0.15)", borderRadius: 3, border: "1px solid rgba(48,209,88,0.3)", marginBottom: 2 }} />
+                  {/* Station */}
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${s.color}18`, border: `1.5px solid ${s.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{s.icon}</div>
+                  <div style={{ fontSize: 7, color: "#48484A", marginTop: 2, textAlign: "center" }}>{s.n}</div>
+                  {i < 7 && <div style={{ width: 8, height: 2, background: "rgba(255,255,255,0.1)", marginTop: 2 }} />}
+                </div>
+              ))}
+              {/* Finish */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                <div style={{ width: 28, height: 12, background: "rgba(48,209,88,0.15)", borderRadius: 3, border: "1px solid rgba(48,209,88,0.3)", marginBottom: 2 }} />
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,168,64,0.15)", border: "1.5px solid rgba(201,168,64,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🏁</div>
+              </div>
+            </div>
+
+            {/* Expanded detail */}
+            {expanded && (
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+                {stationsWithTimes.map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", background: `${s.color}06`, borderRadius: 8 }}>
+                    <span style={{ fontSize: 16 }}>{s.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{s.station}</div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Précédé de {s.run}</div>
+                    </div>
+                    {s.stSec > 0 && (
+                      <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700 }}>{Math.floor(s.stSec/60)}:{String(s.stSec%60).padStart(2,"0")}</div>
+                    )}
+                    <div style={{ fontSize: 10, color: "#C9A840", fontWeight: 700, background: "rgba(201,168,64,0.1)", borderRadius: 6, padding: "2px 6px" }}>{s.cumLabel}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── RACE PACING PLANNER ── */}
       <button onClick={() => setShowPacer(v => !v)} style={{ width: "100%", background: showPacer ? "rgba(57,255,128,0.08)" : "rgba(255,255,255,0.04)", border: showPacer ? "1.5px solid rgba(57,255,128,0.3)" : "1px solid rgba(0,0,0,0.07)", borderRadius: 16, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
         <div style={{ textAlign: "left" }}>
