@@ -9619,6 +9619,60 @@ JSON:
               );
             })()}
 
+            {/* ── MUSCLE FATIGUE HEATMAP ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = getSessionsForProfile(profile.name);
+              const now = Date.now();
+              // muscle groups and which session types stress them (weight = intensity 0-1)
+              const MUSCLE_MAP = {
+                force_stations:    { quads: 0.9, hamstrings: 0.7, glutes: 0.8, shoulders: 0.8, core: 0.7, lats: 0.8, calves: 0.4 },
+                running_zone2:     { quads: 0.5, hamstrings: 0.5, glutes: 0.5, shoulders: 0.1, core: 0.3, lats: 0.1, calves: 0.7 },
+                running_qualite:   { quads: 0.8, hamstrings: 0.7, glutes: 0.7, shoulders: 0.2, core: 0.4, lats: 0.1, calves: 0.9 },
+                hybride_compromis: { quads: 0.8, hamstrings: 0.7, glutes: 0.7, shoulders: 0.6, core: 0.6, lats: 0.5, calves: 0.7 },
+              };
+              const MUSCLES = ["quads", "hamstrings", "glutes", "shoulders", "core", "lats", "calves"];
+              const LABELS = { quads: "Quadriceps", hamstrings: "Ischio-jambiers", glutes: "Fessiers", shoulders: "Épaules", core: "Core", lats: "Dorsaux", calves: "Mollets" };
+
+              // Compute fatigue: EMA decay over 48h per session
+              const fatigue = Object.fromEntries(MUSCLES.map(m => [m, 0]));
+              sessions.slice(-7).forEach(s => {
+                const hoursAgo = (now - new Date(s.date).getTime()) / (1000*60*60);
+                if (hoursAgo > 96) return;
+                const decay = Math.exp(-hoursAgo / 48);
+                const map = MUSCLE_MAP[s.type] || {};
+                const intensity = (s.rpe || 6) / 10;
+                MUSCLES.forEach(m => {
+                  fatigue[m] = Math.min(1, fatigue[m] + (map[m] || 0) * intensity * decay);
+                });
+              });
+
+              const fatigueColor = (v) => v > 0.7 ? "#FF453A" : v > 0.4 ? "#FF9F0A" : v > 0.15 ? "#C9A840" : "#30D158";
+              const sorted = MUSCLES.slice().sort((a,b) => fatigue[b]-fatigue[a]);
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.8)", borderRadius: 18, padding: "16px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>💪 Fatigue musculaire (48-96h)</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {sorted.map(m => {
+                      const v = fatigue[m];
+                      const col = fatigueColor(v);
+                      const label = v > 0.7 ? "Fatigué" : v > 0.4 ? "Modéré" : v > 0.15 ? "Léger" : "Récupéré";
+                      return (
+                        <div key={m} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 90, fontSize: 11, color: "#AEAEB2", fontWeight: 600, flexShrink: 0 }}>{LABELS[m]}</div>
+                          <div style={{ flex: 1, height: 8, background: "#2C2C2E", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${Math.max(3, v*100)}%`, background: `linear-gradient(90deg, ${col}88, ${col})`, borderRadius: 4, transition: "width 0.5s ease" }} />
+                          </div>
+                          <div style={{ width: 58, fontSize: 10, color: col, fontWeight: 700, textAlign: "right" }}>{label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 10, color: "#48484A" }}>Basé sur tes {Math.min(7, sessions.length)} dernières séances • Décroissance sur 48h</div>
+                </div>
+              );
+            })()}
+
             {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
             {profile.vmaKmh && (() => {
               const vma = parseFloat(profile.vmaKmh);
