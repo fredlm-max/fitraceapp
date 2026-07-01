@@ -6793,6 +6793,27 @@ JSON:
                   </div>
                   <div className="bebas" style={{ fontSize: 24, color: "var(--white)", lineHeight: 1.1, marginBottom: 5 }}>{session.titre}</div>
                   <div style={{ fontSize: 12, color: "var(--gray)", lineHeight: 1.5, marginBottom: 10 }}>{session.explication?.slice(0, 90)}{(session.explication?.length || 0) > 90 ? "…" : ""}</div>
+                  {/* Zone FC cible */}
+                  {(() => {
+                    const fcZones = {
+                      running_zone2: { zone: "Z2", label: "Endurance", pct: "65–75%", color: "#30D158", desc: "Conversation possible" },
+                      running_qualite: { zone: "Z4", label: "Seuil", pct: "85–95%", color: "#FF453A", desc: "Effort soutenu" },
+                      hybride_compromis: { zone: "Z3–Z4", label: "Tempo", pct: "75–90%", color: "#FF9F0A", desc: "Rythme de course" },
+                      force_stations: { zone: "Z2–Z3", label: "Force", pct: "60–80%", color: "#0A84FF", desc: "Récupération active" },
+                    };
+                    const z = fcZones[session.type];
+                    const fcMax = profile.fcMax || (220 - (parseInt(profile.age) || 30));
+                    if (!z) return null;
+                    const fcLow = Math.round(fcMax * parseFloat(z.pct.split("–")[0]) / 100);
+                    const fcHigh = Math.round(fcMax * parseFloat(z.pct.split("–")[1]) / 100);
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "7px 10px", background: `${z.color}10`, borderRadius: 10, border: `1px solid ${z.color}25` }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: z.color, flexShrink: 0, boxShadow: `0 0 6px ${z.color}` }} />
+                        <span style={{ fontSize: 11, color: z.color, fontWeight: 700 }}>Zone {z.zone} · {z.label}</span>
+                        <span style={{ fontSize: 11, color: "#8E8E93" }}>{fcLow}–{fcHigh} bpm · {z.desc}</span>
+                      </div>
+                    );
+                  })()}
                   {/* Mini exercice chips */}
                   {(session.exercices || []).length > 0 && (
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
