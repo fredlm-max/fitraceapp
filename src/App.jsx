@@ -15709,6 +15709,54 @@ JSON: {
         );
       })()}
 
+      {/* ── RACE DAY NUTRITION PLANNER ── */}
+      {profile.raceDate && (() => {
+        const raceDate = new Date(profile.raceDate);
+        const daysLeft = Math.ceil((raceDate - new Date()) / 86400000);
+        if (daysLeft > 7 || daysLeft < 0) return null;
+
+        const poids = parseFloat(profile.poids) || 70;
+        const PLAN = [
+          { time: "Veille au soir", icon: "🍝", color: "#FF9F0A",
+            items: [`Pâtes/riz : ${Math.round(poids * 1.5)}g (cuit)`, "Sauce légère, peu de graisses", `Protéines maigres : ${Math.round(poids * 0.4)}g`, "Éviter les fibres excédentaires"] },
+          { time: "J-Matin (3-4h avant)", icon: "🍞", color: "#C9A840",
+            items: [`Flocons avoine : ${Math.round(poids * 0.6)}g + banane`, `Toasts + miel : ${Math.round(poids * 0.8)}g glucides`, "Café ou thé léger ✓", `Hydratation : 500ml dès le réveil`] },
+          { time: "1h30 avant", icon: "🍌", color: "#30D158",
+            items: ["Banane + gel énergétique", `Eau : 300–400ml`, "Éviter tout aliment nouveau", "Chewing-gum caféiné si habitude"] },
+          { time: "Pendant la course", icon: "⚡", color: "#FF453A",
+            items: [`Gel : 1 par 30 min (≈ 25g CHO)`, "Eau aux ravitos uniquement", "Ne rien tester de nouveau le jour J", "Garder le mental : chaque station est une victoire"] },
+          { time: "Post-course (30min)", icon: "🥤", color: "#38bdf8",
+            items: [`Shake récup : ${Math.round(poids * 0.4)}g protéines + 80g glucides`, `Eau + électrolytes : 500ml+`, "Glucides rapides : banane, pain blanc", "Célèbre ! Tu l'as mérité 🏆"] },
+        ];
+
+        return (
+          <div style={{ background: "linear-gradient(135deg, rgba(201,168,64,0.06), rgba(0,0,0,0))", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 18, padding: "16px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 22 }}>🏁</div>
+              <div>
+                <div className="bebas" style={{ fontSize: 16, color: "#C9A840", letterSpacing: 1 }}>PLAN NUTRITION JOUR DE COURSE</div>
+                <div style={{ fontSize: 10, color: "#636366" }}>J-{daysLeft} · {raceDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {PLAN.map((step, i) => (
+                <div key={i} style={{ background: `${step.color}08`, border: `1px solid ${step.color}20`, borderRadius: 12, padding: "10px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 16 }}>{step.icon}</span>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: step.color, textTransform: "uppercase", letterSpacing: "0.05em" }}>{step.time}</div>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 14, display: "flex", flexDirection: "column", gap: 2 }}>
+                    {step.items.map((item, j) => (
+                      <li key={j} style={{ fontSize: 11, color: "#AEAEB2", lineHeight: 1.5 }}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── HERO CALORIES ── */}
       <div style={{ background: "linear-gradient(145deg, #001a00 0%, #080808 60%)", border: `1.5px solid ${kcalColor === "var(--green)" ? "rgba(57,255,128,0.2)" : kcalColor === "var(--yellow)" ? "rgba(201,168,64,0.2)" : "rgba(255,71,71,0.2)"}`, borderRadius: 20, padding: "20px 20px 16px", marginBottom: 14, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -30, right: -20, fontSize: 110, opacity: 0.04 }}>🥗</div>
