@@ -54,7 +54,7 @@ const GLOBAL_STYLES = `
   button:active { transform: scale(0.94) !important; opacity: 0.85; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   input, select, textarea { font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(0,122,255,0.6); outline-offset: 2px; transition: outline 0.15s; }
+  input:focus, select:focus, textarea:focus { outline: none; }
 
   /* ── Tab transitions ── */
   @keyframes slideInRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
@@ -1227,15 +1227,15 @@ function estimateCost(tokens) {
 // ============================================================
 function Btn({ children, onClick, variant = "primary", size = "md", disabled, style }) {
   const styles = {
-    primary: { background: "var(--yellow)", color: "#0a0a0a", fontWeight: 700 },
-    danger: { background: "var(--red)", color: "#fff", fontWeight: 700 },
-    success: { background: "var(--green)", color: "#0a0a0a", fontWeight: 700 },
-    ghost: { background: "transparent", color: "var(--yellow)", border: "1.5px solid var(--yellow)" },
-    dark: { background: "var(--bg3)", color: "var(--white)", border: "1px solid rgba(255,255,255,0.12)" },
+    primary: { background: "var(--yellow)", color: "#0a0a0a", fontWeight: 700, boxShadow: "0 4px 16px rgba(10,132,255,0.35)" },
+    danger: { background: "var(--red)", color: "#fff", fontWeight: 700, boxShadow: "0 4px 14px rgba(255,69,58,0.3)" },
+    success: { background: "var(--green)", color: "#0a0a0a", fontWeight: 700, boxShadow: "0 4px 14px rgba(48,209,88,0.3)" },
+    ghost: { background: "transparent", color: "var(--yellow)", border: "1.5px solid rgba(10,132,255,0.5)" },
+    dark: { background: "rgba(255,255,255,0.08)", color: "var(--white)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(10px)" },
   };
   const sizes = { sm: { padding: "6px 14px", fontSize: 13 }, md: { padding: "11px 22px", fontSize: 15 }, lg: { padding: "15px 32px", fontSize: 18 } };
   return (
-    <button onClick={onClick} disabled={disabled} style={{ borderRadius: 8, opacity: disabled ? 0.45 : 1, ...styles[variant], ...sizes[size], ...style }}>
+    <button onClick={onClick} disabled={disabled} style={{ borderRadius: 10, border: "none", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1, transition: "opacity 0.15s, transform 0.1s", ...styles[variant], ...sizes[size], ...style }}>
       {children}
     </button>
   );
@@ -1243,18 +1243,20 @@ function Btn({ children, onClick, variant = "primary", size = "md", disabled, st
 
 function Card({ children, style, onClick }) {
   return (
-    <div onClick={onClick} style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 12, padding: 18, cursor: onClick ? "pointer" : "default", ...style }}>
+    <div onClick={onClick} style={{ background: "linear-gradient(145deg, rgba(44,44,46,1) 0%, rgba(28,28,30,1) 100%)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: 18, cursor: onClick ? "pointer" : "default", boxShadow: "0 2px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)", ...style }}>
       {children}
     </div>
   );
 }
 
 function Input({ label, value, onChange, type = "text", placeholder, style, min, max, step }) {
+  const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {label && <label style={{ fontSize: 12, color: "#8E8E93", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</label>}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} min={min} max={max} step={step}
-        style={{ background: "var(--bg3)", border: "1px solid var(--gray2)", borderRadius: 8, padding: "10px 14px", color: "var(--white)", fontSize: 15, width: "100%", ...style }} />
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${focused ? "rgba(10,132,255,0.6)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, padding: "10px 14px", color: "var(--white)", fontSize: 15, width: "100%", outline: "none", boxShadow: focused ? "0 0 0 3px rgba(10,132,255,0.15)" : "none", transition: "border-color 0.2s, box-shadow 0.2s", ...style }} />
     </div>
   );
 }
@@ -1296,7 +1298,10 @@ function Section({ title, children, action }) {
   return (
     <div style={{ marginBottom: 28 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h2 className="bebas" style={{ fontSize: 22, color: "var(--yellow)" }}>{title}</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 3, height: 20, background: "var(--yellow)", borderRadius: 99, flexShrink: 0 }} />
+          <h2 className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 1 }}>{title}</h2>
+        </div>
         {action}
       </div>
       {children}
@@ -4483,11 +4488,11 @@ JSON:
       {/* ── Toast notifications ── */}
       <div style={{ position: "fixed", bottom: 96, left: 16, right: 16, zIndex: 900, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         {toasts.map(t => {
-          const colors = { success: { bg: "rgba(57,255,128,0.95)", color: "#000", icon: "✓" }, error: { bg: "rgba(255,71,71,0.95)", color: "#fff", icon: "✕" }, info: { bg: "rgba(0,122,255,0.95)", color: "#000", icon: "ℹ" }, badge: { bg: "rgba(167,139,250,0.95)", color: "#fff", icon: "🏅" } };
+          const colors = { success: { accent: "#30D158", icon: "✓" }, error: { accent: "#FF453A", icon: "✕" }, info: { accent: "#0A84FF", icon: "ℹ" }, badge: { accent: "#BF5AF2", icon: "🏅" } };
           const c = colors[t.type] || colors.success;
           return (
-            <div key={t.id} style={{ animation: "toastIn 0.3s var(--spring) both", background: c.bg, color: c.color, borderRadius: 14, padding: "11px 18px", fontSize: 14, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 10, maxWidth: 360, pointerEvents: "auto", backdropFilter: "blur(12px)" }}>
-              <span style={{ fontSize: 16 }}>{c.icon}</span>
+            <div key={t.id} style={{ animation: "toastIn 0.3s var(--spring) both", background: "rgba(28,28,30,0.95)", color: "#fff", borderRadius: 16, padding: "12px 18px", fontSize: 14, fontWeight: 600, boxShadow: "0 8px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)", display: "flex", alignItems: "center", gap: 12, maxWidth: 360, pointerEvents: "auto", backdropFilter: "blur(40px) saturate(1.8)", border: `1px solid rgba(255,255,255,0.1)`, borderLeft: `3px solid ${c.accent}` }}>
+              <span style={{ fontSize: 16, color: c.accent }}>{c.icon}</span>
               <span>{t.msg}</span>
             </div>
           );
@@ -6168,6 +6173,9 @@ JSON:
 
         {/* TODAY — toujours rendu */}
         <div style={{display: tab === "today" ? "block" : "none"}} className="fade-in">
+
+            {/* ── HERO GRADIENT ── */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 220, background: "radial-gradient(ellipse 80% 180px at 60% 0%, rgba(10,132,255,0.12) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
 
             {/* ── HEADER GREETING + RECOVERY ── */}
             {(()=>{
