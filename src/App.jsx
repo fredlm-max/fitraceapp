@@ -6107,6 +6107,60 @@ JSON:
               );
             })()}
 
+            {/* ── 7-DAY RECOVERY TREND ── */}
+            {(() => {
+              const days = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(); d.setDate(d.getDate() - (6 - i));
+                const dateStr = d.toISOString().slice(0,10);
+                let log = {};
+                try { log = JSON.parse(localStorage.getItem(getDailyLogKey(profile.name, dateStr)) || "{}"); } catch {}
+                const score = (log.fatigue || log.sleepHours || log.sommeil) ? calcRecoveryScore(log, profile) : null;
+                const dow = d.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0,3);
+                return { dateStr, score, dow, isToday: i === 6 };
+              });
+              const todayScore = days[6].score;
+              const validDays = days.filter(d => d.score !== null);
+              if (validDays.length === 0) return null;
+              const avgScore = Math.round(validDays.reduce((a, d) => a + d.score, 0) / validDays.length);
+              const todayRecov = todayScore ? recoveryLabel(todayScore) : null;
+              const maxH = 40;
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🔄 RÉCUPÉRATION 7 JOURS</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>Moyenne: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{avgScore}/100</span></div>
+                    </div>
+                    {todayScore && todayRecov && (
+                      <div style={{ textAlign: "right" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: todayRecov.color, lineHeight: 1 }}>{todayScore}</div>
+                        <div style={{ fontSize: 10, color: todayRecov.color }}>{todayRecov.emoji} {todayRecov.label}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: maxH + 20 }}>
+                    {days.map((d, i) => {
+                      const h = d.score ? Math.max(6, Math.round((d.score / 100) * maxH)) : 4;
+                      const recov = d.score ? recoveryLabel(d.score) : null;
+                      const barColor = recov ? recov.color : "rgba(255,255,255,0.08)";
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          {d.score && <div style={{ fontSize: 9, color: recov.color, fontWeight: 700 }}>{d.score}</div>}
+                          <div style={{ width: "100%", height: h, borderRadius: 4, background: barColor, opacity: d.isToday ? 1 : 0.6, border: d.isToday ? `1.5px solid ${barColor}` : "none", boxShadow: d.isToday && d.score ? `0 0 8px ${barColor}55` : "none", transition: "all 0.3s" }} />
+                          <div style={{ fontSize: 9, color: d.isToday ? "var(--white)" : "#636366", fontWeight: d.isToday ? 700 : 400 }}>{d.dow}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {todayRecov && (
+                    <div style={{ marginTop: 12, padding: "8px 10px", background: todayRecov.color + "15", borderRadius: 8, fontSize: 11, color: "var(--white)" }}>
+                      💡 {todayRecov.tip}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── DELOAD WEEK DETECTOR ── */}
             {(profile.sessions||[]).length >= 5 && (() => {
               const sessions = profile.sessions || [];
