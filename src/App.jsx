@@ -10844,6 +10844,73 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         </Section>
       )}
 
+      {/* ── PERSONAL RECORDS HALL OF FAME ── */}
+      {(() => {
+        const sessions = getSessionsForProfile(profile.name);
+        const exercicesLog = JSON.parse(localStorage.getItem(`fitrace_exercices_${profile.name}`) || "[]");
+
+        // Best session TRIMP
+        let bestTrimp = null;
+        sessions.forEach(s => {
+          const trimp = s.trimp || (s.duration && s.rpe ? Math.round(s.duration * s.rpe / 10) : 0);
+          if (!bestTrimp || trimp > bestTrimp.trimp) bestTrimp = { trimp, date: s.date, type: s.type };
+        });
+
+        // Best 1RM per exercice (Epley)
+        const rmMap = {};
+        exercicesLog.forEach(e => {
+          if (!e.exercice || !e.charge || !e.reps) return;
+          const rm = Math.round(e.charge * (1 + e.reps / 30));
+          if (!rmMap[e.exercice] || rm > rmMap[e.exercice].rm) {
+            rmMap[e.exercice] = { rm, date: e.date, charge: e.charge, reps: e.reps };
+          }
+        });
+        const top3RM = Object.entries(rmMap).sort((a,b) => b[1].rm - a[1].rm).slice(0,3);
+
+        // Longest run session
+        let longestRun = null;
+        sessions.filter(s => s.type && s.type.includes("running")).forEach(s => {
+          if (!longestRun || (s.duration||0) > (longestRun.duration||0)) longestRun = s;
+        });
+
+        // Fastest pace (highest VMA reported)
+        let bestVMA = 0;
+        sessions.forEach(s => { if (s.vma && s.vma > bestVMA) bestVMA = s.vma; });
+        const profileVMA = profile.vma || bestVMA || 0;
+
+        const PRCard = ({ icon, label, value, sub, date }) => (
+          <div style={{ background: "linear-gradient(135deg, rgba(201,168,64,0.08), rgba(201,168,64,0.02))", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(201,168,64,0.4), transparent)" }} />
+            <div style={{ fontSize: 28, minWidth: 36, textAlign: "center" }}>{icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, background: "linear-gradient(135deg,#F5D080,#C9A840)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{value}</div>
+              {sub && <div style={{ fontSize: 12, color: "#AEAEB2", marginTop: 1 }}>{sub}</div>}
+            </div>
+            {date && <div style={{ fontSize: 10, color: "#636366", whiteSpace: "nowrap" }}>{date}</div>}
+          </div>
+        );
+
+        return (
+          <Section title="🏆 Hall of Fame">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {bestTrimp && <PRCard icon="⚡" label="Session Record TRIMP" value={`${bestTrimp.trimp} pts`} sub={bestTrimp.type?.replace(/_/g," ")} date={bestTrimp.date} />}
+              {profileVMA > 0 && <PRCard icon="🚀" label="VMA Record" value={`${profileVMA} km/h`} sub={`Pace: ${Math.floor(60/profileVMA)}:${String(Math.round((60/profileVMA % 1)*60)).padStart(2,"0")} /km`} />}
+              {longestRun && <PRCard icon="🏃" label="Course la plus longue" value={`${longestRun.duration} min`} sub={longestRun.type?.replace(/_/g," ")} date={longestRun.date} />}
+              {top3RM.map(([ex, data]) => (
+                <PRCard key={ex} icon="🏋️" label={`1RM — ${ex}`} value={`${data.rm} kg`} sub={`${data.charge}kg × ${data.reps} reps`} date={data.date} />
+              ))}
+              {!bestTrimp && top3RM.length === 0 && (
+                <div style={{ textAlign: "center", padding: "32px 0", color: "#636366" }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
+                  <div style={{ fontSize: 14 }}>Complete des séances pour voir tes records</div>
+                </div>
+              )}
+            </div>
+          </Section>
+        );
+      })()}
+
       {/* ── OUTILS ATHLÈTE ── */}
       <Section title="Outils Athlète">
         {/* 1RM Calculator */}
