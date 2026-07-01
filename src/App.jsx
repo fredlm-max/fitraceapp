@@ -8486,6 +8486,67 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY VOLUME BARS ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const sessions = profile.sessions || [];
+              const WEEKS_COUNT = 8;
+              const today = new Date(); today.setHours(0,0,0,0);
+              const dow = (today.getDay() + 6) % 7;
+              const start = new Date(today);
+              start.setDate(today.getDate() - dow - 7 * (WEEKS_COUNT - 1));
+
+              const weekData = Array.from({ length: WEEKS_COUNT }, (_, w) => {
+                const wStart = new Date(start); wStart.setDate(start.getDate() + w * 7);
+                const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate() + 6);
+                const daySessions = sessions.filter(s => {
+                  if (!s.date) return false;
+                  const d = new Date(s.date);
+                  return d >= wStart && d <= wEnd;
+                });
+                const trimp = daySessions.reduce((a, s) => a + (s.trimp || Math.round((s.duration || 45) * (s.difficulte || 5) / 10)), 0);
+                const label = wStart.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).replace(" ", "\n");
+                return { trimp, count: daySessions.length, label };
+              });
+
+              const maxTrimp = Math.max(...weekData.map(w => w.trimp), 1);
+              const totalTrimp = weekData.slice(-4).reduce((a, w) => a + w.trimp, 0);
+              const prevTrimp = weekData.slice(-8, -4).reduce((a, w) => a + w.trimp, 0);
+              const delta = prevTrimp > 0 ? Math.round((totalTrimp - prevTrimp) / prevTrimp * 100) : 0;
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>VOLUME 8 SEMAINES</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>Total TRIMP · {totalTrimp} pts les 4 dernières semaines</div>
+                    </div>
+                    {delta !== 0 && (
+                      <div style={{ fontSize: 11, color: delta > 0 ? "#FF9F0A" : "#30D158", fontWeight: 700, background: delta > 0 ? "rgba(255,159,10,0.1)" : "rgba(48,209,88,0.1)", borderRadius: 8, padding: "3px 8px" }}>
+                        {delta > 0 ? "+" : ""}{delta}% vs 4 sem. préc.
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
+                    {weekData.map((w, i) => {
+                      const isCurrentWeek = i === WEEKS_COUNT - 1;
+                      const barH = w.trimp > 0 ? Math.max(6, (w.trimp / maxTrimp) * 70) : 3;
+                      const barColor = isCurrentWeek ? "#C9A840" : w.trimp > maxTrimp * 0.75 ? "#FF9F0A" : w.trimp > maxTrimp * 0.4 ? "#8A6A10" : w.trimp > 0 ? "rgba(138,106,16,0.4)" : "rgba(255,255,255,0.05)";
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          {w.trimp > 0 && <div style={{ fontSize: 7, color: isCurrentWeek ? "#C9A840" : "#48484A", fontWeight: isCurrentWeek ? 800 : 600 }}>{w.trimp}</div>}
+                          <div style={{ width: "100%", height: barH, background: barColor, borderRadius: 3, border: isCurrentWeek ? `1px solid rgba(201,168,64,0.4)` : "none", transition: "height 0.3s" }} />
+                          <div style={{ fontSize: 7, color: isCurrentWeek ? "#C9A840" : "#48484A", fontWeight: isCurrentWeek ? 800 : 600, textAlign: "center", lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                            {w.label.replace("\n", " ")}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
