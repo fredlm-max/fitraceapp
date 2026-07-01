@@ -8944,6 +8944,118 @@ JSON:
               );
             })()}
 
+            {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
+            {profile.vmaKmh && (() => {
+              const vma = parseFloat(profile.vmaKmh);
+              const fcMax = profile.fcMax || (220 - (parseInt(profile.age) || 30));
+              const fcRepos = profile.fcRepos || 55;
+              const fcRes = fcMax - fcRepos;
+
+              const ZONES = [
+                {
+                  z: "Z1", label: "Récupération active", pctVma: [50, 60], pctFc: [50, 60],
+                  color: "#636366", desc: "Footing très lent, récupération entre séances",
+                  workout: "20-40 min continu · après station lourde",
+                },
+                {
+                  z: "Z2", label: "Endurance aérobie", pctVma: [60, 75], pctFc: [60, 75],
+                  color: "#30D158", desc: "Tu peux parler — base aérobie HYROX",
+                  workout: "45-90 min · 3-4×/semaine · base HYROX run",
+                },
+                {
+                  z: "Z3", label: "Tempo / Seuil bas", pctVma: [75, 83], pctFc: [75, 85],
+                  color: "#C9A840", desc: "Effort contrôlé — allure de course HYROX",
+                  workout: "2×20 min · allure objectif HYROX",
+                },
+                {
+                  z: "Z4", label: "Seuil lactique", pctVma: [83, 93], pctFc: [85, 95],
+                  color: "#FF9F0A", desc: "Parole difficile — développe le seuil",
+                  workout: "4-6×5 min r:2 min · ou 3×10 min r:3 min",
+                },
+                {
+                  z: "Z5", label: "VO2max / VMA", pctVma: [95, 105], pctFc: [95, 100],
+                  color: "#FF453A", desc: "Très intense — améliore la VMA",
+                  workout: "10-15×30s r:30s · ou 6×2 min r:3 min",
+                },
+              ];
+
+              function paceStr(kmh) {
+                const secPerKm = 3600 / kmh;
+                const m = Math.floor(secPerKm / 60);
+                const s = Math.round(secPerKm % 60);
+                return `${m}:${String(s).padStart(2,"0")}`;
+              }
+              function fcRange(lo, hi) {
+                return `${Math.round(fcRepos + fcRes * lo / 100)}–${Math.round(fcRepos + fcRes * hi / 100)}`;
+              }
+
+              const [expandedZone, setExpandedZone] = React.useState(null);
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>⚡ Zones d'entraînement</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>Basées sur VMA {vma} km/h · FCmax {fcMax} bpm</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {ZONES.map((zone) => {
+                      const loKmh = vma * zone.pctVma[0] / 100;
+                      const hiKmh = vma * zone.pctVma[1] / 100;
+                      const isOpen = expandedZone === zone.z;
+                      return (
+                        <div key={zone.z}
+                          onClick={() => setExpandedZone(isOpen ? null : zone.z)}
+                          style={{ background: isOpen ? `${zone.color}10` : "rgba(255,255,255,0.025)", border: `1px solid ${isOpen ? zone.color + "40" : "rgba(255,255,255,0.06)"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", transition: "all 0.2s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {/* Zone badge */}
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${zone.color}20`, border: `1.5px solid ${zone.color}60`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span className="bebas" style={{ fontSize: 14, color: zone.color, lineHeight: 1 }}>{zone.z}</span>
+                            </div>
+                            {/* Label + pace */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600, marginBottom: 1 }}>{zone.label}</div>
+                              <div style={{ fontSize: 10, color: "#636366" }}>{zone.desc}</div>
+                            </div>
+                            {/* Pace range */}
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div style={{ fontSize: 13, color: zone.color, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{paceStr(hiKmh)}–{paceStr(loKmh)}</div>
+                              <div style={{ fontSize: 9, color: "#636366" }}>min/km</div>
+                            </div>
+                          </div>
+
+                          {isOpen && (
+                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${zone.color}25`, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                              <div style={{ flex: 1, minWidth: 120 }}>
+                                <div style={{ fontSize: 9, color: "#636366", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Vitesses</div>
+                                <div style={{ fontSize: 12, color: zone.color, fontWeight: 700 }}>{loKmh.toFixed(1)}–{hiKmh.toFixed(1)} km/h</div>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>{zone.pctVma[0]}–{zone.pctVma[1]}% VMA</div>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 120 }}>
+                                <div style={{ fontSize: 9, color: "#636366", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Fréquence cardiaque</div>
+                                <div style={{ fontSize: 12, color: zone.color, fontWeight: 700 }}>{fcRange(zone.pctFc[0], zone.pctFc[1])} bpm</div>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>{zone.pctFc[0]}–{zone.pctFc[1]}% FCréserve</div>
+                              </div>
+                              <div style={{ width: "100%" }}>
+                                <div style={{ fontSize: 9, color: "#636366", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>💡 Workout type HYROX</div>
+                                <div style={{ fontSize: 11, color: "var(--white)", background: `${zone.color}0A`, border: `1px solid ${zone.color}25`, borderRadius: 8, padding: "6px 10px" }}>{zone.workout}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 10, fontSize: 9, color: "#636366", textAlign: "center" }}>
+                    Touche une zone pour voir FC cible · workout · allure détaillés
+                  </div>
+                </div>
+              );
+            })()}
+
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
