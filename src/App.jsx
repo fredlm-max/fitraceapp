@@ -13482,10 +13482,149 @@ function RaceWeekChecklist({ days, checkKey }) {
   );
 }
 
+function ModeCompetition({ profile, onClose }) {
+  const [currentStation, setCurrentStation] = useState(0);
+  const [stationTimes, setStationTimes] = useState({});
+  const [chrono, setChrono] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [stationStart, setStationStart] = useState(null);
+
+  useEffect(() => {
+    let interval;
+    if (running) interval = setInterval(() => setChrono(c => c + 1), 1000);
+    return () => clearInterval(interval);
+  }, [running]);
+
+  const RACE_STATIONS = [
+    { id: "run1", label: "RUN 1", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "skierg", label: "SKIERG", sub: "1000m", icon: "⛷️", color: "#0A84FF", target: "5:00" },
+    { id: "run2", label: "RUN 2", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "sled_push", label: "SLED PUSH", sub: "50m", icon: "🛷", color: "#FF9F0A", target: "2:30" },
+    { id: "run3", label: "RUN 3", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "sled_pull", label: "SLED PULL", sub: "50m", icon: "🛷", color: "#FF453A", target: "3:00" },
+    { id: "run4", label: "RUN 4", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "burpee", label: "BURPEE BBJ", sub: "80m", icon: "💪", color: "#BF5AF2", target: "4:00" },
+    { id: "run5", label: "RUN 5", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "rowing", label: "ROWING", sub: "1000m", icon: "🚣", color: "#0A84FF", target: "4:30" },
+    { id: "run6", label: "RUN 6", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "farmers", label: "FARMERS", sub: "200m", icon: "🏋️", color: "#FF9F0A", target: "2:00" },
+    { id: "run7", label: "RUN 7", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "sandbag", label: "SANDBAG", sub: "100m", icon: "🧱", color: "#8E8E93", target: "5:30" },
+    { id: "run8", label: "RUN 8", sub: "1 km", icon: "🏃", color: "#30D158", target: "5:00" },
+    { id: "wall_balls", label: "WALL BALLS", sub: "100 reps", icon: "🏀", color: "#FF9F0A", target: "5:00" },
+  ];
+
+  const formatT = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  const st = RACE_STATIONS[currentStation];
+  const done = currentStation >= RACE_STATIONS.length;
+  const totalTime = Object.values(stationTimes).reduce((a,b) => a+b, 0);
+
+  const nextStation = () => {
+    const elapsed = stationStart !== null ? chrono - stationStart : null;
+    if (elapsed !== null) setStationTimes(t => ({ ...t, [st.id]: elapsed }));
+    setStationStart(chrono);
+    setCurrentStation(i => i + 1);
+    setRunning(true);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 600, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: running ? "#30D158" : "#444", boxShadow: running ? "0 0 8px #30D158" : "none" }} />
+          <div className="bebas" style={{ fontSize: 15, color: "#30D158", letterSpacing: 2 }}>MODE COMPÉTITION</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="bebas" style={{ fontSize: 24, color: "var(--white)", fontVariantNumeric: "tabular-nums" }}>{formatT(chrono)}</div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, padding: "6px 12px", color: "#8E8E93", fontSize: 12, cursor: "pointer" }}>✕</button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 3, background: "#111" }}>
+        <div style={{ height: "100%", width: `${(currentStation / RACE_STATIONS.length) * 100}%`, background: "linear-gradient(90deg, #30D158, #0A84FF)", transition: "width 0.5s" }} />
+      </div>
+
+      {done ? (
+        /* FINISH */
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+          <div style={{ fontSize: 72, marginBottom: 16 }}>🏁</div>
+          <div className="bebas" style={{ fontSize: 48, color: "#30D158", letterSpacing: 2, lineHeight: 1, marginBottom: 8 }}>FINISH !</div>
+          <div className="bebas" style={{ fontSize: 36, color: "var(--white)", marginBottom: 24 }}>{formatT(totalTime)}</div>
+          <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 6, marginBottom: 24 }}>
+            {RACE_STATIONS.map(s => stationTimes[s.id] && (
+              <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 14px", background: "rgba(255,255,255,0.04)", borderRadius: 10 }}>
+                <span style={{ fontSize: 13, color: "#8E8E93" }}>{s.icon} {s.label}</span>
+                <span className="bebas" style={{ fontSize: 16, color: s.color }}>{formatT(stationTimes[s.id])}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={onClose} style={{ padding: "16px 40px", background: "#30D158", border: "none", borderRadius: 16, fontSize: 20, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: "#000", cursor: "pointer" }}>FERMER</button>
+        </div>
+      ) : (
+        /* STATION EN COURS */
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px 24px", background: `radial-gradient(ellipse 60% 40% at 50% 30%, ${st.color}10 0%, transparent 70%)` }}>
+          {/* Station numéro */}
+          <div style={{ fontSize: 12, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 8 }}>
+            Étape {currentStation + 1} / {RACE_STATIONS.length}
+          </div>
+
+          {/* Icone grande */}
+          <div style={{ fontSize: 64, marginBottom: 12, filter: running ? "none" : "grayscale(1)" }}>{st.icon}</div>
+
+          {/* Nom station */}
+          <div className="bebas" style={{ fontSize: 48, color: st.color, letterSpacing: 2, lineHeight: 1, textAlign: "center", marginBottom: 4 }}>{st.label}</div>
+          <div style={{ fontSize: 18, color: "#8E8E93", marginBottom: 4 }}>{st.sub}</div>
+          <div style={{ fontSize: 13, color: st.color, marginBottom: 32, fontWeight: 700 }}>Cible : {st.target}</div>
+
+          {/* Chrono station */}
+          <div className="bebas" style={{ fontSize: 72, color: "var(--white)", letterSpacing: 4, fontVariantNumeric: "tabular-nums", lineHeight: 1, marginBottom: 32, textShadow: running ? `0 0 30px ${st.color}40` : "none" }}>
+            {formatT(stationStart !== null ? chrono - stationStart : 0)}
+          </div>
+
+          {/* Contrôles */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 340 }}>
+            {!running ? (
+              <button onClick={() => { setRunning(true); if (stationStart === null) setStationStart(chrono); }}
+                style={{ padding: "20px", background: "#30D158", border: "none", borderRadius: 18, fontSize: 26, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 3, color: "#000", cursor: "pointer", boxShadow: "0 8px 32px rgba(48,209,88,0.4)" }}>
+                ▶ DÉPART
+              </button>
+            ) : (
+              <button onClick={nextStation}
+                style={{ padding: "20px", background: st.color, border: "none", borderRadius: 18, fontSize: 22, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: currentStation < RACE_STATIONS.length - 1 ? "#000" : "#fff", cursor: "pointer", boxShadow: `0 8px 32px ${st.color}40` }}>
+                {currentStation < RACE_STATIONS.length - 1 ? `SUIVANT → ${RACE_STATIONS[currentStation+1]?.label}` : "TERMINER 🏁"}
+              </button>
+            )}
+            {running && (
+              <button onClick={() => setRunning(false)} style={{ padding: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", color: "#8E8E93", cursor: "pointer" }}>
+                ⏸ PAUSE
+              </button>
+            )}
+          </div>
+
+          {/* Stations précédentes (splits) */}
+          {Object.keys(stationTimes).length > 0 && (
+            <div style={{ position: "absolute", bottom: 100, left: 20, right: 20, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
+              {RACE_STATIONS.slice(0, currentStation).map(s => stationTimes[s.id] && (
+                <div key={s.id} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "3px 10px", fontSize: 11 }}>
+                  <span style={{ color: "#8E8E93" }}>{s.label} </span>
+                  <span className="bebas" style={{ color: s.color }}>{formatT(stationTimes[s.id])}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RaceTab({ profile, onOpenBenchmark }) {
   const [strategy, setStrategy] = useState(null);
   const [loading, setLoading] = useState(false);
   const [strategyStream, setStrategyStream] = useState("");
+  const [showCompetition, setShowCompetition] = useState(false);
   const [showSim, setShowSim] = useState(false);
   const [showPacer, setShowPacer] = useState(false);
   const [pacerRunMin, setPacerRunMin] = useState(() => {
@@ -13543,6 +13682,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
   return (
     <div className="fade-in">
       {showSim && <SimulationRace profile={profile} onClose={() => setShowSim(false)} />}
+      {showCompetition && <ModeCompetition profile={profile} onClose={() => setShowCompetition(false)} />}
 
       {/* ── HERO RACE COUNTDOWN ── */}
       {profile.raceDate ? (
@@ -13603,10 +13743,15 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#AEAEB2", lineHeight: 1.6, marginBottom: 14 }}>
             {days <= 1 ? "🔥 Hydrate-toi, mange tes glucides, fais confiance à ton entraînement." : days <= 7 ? "⚡ Réduis le volume de 50%, maintiens 2 sessions d'activation courtes. Dors bien." : days <= 30 ? "🎯 Maximise la spécificité — simulations, allures de course, transitions enchaînées." : "📈 Construis ta base aérobie. Chaque séance compte."}
           </div>
-          {/* Bouton simulation intégré */}
-          <button onClick={() => setShowSim(true)} style={{ width: "100%", background: "var(--red)", border: "none", borderRadius: 14, padding: "14px", color: "#fff", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            <span>🏁</span> LANCER LA SIMULATION RACE
-          </button>
+          {/* Boutons action */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => setShowSim(true)} style={{ flex: 1, background: "rgba(255,71,58,0.12)", border: "1.5px solid rgba(255,71,58,0.4)", borderRadius: 14, padding: "14px", color: "var(--red)", fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, letterSpacing: 2, cursor: "pointer" }}>
+              🎮 SIMULATION
+            </button>
+            <button onClick={() => setShowCompetition(true)} style={{ flex: 1, background: "var(--red)", border: "none", borderRadius: 14, padding: "14px", color: "#fff", fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, letterSpacing: 2, cursor: "pointer", boxShadow: "0 6px 24px rgba(255,69,58,0.4)" }}>
+              🏁 MODE COURSE
+            </button>
+          </div>
         </div>
       ) : (
         <div style={{ background: "rgba(255,71,71,0.04)", border: "1px dashed rgba(255,71,71,0.2)", borderRadius: 16, padding: "24px", textAlign: "center", marginBottom: 12 }}>
