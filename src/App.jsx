@@ -11642,6 +11642,128 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── SMART GOAL TRACKER ── */}
+      {(() => {
+        const goalsKey = `fitrace_goals_${profile.name}`;
+        const [goals, setGoals] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(goalsKey) || "[]"); } catch { return []; }
+        });
+        const [showAdd, setShowAdd] = React.useState(false);
+        const [newGoal, setNewGoal] = React.useState({ type: "vma", target: "", label: "" });
+
+        const saveGoals = (g) => { setGoals(g); localStorage.setItem(goalsKey, JSON.stringify(g)); };
+
+        const GOAL_TYPES = [
+          { id: "vma", label: "VMA", unit: "km/h", icon: "🏃", current: () => parseFloat(profile.vmaKmh) || 0 },
+          { id: "squat", label: "Squat 1RM", unit: "kg", icon: "🏋️", current: () => {
+            const ex = JSON.parse(localStorage.getItem(`fitrace_exercices_${profile.name}`) || "[]");
+            const squats = ex.filter(e => e.exercice && e.exercice.toLowerCase().includes("squat") && e.charge && e.reps);
+            if (!squats.length) return parseFloat(profile.squat1RM) || 0;
+            return Math.max(...squats.map(e => Math.round(e.charge * (1 + e.reps/30))));
+          }},
+          { id: "sessions", label: "Séances totales", unit: "séances", icon: "📅", current: () => (profile.sessions||[]).length },
+          { id: "streak", label: "Streak max", unit: "jours", icon: "🔥", current: () => profile.streak || 0 },
+          { id: "hyrox", label: "Chrono HYROX", unit: "min", icon: "🏁", current: () => {
+            const res = profile.raceResults || [];
+            if (!res.length) return 0;
+            return Math.min(...res.map(r => r.totalMinutes || 999));
+          }},
+        ];
+
+        const getGoalProgress = (goal) => {
+          const def = GOAL_TYPES.find(t => t.id === goal.type);
+          if (!def) return { current: 0, pct: 0, eta: null };
+          const current = def.current();
+          const target = parseFloat(goal.target);
+          if (!target) return { current, pct: 0, eta: null };
+          const isLowerBetter = goal.type === "hyrox";
+          const pct = isLowerBetter
+            ? current > 0 ? Math.max(0, Math.min(100, (1 - (current - target) / current) * 100)) : 0
+            : Math.max(0, Math.min(100, (current / target) * 100));
+
+          // ETA: estimate based on session frequency
+          const weeklyRate = (profile.sessions||[]).filter(s => {
+            const d = new Date(s.date); const w = new Date(); w.setDate(w.getDate()-30); return d >= w;
+          }).length / 4; // sessions/week last month
+          const eta = pct < 100 && weeklyRate > 0 ? Math.ceil((100 - pct) / (weeklyRate * 2)) : null;
+
+          return { current, target, pct, eta, isLowerBetter };
+        };
+
+        return (
+          <Section title="🎯 Mes Objectifs">
+            {goals.length === 0 && !showAdd && (
+              <div style={{ background: "rgba(28,28,30,0.6)", borderRadius: 16, padding: "24px", textAlign: "center", border: "1px dashed rgba(201,168,64,0.2)", marginBottom: 8 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🎯</div>
+                <div style={{ fontSize: 13, color: "#636366", marginBottom: 12 }}>Définis tes objectifs pour tracker ta progression</div>
+                <button onClick={() => setShowAdd(true)} style={{ background: "rgba(201,168,64,0.12)", border: "1.5px solid rgba(201,168,64,0.3)", borderRadius: 12, padding: "10px 20px", color: "#C9A840", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>+ Ajouter un objectif</button>
+              </div>
+            )}
+
+            {goals.map((goal, i) => {
+              const { current, target, pct, eta, isLowerBetter } = getGoalProgress(goal);
+              const def = GOAL_TYPES.find(t => t.id === goal.type);
+              const done = pct >= 100;
+              const color = done ? "#30D158" : pct > 60 ? "#C9A840" : "#FF9F0A";
+              return (
+                <div key={i} style={{ background: done ? "rgba(48,209,88,0.06)" : "rgba(28,28,30,0.8)", border: `1px solid ${done ? "rgba(48,209,88,0.2)" : "rgba(255,255,255,0.07)"}`, borderRadius: 16, padding: "14px 16px", marginBottom: 8, position: "relative", overflow: "hidden" }}>
+                  {done && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, #30D158, transparent)" }} />}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>{def?.icon}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#F2F2F7" }}>{goal.label || def?.label}</div>
+                        <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 1 }}>
+                          {current} {def?.unit} → <span style={{ color }}>{target} {def?.unit}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ textAlign: "right" }}>
+                        <div className="bebas" style={{ fontSize: 22, color, lineHeight: 1 }}>{Math.round(pct)}%</div>
+                        {eta && !done && <div style={{ fontSize: 9, color: "#636366" }}>~{eta} sem.</div>}
+                        {done && <div style={{ fontSize: 10, color: "#30D158", fontWeight: 700 }}>✅ Atteint</div>}
+                      </div>
+                      <button onClick={() => saveGoals(goals.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#48484A", cursor: "pointer", fontSize: 16, padding: 4 }}>×</button>
+                    </div>
+                  </div>
+                  <div style={{ height: 6, background: "#2C2C2E", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${color}88, ${color})`, borderRadius: 3, transition: "width 0.8s ease" }} />
+                  </div>
+                </div>
+              );
+            })}
+
+            {showAdd && (
+              <div style={{ background: "rgba(28,28,30,0.9)", border: "1.5px solid rgba(201,168,64,0.25)", borderRadius: 16, padding: "16px", marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: "#8E8E93", fontWeight: 700, marginBottom: 10 }}>Nouvel objectif</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                  {GOAL_TYPES.map(t => (
+                    <button key={t.id} onClick={() => setNewGoal(g => ({ ...g, type: t.id }))}
+                      style={{ padding: "6px 10px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer", border: newGoal.type === t.id ? "1.5px solid #C9A840" : "1px solid rgba(255,255,255,0.1)", background: newGoal.type === t.id ? "rgba(201,168,64,0.12)" : "rgba(255,255,255,0.04)", color: newGoal.type === t.id ? "#C9A840" : "#8E8E93" }}>
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+                <input placeholder={`Valeur cible (${GOAL_TYPES.find(t=>t.id===newGoal.type)?.unit})`} value={newGoal.target} onChange={e => setNewGoal(g => ({ ...g, target: e.target.value }))}
+                  style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 12px", color: "#F2F2F7", fontSize: 13, marginBottom: 8, outline: "none", fontFamily: "inherit" }} />
+                <input placeholder="Label personnalisé (optionnel)" value={newGoal.label} onChange={e => setNewGoal(g => ({ ...g, label: e.target.value }))}
+                  style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 12px", color: "#F2F2F7", fontSize: 13, marginBottom: 10, outline: "none", fontFamily: "inherit" }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => { if (!newGoal.target) return; saveGoals([...goals, { ...newGoal }]); setNewGoal({ type: "vma", target: "", label: "" }); setShowAdd(false); }}
+                    style={{ flex: 1, background: "#C9A840", border: "none", borderRadius: 10, padding: "11px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 16, letterSpacing: 1.5, cursor: "pointer" }}>AJOUTER</button>
+                  <button onClick={() => setShowAdd(false)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 10, padding: "11px 16px", color: "#8E8E93", cursor: "pointer", fontSize: 13 }}>Annuler</button>
+                </div>
+              </div>
+            )}
+
+            {goals.length > 0 && !showAdd && (
+              <button onClick={() => setShowAdd(true)} style={{ width: "100%", background: "rgba(201,168,64,0.06)", border: "1px dashed rgba(201,168,64,0.2)", borderRadius: 12, padding: "10px", color: "#C9A840", fontWeight: 700, fontSize: 12, cursor: "pointer", marginTop: 4 }}>+ Ajouter un objectif</button>
+            )}
+          </Section>
+        );
+      })()}
+
       {/* ── OUTILS ATHLÈTE ── */}
       <Section title="Outils Athlète">
         {/* 1RM Calculator */}
