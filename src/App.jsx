@@ -11336,6 +11336,77 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── 1RM PROGRESS CHART ── */}
+      {(() => {
+        const exercicesLog = JSON.parse(localStorage.getItem(`fitrace_exercices_${profile.name}`) || "[]");
+        if (exercicesLog.length === 0) return null;
+
+        // Group by exercise, compute 1RM (Epley) per entry
+        const byEx = {};
+        exercicesLog.forEach(e => {
+          if (!e.exercice || !e.charge || !e.reps) return;
+          const rm = Math.round(e.charge * (1 + e.reps / 30));
+          if (!byEx[e.exercice]) byEx[e.exercice] = [];
+          byEx[e.exercice].push({ date: e.date, rm });
+        });
+
+        const exercises = Object.keys(byEx).filter(k => byEx[k].length >= 2);
+        if (exercises.length === 0) return null;
+
+        const [selectedEx, setSelectedEx] = React.useState(exercises[0]);
+        const data = (byEx[selectedEx] || []).sort((a,b) => a.date?.localeCompare(b.date)).slice(-10);
+        const maxRM = Math.max(...data.map(d => d.rm));
+        const minRM = Math.min(...data.map(d => d.rm));
+        const range = maxRM - minRM || 1;
+
+        const W = 340, H = 100, PL = 32, PR = 10, PT = 12, PB = 24;
+        const cW = W - PL - PR, cH = H - PT - PB;
+        const xP = (i) => PL + (data.length > 1 ? (i / (data.length - 1)) * cW : cW / 2);
+        const yP = (v) => PT + cH - ((v - minRM) / range) * cH;
+        const pts = data.map((d, i) => `${xP(i)},${yP(d.rm)}`).join(" ");
+        const area = `${xP(0)},${PT+cH} ${pts} ${xP(data.length-1)},${PT+cH}`;
+        const trend = data.length >= 2 ? (data[data.length-1].rm - data[0].rm) : 0;
+
+        return (
+          <Section title="📈 Progression 1RM">
+            {exercises.length > 1 && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                {exercises.map(ex => (
+                  <button key={ex} onClick={() => setSelectedEx(ex)}
+                    style={{ padding: "5px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: selectedEx === ex ? "1.5px solid #C9A840" : "1px solid rgba(255,255,255,0.1)", background: selectedEx === ex ? "rgba(201,168,64,0.12)" : "rgba(255,255,255,0.04)", color: selectedEx === ex ? "#C9A840" : "#8E8E93" }}>
+                    {ex}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ background: "rgba(28,28,30,0.6)", borderRadius: 14, padding: "14px 12px 10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#F2F2F7" }}>{selectedEx}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: trend >= 0 ? "#30D158" : "#FF453A" }}>
+                  {trend >= 0 ? "▲" : "▼"} {Math.abs(trend)} kg
+                </div>
+              </div>
+              <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+                <polygon points={area} fill="rgba(201,168,64,0.08)" />
+                <polyline points={pts} fill="none" stroke="#C9A840" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                {data.map((d, i) => (
+                  <g key={i}>
+                    <circle cx={xP(i)} cy={yP(d.rm)} r="4" fill="#C9A840" stroke="#000" strokeWidth="1.5" />
+                    {(i === 0 || i === data.length - 1) && (
+                      <text x={xP(i)} y={yP(d.rm)-8} textAnchor="middle" fontSize="9" fill="#C9A840" fontWeight="700">{d.rm}kg</text>
+                    )}
+                    <text x={xP(i)} y={H-4} textAnchor="middle" fontSize="7.5" fill="#48484A">{(d.date||"").slice(5)}</text>
+                  </g>
+                ))}
+                <text x={PL-4} y={PT} textAnchor="end" fontSize="8" fill="#48484A" dominantBaseline="middle">{maxRM}</text>
+                <text x={PL-4} y={PT+cH} textAnchor="end" fontSize="8" fill="#48484A" dominantBaseline="middle">{minRM}</text>
+              </svg>
+              <div style={{ marginTop: 4, fontSize: 10, color: "#636366" }}>1RM Epley · {data.length} mesures</div>
+            </div>
+          </Section>
+        );
+      })()}
+
       {/* ── OUTILS ATHLÈTE ── */}
       <Section title="Outils Athlète">
         {/* 1RM Calculator */}
