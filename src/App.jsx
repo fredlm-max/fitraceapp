@@ -10383,26 +10383,28 @@ JSON:
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
         <div style={{ height: 20, background: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 60%, transparent 100%)", pointerEvents: "none" }} />
-        <div style={{ background: "rgba(14,14,14,0.92)", backdropFilter: "blur(40px) saturate(1.8)", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)" }}>
+        <div style={{ background: "rgba(8,8,8,0.96)", backdropFilter: "blur(60px) saturate(2.2)", borderTop: "1px solid rgba(201,168,64,0.1)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)", boxShadow: "0 -1px 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.5)" }}>
           {(() => {
             const ic = {
-              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-              planning: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"var(--yellow)":"#AEAEB2"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+              planning: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             };
             return tabs.map(t => {
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
-                  style={{ background: "none", border: "none", flex: 1, padding: "4px 2px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative", transition: "all 0.2s var(--spring)", cursor: "pointer" }}>
-                  {active && <div style={{ position: "absolute", top: -8, left: "30%", right: "30%", height: 2.5, background: "var(--yellow)", borderRadius: "0 0 4px 4px" }} />}
-                  <div style={{ position: "relative", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.2s var(--spring)", transform: active ? "scale(1.1)" : "scale(1)" }}>
-                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?"var(--yellow)":"#AEAEB2" }}>{t.icon}</span>}
-                    {t.badge && !active && <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--green)", border: "1.5px solid #000", animation: "pulse 2s ease infinite" }} />}
+                  style={{ background: "none", border: "none", flex: 1, padding: "4px 2px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", transition: "all 0.2s var(--spring)", cursor: "pointer" }}>
+                  {/* Gold pill indicator */}
+                  {active && <div style={{ position: "absolute", top: -6, left: "25%", right: "25%", height: 2, background: "linear-gradient(90deg, transparent, #C9A840, transparent)", borderRadius: "0 0 3px 3px", boxShadow: "0 0 8px rgba(201,168,64,0.6)" }} />}
+                  {/* Icon container with glow */}
+                  <div style={{ position: "relative", width: 40, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: active ? "rgba(201,168,64,0.1)" : "transparent", transition: "all 0.2s var(--spring)", transform: active ? "scale(1.05)" : "scale(1)", boxShadow: active ? "0 0 12px rgba(201,168,64,0.2)" : "none" }}>
+                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?"#C9A840":"#5A5A5E" }}>{t.icon}</span>}
+                    {t.badge && !active && <div style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: "#30D158", border: "1.5px solid #000", animation: "pulse 2s ease infinite" }} />}
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? "var(--yellow)" : "#AEAEB2", letterSpacing: "0.02em", transition: "all 0.2s" }}>{t.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? "#C9A840" : "#5A5A5E", letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.2s" }}>{t.label}</span>
                 </button>
               );
             });
