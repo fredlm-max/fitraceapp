@@ -3421,6 +3421,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [planningWeek, setPlanningWeek] = useState(null);
   const [loadingPlanning, setLoadingPlanning] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [levelUpData, setLevelUpData] = useState(null); // { oldLevel, newLevel }
   const [streakData, setStreakData] = useState(null);
   const [streakMilestone, setStreakMilestone] = useState(null); // { days, emoji, msg }
   const [messageIA, setMessageIA] = useState(null);
@@ -4465,6 +4466,15 @@ JSON:
       onUpdateProfile(updated);
       setTimeout(() => calcStreak(), 500);
 
+      // ── Détection Level Up ──
+      try {
+        const oldLevel = profile.level || 1;
+        const newLevel = adapt.niveau || oldLevel;
+        if (newLevel > oldLevel && newLevel <= 4) {
+          setTimeout(() => setLevelUpData({ oldLevel, newLevel }), 1200);
+        }
+      } catch {}
+
       // ── Détection Personal Records ──
       try {
         const prKey = `fitrace_prs_${profile.name}`;
@@ -4575,6 +4585,70 @@ JSON:
           );
         })}
       </div>
+
+      {/* ── LEVEL UP CELEBRATION ── */}
+      {levelUpData && (() => {
+        const lvl = LEVELS[levelUpData.newLevel - 1];
+        const oldLvl = LEVELS[levelUpData.oldLevel - 1];
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 1200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}
+            onClick={() => setLevelUpData(null)}>
+            <style>{`
+              @keyframes levelStarburst { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.12) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+              @keyframes levelShine { 0% { left: -100%; } 100% { left: 200%; } }
+              @keyframes levelFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+            `}</style>
+
+            {/* Gold particles ring */}
+            <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+              {Array.from({ length: 20 }).map((_, i) => (
+                <div key={i} style={{
+                  position: "absolute",
+                  width: 6, height: 6, borderRadius: "50%",
+                  background: i % 3 === 0 ? "#C9A840" : i % 3 === 1 ? "#F5D080" : "#30D158",
+                  left: `${10 + (i * 4.2) % 80}%`,
+                  top: `${5 + (i * 7.1) % 90}%`,
+                  animation: `levelFloat ${1.5 + (i % 4) * 0.4}s ease-in-out infinite`,
+                  animationDelay: `${i * 0.1}s`,
+                  opacity: 0.7,
+                }}/>
+              ))}
+            </div>
+
+            {/* Main card */}
+            <div style={{ animation: "levelStarburst 0.6s cubic-bezier(.22,1,.36,1) both", background: "linear-gradient(145deg, #1a1200 0%, #0a0a0a 100%)", border: `2px solid ${lvl.color}`, borderRadius: 28, padding: "40px 32px", textAlign: "center", maxWidth: 340, width: "100%", position: "relative", overflow: "hidden", boxShadow: `0 0 60px ${lvl.color}40, 0 20px 60px rgba(0,0,0,0.8)` }}>
+              {/* Shine sweep */}
+              <div style={{ position: "absolute", top: 0, bottom: 0, width: "60%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)", animation: "levelShine 2s ease 0.6s both", pointerEvents: "none" }}/>
+
+              <div style={{ fontSize: 64, marginBottom: 8, animation: "levelFloat 2s ease-in-out infinite" }}>{lvl.emoji}</div>
+
+              <div style={{ fontSize: 11, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 8 }}>Niveau atteint</div>
+
+              <div className="bebas" style={{ fontSize: 52, color: lvl.color, lineHeight: 1, marginBottom: 4, background: `linear-gradient(135deg, ${lvl.color}, #F5D080, ${lvl.color})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                {lvl.label.toUpperCase()}
+              </div>
+
+              <div style={{ fontSize: 13, color: "#8E8E93", marginBottom: 24, lineHeight: 1.5 }}>
+                Tu passes du niveau <span style={{ color: oldLvl.color, fontWeight: 700 }}>{oldLvl.label}</span> au niveau <span style={{ color: lvl.color, fontWeight: 700 }}>{lvl.label}</span>
+              </div>
+
+              {/* Level bar */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+                {LEVELS.map((l, i) => (
+                  <div key={i} style={{ flex: 1, height: 6, borderRadius: 99, background: i < levelUpData.newLevel ? l.color : "rgba(255,255,255,0.08)", transition: "background 0.5s" }}/>
+                ))}
+              </div>
+
+              <button onClick={() => { haptic([10,30,50,30,10]); setLevelUpData(null); }}
+                style={{ width: "100%", padding: "16px", background: `linear-gradient(135deg, ${lvl.color}, #C9A840)`, border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 2, color: "#000", cursor: "pointer", fontWeight: 800, boxShadow: `0 6px 24px ${lvl.color}50` }}>
+                CONTINUER ⚡
+              </button>
+            </div>
+
+            <div style={{ marginTop: 16, fontSize: 11, color: "#444" }}>Touche n'importe où pour fermer</div>
+          </div>
+        );
+      })()}
 
       {/* ── PWA Install Banner ── */}
       {showInstallBanner && !isInstalled && (
