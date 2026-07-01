@@ -9460,6 +9460,62 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY COMPARISON ── */}
+            {(() => {
+              const sessions = getSessionsForProfile(profile.name);
+              const now = new Date();
+              const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0
+              const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - dayOfWeek); thisMonday.setHours(0,0,0,0);
+              const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+              const lastSunday = new Date(thisMonday); lastSunday.setDate(thisMonday.getDate() - 1);
+
+              const inRange = (d, from, to) => { const dt = new Date(d); return dt >= from && dt <= to; };
+              const thisWeekS = sessions.filter(s => inRange(s.date, thisMonday, now));
+              const lastWeekS = sessions.filter(s => inRange(s.date, lastMonday, lastSunday));
+
+              const calc = (arr) => ({
+                n: arr.length,
+                trimp: arr.reduce((acc, s) => acc + (s.trimp || (s.duration && s.rpe ? Math.round(s.duration * s.rpe / 10) : 0)), 0),
+                cal: arr.reduce((acc, s) => acc + (s.calories || 0), 0),
+                dur: arr.reduce((acc, s) => acc + (s.duration || 0), 0),
+              });
+              const tw = calc(thisWeekS), lw = calc(lastWeekS);
+
+              const Metric = ({ label, thisVal, lastVal, unit, icon }) => {
+                const delta = lastVal > 0 ? ((thisVal - lastVal) / lastVal * 100).toFixed(0) : null;
+                const up = delta !== null && Number(delta) >= 0;
+                const color = delta === null ? "#8E8E93" : up ? "#30D158" : "#FF453A";
+                return (
+                  <div style={{ background: "rgba(28,28,30,0.8)", borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{icon} {label}</div>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: "#F2F2F7" }}>{thisVal}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 3 }}>{unit}</div>
+                      {delta !== null && (
+                        <div style={{ marginBottom: 3, fontSize: 11, fontWeight: 700, color, marginLeft: "auto" }}>{up ? "▲" : "▼"} {Math.abs(delta)}%</div>
+                      )}
+                    </div>
+                    <div style={{ marginTop: 6, height: 3, background: "#2C2C2E", borderRadius: 2, overflow: "hidden" }}>
+                      {lastVal > 0 && <div style={{ height: "100%", width: `${Math.min(100, (thisVal / Math.max(thisVal, lastVal)) * 100)}%`, background: up ? "#30D158" : "#FF453A", borderRadius: 2, transition: "width 0.6s ease" }} />}
+                    </div>
+                    <div style={{ fontSize: 9, color: "#48484A", marginTop: 4 }}>Sem. passée: {lastVal} {unit}</div>
+                  </div>
+                );
+              };
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>Cette semaine vs semaine passée</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <Metric label="Séances" thisVal={tw.n} lastVal={lw.n} unit="sessions" icon="📅" />
+                    <Metric label="Charge (TRIMP)" thisVal={tw.trimp} lastVal={lw.trimp} unit="pts" icon="⚡" />
+                    <Metric label="Calories" thisVal={tw.cal} lastVal={lw.cal} unit="kcal" icon="🔥" />
+                    <Metric label="Volume" thisVal={tw.dur} lastVal={lw.dur} unit="min" icon="⏱" />
+                  </div>
+                </div>
+              );
+            })()}
+
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Stats globales</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
