@@ -8944,6 +8944,151 @@ JSON:
               );
             })()}
 
+            {/* ── COURBE DE POIDS ── */}
+            {(() => {
+              const [weightData, setWeightData] = React.useState(null);
+              React.useEffect(() => {
+                const DAYS = 30;
+                const today = new Date(); today.setHours(0,0,0,0);
+                const promises = Array.from({ length: DAYS }, (_, i) => {
+                  const d = new Date(today); d.setDate(today.getDate() - (DAYS - 1 - i));
+                  const key = getDailyLogKey(profile.name, d.toISOString().slice(0,10));
+                  return storage.get(key).then(v => ({ date: d.toISOString().slice(0,10), poids: v?.poidsJour ? parseFloat(v.poidsJour) : null }));
+                });
+                Promise.all(promises).then(rows => {
+                  const withData = rows.filter(r => r.poids && r.poids > 30 && r.poids < 300);
+                  setWeightData({ rows, withData });
+                });
+              }, []);
+
+              if (!weightData || weightData.withData.length < 2) {
+                // Show prompt if profile weight exists but no daily logs
+                if (!profile.poids) return null;
+                return null;
+              }
+
+              const { rows, withData } = weightData;
+              const poids = profile.poids ? parseFloat(profile.poids) : withData[0]?.poids;
+              const taille = profile.taille ? parseFloat(profile.taille) : null;
+
+              // Linear regression for trend
+              const n = withData.length;
+              const xs = withData.map((_, i) => i);
+              const ys = withData.map(d => d.poids);
+              const meanX = xs.reduce((a,b) => a+b,0) / n;
+              const meanY = ys.reduce((a,b) => a+b,0) / n;
+              const slope = xs.reduce((s,x,i) => s + (x-meanX)*(ys[i]-meanY),0) / xs.reduce((s,x) => s+(x-meanX)**2,0);
+              const intercept = meanY - slope * meanX;
+
+              const minPoids = Math.min(...ys) - 0.5;
+              const maxPoids = Math.max(...ys) + 0.5;
+              const range = maxPoids - minPoids || 1;
+              const W = 320, H = 80;
+
+              function py(v) { return Math.round(H - ((v - minPoids) / range) * H); }
+              function px(i) { return Math.round((i / (rows.length - 1)) * W); }
+
+              // Build path through rows (skip nulls with gaps)
+              const segments = [];
+              let seg = [];
+              rows.forEach((r, i) => {
+                if (r.poids && r.poids > 30) { seg.push({ x: px(i), y: py(r.poids), v: r.poids }); }
+                else if (seg.length) { segments.push(seg); seg = []; }
+              });
+              if (seg.length) segments.push(seg);
+
+              // Trend line endpoints
+              const trendY0 = intercept;
+              const trendYN = slope * (n - 1) + intercept;
+              const trendPts = withData.map((_, i) => ({ x: px(rows.findIndex(r => r.date === withData[i].date)), y: py(slope * i + intercept) }));
+
+              const deltaW = Math.round((withData[n-1].poids - withData[0].poids) * 10) / 10;
+              const trend30 = Math.round(slope * 30 * 10) / 10;
+              const currentW = withData[n-1].poids;
+              const trendColor = slope < -0.01 ? "#30D158" : slope > 0.01 ? "#FF453A" : "#C9A840";
+
+              const imc = taille ? Math.round((currentW / (taille/100)**2) * 10) / 10 : null;
+              const imcLabel = imc ? (imc < 18.5 ? "Sous-poids" : imc < 25 ? "Normal" : imc < 30 ? "Surpoids" : "Obésité") : null;
+              const imcColor = imc ? (imc < 18.5 ? "#FF9F0A" : imc < 25 ? "#30D158" : "#FF453A") : null;
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>⚖️ Poids corporel</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>30 derniers jours · journal quotidien</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1 }}>{currentW}<span style={{ fontSize: 13, color: "#8E8E93", fontWeight: 400 }}> kg</span></div>
+                      <div style={{ fontSize: 10, color: trendColor, fontWeight: 700 }}>{deltaW > 0 ? "+" : ""}{deltaW} kg sur 30j</div>
+                    </div>
+                  </div>
+
+                  {/* IMC + trend row */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                    <div style={{ flex: 1, background: `${trendColor}0A`, border: `1px solid ${trendColor}25`, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase", marginBottom: 2 }}>Tendance</div>
+                      <div style={{ fontSize: 13, color: trendColor, fontWeight: 700 }}>{slope < -0.01 ? "↓" : slope > 0.01 ? "↑" : "→"} {trend30 > 0 ? "+" : ""}{trend30} kg/mois</div>
+                    </div>
+                    {imc && (
+                      <div style={{ flex: 1, background: `${imcColor}0A`, border: `1px solid ${imcColor}25`, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+                        <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase", marginBottom: 2 }}>IMC</div>
+                        <div style={{ fontSize: 13, color: imcColor, fontWeight: 700 }}>{imc} · {imcLabel}</div>
+                      </div>
+                    )}
+                    <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+                      <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase", marginBottom: 2 }}>Mesures</div>
+                      <div style={{ fontSize: 13, color: "var(--white)", fontWeight: 700 }}>{withData.length} jours</div>
+                    </div>
+                  </div>
+
+                  {/* Chart */}
+                  <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", overflow: "visible" }}>
+                    {/* Trend line */}
+                    {trendPts.length >= 2 && (
+                      <line x1={trendPts[0].x} y1={trendPts[0].y} x2={trendPts[n-1].x} y2={trendPts[n-1].y}
+                        stroke={trendColor} strokeWidth="1" strokeDasharray="4,3" opacity="0.5"/>
+                    )}
+                    {/* Mean weight line */}
+                    <line x1="0" y1={py(meanY)} x2={W} y2={py(meanY)} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="2,4"/>
+
+                    {/* Data segments */}
+                    {segments.map((seg, si) => (
+                      <g key={si}>
+                        <polyline points={seg.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#C9A840" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        {seg.map((p, pi) => (
+                          <circle key={pi} cx={p.x} cy={p.y} r="2.5" fill="#C9A840" stroke="rgba(0,0,0,0.5)" strokeWidth="1"/>
+                        ))}
+                      </g>
+                    ))}
+
+                    {/* Latest dot highlight */}
+                    {segments.length > 0 && (() => {
+                      const last = segments[segments.length-1].slice(-1)[0];
+                      return <circle cx={last.x} cy={last.y} r="4" fill="#C9A840" stroke="rgba(201,168,64,0.3)" strokeWidth="4"/>;
+                    })()}
+
+                    {/* Y labels */}
+                    <text x="2" y={py(maxPoids)} fontSize="7" fill="#636366" dominantBaseline="middle">{maxPoids.toFixed(1)}</text>
+                    <text x="2" y={py(minPoids)} fontSize="7" fill="#636366" dominantBaseline="middle">{minPoids.toFixed(1)}</text>
+                  </svg>
+
+                  {/* X axis */}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingLeft: 20 }}>
+                    {[0, 14, 29].map(i => (
+                      <div key={i} style={{ fontSize: 8, color: "#636366" }}>
+                        {new Date(new Date().setDate(new Date().getDate() - (29 - i))).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 8, fontSize: 9, color: "#636366", textAlign: "center" }}>
+                    Enregistre ton poids chaque matin dans le journal quotidien (onglet Aujourd'hui)
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
             {profile.vmaKmh && (() => {
               const vma = parseFloat(profile.vmaKmh);
