@@ -6948,6 +6948,50 @@ JSON:
                           ⚠️ {session.points_attention}
                         </div>
                       )}
+                      {/* ── COACH BRIEFING dynamique ── */}
+                      {(() => {
+                        const lastSess = (profile.sessions || []).slice(-1)[0];
+                        const lastRPE = lastSess?.difficulte || 5;
+                        const lastEnergie = lastSess?.energie || 3;
+                        const recovery = calcRecoveryScore(dailyData, profile);
+                        const daysLeft = daysUntil(profile.raceDate);
+                        const sc = calcFitnessScore(profile);
+
+                        // Compute 3 context-aware coach bullets
+                        const bullets = [];
+
+                        // Bullet 1 — Pourquoi aujourd'hui (based on recovery + last session)
+                        if (recovery >= 75) bullets.push({ icon: "⚡", color: "#30D158", text: `Récupération optimale (${recovery}/100) — c'est le bon moment pour charger.` });
+                        else if (recovery >= 50) bullets.push({ icon: "✓", color: "#0A84FF", text: `Forme correcte (${recovery}/100) — respecte les intensités prévues.` });
+                        else bullets.push({ icon: "⚠️", color: "#FF9F0A", text: `Récupération partielle (${recovery}/100) — écoute ton corps, réduis si besoin.` });
+
+                        // Bullet 2 — Focus de la séance (based on type + weakest pillar)
+                        const weakPillar = sc.force < sc.endurance && sc.force < sc.puissance ? "la force" : sc.endurance < sc.puissance ? "l'endurance" : "la puissance";
+                        if (session.type === "running_zone2") bullets.push({ icon: "🎯", color: "#8E8E93", text: `Focus: rester sous ${Math.round((profile.fcMax || (220 - (parseInt(profile.age)||30))) * 0.75)} bpm — résiste à l'envie d'accélérer.` });
+                        else if (session.type === "force_stations") bullets.push({ icon: "🎯", color: "#8E8E93", text: `Focus: charges précises + tempo contrôlé. Ta zone faible est ${weakPillar} — concentre-toi sur la technique.` });
+                        else if (session.type === "running_qualite") bullets.push({ icon: "🎯", color: "#8E8E93", text: `Focus: intervalles explosifs — chaque effort à fond, récupération complète entre les séries.` });
+                        else bullets.push({ icon: "🎯", color: "#8E8E93", text: `Focus: maintenir le rythme de course tout au long des stations.` });
+
+                        // Bullet 3 — Race context or fatigue warning
+                        if (lastRPE >= 8 && lastEnergie <= 2) bullets.push({ icon: "🛡️", color: "#FF453A", text: `Dernière séance très dure (RPE ${lastRPE}/10, énergie ${lastEnergie}/5) — surveille la fatigue accumulée.` });
+                        else if (daysLeft !== null && daysLeft <= 14) bullets.push({ icon: "🏁", color: "#BF5AF2", text: `J-${daysLeft} — phase d'affûtage. Volume réduit, intensité maintenue, repos prioritaire.` });
+                        else if (daysLeft !== null && daysLeft <= 30) bullets.push({ icon: "🚀", color: "#FF9F0A", text: `J-${daysLeft} — sprint final. Chaque séance compte. Priorité à la qualité sur la quantité.` });
+                        else bullets.push({ icon: "📈", color: "#0A84FF", text: `Continue à construire ta base — la régularité crée les champions.` });
+
+                        return (
+                          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 14px", marginBottom: 12 }}>
+                            <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>🤖 Briefing Coach</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {bullets.map((b, i) => (
+                                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                                  <span style={{ fontSize: 14, flexShrink: 0, lineHeight: 1.4 }}>{b.icon}</span>
+                                  <span style={{ fontSize: 12, color: b.color, lineHeight: 1.5 }}>{b.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                       {/* Pourquoi cette séance ? — beginner guide */}
                       <PourquoiCard session={session} />
                       {/* Progress ring inline */}
