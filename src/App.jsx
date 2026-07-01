@@ -11721,6 +11721,89 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── VO2MAX ESTIMATOR ── */}
+      {profile.vmaKmh && (() => {
+        const vma = parseFloat(profile.vmaKmh);
+        const age = parseInt(profile.age) || 30;
+        const isFemale = profile.sexe === "F" || profile.sexe === "femme";
+        // VO2max = 3.5 * VMA (km/h) — standard formula from Léger
+        const vo2max = Math.round(vma * 3.5);
+
+        const LEVELS_MALE = [
+          { label: "Faible",     color: "#FF453A", range: [0,  35] },
+          { label: "Moyen",      color: "#FF9F0A", range: [35, 42] },
+          { label: "Bon",        color: "#C9A840", range: [42, 50] },
+          { label: "Très bon",   color: "#30D158", range: [50, 57] },
+          { label: "Excellent",  color: "#38bdf8", range: [57, 65] },
+          { label: "Élite",      color: "#BF5AF2", range: [65, 85] },
+        ];
+        const LEVELS_FEMALE = [
+          { label: "Faible",     color: "#FF453A", range: [0,  30] },
+          { label: "Moyen",      color: "#FF9F0A", range: [30, 37] },
+          { label: "Bon",        color: "#C9A840", range: [37, 43] },
+          { label: "Très bon",   color: "#30D158", range: [43, 50] },
+          { label: "Excellent",  color: "#38bdf8", range: [50, 58] },
+          { label: "Élite",      color: "#BF5AF2", range: [58, 75] },
+        ];
+        const scale = isFemale ? LEVELS_FEMALE : LEVELS_MALE;
+        const maxScale = scale[scale.length - 1].range[1];
+        const myLevel = scale.find(l => vo2max >= l.range[0] && vo2max < l.range[1]) || scale[scale.length - 1];
+        const pct = Math.min(100, (vo2max / maxScale) * 100);
+
+        // HYROX context: typical finishers 40-55 ml/kg/min
+        const hyroxFinish = isFemale ? 38 : 45;
+        const hyroxElite = isFemale ? 52 : 60;
+
+        return (
+          <Section title="🫁 Estimation VO₂max">
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
+              <div style={{ textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 44, color: myLevel.color, lineHeight: 1 }}>{vo2max}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase", letterSpacing: 1 }}>ml·kg⁻¹·min⁻¹</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: myLevel.color, marginBottom: 2 }}>{myLevel.label}</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1.5 }}>
+                  {vo2max >= hyroxElite ? "Niveau élite HYROX — cardio exceptionnel" :
+                   vo2max >= hyroxFinish ? "Capacité HYROX — suffisant pour performer" :
+                   "En dessous du seuil HYROX optimal — priorité cardio"}
+                </div>
+              </div>
+            </div>
+
+            {/* Bar scale */}
+            <div style={{ position: "relative", height: 20, borderRadius: 10, overflow: "hidden", marginBottom: 8, display: "flex" }}>
+              {scale.map((l, i) => (
+                <div key={i} style={{ flex: l.range[1] - l.range[0], background: `${l.color}30`, borderRight: i < scale.length - 1 ? "1px solid rgba(0,0,0,0.2)" : "none" }} />
+              ))}
+              {/* Position marker */}
+              <div style={{ position: "absolute", top: 0, bottom: 0, left: `${pct}%`, width: 3, background: myLevel.color, borderRadius: 2, transform: "translateX(-50%)", boxShadow: `0 0 8px ${myLevel.color}` }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#48484A", marginBottom: 12 }}>
+              {scale.map((l, i) => i % 2 === 0 ? <span key={i}>{l.range[0]}</span> : null)}
+              <span>{scale[scale.length-1].range[1]}</span>
+            </div>
+
+            {/* HYROX reference */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ flex: 1, background: "rgba(201,168,64,0.08)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 18, color: "#C9A840" }}>{hyroxFinish}+</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>Finisheur HYROX</div>
+              </div>
+              <div style={{ flex: 1, background: "rgba(191,90,242,0.08)", border: "1px solid rgba(191,90,242,0.2)", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 18, color: "#BF5AF2" }}>{hyroxElite}+</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>Élite HYROX</div>
+              </div>
+              <div style={{ flex: 1, background: `${myLevel.color}10`, border: `1px solid ${myLevel.color}30`, borderRadius: 10, padding: "8px 10px", textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 18, color: myLevel.color }}>{vo2max}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase" }}>Ton score</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 9, color: "#48484A", marginTop: 8, textAlign: "center" }}>Estimé via formule Léger (VO₂max ≈ VMA × 3.5)</div>
+          </Section>
+        );
+      })()}
+
       {/* ── WEIGHT & BODY COMPOSITION TRACKER ── */}
       {(() => {
         const weightKey = `fitrace_weight_${profile.name}`;
