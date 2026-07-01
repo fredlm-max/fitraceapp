@@ -42,6 +42,8 @@ const GLOBAL_STYLES = `
     --shadow-md: 0 4px 20px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
     --shadow-lg: 0 8px 40px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
   }
+  :root[data-theme="charcoal"] { --bg: #0F0F0F; --bg2: #1A1A1A; --bg3: #252525; }
+  :root[data-theme="midnight"] { --bg: #000814; --bg2: #001233; --bg3: #023E8A22; }
   html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; }
   #root { min-height: 100vh; background: #000; }
   ::-webkit-scrollbar { width: 4px; }
@@ -3298,6 +3300,13 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [tab, setTab] = useState("home");
   const [tabDir, setTabDir] = useState(1); // 1=droite, -1=gauche
   const [showQuickLog, setShowQuickLog] = useState(false);
+
+  // ── Theme
+  const [appTheme, setAppTheme] = useState(() => localStorage.getItem("apex_theme") || "black");
+  React.useEffect(() => {
+    document.documentElement.setAttribute("data-theme", appTheme === "black" ? "" : appTheme);
+    localStorage.setItem("apex_theme", appTheme);
+  }, [appTheme]);
 
   // ── PWA Install prompt
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -10580,7 +10589,7 @@ JSON:
         {/* COURSE & TECHNIQUE */}
         {tab === "nutri" && <NutritionTab profile={profile} />}
         {tab === "technique" && <TechniqueTab profile={profile} />}
-        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
+        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} appTheme={appTheme} setAppTheme={setAppTheme} />}
         {tab === "planning" && (
           <PlanningTab
             profile={profile}
@@ -10903,7 +10912,7 @@ JSON:
         })()}
 
         {/* PROFIL */}
-        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} />}
+        {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} appTheme={appTheme} setAppTheme={setAppTheme} />}
 
       </div>
       </div>
@@ -10980,7 +10989,7 @@ JSON:
 // ============================================================
 // ONGLET PROFIL (modifiable)
 // ============================================================
-function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstalled, isIOS, triggerInstall, notifGranted, requestNotifPermission }) {
+function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstalled, isIOS, triggerInstall, notifGranted, requestNotifPermission, appTheme, setAppTheme }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     poids: profile.poids || "",
@@ -11836,6 +11845,29 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--green)", marginBottom: 2 }}>App installée</div>
                 <div style={{ fontSize: 11, color: "#8E8E93" }}>APEX est sur ton écran d'accueil</div>
+              </div>
+            </div>
+          )}
+
+          {/* Theme Selector */}
+          {setAppTheme && (
+            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: "14px 16px", marginBottom: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(201,168,64,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🎨</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#F2F2F7" }}>Thème de l'app</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[
+                  { id: "black", label: "AMOLED", color: "#000000", border: "#333" },
+                  { id: "charcoal", label: "Charcoal", color: "#0F0F0F", border: "#333" },
+                  { id: "midnight", label: "Midnight", color: "#000814", border: "#023E8A" },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setAppTheme(t.id)}
+                    style={{ flex: 1, padding: "10px 6px", borderRadius: 12, border: appTheme === t.id ? "2px solid #C9A840" : `1px solid ${t.border}`, background: t.color, cursor: "pointer", transition: "all 0.2s" }}>
+                    <div style={{ fontSize: 10, color: appTheme === t.id ? "#C9A840" : "#8E8E93", fontWeight: 700 }}>{t.label}</div>
+                    {appTheme === t.id && <div style={{ fontSize: 9, color: "#C9A840", marginTop: 2 }}>✓ Actif</div>}
+                  </button>
+                ))}
               </div>
             </div>
           )}
