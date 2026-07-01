@@ -8209,6 +8209,84 @@ JSON:
             {/* ── SCORE SEMAINE ── */}
             {(profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
+            {/* ── RPE TREND + VOLUME ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = getSessionsForProfile(profile.name);
+              const now = new Date();
+              // 8 weeks buckets Mon→Sun
+              const weeks = Array.from({ length: 8 }, (_, i) => {
+                const monday = new Date(now);
+                const dow = (now.getDay() + 6) % 7;
+                monday.setDate(now.getDate() - dow - (7 * (7 - i)));
+                monday.setHours(0,0,0,0);
+                const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999);
+                const bucket = sessions.filter(s => { const d = new Date(s.date); return d >= monday && d <= sunday; });
+                const avgRpe = bucket.length ? (bucket.reduce((a, s) => a + (s.rpe || 0), 0) / bucket.length) : 0;
+                const label = monday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+                return { label, avgRpe: Math.round(avgRpe * 10) / 10, count: bucket.length };
+              });
+
+              const maxRpe = Math.max(...weeks.map(w => w.avgRpe), 10);
+              const maxCount = Math.max(...weeks.map(w => w.count), 5);
+              const W = 340, H = 100, PL = 28, PR = 10, PT = 12, PB = 24;
+              const chartW = W - PL - PR, chartH = H - PT - PB;
+              const xPos = (i) => PL + (i / (weeks.length - 1)) * chartW;
+              const yRpe = (v) => PT + chartH - (v / maxRpe) * chartH;
+              const rpePoints = weeks.map((w, i) => `${xPos(i)},${yRpe(w.avgRpe)}`).join(" ");
+              const areaPoints = `${xPos(0)},${PT+chartH} ${rpePoints} ${xPos(weeks.length-1)},${PT+chartH}`;
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.8)", borderRadius: 18, padding: "16px 14px 12px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>RPE moyen + volume (8 semaines)</div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: "visible" }}>
+                    {/* Grid lines */}
+                    {[0.25, 0.5, 0.75, 1].map(f => (
+                      <line key={f} x1={PL} x2={W-PR} y1={PT + chartH * (1-f)} x2={W-PR} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                    ))}
+                    {/* Volume bars */}
+                    {weeks.map((w, i) => {
+                      const barH = maxCount > 0 ? (w.count / maxCount) * chartH : 0;
+                      const barW = (chartW / weeks.length) * 0.5;
+                      return <rect key={i} x={xPos(i) - barW/2} y={PT + chartH - barH} width={barW} height={barH} fill="rgba(201,168,64,0.15)" rx="3" />;
+                    })}
+                    {/* RPE area fill */}
+                    <polygon points={areaPoints} fill="rgba(255,69,58,0.08)" />
+                    {/* RPE line */}
+                    <polyline points={rpePoints} fill="none" stroke="#FF453A" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                    {/* RPE dots */}
+                    {weeks.map((w, i) => w.avgRpe > 0 && (
+                      <circle key={i} cx={xPos(i)} cy={yRpe(w.avgRpe)} r="3.5" fill="#FF453A" stroke="#000" strokeWidth="1.5" />
+                    ))}
+                    {/* RPE labels for last point */}
+                    {weeks[weeks.length-1].avgRpe > 0 && (
+                      <text x={xPos(weeks.length-1)} y={yRpe(weeks[weeks.length-1].avgRpe) - 7} textAnchor="middle" fontSize="9" fill="#FF453A" fontWeight="700">{weeks[weeks.length-1].avgRpe}</text>
+                    )}
+                    {/* X labels */}
+                    {[0, 2, 4, 7].map(i => (
+                      <text key={i} x={xPos(i)} y={H-4} textAnchor="middle" fontSize="8" fill="#48484A">{weeks[i].label}</text>
+                    ))}
+                    {/* Y label */}
+                    <text x={PL-4} y={PT + chartH * 0.5} textAnchor="end" fontSize="8" fill="#636366" dominantBaseline="middle">RPE</text>
+                  </svg>
+                  <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#636366" }}>
+                      <div style={{ width: 10, height: 3, background: "#FF453A", borderRadius: 2 }} />RPE moyen
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#636366" }}>
+                      <div style={{ width: 10, height: 10, background: "rgba(201,168,64,0.3)", borderRadius: 2 }} />Nb séances
+                    </div>
+                    {(() => {
+                      const lastRpe = weeks[weeks.length-1].avgRpe;
+                      const prevRpe = weeks[weeks.length-2].avgRpe;
+                      if (lastRpe > 8 && lastRpe > prevRpe) return <div style={{ marginLeft: "auto", fontSize: 10, color: "#FF453A", fontWeight: 700 }}>⚠️ Risque surcharge</div>;
+                      if (lastRpe < 5 && lastRpe > 0) return <div style={{ marginLeft: "auto", fontSize: 10, color: "#30D158", fontWeight: 700 }}>✅ Charge légère</div>;
+                      return null;
+                    })()}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── CHARGE HEBDOMADAIRE ── */}
             {(profile.sessions||[]).length >= 2 && (() => {
               // Compute last 8 weeks of training load (TRIMP-like: duration × RPE)
