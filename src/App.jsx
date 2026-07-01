@@ -15906,6 +15906,77 @@ JSON: {
             <div className="bebas" style={{ fontSize: 18, color: "#30D158", letterSpacing: 1 }}>NUTRITION SÉANCE</div>
             <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{todaySession?.titre?.slice(0,20) || "Séance du jour"}</div>
           </div>
+          {/* ── HYDRATION TRACKER ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 75;
+            const todayDate = new Date().toISOString().slice(0,10);
+            const lastSession = (profile.sessions||[]).slice(-1)[0];
+            const isTrainingDay = lastSession?.date === todayDate;
+            const hydKey = `fitrace_hydration_${profile.name}_${todayDate}`;
+            const [glasses, setGlasses] = React.useState(() => {
+              try { return parseInt(localStorage.getItem(hydKey) || "0"); } catch { return 0; }
+            });
+            const addGlass = () => {
+              const next = Math.min(glasses + 1, 20);
+              setGlasses(next);
+              localStorage.setItem(hydKey, String(next));
+            };
+            const removeGlass = () => {
+              const next = Math.max(glasses - 1, 0);
+              setGlasses(next);
+              localStorage.setItem(hydKey, String(next));
+            };
+            // 35ml/kg base + 500ml per training day (EFSA 2010)
+            const targetL = ((poids * 35) / 1000 + (isTrainingDay ? 0.5 : 0)).toFixed(1);
+            const targetGlasses = Math.ceil(parseFloat(targetL) / 0.25);
+            const currentL = (glasses * 0.25).toFixed(2);
+            const pct = Math.min(1, glasses / targetGlasses);
+            const radius = 44;
+            const circ = 2 * Math.PI * radius;
+            const dash = circ * pct;
+            const color = pct >= 1 ? "#30D158" : pct >= 0.6 ? "#C9A840" : "#38bdf8";
+            return (
+              <div style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.15)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <div>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>💧 HYDRATATION</div>
+                    <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
+                      Objectif: <span style={{ color: "#38bdf8", fontWeight: 700 }}>{targetL}L</span>
+                      {isTrainingDay ? <span style={{ color: "#8E8E93" }}> (+500ml séance)</span> : null}
+                    </div>
+                  </div>
+                  <div style={{ position: "relative", width: 100, height: 100 }}>
+                    <svg width="100" height="100" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                      <circle cx="50" cy="50" r={radius} fill="none" stroke={color} strokeWidth="8"
+                        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+                        transform="rotate(-90 50 50)" style={{ transition: "stroke-dasharray 0.4s ease" }} />
+                    </svg>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <div className="bebas" style={{ fontSize: 18, color, lineHeight: 1 }}>{parseFloat(currentL).toFixed(1)}L</div>
+                      <div style={{ fontSize: 9, color: "#8E8E93" }}>{glasses} verre{glasses !== 1 ? "s" : ""}</div>
+                    </div>
+                  </div>
+                </div>
+                {/* Glass grid */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                  {Array.from({ length: targetGlasses }).map((_, i) => (
+                    <div key={i} style={{ width: 28, height: 28, borderRadius: 6, background: i < glasses ? color + "33" : "rgba(255,255,255,0.04)", border: `1.5px solid ${i < glasses ? color : "rgba(255,255,255,0.08)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, transition: "all 0.2s" }}>
+                      {i < glasses ? "💧" : ""}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={removeGlass} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#8E8E93", fontSize: 18, cursor: "pointer" }}>−</button>
+                  <button onClick={addGlass} style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: "#38bdf8", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                    + 1 verre (250ml)
+                  </button>
+                </div>
+                {pct >= 1 && <div style={{ marginTop: 10, textAlign: "center", fontSize: 12, color: "#30D158" }}>✅ Objectif hydratation atteint !</div>}
+              </div>
+            );
+          })()}
+
           {/* ── MACRO CALCULATOR ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 75;
