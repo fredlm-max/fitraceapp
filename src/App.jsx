@@ -8616,6 +8616,69 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING DIARY ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const diaryKey = `fitrace_diary_${profile.name}`;
+              const [diary, setDiary] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(diaryKey) || "{}"); } catch { return {}; }
+              });
+              const [editDay, setEditDay] = React.useState(null);
+              const [editText, setEditText] = React.useState("");
+              const last8 = (profile.sessions||[]).slice(-8).reverse();
+
+              const saveNote = (date) => {
+                const next = { ...diary, [date]: editText };
+                setDiary(next);
+                localStorage.setItem(diaryKey, JSON.stringify(next));
+                setEditDay(null);
+              };
+
+              const sessionsWithDates = last8.filter(s => s.date);
+              if (!sessionsWithDates.length) return null;
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>📝 Journal d'entraînement</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {sessionsWithDates.slice(0, 5).map((s, i) => {
+                      const dateKey = s.date.slice(0, 10);
+                      const note = diary[dateKey] || "";
+                      const isEditing = editDay === dateKey;
+                      const dateLabel = new Date(s.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+                      return (
+                        <div key={i} style={{ background: note ? "rgba(201,168,64,0.04)" : "rgba(255,255,255,0.03)", border: `1px solid ${note ? "rgba(201,168,64,0.15)" : "rgba(255,255,255,0.05)"}`, borderRadius: 12, padding: "10px 12px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isEditing || note ? 6 : 0 }}>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)" }}>{s.titre || "Séance"}</div>
+                              <div style={{ fontSize: 9, color: "#636366" }}>{dateLabel}</div>
+                            </div>
+                            <button onClick={() => { setEditDay(isEditing ? null : dateKey); setEditText(note); }}
+                              style={{ background: "none", border: "none", color: isEditing ? "#C9A840" : "#48484A", cursor: "pointer", fontSize: 13, padding: "2px 6px" }}>
+                              {isEditing ? "✓" : note ? "✏️" : "+ Note"}
+                            </button>
+                          </div>
+                          {isEditing ? (
+                            <div style={{ marginTop: 4 }}>
+                              <textarea value={editText} onChange={e => setEditText(e.target.value)}
+                                placeholder="Ressenti, observations, points à améliorer..."
+                                rows={3} autoFocus
+                                style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(201,168,64,0.25)", borderRadius: 8, padding: "8px 10px", color: "var(--white)", fontSize: 12, outline: "none", resize: "none", boxSizing: "border-box", lineHeight: 1.6, fontFamily: "inherit" }} />
+                              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                                <button onClick={() => saveNote(dateKey)} style={{ flex: 1, background: "var(--yellow)", border: "none", borderRadius: 8, padding: "8px", color: "#000", fontWeight: 800, cursor: "pointer", fontSize: 12 }}>Sauvegarder</button>
+                                <button onClick={() => setEditDay(null)} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, padding: "8px 12px", color: "#8E8E93", cursor: "pointer", fontSize: 12 }}>Annuler</button>
+                              </div>
+                            </div>
+                          ) : note ? (
+                            <div style={{ fontSize: 12, color: "#AEAEB2", lineHeight: 1.6, fontStyle: "italic" }}>{note}</div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── EMPTY STATE — moins de 2 séances ── */}
             {(profile.sessions||[]).length < 2 && (
               <div style={{ textAlign: "center", padding: "48px 24px" }}>
