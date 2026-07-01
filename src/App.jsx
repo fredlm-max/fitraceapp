@@ -8547,6 +8547,61 @@ JSON:
               );
             })()}
 
+            {/* ── MONTHLY STATS SUMMARY ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              const now = new Date();
+              const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+              const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+              const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
+
+              const thisMonth = sessions.filter(s => s.date && s.date.startsWith(monthStr));
+              const lastMonth = sessions.filter(s => s.date && s.date.startsWith(prevMonthStr));
+
+              const calcStats = (arr) => ({
+                count: arr.length,
+                trimp: arr.reduce((a, s) => a + (s.trimp || Math.round((s.duration||45)*(s.difficulte||5)/10)), 0),
+                duration: arr.reduce((a, s) => a + (parseInt(s.tempsReel || s.duree || 45)), 0),
+                calories: arr.reduce((a, s) => a + (parseInt(s.calories) || 0), 0),
+              });
+
+              const cur = calcStats(thisMonth);
+              const prev = calcStats(lastMonth);
+              const monthName = now.toLocaleDateString("fr-FR", { month: "long" }).charAt(0).toUpperCase() + now.toLocaleDateString("fr-FR", { month: "long" }).slice(1);
+
+              const delta = (c, p) => p > 0 ? Math.round((c - p) / p * 100) : null;
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>BILAN {monthName.toUpperCase()}</div>
+                    <div style={{ fontSize: 10, color: "#636366" }}>vs {prevDate.toLocaleDateString("fr-FR", { month: "long" })}</div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+                    {[
+                      { label: "Séances", val: cur.count, prev: prev.count, color: "#C9A840", unit: "" },
+                      { label: "TRIMP", val: cur.trimp, prev: prev.trimp, color: "#30D158", unit: "" },
+                      { label: "Durée", val: Math.round(cur.duration/60), prev: Math.round(prev.duration/60), color: "#38bdf8", unit: "h" },
+                      { label: "kcal", val: cur.calories || "—", prev: prev.calories, color: "#FF453A", unit: "" },
+                    ].map(item => {
+                      const d = typeof item.val === "number" && item.prev > 0 ? delta(item.val, item.prev) : null;
+                      return (
+                        <div key={item.label} style={{ background: `${item.color}08`, border: `1px solid ${item.color}20`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                          <div className="bebas" style={{ fontSize: 20, color: item.color, lineHeight: 1 }}>{item.val}{item.unit}</div>
+                          <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", marginTop: 2 }}>{item.label}</div>
+                          {d !== null && (
+                            <div style={{ fontSize: 8, color: d > 0 ? "#30D158" : "#FF9F0A", fontWeight: 700, marginTop: 2 }}>
+                              {d > 0 ? "▲" : "▼"}{Math.abs(d)}%
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
