@@ -8337,6 +8337,85 @@ JSON:
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
 
+            {/* ── ACTIVITY HEATMAP ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const sessMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                const key = s.date.slice(0, 10);
+                const trimp = s.trimp || Math.round((s.duration || 45) * (s.difficulte || 5) / 10);
+                sessMap[key] = (sessMap[key] || 0) + trimp;
+              });
+
+              const WEEKS = 16;
+              const today = new Date(); today.setHours(0,0,0,0);
+              const dow = (today.getDay() + 6) % 7; // Mon=0
+              const start = new Date(today);
+              start.setDate(today.getDate() - dow - 7 * (WEEKS - 1));
+
+              const days = [];
+              for (let i = 0; i < WEEKS * 7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                const key = d.toISOString().slice(0, 10);
+                days.push({ key, trimp: sessMap[key] || 0, isFuture: d > today });
+              }
+
+              const maxTrimp = Math.max(...days.map(d => d.trimp), 1);
+              const totalSessions = sessions.length;
+              const thisYear = sessions.filter(s => s.date && s.date.startsWith(String(new Date().getFullYear()))).length;
+
+              const getColor = (trimp, isFuture) => {
+                if (isFuture || trimp === 0) return "rgba(255,255,255,0.04)";
+                const pct = trimp / maxTrimp;
+                if (pct > 0.75) return "#C9A840";
+                if (pct > 0.45) return "#8A6A10";
+                if (pct > 0.15) return "rgba(138,106,16,0.5)";
+                return "rgba(138,106,16,0.2)";
+              };
+
+              const weeks = [];
+              for (let w = 0; w < WEEKS; w++) weeks.push(days.slice(w * 7, w * 7 + 7));
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>ACTIVITÉ</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>{thisYear} séances cette année · {totalSessions} total</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Moins</div>
+                      {[0.04, 0.2, 0.5, 0.85, 1].map((p, i) => (
+                        <div key={i} style={{ width: 9, height: 9, borderRadius: 2, background: p < 0.1 ? "rgba(255,255,255,0.04)" : `rgba(201,168,64,${p})` }} />
+                      ))}
+                      <div style={{ fontSize: 9, color: "#636366" }}>Plus</div>
+                    </div>
+                  </div>
+
+                  {/* Day labels */}
+                  <div style={{ display: "flex", gap: 2, marginBottom: 4, paddingLeft: 0 }}>
+                    {["L","M","M","J","V","S","D"].map((d, i) => (
+                      <div key={i} style={{ width: "calc((100% - " + (WEEKS - 1) * 2 + "px) / " + WEEKS + ")", textAlign: "center", fontSize: 8, color: "#48484A" }}>{d}</div>
+                    ))}
+                  </div>
+
+                  {/* Heatmap grid: weeks as columns, days as rows */}
+                  <div style={{ display: "flex", gap: 2 }}>
+                    {weeks.map((week, wi) => (
+                      <div key={wi} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                        {week.map((day, di) => (
+                          <div key={di} title={day.trimp ? `${day.key}: ${day.trimp} TRIMP` : day.key}
+                            style={{ aspectRatio: "1", borderRadius: 2, background: getColor(day.trimp, day.isFuture), border: day.key === today.toISOString().slice(0,10) ? "1px solid #C9A840" : "none" }} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
