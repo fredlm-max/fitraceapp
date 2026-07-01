@@ -9877,8 +9877,13 @@ JSON:
               ];
               const [journalFilter, setJournalFilter] = React.useState("all");
               const [expandedSessions, setExpandedSessions] = React.useState({});
+              const [searchQuery, setSearchQuery] = React.useState("");
               const allSessions = (profile.sessions||[]).slice().reverse();
-              const filtered = journalFilter === "all" ? allSessions : allSessions.filter(s => s.type === journalFilter);
+              const filtered = allSessions.filter(s => {
+                const typeMatch = journalFilter === "all" || s.type === journalFilter;
+                const searchMatch = !searchQuery || (s.titre||"").toLowerCase().includes(searchQuery.toLowerCase()) || (s.type||"").includes(searchQuery.toLowerCase());
+                return typeMatch && searchMatch;
+              });
               const total = allSessions.length;
               return (
                 <div style={{ marginBottom: 16 }}>
@@ -9912,6 +9917,18 @@ JSON:
                             <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
                           </div>
                         ))}
+                      </div>
+
+                      {/* Search bar */}
+                      <div style={{ position: "relative", marginBottom: 8 }}>
+                        <input
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          placeholder="Rechercher une séance..."
+                          style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 14px 10px 36px", color: "#F2F2F7", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                        />
+                        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#636366" }}>🔍</span>
+                        {searchQuery && <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#636366", cursor: "pointer", fontSize: 16, padding: 2 }}>×</button>}
                       </div>
 
                       {/* Filter chips */}
