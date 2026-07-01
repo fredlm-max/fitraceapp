@@ -7714,6 +7714,107 @@ JSON:
             {/* ── SCORE SEMAINE ── */}
             {(profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
+            {/* ── CHARGE HEBDOMADAIRE ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              // Compute last 8 weeks of training load (TRIMP-like: duration × RPE)
+              const now = new Date();
+              const weeks = Array.from({ length: 8 }, (_, i) => {
+                const weekEnd = new Date(now);
+                weekEnd.setDate(now.getDate() - i * 7);
+                weekEnd.setHours(23, 59, 59, 999);
+                const weekStart = new Date(weekEnd);
+                weekStart.setDate(weekEnd.getDate() - 6);
+                weekStart.setHours(0, 0, 0, 0);
+                const label = i === 0 ? "Cette sem." : i === 1 ? "Sem. -1" : `S-${i}`;
+                const sessionsInWeek = (profile.sessions || []).filter(s => {
+                  const d = new Date(s.date);
+                  return d >= weekStart && d <= weekEnd;
+                });
+                const load = sessionsInWeek.reduce((sum, s) => {
+                  const dur = parseInt(s.tempsReel) || parseInt(s.duree) || 60;
+                  const rpe = parseInt(s.difficulte) || 5;
+                  return sum + Math.round(dur * rpe / 10);
+                }, 0);
+                return { label, load, count: sessionsInWeek.length, isCurrentWeek: i === 0 };
+              }).reverse();
+
+              const maxLoad = Math.max(...weeks.map(w => w.load), 1);
+              // Target load: based on profile's sessions/week target × 60min × RPE 6
+              const targetSeances = parseInt(profile.seancesParSemaine) || 3;
+              const targetLoad = Math.round(targetSeances * 60 * 6 / 10);
+
+              const totalLoad = weeks[weeks.length - 1].load;
+              const prevLoad = weeks[weeks.length - 2].load;
+              const trend = totalLoad - prevLoad;
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <div style={{ width: 3, height: 18, background: "#0A84FF", borderRadius: 99 }} />
+                        <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>CHARGE HEBDO</div>
+                      </div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>TRIMP · durée × intensité · 8 semaines</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: trend >= 0 ? "#30D158" : "#FF453A" }}>{totalLoad}</div>
+                      <div style={{ fontSize: 10, color: trend >= 0 ? "#30D158" : "#FF453A", fontWeight: 700 }}>{trend >= 0 ? "+" : ""}{trend} vs S-1</div>
+                    </div>
+                  </div>
+
+                  {/* Bars chart */}
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80, marginBottom: 6 }}>
+                    {/* Target line reference */}
+                    {weeks.map((w, i) => {
+                      const h = maxLoad > 0 ? Math.round((w.load / maxLoad) * 72) : 4;
+                      const isOver = w.load > targetLoad * 1.2;
+                      const isUnder = w.load < targetLoad * 0.5 && w.load > 0;
+                      const barColor = isOver ? "#FF453A" : isUnder ? "#FF9F0A" : w.isCurrentWeek ? "#0A84FF" : "rgba(255,255,255,0.2)";
+                      const glowColor = isOver ? "rgba(255,69,58,0.4)" : w.isCurrentWeek ? "rgba(10,132,255,0.3)" : "none";
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ fontSize: 8, color: w.load > 0 ? barColor : "transparent", fontWeight: 700 }}>{w.load}</div>
+                          <div style={{ width: "100%", height: Math.max(h, w.load > 0 ? 4 : 2), background: w.load > 0 ? barColor : "rgba(255,255,255,0.06)", borderRadius: "4px 4px 0 0", boxShadow: w.load > 0 ? `0 2px 8px ${glowColor}` : "none", transition: "height 0.6s ease", position: "relative" }}>
+                            {/* Target line overlay */}
+                            {targetLoad > 0 && (
+                              <div style={{ position: "absolute", bottom: Math.round((targetLoad / maxLoad) * 72) - h, left: -1, right: -1, height: 1, background: "rgba(48,209,88,0.3)", pointerEvents: "none" }} />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Labels */}
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {weeks.map((w, i) => (
+                      <div key={i} style={{ flex: 1, textAlign: "center" }}>
+                        <div style={{ fontSize: 8, color: w.isCurrentWeek ? "#0A84FF" : "#636366", fontWeight: w.isCurrentWeek ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{w.label}</div>
+                        {w.count > 0 && <div style={{ fontSize: 7, color: "#636366" }}>{w.count}s</div>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: "#0A84FF" }} />
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Semaine actuelle</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 2, background: "rgba(48,209,88,0.5)" }} />
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Cible ({targetLoad})</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: "#FF453A" }} />
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Surcharge</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MIX ENTRAÎNEMENT ── */}
             <TrainingMixChart profile={profile} />
 
