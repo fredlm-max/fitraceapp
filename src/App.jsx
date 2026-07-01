@@ -11488,6 +11488,81 @@ JSON:
                 );
               })()}
 
+              {/* ── HR ZONES TRAINING GUIDE ── */}
+              {(() => {
+                const fcMax = profile.fcMax || estimateFCmax(profile.age, profile.sex);
+                if (!fcMax) return null;
+                const zones = calcFCZones(fcMax, profile.fcRest, profile.age, profile.sex);
+                if (!zones) return null;
+                const [expanded, setExpanded] = React.useState(null);
+                const method = profile.fcRest ? "Karvonen" : "% FCmax";
+                return (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div>
+                        <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>❤️ ZONES FC PERSONNALISÉES</div>
+                        <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
+                          FCmax: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{fcMax} bpm</span>
+                          {profile.fcRest ? <> · Repos: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{profile.fcRest} bpm</span></> : null}
+                          {" "}· Méthode: <span style={{ color: "#aaa" }}>{method}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {zones.map((z, i) => {
+                      const isOpen = expanded === i;
+                      const pctOfMax = Math.round(((z.fcLow + z.fcHigh) / 2) / fcMax * 100);
+                      const barW = Math.round((z.fcHigh / fcMax) * 100) - Math.round((z.fcLow / fcMax) * 100);
+                      const barStart = Math.round((z.fcLow / fcMax) * 100);
+                      return (
+                        <div key={z.z} onClick={() => setExpanded(isOpen ? null : i)}
+                          style={{ background: "var(--bg2)", borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: isOpen ? `1px solid ${z.color}` : "1px solid transparent", cursor: "pointer", transition: "all 0.2s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: z.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <div className="bebas" style={{ color: z.color, fontSize: 14 }}>{z.z}</div>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                                <div style={{ fontSize: 13, color: "var(--white)", fontWeight: 600 }}>{z.label}</div>
+                                <div style={{ fontSize: 13, color: z.color, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{z.fcLow}–{z.fcHigh} <span style={{ fontSize: 10, color: "#8E8E93" }}>bpm</span></div>
+                              </div>
+                              <div style={{ position: "relative", height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                                <div style={{ position: "absolute", left: `${barStart}%`, width: `${barW}%`, height: "100%", borderRadius: 99, background: z.color, opacity: 0.85 }} />
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                                <div style={{ fontSize: 10, color: "#8E8E93" }}>{z.pct[0]}–{z.pct[1]}% FCmax</div>
+                                <div style={{ fontSize: 10, color: "#666" }}>{isOpen ? "▲" : "▼"}</div>
+                              </div>
+                            </div>
+                          </div>
+                          {isOpen && (
+                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                              <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6, marginBottom: 8 }}>{z.role}</div>
+                              <div style={{ background: z.color + "15", borderRadius: 8, padding: "8px 10px", marginBottom: 8 }}>
+                                <div style={{ fontSize: 10, color: z.color, fontWeight: 700, marginBottom: 3 }}>🏆 HYROX</div>
+                                <div style={{ fontSize: 12, color: "var(--white)" }}>{z.hyrox}</div>
+                              </div>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                                  <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 2 }}>⏱️ DURÉE</div>
+                                  <div style={{ fontSize: 11, color: "var(--white)" }}>{z.duree}</div>
+                                </div>
+                                <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                                  <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 2 }}>💬 RESSENTI</div>
+                                  <div style={{ fontSize: 11, color: "var(--white)" }}>{z.ressenti}</div>
+                                </div>
+                              </div>
+                              {z.fc_note && (
+                                <div style={{ marginTop: 8, fontSize: 11, color: "#8E8E93", fontStyle: "italic" }}>💡 {z.fc_note}</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
               {/* ── BREATHING PROTOCOL ── */}
               {(() => {
                 const PROTOCOLS = [
