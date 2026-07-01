@@ -6666,6 +6666,117 @@ JSON:
               );
             })()}
 
+            {/* ── INTERVAL TIMER ── */}
+            {(() => {
+              const [timerOpen, setTimerOpen] = React.useState(false);
+              const [workSec, setWorkSec] = React.useState(30);
+              const [restSec, setRestSec] = React.useState(15);
+              const [rounds, setRounds] = React.useState(8);
+              const [currentRound, setCurrentRound] = React.useState(1);
+              const [phase, setPhase] = React.useState("ready"); // ready|work|rest|done
+              const [remaining, setRemaining] = React.useState(workSec);
+              const timerRef = React.useRef(null);
+
+              const beep = (freq = 880, dur = 0.12) => {
+                try {
+                  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                  const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                  osc.connect(gain); gain.connect(ctx.destination);
+                  osc.frequency.value = freq; gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+                  osc.start(); osc.stop(ctx.currentTime + dur);
+                } catch {}
+              };
+
+              const start = () => {
+                setPhase("work"); setCurrentRound(1); setRemaining(workSec);
+                beep(880, 0.15);
+              };
+              const stop = () => {
+                clearInterval(timerRef.current); setPhase("ready"); setCurrentRound(1); setRemaining(workSec);
+              };
+
+              React.useEffect(() => {
+                if (phase === "ready" || phase === "done") return;
+                timerRef.current = setInterval(() => {
+                  setRemaining(r => {
+                    if (r <= 1) {
+                      if (phase === "work") {
+                        if (currentRound >= rounds) { clearInterval(timerRef.current); setPhase("done"); beep(440, 0.4); return 0; }
+                        setPhase("rest"); beep(550, 0.2); return restSec;
+                      } else {
+                        setCurrentRound(c => c + 1); setPhase("work"); beep(880, 0.15); return workSec;
+                      }
+                    }
+                    return r - 1;
+                  });
+                }, 1000);
+                return () => clearInterval(timerRef.current);
+              }, [phase, currentRound]);
+
+              const phaseColor = phase === "work" ? "#FF453A" : phase === "rest" ? "#30D158" : phase === "done" ? "#C9A840" : "#8E8E93";
+              const phasePct = phase === "work" ? (1 - remaining / workSec) * 100 : phase === "rest" ? (1 - remaining / restSec) * 100 : 0;
+
+              if (!timerOpen) return (
+                <button onClick={() => setTimerOpen(true)} style={{ width: "100%", background: "rgba(255,69,58,0.06)", border: "1px solid rgba(255,69,58,0.15)", borderRadius: 16, padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12 }}>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 10, color: "#FF453A", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>⏱ Tabata / HIIT</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#F2F2F7", marginTop: 2 }}>Timer d'intervalles</div>
+                    <div style={{ fontSize: 11, color: "#8E8E93" }}>Travail / Repos / Rounds</div>
+                  </div>
+                  <div style={{ fontSize: 28 }}>⏱</div>
+                </button>
+              );
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.9)", border: `1.5px solid ${phaseColor}40`, borderRadius: 18, padding: "18px 16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <div className="bebas" style={{ fontSize: 18, color: phaseColor }}>⏱ TIMER</div>
+                    <button onClick={() => { stop(); setTimerOpen(false); }} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: "50%", width: 28, height: 28, color: "#666", cursor: "pointer", fontSize: 14 }}>×</button>
+                  </div>
+
+                  {phase === "ready" && (
+                    <>
+                      {[{ label: "Travail", val: workSec, set: setWorkSec, opts: [20,30,45,60,90,120] }, { label: "Repos", val: restSec, set: setRestSec, opts: [10,15,20,30,45,60] }, { label: "Rounds", val: rounds, set: setRounds, opts: [4,6,8,10,12,16] }].map(cfg => (
+                        <div key={cfg.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <div style={{ fontSize: 12, color: "#8E8E93", fontWeight: 600 }}>{cfg.label}</div>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {cfg.opts.map(o => <button key={o} onClick={() => cfg.set(o)} style={{ padding: "4px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700, border: cfg.val === o ? "1.5px solid #C9A840" : "1px solid rgba(255,255,255,0.1)", background: cfg.val === o ? "rgba(201,168,64,0.12)" : "rgba(255,255,255,0.04)", color: cfg.val === o ? "#C9A840" : "#8E8E93", cursor: "pointer" }}>{cfg.label === "Travail" || cfg.label === "Repos" ? `${o}s` : o}</button>)}
+                          </div>
+                        </div>
+                      ))}
+                      <button onClick={start} style={{ width: "100%", background: "#C9A840", border: "none", borderRadius: 12, padding: "14px", color: "#000", fontFamily: "'Bebas Neue',sans-serif", fontSize: 18, letterSpacing: 2, cursor: "pointer" }}>START</button>
+                    </>
+                  )}
+
+                  {(phase === "work" || phase === "rest") && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: phaseColor, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>{phase === "work" ? "EFFORT" : "REPOS"} — Round {currentRound}/{rounds}</div>
+                      <div style={{ position: "relative", width: 100, height: 100, margin: "0 auto 12px" }}>
+                        <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                          <circle cx="50" cy="50" r="42" fill="none" stroke={phaseColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={264} strokeDashoffset={264 * (1 - phasePct/100)} style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+                        </svg>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div className="bebas" style={{ fontSize: 36, color: phaseColor, lineHeight: 1 }}>{remaining}</div>
+                        </div>
+                      </div>
+                      <button onClick={stop} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 10, padding: "8px 20px", color: "#8E8E93", cursor: "pointer", fontSize: 13 }}>STOP</button>
+                    </div>
+                  )}
+
+                  {phase === "done" && (
+                    <div style={{ textAlign: "center", padding: "16px 0" }}>
+                      <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
+                      <div className="bebas" style={{ fontSize: 22, color: "#C9A840" }}>SESSION COMPLÈTE !</div>
+                      <div style={{ fontSize: 12, color: "#8E8E93", marginTop: 6 }}>{rounds} rounds · {Math.round((workSec * rounds + restSec * rounds) / 60)} min total</div>
+                      <button onClick={stop} style={{ marginTop: 14, background: "rgba(201,168,64,0.12)", border: "1px solid rgba(201,168,64,0.3)", borderRadius: 10, padding: "8px 20px", color: "#C9A840", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Recommencer</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SEMAINE 1 ROADMAP (beginners) ── */}
             {(profile.sessions||[]).length < 5 && (() => {
               const sessionsDone = (profile.sessions||[]).length;
