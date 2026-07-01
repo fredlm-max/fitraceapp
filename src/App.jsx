@@ -1133,16 +1133,20 @@ function calcTotalXP(profile) {
 }
 
 const BADGES = [
-  { id: "first_session",  icon: "🏋️", name: "Première séance",    desc: "Tu as complété ta première séance !",         check: p => (p.sessions||[]).length >= 1 },
-  { id: "week_warrior",   icon: "📅", name: "Semaine complète",    desc: "4+ séances en une semaine",                   check: p => { const w=new Date(); w.setDate(w.getDate()-7); return (p.sessions||[]).filter(s=>new Date(s.date)>=w).length>=4; } },
-  { id: "streak_7",       icon: "🔥", name: "7 jours de feu",     desc: "7 jours d'entraînement consécutifs",           check: p => (p.streak||0) >= 7 },
-  { id: "nutrition_pro",  icon: "🥗", name: "Nutrition consciente", desc: "5 jours de journal nutritionnel rempli",     check: p => (p.nutriDays||0) >= 5 },
-  { id: "early_bird",     icon: "🌅", name: "Lève-tôt",            desc: "Check-in avant 7h du matin",                  check: p => (p.earlyBird||false) },
-  { id: "iron_will",      icon: "💪", name: "Volonté de fer",       desc: "Séance réalisée malgré RPE déclaré 8+",       check: p => (p.sessions||[]).some(s => s.difficulte >= 8) },
-  { id: "data_nerd",      icon: "📊", name: "Data addict",          desc: "VFC + poids + hydratation logués le même jour", check: p => (p.dataNerd||false) },
-  { id: "podium",         icon: "🏆", name: "Podium HYROX",         desc: "Résultat de course enregistré",               check: p => (p.raceResults||[]).length >= 1 },
-  { id: "ten_sessions",   icon: "⚡", name: "10 séances",           desc: "10 séances complètes dans l'app",             check: p => (p.sessions||[]).length >= 10 },
-  { id: "level5",         icon: "👑", name: "Elite",                desc: "Atteindre le niveau Elite (1800 XP)",         check: p => calcTotalXP(p) >= 1800 },
+  { id: "first_session",  icon: "🏋️", name: "Première séance",     desc: "Tu as complété ta première séance !",              tier: "bronze", check: p => (p.sessions||[]).length >= 1 },
+  { id: "week_warrior",   icon: "📅", name: "Semaine complète",     desc: "4+ séances en une semaine",                        tier: "silver", check: p => { const w=new Date(); w.setDate(w.getDate()-7); return (p.sessions||[]).filter(s=>new Date(s.date)>=w).length>=4; } },
+  { id: "streak_7",       icon: "🔥", name: "7 jours de feu",      desc: "7 jours d'entraînement consécutifs",               tier: "gold",   check: p => (p.streak||0) >= 7 },
+  { id: "nutrition_pro",  icon: "🥗", name: "Nutrition consciente", desc: "5 jours de journal nutritionnel rempli",           tier: "silver", check: p => (p.nutriDays||0) >= 5 },
+  { id: "early_bird",     icon: "🌅", name: "Lève-tôt",             desc: "Check-in avant 7h du matin",                       tier: "bronze", check: p => (p.earlyBird||false) },
+  { id: "iron_will",      icon: "💪", name: "Volonté de fer",       desc: "Séance réalisée malgré RPE déclaré 8+",            tier: "silver", check: p => (p.sessions||[]).some(s => s.difficulte >= 8) },
+  { id: "data_nerd",      icon: "📊", name: "Data addict",          desc: "VFC + poids + hydratation logués le même jour",    tier: "bronze", check: p => (p.dataNerd||false) },
+  { id: "podium",         icon: "🏆", name: "Podium HYROX",         desc: "Résultat de course enregistré",                    tier: "gold",   check: p => (p.raceResults||[]).length >= 1 },
+  { id: "ten_sessions",   icon: "⚡", name: "10 séances",            desc: "10 séances complètes dans l'app",                 tier: "silver", check: p => (p.sessions||[]).length >= 10 },
+  { id: "fifty_sessions", icon: "🦾", name: "50 séances",            desc: "50 séances complètes — HYROX Addict",            tier: "gold",   check: p => (p.sessions||[]).length >= 50 },
+  { id: "level5",         icon: "👑", name: "Elite",                 desc: "Atteindre le niveau Elite (1800 XP)",             tier: "gold",   check: p => calcTotalXP(p) >= 1800 },
+  { id: "high_rpe",       icon: "😤", name: "Warrior",               desc: "5 séances avec RPE ≥ 9",                          tier: "silver", check: p => (p.sessions||[]).filter(s=>s.difficulte>=9).length>=5 },
+  { id: "consistent",     icon: "⏰", name: "Régulier",              desc: "4+ semaines consécutives avec au moins 2 séances", tier: "gold",   check: p => { const s=p.sessions||[]; if(s.length<8)return false; const weeks={}; s.forEach(ss=>{const w=Math.floor(new Date(ss.date).getTime()/(1000*60*60*24*7));weeks[w]=(weeks[w]||0)+1;}); const vals=Object.values(weeks).sort((a,b)=>b-a); let streak=0,max=0; Object.keys(weeks).sort().reverse().forEach(k=>{if(weeks[k]>=2){streak++;max=Math.max(max,streak);}else streak=0;}); return max>=4; } },
+  { id: "benchmark",      icon: "📍", name: "Benchmarké",            desc: "Temps enregistrés pour 4+ stations",              tier: "bronze", check: p => { try{return Object.keys(JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${p.name}`)||"{}")||{}).length>=4;}catch{return false;} } },
 ];
 
 // ============================================================
@@ -11166,6 +11170,50 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
           </Card>
         </Section>
       )}
+
+      {/* ── TROPHY SHELF ── */}
+      {(() => {
+        const TIER_STYLE = {
+          gold:   { bg: "rgba(201,168,64,0.15)", border: "rgba(201,168,64,0.4)", glow: "rgba(201,168,64,0.3)", label: "#C9A840" },
+          silver: { bg: "rgba(174,174,178,0.12)", border: "rgba(174,174,178,0.35)", glow: "rgba(174,174,178,0.2)", label: "#AEAEB2" },
+          bronze: { bg: "rgba(160,110,80,0.12)", border: "rgba(160,110,80,0.35)", glow: "rgba(160,110,80,0.2)", label: "#A06E50" },
+        };
+        const earned = BADGES.filter(b => b.check(profile));
+        const locked = BADGES.filter(b => !b.check(profile));
+        return (
+          <Section title={`🏅 Trophées (${earned.length}/${BADGES.length})`}>
+            {earned.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "24px 0", color: "#636366" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>🏅</div>
+                <div style={{ fontSize: 13 }}>Complete ta première séance pour débloquer ton premier badge</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+                  {earned.map(b => {
+                    const st = TIER_STYLE[b.tier] || TIER_STYLE.bronze;
+                    return (
+                      <div key={b.id} title={b.desc} style={{ background: st.bg, border: `1.5px solid ${st.border}`, borderRadius: 14, padding: "10px 6px", textAlign: "center", boxShadow: `0 0 8px ${st.glow}` }}>
+                        <div style={{ fontSize: 24, marginBottom: 4 }}>{b.icon}</div>
+                        <div style={{ fontSize: 8, color: st.label, fontWeight: 700, lineHeight: 1.3, textTransform: "uppercase" }}>{b.name}</div>
+                      </div>
+                    );
+                  })}
+                  {locked.slice(0,2).map(b => (
+                    <div key={b.id} title={b.desc} style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 14, padding: "10px 6px", textAlign: "center", opacity: 0.4 }}>
+                      <div style={{ fontSize: 24, marginBottom: 4, filter: "grayscale(1)" }}>{b.icon}</div>
+                      <div style={{ fontSize: 8, color: "#636366", fontWeight: 700, lineHeight: 1.3, textTransform: "uppercase" }}>{b.name}</div>
+                    </div>
+                  ))}
+                </div>
+                {locked.length > 0 && (
+                  <div style={{ fontSize: 11, color: "#636366", textAlign: "center" }}>+{locked.length} badge{locked.length>1?"s":""} à débloquer • Prochaine cible: <span style={{ color: "#C9A840" }}>{locked[0].name}</span></div>
+                )}
+              </>
+            )}
+          </Section>
+        );
+      })()}
 
       {/* ── PERSONAL RECORDS HALL OF FAME ── */}
       {(() => {
