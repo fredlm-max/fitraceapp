@@ -11701,6 +11701,37 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
             </div>
             {!notifGranted && <div style={{ fontSize: 12, color: "var(--yellow)", fontWeight: 700 }}>ACTIVER →</div>}
           </button>
+          {notifGranted && (() => {
+            const [reminderTime, setReminderTime] = React.useState(() => localStorage.getItem(`fitrace_reminder_time_${profile.name}`) || "07:30");
+            const [reminderOn, setReminderOn] = React.useState(() => localStorage.getItem(`fitrace_reminder_on_${profile.name}`) !== "false");
+            const saveReminder = (time, on) => {
+              localStorage.setItem(`fitrace_reminder_time_${profile.name}`, time);
+              localStorage.setItem(`fitrace_reminder_on_${profile.name}`, String(on));
+            };
+            const testNotif = () => {
+              if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+                new Notification("⚡ APEX Performance", { body: `Séance du jour prête — Let's go ${profile.name.split(" ")[0]} !`, icon: "/icon-192.png" });
+              }
+            };
+            return (
+              <div style={{ background: "rgba(57,255,128,0.03)", border: "1px solid rgba(57,255,128,0.1)", borderRadius: 12, padding: "12px 14px", marginTop: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: "#8E8E93", fontWeight: 700 }}>🕐 Rappel quotidien</div>
+                  <button onClick={() => { const next = !reminderOn; setReminderOn(next); saveReminder(reminderTime, next); }}
+                    style={{ width: 44, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: reminderOn ? "#30D158" : "#3A3A3C", position: "relative", transition: "background 0.2s" }}>
+                    <div style={{ position: "absolute", top: 3, left: reminderOn ? 21 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
+                  </button>
+                </div>
+                {reminderOn && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input type="time" value={reminderTime} onChange={e => { setReminderTime(e.target.value); saveReminder(e.target.value, reminderOn); }}
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "6px 10px", color: "#F2F2F7", fontSize: 14, fontFamily: "inherit", flex: 1 }} />
+                    <button onClick={testNotif} style={{ background: "rgba(201,168,64,0.12)", border: "1px solid rgba(201,168,64,0.25)", borderRadius: 8, padding: "6px 12px", color: "#C9A840", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Tester</button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
