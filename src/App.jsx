@@ -9866,6 +9866,136 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── HYROX BENCHMARKS COMPARISON ── */}
+      {(() => {
+        const vma = parseFloat(profile.vmaKmh) || 0;
+        const squat = parseFloat(profile.squat1RM_final) || 0;
+        const deadlift = parseFloat(profile.deadlift1RM_final) || 0;
+        const poids = parseFloat(profile.poids) || 70;
+        const sexe = profile.sexe || "M";
+        const isFemme = sexe === "F";
+
+        // HYROX standards (approximations basées sur les données officielles HYROX)
+        const BENCHMARKS = {
+          vma: isFemme
+            ? { open: 12, pro: 14, elite: 16, unit: "km/h", label: "VMA", icon: "🏃" }
+            : { open: 13, pro: 15, elite: 17, unit: "km/h", label: "VMA", icon: "🏃" },
+          squat: isFemme
+            ? { open: 60, pro: 80, elite: 100, unit: "kg", label: "Squat 1RM", icon: "🏋️" }
+            : { open: 80, pro: 110, elite: 140, unit: "kg", label: "Squat 1RM", icon: "🏋️" },
+          deadlift: isFemme
+            ? { open: 70, pro: 100, elite: 130, unit: "kg", label: "Deadlift 1RM", icon: "💀" }
+            : { open: 100, pro: 140, elite: 180, unit: "kg", label: "Deadlift 1RM", icon: "💀" },
+          ratio: isFemme
+            ? { open: 1.0, pro: 1.3, elite: 1.6, unit: "× BW", label: "Squat/Poids", icon: "⚖️" }
+            : { open: 1.1, pro: 1.4, elite: 1.8, unit: "× BW", label: "Squat/Poids", icon: "⚖️" },
+        };
+
+        const metrics = [
+          { key: "vma", value: vma },
+          { key: "squat", value: squat },
+          { key: "deadlift", value: deadlift },
+          { key: "ratio", value: poids > 0 && squat > 0 ? Math.round((squat / poids) * 10) / 10 : 0 },
+        ].filter(m => m.value > 0);
+
+        if (metrics.length < 2) return null;
+
+        function getLevel(value, bm) {
+          if (value >= bm.elite) return { label: "ELITE", color: "#BF5AF2", rank: 3 };
+          if (value >= bm.pro) return { label: "PRO", color: "#FF9F0A", rank: 2 };
+          if (value >= bm.open) return { label: "OPEN", color: "#30D158", rank: 1 };
+          return { label: "EN COURS", color: "#8E8E93", rank: 0 };
+        }
+
+        function getPct(value, bm) {
+          if (value >= bm.elite) return 100;
+          if (value >= bm.pro) return 67 + Math.round(((value - bm.pro) / (bm.elite - bm.pro)) * 33);
+          if (value >= bm.open) return 34 + Math.round(((value - bm.open) / (bm.pro - bm.open)) * 33);
+          return Math.round((value / bm.open) * 33);
+        }
+
+        const avgRank = metrics.reduce((s, m) => s + getLevel(m.value, BENCHMARKS[m.key]).rank, 0) / metrics.length;
+        const globalLabel = avgRank >= 2.5 ? "ELITE" : avgRank >= 1.5 ? "PRO" : avgRank >= 0.8 ? "OPEN" : "DÉBUTANT";
+        const globalColor = avgRank >= 2.5 ? "#BF5AF2" : avgRank >= 1.5 ? "#FF9F0A" : avgRank >= 0.8 ? "#30D158" : "#8E8E93";
+
+        return (
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em" }}>📊 Comparaison HYROX</div>
+              <div style={{ background: `${globalColor}18`, border: `1px solid ${globalColor}40`, borderRadius: 20, padding: "4px 12px", fontSize: 11, color: globalColor, fontWeight: 800, letterSpacing: "0.06em" }}>
+                {globalLabel}
+              </div>
+            </div>
+
+            {/* Tier rail */}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14, padding: "0 4px" }}>
+              {[
+                { label: "EN COURS", color: "#8E8E93", w: "20%" },
+                { label: "OPEN", color: "#30D158", w: "26%" },
+                { label: "PRO", color: "#FF9F0A", w: "27%" },
+                { label: "ELITE", color: "#BF5AF2", w: "27%" },
+              ].map((tier, i) => (
+                <div key={i} style={{ flex: "none", width: tier.w, textAlign: "center" }}>
+                  <div style={{ height: 4, background: tier.color, borderRadius: 99, marginBottom: 4, opacity: 0.5 }} />
+                  <div style={{ fontSize: 8, color: tier.color, fontWeight: 700, letterSpacing: "0.05em" }}>{tier.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {metrics.map((m, i) => {
+                const bm = BENCHMARKS[m.key];
+                const lv = getLevel(m.value, bm);
+                const pct = getPct(m.value, bm);
+                return (
+                  <div key={i}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 14 }}>{bm.icon}</span>
+                        <span style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{bm.label}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span className="bebas" style={{ fontSize: 18, color: lv.color, lineHeight: 1 }}>{m.value}</span>
+                        <span style={{ fontSize: 10, color: "#8E8E93" }}>{bm.unit}</span>
+                        <div style={{ background: `${lv.color}18`, border: `1px solid ${lv.color}40`, borderRadius: 12, padding: "2px 8px", fontSize: 9, color: lv.color, fontWeight: 800 }}>{lv.label}</div>
+                      </div>
+                    </div>
+                    <div style={{ position: "relative", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${lv.color}88, ${lv.color})`, borderRadius: 99, transition: "width 0.8s cubic-bezier(.22,1,.36,1)" }} />
+                      {/* Tier markers */}
+                      {[33, 67].map((pos, j) => (
+                        <div key={j} style={{ position: "absolute", top: 0, left: `${pos}%`, width: 1, height: "100%", background: "rgba(255,255,255,0.15)" }} />
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                      <span style={{ fontSize: 9, color: "#636366" }}>Open: {bm.open}{bm.unit}</span>
+                      <span style={{ fontSize: 9, color: "#636366" }}>Pro: {bm.pro}{bm.unit}</span>
+                      <span style={{ fontSize: 9, color: "#636366" }}>Elite: {bm.elite}{bm.unit}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Insight text */}
+            <div style={{ marginTop: 12, padding: "10px 12px", background: `${globalColor}08`, border: `1px solid ${globalColor}20`, borderRadius: 12 }}>
+              <div style={{ fontSize: 11, color: globalColor, fontWeight: 700, marginBottom: 3 }}>
+                {avgRank >= 2.5 ? "🏆 Niveau Elite confirmé — optimise tes splits de course" :
+                 avgRank >= 1.5 ? "🔥 Niveau Pro — les derniers % font la différence" :
+                 avgRank >= 0.8 ? "💪 Niveau Open — progresse sur la force et l'endurance" :
+                 "🚀 En développement — chaque séance compte"}
+              </div>
+              <div style={{ fontSize: 10, color: "#8E8E93", lineHeight: 1.5 }}>
+                {avgRank >= 2.5 ? "Focus sur la vitesse de course entre stations et la transition technique." :
+                 avgRank >= 1.5 ? "Augmente le volume d'endurance et affine la stratégie de pace." :
+                 avgRank >= 0.8 ? "Renforce ta base aerobique et atteins les standards de force." :
+                 "Construis ta base avec régularité — 3-4 séances/semaine minimum."}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Bouton batterie de tests */}
       <Section title="Batterie de tests">
         <button onClick={() => setShowTests(true)} style={{ width: "100%", background: "var(--bg2)", border: "1px solid rgba(0,122,255,0.2)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
