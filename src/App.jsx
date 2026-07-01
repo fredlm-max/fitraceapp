@@ -6508,6 +6508,89 @@ JSON:
             {/* Historique — scroll horizontal */}
             {(profile.sessions || []).length > 0 && <SessionHistoryCard profile={profile} haptic={haptic} navigateTo={navigateTo} />}
 
+            {/* ── QUICK DRILL GENERATOR ── */}
+            {(() => {
+              const [drillVisible, setDrillVisible] = React.useState(false);
+              const [currentDrill, setCurrentDrill] = React.useState(null);
+
+              const DRILLS = {
+                skierg: {
+                  name: "SkiErg Power", icon: "🎿",
+                  workout: ["4× 30s effort max — 30s récup", "Bras tendus, tirez avec les dorsaux", "Focus: coordonner hanches + bras"],
+                },
+                sled: {
+                  name: "Sled Explosion", icon: "🛷",
+                  workout: ["Goblet Squat: 3×15 reps", "Step-up: 3×10 chaque jambe", "Box Jump: 3×8 sauts"],
+                },
+                burpee: {
+                  name: "Burpee Conditioning", icon: "🔥",
+                  workout: ["EMOM 10min: 8 burpees au saut", "30s planche après chaque série", "Focus: rythme constant, pas de sprint"],
+                },
+                rowing: {
+                  name: "Rowing Intervals", icon: "🚣",
+                  workout: ["5× 2min fort — 1min récup", "Attaque avec les jambes, finir avec les bras", "Cible: SPM 22-26"],
+                },
+                wallballs: {
+                  name: "Wall Ball AMRAP", icon: "🏀",
+                  workout: ["AMRAP 12min: 10 wall balls + 10 squats", "Gardez le ballon à hauteur de poitrine", "Respirez dans le squat, expirez en poussant"],
+                },
+                running: {
+                  name: "Running Activation", icon: "🏃",
+                  workout: ["3min jog facile → 3× 1min à 90% VMA → 3min cool-down", "Foulée courte et fréquente", "Cible: 170-180 pas/min"],
+                },
+              };
+
+              const pickDrill = () => {
+                const keys = Object.keys(DRILLS);
+                let times = {};
+                try { times = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch {}
+                const BENCH = { skierg: { open: 360, elite: 240 }, rowing: { open: 360, elite: 240 }, sled: { open: 210, elite: 120 }, burpee: { open: 360, elite: 210 }, wallballs: { open: 300, elite: 180 } };
+                const scored = Object.entries(BENCH).map(([id, b]) => {
+                  const t = times[id] || times[id + "_push"] || times[id + "_pull"];
+                  if (!t) return { id, score: 50 };
+                  return { id, score: Math.max(0, Math.min(100, (b.open - t) / (b.open - b.elite) * 100)) };
+                }).sort((a, b) => a.score - b.score);
+
+                const weakKey = scored[0]?.id || "running";
+                const drillKey = { skierg: "skierg", rowing: "rowing", sled: "sled", burpee: "burpee", wallballs: "wallballs" }[weakKey] || "running";
+                setCurrentDrill(DRILLS[drillKey]);
+                setDrillVisible(true);
+              };
+
+              return (
+                <div style={{ marginBottom: 12 }}>
+                  {!drillVisible ? (
+                    <button onClick={pickDrill} style={{ width: "100%", background: "rgba(201,168,64,0.08)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 16, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: 10, color: "#C9A840", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>⚡ 15 min</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#F2F2F7", marginTop: 2 }}>Drill rapide ciblé</div>
+                        <div style={{ fontSize: 11, color: "#8E8E93" }}>Entraîne ta station la plus faible</div>
+                      </div>
+                      <div style={{ fontSize: 28 }}>🎯</div>
+                    </button>
+                  ) : currentDrill && (
+                    <div style={{ background: "linear-gradient(135deg, rgba(201,168,64,0.1), rgba(201,168,64,0.03))", border: "1.5px solid rgba(201,168,64,0.25)", borderRadius: 18, padding: "18px 16px", position: "relative" }}>
+                      <button onClick={() => setDrillVisible(false)} style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.06)", border: "none", borderRadius: "50%", width: 26, height: 26, color: "#666", cursor: "pointer", fontSize: 14 }}>×</button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                        <span style={{ fontSize: 28 }}>{currentDrill.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#C9A840", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>Drill 15 min</div>
+                          <div style={{ fontSize: 17, fontWeight: 800, color: "#F2F2F7" }}>{currentDrill.name}</div>
+                        </div>
+                      </div>
+                      {currentDrill.workout.map((step, i) => (
+                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
+                          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(201,168,64,0.2)", color: "#C9A840", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{i+1}</div>
+                          <div style={{ fontSize: 13, color: "#D1D1D6", lineHeight: 1.5 }}>{step}</div>
+                        </div>
+                      ))}
+                      <button onClick={pickDrill} style={{ width: "100%", marginTop: 10, background: "rgba(201,168,64,0.15)", border: "1px solid rgba(201,168,64,0.3)", borderRadius: 12, padding: "10px", color: "#C9A840", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Autre drill →</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SEMAINE 1 ROADMAP (beginners) ── */}
             {(profile.sessions||[]).length < 5 && (() => {
               const sessionsDone = (profile.sessions||[]).length;
