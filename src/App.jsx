@@ -1620,6 +1620,27 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
   ];
 
   // Écran de bienvenue
+  const [welcomeSlide, setWelcomeSlide] = useState(0);
+  const WELCOME_SLIDES = [
+    {
+      icon: "⚡", color: "#C9A840",
+      title: "Coach IA HYROX",
+      subtitle: "Séances personnalisées chaque jour",
+      desc: "L'IA génère ta séance selon ta VMA, ta fatigue, ta force et ta date de course. Chaque entraînement évolue avec toi.",
+    },
+    {
+      icon: "📊", color: "#30D158",
+      title: "Données & Progression",
+      subtitle: "Charge, récupération, tendances",
+      desc: "PMC Chart (CTL/ATL/TSB), RPE Trend, Hall of Fame, Muscle Fatigue — tout pour comprendre ta progression.",
+    },
+    {
+      icon: "🏁", color: "#FF453A",
+      title: "Stratégie de Course",
+      subtitle: "HYROX prêt le jour J",
+      desc: "Simulation de race, split par station, pacing planner, checklist J-Day. Prépare chaque détail avant le départ.",
+    },
+  ];
   if (showWelcome) return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", padding: "0" }}>
       <style>{GLOBAL_STYLES}</style>
@@ -1653,21 +1674,37 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
         <div style={{ fontSize: 14, color: "#666", lineHeight: 1.7, marginBottom: 36, maxWidth: 340 }}>
           Adapté à ton profil, tes performances et ta date de course. Chaque séance évolue avec toi.
         </div>
-        {/* 3 bénéfices */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 360, marginBottom: 36 }}>
-          {[
-            { icon: "⚡", title: "Séances personnalisées", sub: "Générées selon ta VMA, ta force et ta fatigue du jour" },
-            { icon: "📈", title: "Progression tracée", sub: "Graphiques de charges, RPE, régularité et condition physique" },
-            { icon: "🏁", title: "Stratégie de course", sub: "Split par station, simulation HYROX, checklist J-Day" },
-          ].map(b => (
-            <div key={b.icon} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 14, padding: "14px 16px", textAlign: "left" }}>
-              <div style={{ fontSize: 24, flexShrink: 0 }}>{b.icon}</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--white)", marginBottom: 2 }}>{b.title}</div>
-                <div style={{ fontSize: 12, color: "#8E8E93", lineHeight: 1.5 }}>{b.sub}</div>
+        {/* Swipeable slides */}
+        <div style={{ width: "100%", maxWidth: 360, marginBottom: 28, overflow: "hidden" }}>
+          <div style={{ display: "flex", transition: "transform 0.4s var(--spring)", transform: `translateX(-${welcomeSlide * 100}%)` }}>
+            {WELCOME_SLIDES.map((slide, i) => (
+              <div key={i} style={{ minWidth: "100%", padding: "0 4px" }}>
+                <div style={{ background: `linear-gradient(135deg, ${slide.color}12, ${slide.color}04)`, border: `1.5px solid ${slide.color}30`, borderRadius: 22, padding: "32px 24px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${slide.color}60, transparent)` }} />
+                  <div style={{ fontSize: 52, marginBottom: 16 }}>{slide.icon}</div>
+                  <div style={{ fontSize: 10, color: slide.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8 }}>{slide.subtitle}</div>
+                  <div className="bebas" style={{ fontSize: 26, color: "#F2F2F7", letterSpacing: 1, marginBottom: 12 }}>{slide.title}</div>
+                  <div style={{ fontSize: 13, color: "#8E8E93", lineHeight: 1.7 }}>{slide.desc}</div>
+                </div>
               </div>
+            ))}
+          </div>
+          {/* Dots */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 14 }}>
+            {WELCOME_SLIDES.map((_, i) => (
+              <button key={i} onClick={() => setWelcomeSlide(i)}
+                style={{ width: i === welcomeSlide ? 20 : 8, height: 8, borderRadius: 4, background: i === welcomeSlide ? "#C9A840" : "rgba(255,255,255,0.15)", border: "none", cursor: "pointer", transition: "all 0.3s var(--spring)" }} />
+            ))}
+          </div>
+          {/* Prev/Next */}
+          {welcomeSlide < WELCOME_SLIDES.length - 1 && (
+            <div style={{ textAlign: "center", marginTop: 10 }}>
+              <button onClick={() => setWelcomeSlide(s => Math.min(WELCOME_SLIDES.length-1, s+1))}
+                style={{ background: "none", border: "none", color: "#636366", fontSize: 12, cursor: "pointer" }}>
+                Suivant →
+              </button>
             </div>
-          ))}
+          )}
         </div>
       </div>
       {/* CTA */}
