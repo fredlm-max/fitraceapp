@@ -366,20 +366,24 @@ function formatHyroxStandards(profile) {
 }
 
 const CITATIONS_HYROX = [
-  "Le HYROX ne récompense pas celui qui part fort. Il récompense celui qui finit fort.",
-  "La station la plus dure, c'est le kilomètre après chaque station.",
-  "Ton moteur aérobie est ta vraie arme. Construis-le d'abord.",
-  "En HYROX, la force sans endurance est une illusion. L'endurance sans force est une limite.",
-  "La régularité bat l'intensité. Toujours.",
-  "Ce que tu ressens à la station 7, tu l'as construit à l'entraînement.",
-  "Ne cours pas après le chrono. Cours après la technique. Le chrono suivra.",
-  "Chaque séance Zone 2 que tu veux sauter est exactement celle qu'il faut faire.",
-  "La transition est une compétence. Entraîne-la comme une compétence.",
-  "J-1 ne change rien. Les 47 jours avant, si.",
+  { text: "Le HYROX ne récompense pas celui qui part fort. Il récompense celui qui finit fort.", author: "Mentalité HYROX" },
+  { text: "La station la plus dure, c'est le kilomètre après chaque station.", author: "Stratégie Race" },
+  { text: "Ton moteur aérobie est ta vraie arme. Construis-le d'abord.", author: "Physiologie Sport" },
+  { text: "En HYROX, la force sans endurance est une illusion. L'endurance sans force est une limite.", author: "APEX Performance" },
+  { text: "La régularité bat l'intensité. Toujours.", author: "Principe #1" },
+  { text: "Ce que tu ressens à la station 7, tu l'as construit à l'entraînement.", author: "Préparation mentale" },
+  { text: "Ne cours pas après le chrono. Cours après la technique. Le chrono suivra.", author: "Coach HYROX" },
+  { text: "Chaque séance Zone 2 que tu veux sauter est exactement celle qu'il faut faire.", author: "Zone 2 Gospel" },
+  { text: "La transition est une compétence. Entraîne-la comme une compétence.", author: "Race IQ" },
+  { text: "J-1 ne change rien. Les 47 jours avant, si.", author: "Vérité HYROX" },
+  { text: "Dépasser sa limite, c'est découvrir qu'elle n'était pas une limite.", author: "APEX Mindset" },
+  { text: "Le confort est l'ennemi de la progression. L'inconfort maîtrisé est ton allié.", author: "Philosophie Training" },
+  { text: "Une séance médiocre vaut mieux qu'une séance parfaite annulée.", author: "Consistance" },
+  { text: "Le wall ball au tour 8, c'est là que tu as gagné ta médaille — pas le jour J.", author: "Entraînement APEX" },
 ];
 
 function getCitationDuJour() {
-  const day = new Date().getDay();
+  const day = Math.floor(Date.now() / (1000*60*60*24));
   return CITATIONS_HYROX[day % CITATIONS_HYROX.length];
 }
 
@@ -5838,6 +5842,20 @@ JSON:
               </div>
             )}
 
+            {/* ── CITATION DU JOUR ── */}
+            {(() => {
+              const citation = getCitationDuJour();
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(201,168,64,0.1) 0%, rgba(201,168,64,0.04) 100%)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 18, padding: "18px 18px", marginBottom: 12, position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 100, height: 100, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,168,64,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(201,168,64,0.4), transparent)", pointerEvents: "none" }} />
+                  <div style={{ fontSize: 28, color: "rgba(201,168,64,0.3)", lineHeight: 1, marginBottom: 8, fontFamily: "Georgia, serif" }}>"</div>
+                  <div style={{ fontSize: 14, color: "#E5E5EA", lineHeight: 1.6, fontStyle: "italic", fontWeight: 500, marginBottom: 10 }}>{citation.text}</div>
+                  <div style={{ fontSize: 10, color: "#C9A840", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>— {citation.author}</div>
+                </div>
+              );
+            })()}
+
             {/* ── SMART INSIGHTS ── */}
             {(profile.sessions||[]).length >= 2 && (() => {
               const sessions = profile.sessions || [];
@@ -6697,7 +6715,7 @@ JSON:
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: "var(--white)" }}>{greeting}, {(profile.name||"").split(" ")[0]} 👋</div>
-                    <div style={{ fontSize: 12, color: "#8E8E93", marginTop: 2, fontStyle: "italic" }}>"{getCitationDuJour()}"</div>
+                    <div style={{ fontSize: 12, color: "#8E8E93", marginTop: 2, fontStyle: "italic" }}>"{getCitationDuJour().text}"</div>
                   </div>
                   <button onClick={() => setTab("forme")} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: "50%", background: `${recov.color}15`, border: `2px solid ${recov.color}40`, cursor: "pointer" }}>
                     <span style={{ fontSize: 16, fontWeight: 900, color: recov.color, fontFamily: "'Bebas Neue',sans-serif", lineHeight: 1 }}>{recovery}</span>
