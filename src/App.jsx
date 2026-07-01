@@ -4420,6 +4420,14 @@ JSON:
       const fbMatch = fbCleaned.match(/\{[\s\S]*\}/);
       const adapt = JSON.parse(fbMatch ? fbMatch[0] : "{}");
 
+      // Calcul calories MET (Compendium of Physical Activities)
+      const MET_MAP = { running_zone2: 7.5, running_qualite: 11.0, force_stations: 5.5, hybride_compromis: 9.5 };
+      const met = MET_MAP[session?.type] || 7.0;
+      const dureeH = (parseInt(feedbackData.temps) || parseInt(session?.duree) || 45) / 60;
+      const poids_kg = parseFloat(profile.poids) || 75;
+      const caloriesBrulees = Math.round(met * poids_kg * dureeH);
+      const trimp = Math.round(dureeH * 60 * (feedbackData.difficulte || 6) / 10);
+
       // Sauvegarder session complète
       const sessionData = {
         date: new Date().toISOString(),
@@ -4427,13 +4435,17 @@ JSON:
         type: session?.type || "général",
         ressenti: feedbackData.ressenti,
         difficulte: feedbackData.difficulte,
+        rpe: feedbackData.difficulte,
         exercicesLog: feedbackData.exercicesLog || [],
         charges: feedbackData.charges,
         photoAnalyse: feedbackData._photoAnalyse || null,
         tempsReel: feedbackData.temps,
+        dureeReelle: feedbackData.temps || session?.duree,
         douleurs: feedbackData.douleurs,
         energie: feedbackData.energie,
         notes: feedbackData.notes,
+        calories: caloriesBrulees,
+        trimp,
         summary: `${session?.titre} — RPE ${feedbackData.difficulte}/10 — ${feedbackData.ressenti}`,
         // Sauvegarder aussi la prochaine séance générée
         prochaineSéance: adapt.prochaine_seance || null,
@@ -5757,16 +5769,30 @@ JSON:
                         <div style={{ height: "100%", width: `${weekLoadPct}%`, background: weekLoadPct >= 100 ? "var(--green)" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
                       </div>
                     </div>
-                    {/* Streak */}
-                    <div style={{ background: streak >= 7 ? "rgba(255,154,60,0.06)" : "rgba(255,255,255,0.04)", border: `1px solid ${streak >= 7 ? "rgba(255,154,60,0.2)" : "rgba(255,255,255,0.08)"}`, borderRadius: 14, padding: "12px 14px" }}>
-                      <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
-                        <span style={{ fontSize: 18 }}>{streak >= 14 ? "🏆" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "📅"}</span>
-                        <span className="bebas" style={{ fontSize: 26, color: streak >= 7 ? "var(--orange)" : "var(--yellow)", lineHeight: 1 }}>{streak}</span>
-                        <span style={{ fontSize: 10, color: "#8E8E93" }}>jours</span>
-                      </div>
-                      <div style={{ fontSize: 10, color: "#8E8E93" }}>Record : {profile.bestStreak || streak} j</div>
-                    </div>
+                    {/* Calories semaine */}
+                    {(() => {
+                      const weekCals = weekSessions.reduce((a, s) => a + (s.calories || 0), 0);
+                      if (weekCals === 0) return (
+                        <div style={{ background: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 14px" }}>
+                          <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Streak consécutif</div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
+                            <span style={{ fontSize: 18 }}>{streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "📅"}</span>
+                            <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{streak}</span>
+                            <span style={{ fontSize: 10, color: "#8E8E93" }}>jours</span>
+                          </div>
+                        </div>
+                      );
+                      return (
+                        <div style={{ background: "rgba(255,154,60,0.04)", border: "1px solid rgba(255,154,60,0.15)", borderRadius: 14, padding: "12px 14px" }}>
+                          <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>🔥 Calories semaine</div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 2 }}>
+                            <span className="bebas" style={{ fontSize: 26, color: "#FF9F0A", lineHeight: 1 }}>{weekCals}</span>
+                            <span style={{ fontSize: 10, color: "#8E8E93" }}>kcal</span>
+                          </div>
+                          <div style={{ fontSize: 9, color: "#8E8E93" }}>Streak {streak}j {streak >= 3 ? "🔥" : ""}</div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -9581,8 +9607,10 @@ JSON:
 
                             {/* Pills row */}
                             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
-                              {s.tempsReel && <span style={{ fontSize: 9, color: "#8E8E93", background: "rgba(255,255,255,0.06)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}</span>}
+                              {s.tempsReel && <span style={{ fontSize: 9, color: "#8E8E93", background: "rgba(255,255,255,0.06)", borderRadius: 5, padding: "2px 7px" }}>⏱ {s.tempsReel}min</span>}
                               {s.energie && <span style={{ fontSize: 9, color: "#8E8E93", background: "rgba(255,255,255,0.06)", borderRadius: 5, padding: "2px 7px" }}>⚡ {s.energie}/5</span>}
+                              {s.calories && <span style={{ fontSize: 9, color: "#FF9F0A", background: "rgba(255,154,60,0.1)", borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>🔥 {s.calories} kcal</span>}
+                              {s.trimp && <span style={{ fontSize: 9, color: "#C9A840", background: "rgba(201,168,64,0.08)", borderRadius: 5, padding: "2px 7px" }}>TRIMP {s.trimp}</span>}
                               {s.ressenti && <span style={{ fontSize: 9, color: ressentiColor, background: `${ressentiColor}12`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{s.ressenti === "bien" ? "Calibré" : s.ressenti === "facile" ? "Facile" : "Dur"}</span>}
                               {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 9, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 5, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
                             </div>
