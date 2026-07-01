@@ -11017,6 +11017,119 @@ JSON:
                 <div style={{ fontSize: 16, color: "#8E8E93" }}>›</div>
               </button>
 
+              {/* ── JOURNAL DOULEURS / BLESSURES ── */}
+              {(() => {
+                const injuryKey = `fitrace_injuries_${profile.name}`;
+                const [injuries, setInjuries] = React.useState(() => {
+                  try { return JSON.parse(localStorage.getItem(injuryKey) || "[]"); } catch { return []; }
+                });
+                const [showForm, setShowForm] = React.useState(false);
+                const [newInj, setNewInj] = React.useState({ zone: "genou", sev: 2, note: "" });
+
+                const ZONES = [
+                  { id: "genou", label: "Genou", icon: "🦵" },
+                  { id: "dos", label: "Dos", icon: "🔙" },
+                  { id: "epaule", label: "Épaule", icon: "💪" },
+                  { id: "cheville", label: "Cheville", icon: "🦶" },
+                  { id: "hanche", label: "Hanche", icon: "🍑" },
+                  { id: "mollet", label: "Mollet", icon: "🦿" },
+                  { id: "coude", label: "Coude", icon: "💪" },
+                  { id: "autre", label: "Autre", icon: "⚠️" },
+                ];
+
+                const SEV_CONF = [
+                  { v: 1, label: "Légère", color: "#30D158" },
+                  { v: 2, label: "Modérée", color: "#FF9F0A" },
+                  { v: 3, label: "Sévère", color: "#FF453A" },
+                ];
+
+                const addInjury = () => {
+                  if (!newInj.note && !newInj.zone) return;
+                  const entry = { ...newInj, date: new Date().toISOString().slice(0,10), id: Date.now() };
+                  const next = [entry, ...injuries].slice(0, 20);
+                  setInjuries(next);
+                  localStorage.setItem(injuryKey, JSON.stringify(next));
+                  setShowForm(false);
+                  setNewInj({ zone: "genou", sev: 2, note: "" });
+                };
+
+                const removeInjury = (id) => {
+                  const next = injuries.filter(x => x.id !== id);
+                  setInjuries(next);
+                  localStorage.setItem(injuryKey, JSON.stringify(next));
+                };
+
+                const recent = injuries.filter(x => {
+                  const d = new Date(x.date);
+                  return (Date.now() - d.getTime()) < 14 * 86400000;
+                });
+
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>🩹 Journal Douleurs</div>
+                      <button onClick={() => setShowForm(s => !s)} style={{ background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.25)", borderRadius: 16, padding: "4px 12px", fontSize: 11, color: "#FF453A", cursor: "pointer", fontWeight: 700 }}>+ Signaler</button>
+                    </div>
+
+                    {showForm && (
+                      <div className="fade-in" style={{ background: "rgba(255,69,58,0.05)", border: "1px solid rgba(255,69,58,0.15)", borderRadius: 14, padding: "14px", marginBottom: 10 }}>
+                        {/* Zone picker */}
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 6, textTransform: "uppercase" }}>Zone</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 }}>
+                          {ZONES.map(z => (
+                            <button key={z.id} onClick={() => setNewInj(n => ({ ...n, zone: z.id }))}
+                              style={{ background: newInj.zone === z.id ? "rgba(255,69,58,0.15)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${newInj.zone === z.id ? "#FF453A" : "transparent"}`, borderRadius: 16, padding: "4px 10px", fontSize: 11, color: newInj.zone === z.id ? "#FF453A" : "#8E8E93", cursor: "pointer", fontWeight: 600 }}>
+                              {z.icon} {z.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Severity */}
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 6, textTransform: "uppercase" }}>Intensité</div>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                          {SEV_CONF.map(s => (
+                            <button key={s.v} onClick={() => setNewInj(n => ({ ...n, sev: s.v }))}
+                              style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700, background: newInj.sev === s.v ? `${s.color}15` : "rgba(255,255,255,0.04)", border: `1.5px solid ${newInj.sev === s.v ? s.color : "transparent"}`, color: newInj.sev === s.v ? s.color : "#555", cursor: "pointer" }}>
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Note */}
+                        <textarea value={newInj.note} onChange={e => setNewInj(n => ({ ...n, note: e.target.value }))}
+                          placeholder="Description (optionnel)..." rows={2}
+                          style={{ width: "100%", background: "var(--bg3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "8px 10px", color: "var(--white)", fontSize: 12, outline: "none", resize: "none", boxSizing: "border-box", marginBottom: 8 }} />
+
+                        <button onClick={addInjury} style={{ width: "100%", padding: "10px", borderRadius: 10, background: "#FF453A", border: "none", color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 13 }}>Enregistrer</button>
+                      </div>
+                    )}
+
+                    {injuries.length === 0 ? (
+                      <div style={{ fontSize: 12, color: "#48484A", textAlign: "center", padding: "10px 0" }}>Aucune douleur signalée ✓</div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {injuries.slice(0, 5).map(inj => {
+                          const z = ZONES.find(x => x.id === inj.zone) || ZONES[0];
+                          const s = SEV_CONF.find(x => x.v === inj.sev) || SEV_CONF[1];
+                          const isOld = (Date.now() - new Date(inj.date).getTime()) > 14 * 86400000;
+                          return (
+                            <div key={inj.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: 12, opacity: isOld ? 0.5 : 1 }}>
+                              <span style={{ fontSize: 18 }}>{z.icon}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: s.color }}>{z.label} · {s.label}</div>
+                                {inj.note && <div style={{ fontSize: 11, color: "#8E8E93", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inj.note}</div>}
+                                <div style={{ fontSize: 9, color: "#48484A" }}>{new Date(inj.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}{isOld ? " · Ancienne" : ""}</div>
+                              </div>
+                              <button onClick={() => removeInjury(inj.id)} style={{ background: "none", border: "none", color: "#48484A", cursor: "pointer", fontSize: 16, padding: "0 4px", lineHeight: 1 }}>×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Bouton Enregistrer */}
               <button onClick={async () => {
                 haptic([10, 30, 10]);
