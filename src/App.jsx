@@ -13684,6 +13684,103 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── MONTHLY CALENDAR VIEW ── */}
+      {(() => {
+        const [calMonth, setCalMonth] = React.useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+        const sessions = getSessionsForProfile(profile.name);
+
+        const TYPE_COLOR = {
+          running_zone2: "#30D158", running_qualite: "#FF9F0A",
+          force_stations: "#C9A840", hybride_compromis: "#BF5AF2",
+        };
+
+        // Build session map: date string → [type, ...]
+        const sessMap = {};
+        sessions.forEach(s => {
+          if (!s.date) return;
+          const key = s.date.slice(0, 10);
+          if (!sessMap[key]) sessMap[key] = [];
+          sessMap[key].push(s.type);
+        });
+
+        const firstDay = new Date(calMonth.y, calMonth.m, 1);
+        const lastDay = new Date(calMonth.y, calMonth.m + 1, 0);
+        const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+        const today = new Date().toISOString().slice(0, 10);
+        const monthName = firstDay.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+        const cells = [];
+        for (let i = 0; i < startDow; i++) cells.push(null);
+        for (let d = 1; d <= lastDay.getDate(); d++) cells.push(d);
+        while (cells.length % 7 !== 0) cells.push(null);
+
+        const prevMonth = () => setCalMonth(m => m.m === 0 ? { y: m.y-1, m: 11 } : { y: m.y, m: m.m-1 });
+        const nextMonth = () => setCalMonth(m => m.m === 11 ? { y: m.y+1, m: 0 } : { y: m.y, m: m.m+1 });
+
+        const monthSessions = sessions.filter(s => s.date && s.date.startsWith(`${calMonth.y}-${String(calMonth.m+1).padStart(2,"0")}`));
+        const monthLoad = monthSessions.reduce((a, s) => a + Math.round((s.duration || 45) * (s.rpe || 6) / 10), 0);
+
+        return (
+          <div style={{ background: "rgba(28,28,30,0.8)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <button onClick={prevMonth} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, color: "#8E8E93", cursor: "pointer", fontSize: 16 }}>‹</button>
+              <div style={{ textAlign: "center" }}>
+                <div className="bebas" style={{ fontSize: 18, color: "#F2F2F7", letterSpacing: 1 }}>{monthName.charAt(0).toUpperCase() + monthName.slice(1)}</div>
+                <div style={{ fontSize: 10, color: "#636366" }}>{monthSessions.length} séances · {monthLoad} TRIMP</div>
+              </div>
+              <button onClick={nextMonth} style={{ background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8, width: 32, height: 32, color: "#8E8E93", cursor: "pointer", fontSize: 16 }}>›</button>
+            </div>
+
+            {/* Day labels */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 4 }}>
+              {["Lu","Ma","Me","Je","Ve","Sa","Di"].map(d => (
+                <div key={d} style={{ textAlign: "center", fontSize: 9, color: "#48484A", fontWeight: 700, paddingBottom: 4 }}>{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar cells */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+              {cells.map((day, i) => {
+                if (!day) return <div key={i} />;
+                const dateStr = `${calMonth.y}-${String(calMonth.m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+                const daySessions = sessMap[dateStr] || [];
+                const isToday = dateStr === today;
+                const isFuture = new Date(dateStr) > new Date(today);
+                const mainColor = daySessions.length > 0 ? (TYPE_COLOR[daySessions[0]] || "#C9A840") : null;
+
+                return (
+                  <div key={i} style={{
+                    aspectRatio: "1", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+                    background: mainColor ? `${mainColor}18` : isToday ? "rgba(201,168,64,0.08)" : "rgba(255,255,255,0.03)",
+                    border: isToday ? "1.5px solid rgba(201,168,64,0.6)" : `1px solid ${mainColor ? mainColor + "30" : "rgba(255,255,255,0.04)"}`,
+                    opacity: isFuture ? 0.35 : 1,
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: isToday ? 800 : 500, color: isToday ? "#C9A840" : daySessions.length ? "#F2F2F7" : "#48484A", lineHeight: 1 }}>{day}</div>
+                    {daySessions.length > 0 && (
+                      <div style={{ display: "flex", gap: 1.5 }}>
+                        {daySessions.slice(0, 3).map((t, j) => (
+                          <div key={j} style={{ width: 4, height: 4, borderRadius: "50%", background: TYPE_COLOR[t] || "#C9A840" }} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              {[["#30D158","Zone 2"],["#FF9F0A","Qualité"],["#C9A840","Force"],["#BF5AF2","Hybride"]].map(([c,l]) => (
+                <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#636366" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: c }} />{l}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
