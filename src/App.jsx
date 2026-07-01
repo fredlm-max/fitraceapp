@@ -7923,6 +7923,154 @@ JSON:
               );
             })()}
 
+            {/* ── HEATMAP CHARGE JOURNALIÈRE ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              // Build day → TRIMP map for last 56 days
+              const dayMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                const dateKey = s.date.slice(0, 10);
+                const dur = parseInt(s.dureeReelle || s.duree || 45);
+                const rpe = parseFloat(s.rpe || s.rpeGlobal || 6);
+                const trimp = Math.round(dur * rpe / 10);
+                dayMap[dateKey] = (dayMap[dateKey] || 0) + trimp;
+              });
+
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              // Start from Monday 8 weeks ago
+              const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Mon
+              const startDay = new Date(today);
+              startDay.setDate(today.getDate() - dayOfWeek - 7 * 7);
+
+              const cells = [];
+              for (let i = 0; i < 56; i++) {
+                const d = new Date(startDay);
+                d.setDate(startDay.getDate() + i);
+                const key = d.toISOString().slice(0, 10);
+                const trimp = dayMap[key] || 0;
+                const isToday = key === today.toISOString().slice(0, 10);
+                const isFuture = d > today;
+                cells.push({ date: d, key, trimp, isToday, isFuture });
+              }
+
+              const maxTrimp = Math.max(...cells.map(c => c.trimp), 1);
+
+              function cellColor(c) {
+                if (c.isFuture) return "rgba(255,255,255,0.03)";
+                if (c.trimp === 0) return "rgba(255,255,255,0.05)";
+                const intensity = c.trimp / maxTrimp;
+                if (intensity < 0.25) return "rgba(201,168,64,0.2)";
+                if (intensity < 0.5) return "rgba(201,168,64,0.45)";
+                if (intensity < 0.75) return "rgba(201,168,64,0.7)";
+                return "rgba(201,168,64,0.95)";
+              }
+
+              function cellGlow(c) {
+                if (c.trimp === 0 || c.isFuture) return "none";
+                const intensity = c.trimp / maxTrimp;
+                if (intensity < 0.5) return "none";
+                return `0 0 6px rgba(201,168,64,${intensity * 0.6})`;
+              }
+
+              const totalTrimp = cells.filter(c => !c.isFuture).reduce((s, c) => s + c.trimp, 0);
+              const activeDays = cells.filter(c => c.trimp > 0).length;
+              const streak = (() => {
+                let s = 0;
+                for (let i = cells.length - 1; i >= 0; i--) {
+                  if (cells[i].trimp > 0 && !cells[i].isFuture) s++;
+                  else if (!cells[i].isFuture) break;
+                }
+                return s;
+              })();
+
+              const DAYS = ["L", "M", "M", "J", "V", "S", "D"];
+              const weeks = Array.from({ length: 8 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+              const weekLabels = weeks.map(w => {
+                const d = w[0].date;
+                return `S${Math.ceil((d.getDate()) / 7)} ${d.toLocaleDateString("fr-FR", { month: "short" })}`;
+              });
+
+              const [hoveredCell, setHoveredCell] = React.useState(null);
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>🗓 Activité — 8 semaines</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>Charge TRIMP par jour · durée × RPE</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 20, color: "#C9A840", lineHeight: 1 }}>{activeDays}</div>
+                        <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase" }}>jours actifs</div>
+                      </div>
+                      {streak > 1 && (
+                        <div style={{ textAlign: "center" }}>
+                          <div className="bebas" style={{ fontSize: 20, color: "#FF9F0A", lineHeight: 1 }}>{streak}🔥</div>
+                          <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase" }}>streak</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Day labels */}
+                  <div style={{ display: "flex", gap: 3, marginBottom: 4, paddingLeft: 28 }}>
+                    {DAYS.map((d, i) => (
+                      <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: "#636366", fontWeight: 700 }}>{d}</div>
+                    ))}
+                  </div>
+
+                  {/* Grid rows = weeks */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {weeks.map((week, wi) => (
+                      <div key={wi} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 24, fontSize: 7, color: "#636366", flexShrink: 0, textAlign: "right", paddingRight: 4 }}>{weekLabels[wi]}</div>
+                        {week.map((cell, di) => (
+                          <div
+                            key={di}
+                            style={{
+                              flex: 1,
+                              aspectRatio: "1",
+                              borderRadius: 3,
+                              background: cellColor(cell),
+                              boxShadow: cellGlow(cell),
+                              border: cell.isToday ? "1.5px solid rgba(201,168,64,0.8)" : "1px solid rgba(255,255,255,0.04)",
+                              cursor: cell.trimp > 0 ? "pointer" : "default",
+                              position: "relative",
+                              transition: "transform 0.1s",
+                            }}
+                            onMouseEnter={() => setHoveredCell(cell)}
+                            onMouseLeave={() => setHoveredCell(null)}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tooltip */}
+                  {hoveredCell && hoveredCell.trimp > 0 && (
+                    <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(44,44,46,0.95)", border: "1px solid rgba(201,168,64,0.3)", borderRadius: 10, fontSize: 11, color: "var(--white)", display: "flex", justifyContent: "space-between" }}>
+                      <span>{hoveredCell.date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                      <span style={{ color: "#C9A840", fontWeight: 700 }}>TRIMP {hoveredCell.trimp}</span>
+                    </div>
+                  )}
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+                    <span style={{ fontSize: 9, color: "#636366" }}>Moins</span>
+                    {[0.05, 0.2, 0.45, 0.7, 0.95].map((op, i) => (
+                      <div key={i} style={{ width: 12, height: 12, borderRadius: 2, background: op === 0.05 ? "rgba(255,255,255,0.06)" : `rgba(201,168,64,${op})` }} />
+                    ))}
+                    <span style={{ fontSize: 9, color: "#636366" }}>Plus</span>
+                    <div style={{ marginLeft: "auto", fontSize: 9, color: "#636366" }}>Total 8 sem: <span style={{ color: "#C9A840", fontWeight: 700 }}>{totalTrimp} TRIMP</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MIX ENTRAÎNEMENT ── */}
             <TrainingMixChart profile={profile} />
 
