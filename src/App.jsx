@@ -18449,6 +18449,91 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── WEEKLY MILEAGE PLANNER ── */}
+      {(() => {
+        const mileKey = `fitrace_mileage_${profile.name}`;
+        const [baseKm, setBaseKm] = React.useState(() => {
+          try { return parseInt(localStorage.getItem(mileKey) || "20"); } catch { return 20; }
+        });
+        React.useEffect(() => { localStorage.setItem(mileKey, String(baseKm)); }, [baseKm]);
+
+        const sessions = profile.sessions || [];
+        const now = new Date();
+
+        // Current week actual km
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const thisWeekKm = sessions
+          .filter(s => s.distance && new Date(s.date) >= weekStart)
+          .reduce((s, x) => s + parseFloat(x.distance), 0);
+
+        // 10% progressive overload plan over 8 weeks
+        const WEEKS = Array.from({ length: 8 }, (_, i) => {
+          // Every 4th week is recovery (60%)
+          const isRecovery = (i + 1) % 4 === 0;
+          const factor = isRecovery ? 0.6 : Math.min(1 + i * 0.1, 1.5);
+          return {
+            week: i + 1,
+            km: Math.round(baseKm * factor),
+            isRecovery,
+            isCurrent: i === 0,
+          };
+        });
+
+        const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+        const DISTRIBUTION = [0.15, 0, 0.20, 0, 0.25, 0.30, 0.10]; // typical plan split
+
+        const maxKm = Math.max(...WEEKS.map(w => w.km));
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Planificateur Kilométrage</div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: "#8E8E93" }}>Base hebdo : <span style={{ color: "var(--yellow)", fontWeight: 800 }}>{baseKm} km</span></span>
+                <span style={{ fontSize: 11, color: thisWeekKm > 0 ? "#30D158" : "#636366" }}>Cette semaine : {thisWeekKm.toFixed(1)} km</span>
+              </div>
+              <input type="range" min="10" max="80" step="5" value={baseKm}
+                onChange={e => setBaseKm(parseInt(e.target.value))}
+                style={{ width: "100%", accentColor: "var(--yellow)" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366" }}>
+                <span>10 km (débutant)</span><span>80 km (élite)</span>
+              </div>
+            </div>
+
+            {/* 8-week bar chart */}
+            <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70, marginBottom: 10 }}>
+              {WEEKS.map(w => (
+                <div key={w.week} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <div style={{ fontSize: 8, color: w.isRecovery ? "#007AFF" : "var(--yellow)", fontWeight: 700 }}>{w.km}</div>
+                  <div style={{ width: "100%", height: `${(w.km / maxKm) * 55}px`, background: w.isRecovery ? "#007AFF" : w.isCurrent ? "var(--yellow)" : "#C9A84060", borderRadius: "3px 3px 0 0", border: w.isCurrent ? "1px solid var(--yellow)" : "none", minHeight: 4 }} />
+                  <div style={{ fontSize: 7, color: w.isRecovery ? "#007AFF" : "#636366" }}>S{w.week}{w.isRecovery ? "🔄" : ""}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Daily distribution for current week */}
+            <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+              <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Répartition recommandée S1 ({baseKm} km)</div>
+              <div style={{ display: "flex", gap: 3 }}>
+                {DAYS.map((day, i) => {
+                  const km = Math.round(baseKm * DISTRIBUTION[i] * 10) / 10;
+                  return (
+                    <div key={day} style={{ flex: 1, textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: km > 0 ? "var(--yellow)" : "#3A3A3C", fontWeight: km > 0 ? 700 : 400 }}>{km > 0 ? km : "—"}</div>
+                      <div style={{ fontSize: 7, color: "#636366" }}>{day}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 9, color: "#636366", textAlign: "center" }}>Règle des 10% · Semaines 4 et 8 = récupération active (60%)</div>
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
