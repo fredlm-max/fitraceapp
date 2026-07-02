@@ -6253,6 +6253,111 @@ JSON:
               );
             })()}
 
+            {/* ── DELOAD DETECTOR ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 6) return null;
+
+              const now = Date.now();
+              const msDay = 86400000;
+
+              const weekLoad = (start, days) => sessions
+                .filter(s => { const t = new Date(s.date).getTime(); return t >= now - (start + days) * msDay && t < now - start * msDay; })
+                .reduce((s, x) => s + (x.duree || 0) * ((x.rpe || 5) / 10), 0);
+
+              const w0 = weekLoad(0, 7);
+              const w1 = weekLoad(7, 7);
+              const w2 = weekLoad(14, 7);
+              const w3 = weekLoad(21, 7);
+
+              // Criteria for deload recommendation
+              const avgPrev3 = (w1 + w2 + w3) / 3;
+              const spike = avgPrev3 > 0 ? w0 / avgPrev3 : 1;
+              const consecHighWeeks = [w1, w2, w3].filter(w => w > avgPrev3 * 0.85).length;
+
+              // Sleep from log
+              const sleepKey = `fitrace_sleep_${profile.name}`;
+              const sleepLog = (() => { try { return JSON.parse(localStorage.getItem(sleepKey) || "[]"); } catch { return []; } })();
+              const recentSleepQuality = sleepLog.slice(0, 5).length > 0
+                ? sleepLog.slice(0, 5).reduce((s, e) => s + (e.quality || 3), 0) / sleepLog.slice(0, 5).length
+                : 3;
+
+              // Wellness from log
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const wellLog = (() => { try { return JSON.parse(localStorage.getItem(wellKey) || "[]"); } catch { return []; } })();
+              const recentWellness = wellLog.slice(0, 5).length > 0
+                ? wellLog.slice(0, 5).reduce((s, e) => s + (e.score || 3), 0) / wellLog.slice(0, 5).length
+                : 3;
+
+              // Scoring
+              let deloadScore = 0;
+              const reasons = [];
+              if (consecHighWeeks >= 3) { deloadScore += 35; reasons.push(`3 semaines consécutives à charge élevée`); }
+              if (spike > 1.4) { deloadScore += 25; reasons.push(`Pic de charge ×${spike.toFixed(1)} cette semaine`); }
+              if (recentSleepQuality < 2.5) { deloadScore += 20; reasons.push(`Qualité de sommeil dégradée (${recentSleepQuality.toFixed(1)}/5)`); }
+              if (recentWellness < 2.5) { deloadScore += 20; reasons.push(`Bien-être faible (${recentWellness.toFixed(1)}/5)`); }
+
+              const needsDeload = deloadScore >= 40;
+              const urgency = deloadScore >= 70 ? "URGENT" : deloadScore >= 40 ? "RECOMMANDÉ" : "OPTIONNEL";
+              const color = deloadScore >= 70 ? "#FF453A" : deloadScore >= 40 ? "#FF9F0A" : "#30D158";
+
+              // Days since last deload (week where load was <60% of avg)
+              const lastDeloadWeek = [w1, w2, w3].findIndex(w => w < avgPrev3 * 0.6);
+              const weeksSinceDeload = lastDeloadWeek >= 0 ? lastDeloadWeek + 1 : "4+";
+
+              return (
+                <div style={{ background: needsDeload ? `${color}12` : "var(--bg2)", border: needsDeload ? `1px solid ${color}40` : "none", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Semaine de Décharge</div>
+                      <div style={{ fontSize: 9, color: "#636366", marginTop: 1 }}>Dernière décharge : il y a {weeksSinceDeload} sem.</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 12, fontWeight: 900, color }}>{urgency}</div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Score {deloadScore}/100</div>
+                    </div>
+                  </div>
+
+                  {/* 4-week load bars */}
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 50, marginBottom: 10 }}>
+                    {[w3, w2, w1, w0].map((w, i) => {
+                      const maxW = Math.max(w0, w1, w2, w3, 1);
+                      const labels = ["S-3", "S-2", "S-1", "Cette S"];
+                      const isThis = i === 3;
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          <div style={{ fontSize: 7, color: isThis ? color : "#636366", fontWeight: isThis ? 800 : 400 }}>{Math.round(w)}</div>
+                          <div style={{ width: "100%", height: `${(w / maxW) * 42}px`, background: isThis ? color : "#3A3A3C", borderRadius: "3px 3px 0 0", minHeight: 3 }} />
+                          <div style={{ fontSize: 7, color: isThis ? color : "#636366", fontWeight: isThis ? 700 : 400 }}>{labels[i]}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {reasons.length > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      {reasons.map((r, i) => (
+                        <div key={i} style={{ display: "flex", gap: 6, fontSize: 10, color: "var(--fg)", marginBottom: 3 }}>
+                          <span style={{ color }}>⚠</span><span>{r}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {needsDeload ? (
+                    <div style={{ background: `${color}15`, borderRadius: 10, padding: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color, marginBottom: 4 }}>Plan décharge recommandé cette semaine :</div>
+                      {["Réduisez le volume de 40-60%", "Gardez l'intensité (1 séance tempo)", "Priorité : sommeil + mobilité + récupération active", "Pas de séance HYROX complète cette semaine"].map((t, i) => (
+                        <div key={i} style={{ fontSize: 10, color: "#8E8E93", marginBottom: 2 }}>→ {t}</div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: "center", fontSize: 11, color: "#30D158" }}>✅ Pas besoin de décharge — continuez votre progression</div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING READINESS SCORE ── */}
             {(() => {
               const sleepKey = `fitrace_sleep_${profile.name}`;
