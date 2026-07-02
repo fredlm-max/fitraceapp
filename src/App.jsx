@@ -10152,6 +10152,108 @@ JSON:
               );
             })()}
 
+            {/* ── ACUTE:CHRONIC WORKLOAD RATIO (ATL/CTL/TSB) ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              // TRIMP per session = duration(min) × RPE/10
+              const now = Date.now();
+              const getTrimp = (s) => (s.duree || 0) * ((s.rpe || 5) / 10);
+
+              // ATL = 7-day exponential moving average (acute load)
+              // CTL = 42-day exponential moving average (chronic load/fitness)
+              // TSB = CTL - ATL (form/freshness)
+              const kATL = 1 - Math.exp(-1 / 7);
+              const kCTL = 1 - Math.exp(-1 / 42);
+
+              // Build daily TRIMP map
+              const dailyTrimp = {};
+              sessions.forEach(s => {
+                const d = new Date(s.date).toISOString().slice(0, 10);
+                dailyTrimp[d] = (dailyTrimp[d] || 0) + getTrimp(s);
+              });
+
+              // Walk through last 42 days
+              let atl = 0, ctl = 0;
+              const history = [];
+              for (let i = 41; i >= 0; i--) {
+                const d = new Date(now - i * 86400000).toISOString().slice(0, 10);
+                const trimp = dailyTrimp[d] || 0;
+                atl = atl + kATL * (trimp - atl);
+                ctl = ctl + kCTL * (trimp - ctl);
+                if (i <= 13) history.push({ d, atl: Math.round(atl * 10) / 10, ctl: Math.round(ctl * 10) / 10, tsb: Math.round((ctl - atl) * 10) / 10 });
+              }
+
+              const current = history[history.length - 1] || { atl: 0, ctl: 0, tsb: 0 };
+              const acr = current.atl > 0 ? Math.round((current.atl / (current.ctl || 1)) * 100) / 100 : null;
+
+              const getAcrStatus = (r) => {
+                if (!r) return { label: "Pas de données", color: "#636366" };
+                if (r < 0.8) return { label: "Sous-entraîné", color: "#007AFF" };
+                if (r <= 1.3) return { label: "Zone optimale", color: "#30D158" };
+                if (r <= 1.5) return { label: "Attention surcharge", color: "#FF9F0A" };
+                return { label: "Surmenage risqué", color: "#FF453A" };
+              };
+              const acrStatus = getAcrStatus(acr);
+
+              const tsbStatus = current.tsb > 5 ? { label: "Frais", color: "#30D158" } : current.tsb >= -10 ? { label: "Neutre", color: "#FF9F0A" } : { label: "Fatigué", color: "#FF453A" };
+
+              // Mini sparkline for CTL/ATL
+              const maxVal = Math.max(...history.map(h => Math.max(h.atl, h.ctl)), 1);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>ATL / CTL / TSB</div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Charge aiguë / Fitness / Forme</div>
+                    </div>
+                    {acr && <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: acrStatus.color }}>ACR {acr}</div>
+                      <div style={{ fontSize: 9, color: acrStatus.color }}>{acrStatus.label}</div>
+                    </div>}
+                  </div>
+
+                  {/* Metrics */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                    {[
+                      { label: "ATL (Fatigue)", value: current.atl, color: "#FF453A", desc: "7j" },
+                      { label: "CTL (Fitness)", value: current.ctl, color: "#007AFF", desc: "42j" },
+                      { label: "TSB (Forme)", value: current.tsb, color: tsbStatus.color, desc: tsbStatus.label },
+                    ].map(m => (
+                      <div key={m.label} style={{ flex: 1, background: `${m.color}12`, borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, color: m.color }}>{m.value}</div>
+                        <div style={{ fontSize: 7, color: "#636366" }}>{m.desc}</div>
+                        <div style={{ fontSize: 7, color: "#3A3A3C", textTransform: "uppercase", letterSpacing: 0.3 }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Sparklines */}
+                  {history.length >= 2 && (
+                    <svg width="100%" viewBox={`0 0 ${history.length * 18} 50`} style={{ overflow: "visible" }}>
+                      {["ctl", "atl"].map((key, ki) => {
+                        const color = key === "ctl" ? "#007AFF" : "#FF453A";
+                        const pts = history.map((h, i) => `${i * 18 + 9},${50 - (h[key] / maxVal) * 44}`).join(" ");
+                        return <polyline key={key} points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeOpacity={ki === 0 ? 0.9 : 0.7} />;
+                      })}
+                    </svg>
+                  )}
+
+                  <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 4 }}>
+                    {[["CTL Fitness", "#007AFF"], ["ATL Fatigue", "#FF453A"]].map(([l, c]) => (
+                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <div style={{ width: 12, height: 2, background: c, borderRadius: 1 }} />
+                        <span style={{ fontSize: 9, color: "#636366" }}>{l}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 9, color: "#636366", textAlign: "center" }}>ACR optimal : 0.8–1.3 · En dehors = risque blessure ou sous-performance</div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING LOAD DISTRIBUTION ── */}
             {(profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
