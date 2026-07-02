@@ -23977,6 +23977,115 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── POST-RACE RECOVERY PROTOCOL ── */}
+      {(() => {
+        const poids = parseFloat(profile.poids) || 70;
+        const recovKey = `fitrace_postrace_${profile.name}`;
+        const [checked, setChecked] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(recovKey) || "{}"); } catch { return {}; }
+        });
+        const [activeDay, setActiveDay] = React.useState(1);
+
+        const toggleCheck = (id) => {
+          const updated = { ...checked, [id]: !checked[id] };
+          setChecked(updated); localStorage.setItem(recovKey, JSON.stringify(updated));
+        };
+
+        const PROTOCOL = [
+          {
+            day: 1,
+            label: "J+1 · Récupération immédiate",
+            color: "#FF453A",
+            icon: "🧊",
+            tasks: [
+              { id: "d1_refeed", label: `Refueling : ${Math.round(poids * 1.2)}g glucides + ${Math.round(poids * 0.5)}g protéines dans les 2h`, icon: "🍚" },
+              { id: "d1_hydrat", label: `Réhydratation : ${Math.round(poids * 0.03 * 1000)}ml + électrolytes`, icon: "💧" },
+              { id: "d1_ice", label: "Bain froid 10min ou cryothérapie si disponible", icon: "🧊" },
+              { id: "d1_sleep", label: "Sommeil ≥9h cette nuit — priorité absolue", icon: "😴" },
+              { id: "d1_walk", label: "Marche légère 15-20min seulement", icon: "🚶" },
+              { id: "d1_protein", label: `Protéines : ${Math.round(poids * 2.5)}g sur la journée`, icon: "🥩" },
+            ],
+          },
+          {
+            day: 2,
+            label: "J+2 · Récupération active",
+            color: "#FF9F0A",
+            icon: "🧘",
+            tasks: [
+              { id: "d2_mobility", label: "Mobilité douce 20-30min (pas d'étirement forcé)", icon: "🧘" },
+              { id: "d2_massage", label: "Auto-massage rouleau mousse : mollets, ischio, quadri", icon: "💆" },
+              { id: "d2_sleep", label: "Sommeil ≥8h cette nuit", icon: "😴" },
+              { id: "d2_omega3", label: "Oméga-3 × 3g + curcuma anti-inflammatoire", icon: "💊" },
+              { id: "d2_swim", label: "Natation légère ou vélo très facile 20min (optionnel)", icon: "🏊" },
+            ],
+          },
+          {
+            day: 3,
+            label: "J+3-4 · Récupération progressive",
+            color: "#FF9F0A",
+            icon: "🚶",
+            tasks: [
+              { id: "d3_run", label: "Footing très facile 20-30min (FC < 65% FCmax)", icon: "🏃" },
+              { id: "d3_strength", label: "Pas de séance de force avant J+4", icon: "🚫" },
+              { id: "d3_checkdmg", label: "Évaluer douleurs résiduelles (ampoules, tendinites...)", icon: "🩺" },
+              { id: "d3_nutrition", label: "Alimentation normale, légèrement hypercalorique", icon: "🍽️" },
+            ],
+          },
+          {
+            day: 5,
+            label: "J+5-7 · Retour à l'entraînement",
+            color: "#30D158",
+            icon: "💪",
+            tasks: [
+              { id: "d5_technique", label: "1 séance technique légère (technique course, mobilité)", icon: "🎯" },
+              { id: "d5_force", label: "Force légère possible si aucune douleur (50% charges)", icon: "🏋️" },
+              { id: "d5_plan", label: "Planifier le prochain cycle avec 1 semaine de transition", icon: "📅" },
+              { id: "d5_bilan", label: "Bilan de course : ce qui a bien marché / à améliorer", icon: "📝" },
+              { id: "d5_prochaine", label: "Inscription prochaine race si objectif confirmé", icon: "🏁" },
+            ],
+          },
+        ];
+
+        const currentDayProtocol = PROTOCOL.find(p => p.day === activeDay) || PROTOCOL[0];
+        const doneInCurrent = currentDayProtocol.tasks.filter(t => checked[t.id]).length;
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Protocole Récupération Post-Race</div>
+
+            {/* Day selector */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+              {PROTOCOL.map(p => (
+                <button key={p.day} onClick={() => setActiveDay(p.day)}
+                  style={{ flex: 1, background: activeDay === p.day ? p.color : "var(--bg3)", color: activeDay === p.day ? "#fff" : "#636366", border: "none", borderRadius: 8, padding: "6px 2px", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>
+                  {p.icon} J+{p.day}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: currentDayProtocol.color }}>{currentDayProtocol.label}</div>
+                <div style={{ fontSize: 10, color: doneInCurrent === currentDayProtocol.tasks.length ? "#30D158" : "#636366" }}>{doneInCurrent}/{currentDayProtocol.tasks.length}</div>
+              </div>
+              <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2, marginBottom: 10 }}>
+                <div style={{ height: "100%", width: `${(doneInCurrent / currentDayProtocol.tasks.length) * 100}%`, background: currentDayProtocol.color, borderRadius: 2, transition: "width 0.4s" }} />
+              </div>
+
+              {currentDayProtocol.tasks.map(task => (
+                <button key={task.id} onClick={() => toggleCheck(task.id)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", background: checked[task.id] ? `${currentDayProtocol.color}12` : "var(--bg3)", border: `1px solid ${checked[task.id] ? currentDayProtocol.color + "40" : "#2C2C2E"}`, borderRadius: 10, marginBottom: 5, cursor: "pointer" }}>
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${checked[task.id] ? currentDayProtocol.color : "#636366"}`, background: checked[task.id] ? currentDayProtocol.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff", fontSize: 11 }}>
+                    {checked[task.id] ? "✓" : ""}
+                  </div>
+                  <span style={{ fontSize: 10, color: checked[task.id] ? currentDayProtocol.color : "var(--fg)", textAlign: "left", textDecoration: checked[task.id] ? "line-through" : "none", opacity: checked[task.id] ? 0.7 : 1 }}>{task.icon} {task.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── RACE GEAR CHECKLIST ── */}
       {(() => {
         const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
