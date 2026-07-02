@@ -6920,6 +6920,80 @@ JSON:
               );
             })()}
 
+            {/* ── BODY SCAN PAIN TRACKER ── */}
+            {(() => {
+              const painKey = `fitrace_pain_${profile.name}`;
+              const [pain, setPain] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(painKey) || "{}"); } catch { return {}; }
+              });
+
+              const ZONES = [
+                { id: "neck", label: "Nuque/Cou", emoji: "🔴", row: 0, col: 1 },
+                { id: "shoulder_l", label: "Épaule G", emoji: "🔴", row: 1, col: 0 },
+                { id: "shoulder_r", label: "Épaule D", emoji: "🔴", row: 1, col: 2 },
+                { id: "upper_back", label: "Dos haut", emoji: "🔴", row: 1, col: 1 },
+                { id: "lower_back", label: "Bas du dos", emoji: "🔴", row: 2, col: 1 },
+                { id: "hip_l", label: "Hanche G", emoji: "🔴", row: 3, col: 0 },
+                { id: "hip_r", label: "Hanche D", emoji: "🔴", row: 3, col: 2 },
+                { id: "knee_l", label: "Genou G", emoji: "🔴", row: 4, col: 0 },
+                { id: "knee_r", label: "Genou D", emoji: "🔴", row: 4, col: 2 },
+                { id: "calf_l", label: "Mollet G", emoji: "🔴", row: 5, col: 0 },
+                { id: "calf_r", label: "Mollet D", emoji: "🔴", row: 5, col: 2 },
+                { id: "achilles_l", label: "Achille G", emoji: "🔴", row: 6, col: 0 },
+                { id: "achilles_r", label: "Achille D", emoji: "🔴", row: 6, col: 2 },
+              ];
+
+              const toggle = (id) => {
+                const current = pain[id] || 0;
+                const next = (current + 1) % 4; // 0=none, 1=mild, 2=moderate, 3=severe
+                const updated = { ...pain, [id]: next };
+                if (next === 0) delete updated[id];
+                setPain(updated); localStorage.setItem(painKey, JSON.stringify(updated));
+              };
+
+              const getPainColor = (level) => ["transparent", "#FF9F0A", "#FF6B35", "#FF453A"][level] || "transparent";
+              const getPainLabel = (level) => ["", "Légère", "Modérée", "Sévère"][level] || "";
+
+              const activePains = ZONES.filter(z => pain[z.id] > 0);
+              const hasSevere = activePains.some(z => pain[z.id] === 3);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Body Scan · Douleurs</div>
+                    {activePains.length > 0 && <div style={{ fontSize: 10, color: hasSevere ? "#FF453A" : "#FF9F0A", fontWeight: 700 }}>{activePains.length} zone{activePains.length > 1 ? "s" : ""}</div>}
+                  </div>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 12 }}>Appuyez pour cycler : Aucune → Légère → Modérée → Sévère</div>
+
+                  <div style={{ display: "flex", gap: 12 }}>
+                    {/* Body zones list */}
+                    <div style={{ flex: 1 }}>
+                      {ZONES.map(z => {
+                        const level = pain[z.id] || 0;
+                        const color = getPainColor(level);
+                        return (
+                          <button key={z.id} onClick={() => toggle(z.id)}
+                            style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: level > 0 ? `${color}15` : "var(--bg3)", border: `1px solid ${level > 0 ? color : "#2C2C2E"}`, borderRadius: 8, padding: "6px 8px", marginBottom: 4, cursor: "pointer" }}>
+                            <span style={{ fontSize: 10, color: level > 0 ? color : "#8E8E93" }}>{z.label}</span>
+                            {level > 0 && <span style={{ fontSize: 9, color, fontWeight: 700 }}>{getPainLabel(level)}</span>}
+                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: level > 0 ? color : "#2C2C2E", border: `1px solid ${level > 0 ? color : "#3A3A3C"}` }} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {hasSevere && (
+                    <div style={{ marginTop: 8, background: "#FF453A15", border: "1px solid #FF453A40", borderRadius: 10, padding: 10 }}>
+                      <div style={{ fontSize: 10, color: "#FF453A", fontWeight: 700 }}>⚠️ Douleur sévère détectée</div>
+                      <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 3 }}>Consultez un médecin ou kinésithérapeute avant de reprendre l'entraînement intense.</div>
+                    </div>
+                  )}
+                  {activePains.length === 0 && <div style={{ textAlign: "center", fontSize: 11, color: "#30D158", marginTop: 4 }}>✅ Aucune douleur — excellent !</div>}
+                </div>
+              );
+            })()}
+
             {/* ── STRESS & WELLNESS LOG ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0, 10);
@@ -10605,6 +10679,94 @@ JSON:
                       </div>
                     ))}
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── POWER OUTPUT ESTIMATOR ── */}
+            {(() => {
+              const poids = parseFloat(profile.poids) || 70;
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const sessions = profile.sessions || [];
+              const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+
+              const bestPaceMinKm = runs.length > 0
+                ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+                : vma ? 60 / vma : null;
+
+              if (!bestPaceMinKm) return null;
+
+              // Running power estimation (Stryd-like formula)
+              // P (W) ≈ poids × g × v × (Cr + grade_factor)
+              // Cr ≈ 0.98 J/kg/m for flat running (running cost)
+              // Simplified: P ≈ poids × speedMs × 3.6 (empirical multiplier)
+              const speedMs = (1000 / bestPaceMinKm) / 60;
+              const powerW = Math.round(poids * speedMs * 3.8); // ~W
+              const powerKg = Math.round((powerW / poids) * 10) / 10; // W/kg
+
+              // FTP estimate (≈ 95% of best 20min effort)
+              const ftp = Math.round(powerW * 0.95);
+              const ftpKg = Math.round((ftp / poids) * 10) / 10;
+
+              // Power zones from FTP
+              const POWER_ZONES = [
+                { name: "Z1 · Récup", pct: [0, 55], color: "#636366" },
+                { name: "Z2 · Endurance", pct: [56, 75], color: "#007AFF" },
+                { name: "Z3 · Tempo", pct: [76, 90], color: "#30D158" },
+                { name: "Z4 · Seuil", pct: [91, 105], color: "#FF9F0A" },
+                { name: "Z5 · VO2max", pct: [106, 120], color: "#FF6B35" },
+                { name: "Z6 · Anaérobie", pct: [121, 150], color: "#FF453A" },
+              ];
+
+              const getPowerLevel = (wkg) => {
+                if (wkg >= 5.0) return { label: "Elite", color: "#FFD60A" };
+                if (wkg >= 4.0) return { label: "Avancé", color: "#30D158" };
+                if (wkg >= 3.0) return { label: "Intermédiaire", color: "#FF9F0A" };
+                return { label: "Débutant", color: "#FF453A" };
+              };
+              const level = getPowerLevel(ftpKg);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Puissance de Course</div>
+                    <div style={{ fontSize: 10, color: level.color, fontWeight: 700 }}>{level.label}</div>
+                  </div>
+
+                  {/* Main metrics */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    {[
+                      { label: "Puissance estimée", val: `${powerW}W`, sub: `À ${Math.floor(bestPaceMinKm)}:${String(Math.round((bestPaceMinKm%1)*60)).padStart(2,"0")}/km`, color: "#FF9F0A" },
+                      { label: "FTP estimé", val: `${ftp}W`, sub: "Functional Threshold Power", color: "#007AFF" },
+                      { label: "W/kg", val: ftpKg, sub: level.label, color: level.color },
+                    ].map(m => (
+                      <div key={m.label} style={{ flex: 1, background: `${m.color}12`, borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 17, fontWeight: 900, color: m.color }}>{m.val}</div>
+                        <div style={{ fontSize: 7, color: "#636366", marginTop: 2 }}>{m.sub}</div>
+                        <div style={{ fontSize: 7, color: "#3A3A3C", textTransform: "uppercase", marginTop: 2 }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Power zones */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase" }}>Zones de puissance (FTP {ftp}W)</div>
+                    {POWER_ZONES.map(z => {
+                      const wLow = Math.round(ftp * z.pct[0] / 100);
+                      const wHigh = Math.round(ftp * z.pct[1] / 100);
+                      return (
+                        <div key={z.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2C2C2E" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: 2, background: z.color }} />
+                            <span style={{ fontSize: 10, color: "var(--fg)" }}>{z.name}</span>
+                          </div>
+                          <span style={{ fontSize: 10, color: z.color, fontWeight: 600 }}>{wLow}–{wHigh}W</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 6, fontSize: 9, color: "#636366", textAlign: "center" }}>Estimation basée sur allure et poids · Stryd pour mesure précise</div>
                 </div>
               );
             })()}
@@ -24536,6 +24698,128 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 </div>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* ── RACE MENTAL PREP ── */}
+      {(() => {
+        const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+        const daysLeft = raceDate ? Math.ceil((raceDate - new Date()) / 86400000) : null;
+        const prepKey = `fitrace_mentalprep_${profile.name}`;
+        const [checked, setChecked] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(prepKey) || "{}"); } catch { return {}; }
+        });
+        const [activeSection, setActiveSection] = React.useState("routine");
+
+        const toggle = (id) => {
+          const u = { ...checked, [id]: !checked[id] };
+          setChecked(u); localStorage.setItem(prepKey, JSON.stringify(u));
+        };
+
+        const SECTIONS = [
+          {
+            id: "routine",
+            label: "Routine J-1",
+            icon: "🌙",
+            color: "#BF5AF2",
+            items: [
+              { id: "r1", text: "Coucher avant 22h — sommeil 8-9h minimum" },
+              { id: "r2", text: "Préparer le sac et équipement la veille" },
+              { id: "r3", text: "Repas J-1 soir : glucides complexes, éviter fibres" },
+              { id: "r4", text: "Visualisation 10min : courir les 8km, exécuter les stations" },
+              { id: "r5", text: "Lire son plan de race (allure, stations, transitions)" },
+              { id: "r6", text: "Pas de nouvelle activité ou stress non nécessaire" },
+            ],
+          },
+          {
+            id: "morning",
+            label: "Matin de course",
+            icon: "🌅",
+            color: "#FF9F0A",
+            items: [
+              { id: "m1", text: "Réveil 2h30-3h avant le départ" },
+              { id: "m2", text: `Petit-déjeuner : glucides rapides + léger (${Math.round((parseFloat(profile.poids)||70) * 0.5)}g glucides)` },
+              { id: "m3", text: "Hydratation : 500ml d'eau + électrolytes" },
+              { id: "m4", text: "Arriver sur site 60-90min avant le départ" },
+              { id: "m5", text: "Échauffement 15-20min (footing léger + mobilité)" },
+              { id: "m6", text: "Caféine 45-60min avant le départ (optionnel)" },
+            ],
+          },
+          {
+            id: "mental",
+            label: "Mental & Focus",
+            icon: "🧠",
+            color: "#007AFF",
+            items: [
+              { id: "n1", text: "Mantra personnel : une phrase qui vous motive" },
+              { id: "n2", text: "Focus sur le processus, pas le résultat" },
+              { id: "n3", text: "Diviser la course en 4 blocs de 2km + stations" },
+              { id: "n4", text: "Si douleur après station : 'ce n'est que temporaire'" },
+              { id: "n5", text: "Visualiser les transitions : courir, pas marcher" },
+              { id: "n6", text: "Rappel : vous avez fait le travail — faites confiance" },
+            ],
+          },
+          {
+            id: "strategy",
+            label: "Stratégie de course",
+            icon: "🎯",
+            color: "#30D158",
+            items: [
+              { id: "s1", text: "Départ conservateur : 5% plus lent que l'objectif" },
+              { id: "s2", text: "Stations : rythme régulier > sprint initial" },
+              { id: "s3", text: "Boire aux ravitaillements même sans soif" },
+              { id: "s4", text: "Si mal : ralentir 10%, pas arrêter" },
+              { id: "s5", text: "Km 6-8 : tout donner si réserves disponibles" },
+              { id: "s6", text: "Wall Balls en dernier : compter les reps à voix haute" },
+            ],
+          },
+        ];
+
+        const currentSection = SECTIONS.find(s => s.id === activeSection);
+        const done = currentSection?.items.filter(i => checked[i.id]).length || 0;
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Préparation Mentale Race</div>
+              {daysLeft !== null && daysLeft >= 0 && <div style={{ fontSize: 11, color: daysLeft <= 7 ? "#FF9F0A" : "#8E8E93", fontWeight: 700 }}>J-{daysLeft}</div>}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 12, marginTop: 10 }}>
+              {SECTIONS.map(s => {
+                const sdone = s.items.filter(i => checked[i.id]).length;
+                return (
+                  <button key={s.id} onClick={() => setActiveSection(s.id)}
+                    style={{ background: activeSection === s.id ? `${s.color}20` : "var(--bg3)", border: `1px solid ${activeSection === s.id ? s.color : "#2C2C2E"}`, borderRadius: 8, padding: "7px 8px", cursor: "pointer", textAlign: "left" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: activeSection === s.id ? s.color : "var(--fg)" }}>{s.icon} {s.label}</div>
+                    <div style={{ fontSize: 9, color: "#636366" }}>{sdone}/{s.items.length} fait{sdone > 1 ? "s" : ""}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {currentSection && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: currentSection.color }}>{currentSection.icon} {currentSection.label}</div>
+                  <div style={{ fontSize: 10, color: done === currentSection.items.length ? "#30D158" : "#636366" }}>{done}/{currentSection.items.length}</div>
+                </div>
+                <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2, marginBottom: 10 }}>
+                  <div style={{ height: "100%", width: `${(done / currentSection.items.length) * 100}%`, background: currentSection.color, borderRadius: 2, transition: "width 0.4s" }} />
+                </div>
+                {currentSection.items.map(item => (
+                  <button key={item.id} onClick={() => toggle(item.id)}
+                    style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", background: checked[item.id] ? `${currentSection.color}10` : "var(--bg3)", border: `1px solid ${checked[item.id] ? currentSection.color + "40" : "#2C2C2E"}`, borderRadius: 10, marginBottom: 5, cursor: "pointer" }}>
+                    <div style={{ width: 18, height: 18, borderRadius: "50%", border: `2px solid ${checked[item.id] ? currentSection.color : "#636366"}`, background: checked[item.id] ? currentSection.color : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, marginTop: 1 }}>
+                      {checked[item.id] ? "✓" : ""}
+                    </div>
+                    <span style={{ fontSize: 10, color: checked[item.id] ? "#636366" : "var(--fg)", textAlign: "left", textDecoration: checked[item.id] ? "line-through" : "none" }}>{item.text}</span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         );
       })()}
