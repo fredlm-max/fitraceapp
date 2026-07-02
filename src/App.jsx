@@ -9126,6 +9126,107 @@ JSON:
               );
             })()}
 
+            {/* ── TIME IN ZONE TRACKER ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              const age = profile.age || 30;
+              const sex = profile.sexe === "F" ? 0 : 1;
+              const fcRest = profile.fcRepos || 60;
+              const fcMax = profile.fcMax || Math.round(sex ? (208 - 0.7 * age) : (206 - 0.88 * age));
+
+              // Karvonen zones boundaries as % of HRR
+              const hrrBoundaries = [0.5, 0.6, 0.7, 0.8, 0.9]; // Z1/2/3/4/5 transitions
+              const fcBound = hrrBoundaries.map(p => Math.round(fcRest + p * (fcMax - fcRest)));
+
+              // Map session type to typical zone distribution (% of time in each zone)
+              const ZONE_MAP = {
+                running_zone2:    [0.05, 0.70, 0.20, 0.04, 0.01],
+                running_qualite:  [0.02, 0.15, 0.35, 0.35, 0.13],
+                force_stations:   [0.05, 0.20, 0.45, 0.25, 0.05],
+                hybride_compromis:[0.03, 0.30, 0.35, 0.25, 0.07],
+                mobilite:         [0.60, 0.35, 0.05, 0.00, 0.00],
+                coach:            [0.02, 0.20, 0.40, 0.30, 0.08],
+              };
+
+              const ZONES = [
+                { label: "Z1 Récup", color: "#30D158" },
+                { label: "Z2 Aérobie", color: "#007AFF" },
+                { label: "Z3 Tempo", color: "#FF9F0A" },
+                { label: "Z4 Seuil", color: "#FF6B00" },
+                { label: "Z5 VO2max", color: "#FF453A" },
+              ];
+
+              // Accumulate time-in-zone for last 28 days
+              const now = Date.now();
+              const recent = sessions.filter(s => s.date && (now - new Date(s.date)) < 28 * 86400000);
+              const totalMinByZone = [0, 0, 0, 0, 0];
+              recent.forEach(s => {
+                const dur = s.duree || 60;
+                const dist = ZONE_MAP[s.type] || [0.1, 0.4, 0.3, 0.15, 0.05];
+                dist.forEach((p, i) => { totalMinByZone[i] += p * dur; });
+              });
+              const totalMin = totalMinByZone.reduce((a, b) => a + b, 0);
+              const maxZoneMin = Math.max(...totalMinByZone);
+
+              const z2pct = totalMin > 0 ? Math.round((totalMinByZone[1] / totalMin) * 100) : 0;
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>❤️ TEMPS EN ZONE FC</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>28j · {recent.length} séances</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 12 }}>
+                    FCmax estimée: <span style={{ color: "#FF453A", fontWeight: 700 }}>{fcMax} bpm</span> · Repos: <span style={{ color: "#30D158", fontWeight: 700 }}>{fcRest} bpm</span>
+                  </div>
+
+                  {/* Zone bars */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                    {ZONES.map((z, i) => {
+                      const mins = Math.round(totalMinByZone[i]);
+                      const h = Math.floor(mins / 60);
+                      const m = mins % 60;
+                      const pct = maxZoneMin > 0 ? Math.round((totalMinByZone[i] / maxZoneMin) * 100) : 0;
+                      const fcLow = i === 0 ? fcRest : fcBound[i - 1];
+                      const fcHigh = i === 4 ? fcMax : fcBound[i];
+                      return (
+                        <div key={z.label}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              <span style={{ width: 8, height: 8, background: z.color, borderRadius: "50%", display: "inline-block" }} />
+                              <span style={{ fontSize: 11, color: "var(--white)", fontWeight: 600 }}>{z.label}</span>
+                              <span style={{ fontSize: 9, color: "#636366" }}>{fcLow}–{fcHigh} bpm</span>
+                            </div>
+                            <span style={{ fontSize: 11, color: z.color, fontWeight: 700 }}>{h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m}min`}</span>
+                          </div>
+                          <div style={{ height: 8, background: "#3A3A3C", borderRadius: 99 }}>
+                            <div style={{ width: `${pct}%`, height: "100%", background: z.color, borderRadius: 99 }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#007AFF" }}>{z2pct}%</div>
+                        <div style={{ fontSize: 10, color: "#8E8E93" }}>Temps Z2</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "var(--yellow)" }}>{Math.round(totalMin / 60)}h{Math.round(totalMin % 60)}min</div>
+                        <div style={{ fontSize: 10, color: "#8E8E93" }}>Total cardio</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: z2pct >= 60 ? "#30D158" : "#FF9F0A" }}>{z2pct >= 60 ? "✅" : "⚠️"}</div>
+                        <div style={{ fontSize: 10, color: "#8E8E93" }}>Polarisation</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── CALORIE BURN ESTIMATOR ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const poids = parseFloat(profile.poids) || 75;
