@@ -25768,6 +25768,142 @@ JSON: {
             );
           })()}
 
+          {/* ── DAILY MEAL PLANNER ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0,10);
+            const KEY = `fitrace_mealplan_${profile.name}_${todayStr}`;
+            const YDAY = new Date(Date.now()-86400000).toISOString().slice(0,10);
+            const YDAY_KEY = `fitrace_mealplan_${profile.name}_${YDAY}`;
+
+            const MEAL_TEMPLATES = {
+              "Petit-déj athlète": { kcal:450, p:35, c:45, f:12 },
+              "Flocons+œufs":       { kcal:380, p:28, c:42, f:10 },
+              "Pancakes protéinés": { kcal:420, p:32, c:48, f:8  },
+              "Riz+poulet+légumes": { kcal:520, p:42, c:55, f:8  },
+              "Pasta bolognaise":   { kcal:580, p:36, c:68, f:14 },
+              "Saumon+patate douce":{ kcal:490, p:38, c:42, f:14 },
+              "Shake récup":        { kcal:320, p:40, c:28, f:4  },
+              "Yaourt grec+fruits": { kcal:220, p:18, c:26, f:4  },
+              "Amandes+banane":     { kcal:280, p:8,  c:32, f:14 },
+              "Thon+riz":           { kcal:410, p:38, c:44, f:6  },
+              "Bœuf+quinoa":        { kcal:530, p:44, c:46, f:14 },
+              "Omelette 4œufs":     { kcal:340, p:28, c:4,  f:22 },
+            };
+
+            const DEFAULT_MEALS = [
+              { id:"m1", label:"Petit-déjeuner", icon:"🌅", item:"", kcal:0, p:0, c:0, f:0 },
+              { id:"m2", label:"Collation matin", icon:"🍎", item:"", kcal:0, p:0, c:0, f:0 },
+              { id:"m3", label:"Déjeuner",        icon:"🍽️", item:"", kcal:0, p:0, c:0, f:0 },
+              { id:"m4", label:"Collation après", icon:"🥤", item:"", kcal:0, p:0, c:0, f:0 },
+              { id:"m5", label:"Dîner",           icon:"🌙", item:"", kcal:0, p:0, c:0, f:0 },
+              { id:"m6", label:"Collation nuit",  icon:"⭐", item:"", kcal:0, p:0, c:0, f:0 },
+            ];
+
+            const [meals, setMeals] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(KEY)) || DEFAULT_MEALS; } catch { return DEFAULT_MEALS; }
+            });
+            const [expandedMeal, setExpandedMeal] = React.useState(null);
+
+            const saveMeals = (next) => {
+              setMeals(next);
+              localStorage.setItem(KEY, JSON.stringify(next));
+            };
+
+            const applyTemplate = (mealId, tplName) => {
+              const tpl = MEAL_TEMPLATES[tplName];
+              const next = meals.map(m => m.id===mealId ? { ...m, item:tplName, ...tpl } : m);
+              saveMeals(next);
+              setExpandedMeal(null);
+            };
+
+            const clearMeal = (mealId) => {
+              const next = meals.map(m => m.id===mealId ? { ...m, item:"", kcal:0, p:0, c:0, f:0 } : m);
+              saveMeals(next);
+            };
+
+            const copyYesterday = () => {
+              try {
+                const yday = JSON.parse(localStorage.getItem(YDAY_KEY));
+                if (yday) { saveMeals(yday.map(m=>({...m}))); }
+              } catch {}
+            };
+
+            const totKcal = meals.reduce((s,m)=>s+m.kcal,0);
+            const totP = meals.reduce((s,m)=>s+m.p,0);
+            const totC = meals.reduce((s,m)=>s+m.c,0);
+            const totF = meals.reduce((s,m)=>s+m.f,0);
+
+            const poids = profile.poids || 70;
+            const tgtP = Math.round(poids*1.8), tgtC = Math.round(poids*4), tgtF = Math.round(poids*1);
+            const tgtKcal = tgtP*4 + tgtC*4 + tgtF*9;
+
+            return (
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Planificateur Repas</div>
+                  <button onClick={copyYesterday} style={{ background:"var(--bg3)",color:"#8E8E93",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,cursor:"pointer" }}>
+                    📋 Copier hier
+                  </button>
+                </div>
+
+                {/* Daily totals */}
+                <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                  {[
+                    { label:"kcal", val:totKcal, tgt:tgtKcal, color:"var(--yellow)" },
+                    { label:"P",    val:totP,    tgt:tgtP,    color:"#BF5AF2" },
+                    { label:"G",    val:totC,    tgt:tgtC,    color:"#FF9F0A" },
+                    { label:"L",    val:totF,    tgt:tgtF,    color:"#FF453A" },
+                  ].map(m=>(
+                    <div key={m.label} style={{ flex:1,background:"var(--bg3)",borderRadius:8,padding:"6px 4px",textAlign:"center" }}>
+                      <div style={{ fontSize:11,fontWeight:900,color:m.color }}>{m.val}</div>
+                      <div style={{ fontSize:7,color:"#636366" }}>{m.label}/{m.tgt}</div>
+                      <div style={{ height:3,background:"#2C2C2E",borderRadius:2,marginTop:3,overflow:"hidden" }}>
+                        <div style={{ height:"100%",width:`${Math.min(100,Math.round(m.val/m.tgt*100))}%`,background:m.color,borderRadius:2 }}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Meal rows */}
+                {meals.map(meal=>(
+                  <div key={meal.id} style={{ marginBottom:4 }}>
+                    <button onClick={()=>setExpandedMeal(expandedMeal===meal.id?null:meal.id)}
+                      style={{ width:"100%",display:"flex",alignItems:"center",gap:8,background:meal.item?"#1C3A24":"var(--bg3)",border:`1px solid ${meal.item?"#30D15840":"transparent"}`,borderRadius:10,padding:"8px 10px",cursor:"pointer",textAlign:"left" }}>
+                      <span style={{ fontSize:16 }}>{meal.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10,color:"#8E8E93" }}>{meal.label}</div>
+                        <div style={{ fontSize:11,fontWeight:700,color:meal.item?"var(--white)":"#3A3A3C" }}>{meal.item||"Vide — cliquer pour planifier"}</div>
+                      </div>
+                      {meal.item && (
+                        <div style={{ textAlign:"right" }}>
+                          <div style={{ fontSize:10,fontWeight:800,color:"var(--yellow)" }}>{meal.kcal} kcal</div>
+                          <div style={{ fontSize:8,color:"#636366" }}>P{meal.p} G{meal.c} L{meal.f}</div>
+                        </div>
+                      )}
+                      <span style={{ fontSize:12,color:"#636366" }}>{expandedMeal===meal.id?"▲":"▼"}</span>
+                    </button>
+
+                    {expandedMeal===meal.id && (
+                      <div style={{ background:"#1C1C1E",borderRadius:"0 0 10px 10px",padding:8,display:"flex",flexWrap:"wrap",gap:4 }}>
+                        {Object.keys(MEAL_TEMPLATES).map(tpl=>(
+                          <button key={tpl} onClick={()=>applyTemplate(meal.id,tpl)}
+                            style={{ background:meal.item===tpl?"var(--yellow)":"var(--bg3)",color:meal.item===tpl?"#000":"#8E8E93",border:"none",borderRadius:6,padding:"5px 8px",fontSize:9,cursor:"pointer",fontWeight:meal.item===tpl?800:400 }}>
+                            {tpl} <span style={{ opacity:0.6 }}>{MEAL_TEMPLATES[tpl].kcal}kcal</span>
+                          </button>
+                        ))}
+                        {meal.item && (
+                          <button onClick={()=>clearMeal(meal.id)} style={{ background:"#3A1C1C",color:"#FF453A",border:"none",borderRadius:6,padding:"5px 8px",fontSize:9,cursor:"pointer" }}>
+                            ✕ Vider
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* ── RACE DAY NUTRITION PLANNER ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 70;
