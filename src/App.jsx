@@ -15400,6 +15400,130 @@ function TechniqueTab({ profile = {} }) {
         </div>
       )}
 
+      {/* ── INJURY PREVENTION PREHAB ── */}
+      {(() => {
+        const PREHAB = [
+          {
+            name: "Hip Flexor Stretch",
+            zone: "Hanches / Lombaires",
+            icon: "🦵",
+            color: "#C9A840",
+            sets: "3×30s chaque côté",
+            risk: "Sled Push, Sandbag Lunges",
+            how: "Genou au sol (fente basse), bassin poussé en avant. Maintiens 30s. Crucial après séances force.",
+            cue: "Contracte les fessiers pendant l'étirement pour plus d'effet",
+          },
+          {
+            name: "Banded Clamshell",
+            zone: "Fessiers / Abducteurs",
+            icon: "🍑",
+            color: "#FF9F0A",
+            sets: "3×20 reps chaque côté",
+            risk: "Tous les runs — syndrome de la bandelette IT",
+            how: "Allongé sur le côté, élastique aux genoux. Ouvre et ferme comme une palourde sans bouger le bassin.",
+            cue: "Isole bien la fesse — pas de rotation du tronc",
+          },
+          {
+            name: "Shoulder CARs",
+            zone: "Épaules / Rotateurs",
+            icon: "💪",
+            color: "#38bdf8",
+            sets: "2×5 rotations lentes chaque épaule",
+            risk: "SkiErg, Wall Balls — conflit sous-acromial",
+            how: "Cercles articulaires complets à vitesse lente et contrôlée. Toute l'amplitude possible.",
+            cue: "Lenteur maximale — 3–5s par quart de cercle",
+          },
+          {
+            name: "Ankle Dorsiflexion Mob",
+            zone: "Chevilles",
+            icon: "🦶",
+            color: "#30D158",
+            sets: "3×10 reps + 30s stretch chaque pied",
+            risk: "Wall Balls, Sandbag Lunges — compensations genou",
+            how: "Pied sur marche, genou vers l'avant sans lever le talon. Mobilise la dorsiflexion.",
+            cue: "Teste : tu dois pouvoir pointer le genou à 10–12cm du mur, talon au sol",
+          },
+          {
+            name: "Thoracic Rotation",
+            zone: "Thoracique / Dos",
+            icon: "🫁",
+            color: "#BF5AF2",
+            sets: "3×10 chaque côté",
+            risk: "SkiErg, Rowing — douleurs cervicales et lombaires",
+            how: "Assis sur talons, mains derrière la tête. Rotation du buste droite puis gauche, bassin fixe.",
+            cue: "Initie le mouvement par la cage thoracique, pas par les épaules",
+          },
+          {
+            name: "Copenhagen Plank",
+            zone: "Adducteurs / Hanche",
+            icon: "🏋️",
+            color: "#FF453A",
+            sets: "3×20–30s chaque côté",
+            risk: "Runs longs — pubalgie, syndrome de l'aine",
+            how: "Planche latérale, pied supérieur posé sur un banc. Le corps forme une ligne droite.",
+            cue: "Progressif : commence genou posé sur banc, puis pied complet",
+          },
+          {
+            name: "Dead Bug",
+            zone: "Core / Stabilisation",
+            icon: "🐛",
+            color: "#eab308",
+            sets: "3×10 reps alternées",
+            risk: "Farmers Carry, Sled — douleurs lombaires",
+            how: "Allongé·e, dos plaqué au sol. Étend bras et jambe opposés simultanément en soufflant.",
+            cue: "Le bas du dos ne doit JAMAIS décoller — c'est le seul critère qui compte",
+          },
+          {
+            name: "Glute Bridge Isométrique",
+            zone: "Fessiers / Ischios",
+            icon: "🍑",
+            color: "#FF9F0A",
+            sets: "3×45s + 10 pulses",
+            risk: "Sled Pull, Rowing — tendinopathie ischios",
+            how: "Allongé, pieds à plat. Pousse les hanches vers le haut, squeeze les fessiers au max. Tiens.",
+            cue: "Pointe les orteils vers le haut pour activer davantage les ischios",
+          },
+        ];
+        const [openIdx, setOpenIdx] = React.useState(null);
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>🛡️ PRÉVENTION BLESSURES</div>
+              <div style={{ fontSize: 10, color: "#8E8E93" }}>8 exercices · Tap pour détails</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {PREHAB.map((ex, i) => {
+                const isOpen = openIdx === i;
+                return (
+                  <div key={i} onClick={() => setOpenIdx(isOpen ? null : i)}
+                    style={{ background: isOpen ? ex.color + "12" : "rgba(255,255,255,0.04)", border: `1px solid ${isOpen ? ex.color : "rgba(255,255,255,0.06)"}`, borderRadius: 10, overflow: "hidden", cursor: "pointer", transition: "all 0.2s" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: ex.color + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{ex.icon}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{ex.name}</div>
+                          <div style={{ fontSize: 10, color: ex.color, fontWeight: 700 }}>{ex.sets}</div>
+                        </div>
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>🎯 {ex.zone}</div>
+                      </div>
+                    </div>
+                    {isOpen && (
+                      <div style={{ padding: "0 12px 12px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ marginTop: 10, fontSize: 12, color: "#ccc", lineHeight: 1.6, marginBottom: 8 }}>{ex.how}</div>
+                        <div style={{ padding: "7px 10px", background: ex.color + "15", borderRadius: 8, marginBottom: 6 }}>
+                          <div style={{ fontSize: 11, color: ex.color }}>⚡ Cue technique : {ex.cue}</div>
+                        </div>
+                        <div style={{ fontSize: 10, color: "#636366" }}>⚠️ Risque ciblé : {ex.risk}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── MUSIC BPM GUIDE ── */}
       {(() => {
         const STATION_BPM = [
