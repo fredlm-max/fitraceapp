@@ -11127,6 +11127,116 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING CALENDAR HEATMAP ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              // Build a map of date → {rpe, count}
+              const dateMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                if (!dateMap[s.date]) dateMap[s.date] = { totalRpe: 0, count: 0 };
+                dateMap[s.date].totalRpe += (s.rpe || 5);
+                dateMap[s.date].count++;
+              });
+
+              // 16 weeks back from today
+              const WEEKS = 16;
+              const now = new Date();
+              const dayOfWeek = now.getDay(); // 0=Sun
+              // Start from the Sunday WEEKS weeks ago
+              const startDate = new Date(now);
+              startDate.setDate(now.getDate() - dayOfWeek - (WEEKS - 1) * 7);
+
+              const days = [];
+              for (let i = 0; i < WEEKS * 7; i++) {
+                const d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
+                const dateStr = d.toISOString().slice(0, 10);
+                const entry = dateMap[dateStr];
+                const avgRpe = entry ? entry.totalRpe / entry.count : 0;
+                days.push({ date: dateStr, avgRpe, hasSession: !!entry, count: entry?.count || 0 });
+              }
+
+              const rpeColor = rpe => {
+                if (rpe === 0) return "#1C1C1E";
+                if (rpe <= 3) return "#1C3A24";
+                if (rpe <= 5) return "#30D158";
+                if (rpe <= 7) return "#FF9F0A";
+                if (rpe <= 9) return "#FF453A";
+                return "#BF5AF2";
+              };
+
+              const CELL = 14, GAP = 2;
+              const W = WEEKS * (CELL + GAP);
+              const H = 7 * (CELL + GAP);
+              const DAY_LABELS = ["D","L","M","M","J","V","S"];
+              const MONTH_LABELS = [];
+              days.forEach((d, i) => {
+                if (i % 7 === 0) {
+                  const month = new Date(d.date + "T12:00:00").toLocaleDateString("fr",{month:"short"});
+                  const lastMonth = MONTH_LABELS[MONTH_LABELS.length - 1];
+                  if (!lastMonth || lastMonth.label !== month) {
+                    MONTH_LABELS.push({ label: month, col: Math.floor(i / 7) });
+                  }
+                }
+              });
+
+              const totalSessions = sessions.length;
+              const activeDays = Object.keys(dateMap).length;
+              const avgRpeAll = sessions.length ? (sessions.reduce((s,e)=>s+(e.rpe||5),0)/sessions.length).toFixed(1) : 0;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Calendrier d'Entraînement</div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>{totalSessions} séances · {activeDays} jours actifs</div>
+                  </div>
+
+                  <div style={{ overflowX:"auto", paddingBottom:4 }}>
+                    <svg width={W + 20} height={H + 28} style={{ display:"block" }}>
+                      {/* Day labels */}
+                      {[0,1,2,3,4,5,6].map(d=>(
+                        <text key={d} x={16} y={d*(CELL+GAP)+CELL/2+3} textAnchor="end" fill="#636366" fontSize={7}>{DAY_LABELS[d]}</text>
+                      ))}
+                      {/* Month labels */}
+                      {MONTH_LABELS.map((m,i)=>(
+                        <text key={i} x={20 + m.col*(CELL+GAP)} y={H+16} fill="#636366" fontSize={7}>{m.label}</text>
+                      ))}
+                      {/* Cells */}
+                      {days.map((d,i) => {
+                        const col = Math.floor(i / 7);
+                        const row = i % 7;
+                        const x = 20 + col * (CELL + GAP);
+                        const y = row * (CELL + GAP);
+                        return (
+                          <rect key={i} x={x} y={y} width={CELL} height={CELL} rx={2}
+                            fill={rpeColor(d.avgRpe)}
+                            opacity={d.hasSession ? 1 : 0.5}
+                          >
+                            <title>{d.date}{d.hasSession ? ` · ${d.count} séance${d.count>1?"s":""} · RPE ${d.avgRpe.toFixed(1)}` : ""}</title>
+                          </rect>
+                        );
+                      })}
+                    </svg>
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display:"flex",gap:6,alignItems:"center",marginTop:4 }}>
+                    <span style={{ fontSize:8,color:"#636366" }}>RPE:</span>
+                    {[[0,"Repos"],[2,"Facile"],[5,"Modéré"],[7,"Dur"],[9,"Max"]].map(([rpe,lbl])=>(
+                      <div key={rpe} style={{ display:"flex",alignItems:"center",gap:3 }}>
+                        <div style={{ width:8,height:8,borderRadius:2,background:rpeColor(rpe) }}/>
+                        <span style={{ fontSize:7,color:"#636366" }}>{lbl}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginLeft:"auto",fontSize:8,color:"#8E8E93" }}>RPE moy: <span style={{ color:"var(--yellow)",fontWeight:700 }}>{avgRpeAll}</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── BENCHMARK TEST TRACKER ── */}
             {(() => {
               const benchKey = `fitrace_benchmarks_${profile.name}`;
