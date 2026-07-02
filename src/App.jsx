@@ -6557,6 +6557,99 @@ JSON:
               );
             })()}
 
+            {/* ── HEAT & WEATHER TRAINING ADVISOR ── */}
+            {(() => {
+              const [temp, setTemp] = React.useState(20);
+              const [humidity, setHumidity] = React.useState(50);
+
+              // Heat Index calculation (simplified)
+              const heatIndex = temp > 27 ? Math.round(temp + 0.33 * (humidity / 100 * 6.105 * Math.exp(17.27 * temp / (237.7 + temp))) - 4) : temp;
+
+              const getCondition = (hi, t) => {
+                if (t < 0) return { label: "Gel", color: "#5AC8FA", emoji: "🥶", risk: "Très faible" };
+                if (t < 5) return { label: "Froid intense", color: "#007AFF", emoji: "❄️", risk: "Faible" };
+                if (t < 15) return { label: "Frais", color: "#30D158", emoji: "🌤", risk: "Optimal" };
+                if (t < 22) return { label: "Idéal", color: "#30D158", emoji: "☀️", risk: "Optimal" };
+                if (hi < 27) return { label: "Chaud", color: "#FF9F0A", emoji: "🌡", risk: "Modéré" };
+                if (hi < 32) return { label: "Très chaud", color: "#FF6B35", emoji: "🔥", risk: "Élevé" };
+                return { label: "Dangereux", color: "#FF453A", emoji: "🚨", risk: "Critique" };
+              };
+
+              const cond = getCondition(heatIndex, temp);
+
+              // Performance impact
+              const perfImpact = temp < 10 ? "+2-5% performance possible"
+                : temp < 22 ? "Conditions optimales de performance"
+                : temp < 28 ? "-2-4% performance (chaleur modérée)"
+                : temp < 33 ? "-5-8% performance (chaleur élevée)"
+                : "-10%+ performance (chaleur extrême)";
+
+              const TIPS = {
+                gel: ["Couches thermiques superposées", "Couvrir extrémités (gants, bonnet)", "Échauffement 15min avant sortie", "Raccourcir la sortie si vent fort"],
+                froid: ["1-2 couches techniques respirantes", "Réduire l'allure de départ (-10%)", "Hydratation même sans soif", "Protéger oreilles et mains"],
+                optimal: ["Conditions parfaites — poussez fort !", "Hydratation normale (400-600ml/h)", "Allure race possible en entraînement", "Profitez de la météo favorable"],
+                chaud: ["Démarrer 30% plus lentement", "Eau toutes les 15-20min", "Vêtements clairs et respirants", "S'acclimater 10-14 jours progressivement", "Éviter 11h-16h en plein été"],
+                dangereux: ["NE PAS s'entraîner dehors !", "Salle de sport ou tapis de course", "Si obligatoire : réduire de 50% et durée max 30min", "Signes danger : arrêter si vertiges/nausées"],
+              };
+
+              const getTipsKey = (t, hi) => t < 0 ? "gel" : t < 10 ? "froid" : t < 22 ? "optimal" : hi < 30 ? "chaud" : "dangereux";
+              const tipsKey = getTipsKey(temp, heatIndex);
+
+              // Pace adjustment
+              const paceAdj = temp < 5 ? "-3%" : temp < 15 ? "0%" : temp < 22 ? "0%" : temp < 28 ? "+5-8%" : temp < 33 ? "+10-15%" : "+20%+";
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Conseiller Météo & Chaleur</div>
+
+                  {/* Sliders */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: "#8E8E93" }}>Température extérieure</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: cond.color }}>{temp}°C {cond.emoji}</span>
+                    </div>
+                    <input type="range" min="-10" max="45" step="1" value={temp} onChange={e => setTemp(parseInt(e.target.value))} style={{ width: "100%", accentColor: cond.color, marginBottom: 8 }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: "#8E8E93" }}>Humidité</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#8E8E93" }}>{humidity}%</span>
+                    </div>
+                    <input type="range" min="10" max="100" step="5" value={humidity} onChange={e => setHumidity(parseInt(e.target.value))} style={{ width: "100%", accentColor: "#007AFF" }} />
+                  </div>
+
+                  {/* Condition card */}
+                  <div style={{ background: `${cond.color}12`, border: `1px solid ${cond.color}30`, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: cond.color }}>{cond.emoji} {cond.label}</div>
+                      <div style={{ fontSize: 10, color: cond.color, fontWeight: 700 }}>Risque {cond.risk}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[
+                        { label: "Indice chaleur", val: `${heatIndex}°C`, color: cond.color },
+                        { label: "Impact perf.", val: perfImpact.split(" ")[0], color: temp < 22 ? "#30D158" : "#FF9F0A" },
+                        { label: "Ajust. allure", val: paceAdj, color: paceAdj === "0%" ? "#30D158" : "#FF9F0A" },
+                      ].map(m => (
+                        <div key={m.label} style={{ flex: 1, textAlign: "center" }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: m.color }}>{m.val}</div>
+                          <div style={{ fontSize: 8, color: "#636366" }}>{m.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tips */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 5, textTransform: "uppercase" }}>Recommandations</div>
+                    {TIPS[tipsKey].map((tip, i) => (
+                      <div key={i} style={{ display: "flex", gap: 6, marginBottom: 3 }}>
+                        <span style={{ color: cond.color, fontSize: 10 }}>→</span>
+                        <span style={{ fontSize: 10, color: "var(--fg)" }}>{tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── SEASONAL TRAINING ADVISOR ── */}
             {(() => {
               const month = new Date().getMonth(); // 0-11
@@ -7147,6 +7240,86 @@ JSON:
                       </div>
                     );
                   })}
+                </div>
+              );
+            })()}
+
+            {/* ── TRAINING HIGHLIGHT REEL ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length === 0) return null;
+
+              const now = new Date();
+              const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)); weekStart.setHours(0,0,0,0);
+              const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+              const thisWeek = sessions.filter(s => new Date(s.date) >= weekStart);
+              const thisMonth = sessions.filter(s => new Date(s.date) >= monthStart);
+
+              const weekKm = thisWeek.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0);
+              const weekMin = thisWeek.reduce((s, x) => s + (x.duree || 0), 0);
+              const weekLoad = thisWeek.reduce((s, x) => s + (x.duree || 0) * ((x.rpe || 5) / 10), 0);
+              const monthKm = thisMonth.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0);
+              const monthSessions = thisMonth.length;
+
+              // Best session this week
+              const bestSession = thisWeek.length > 0
+                ? thisWeek.reduce((best, s) => ((s.rpe || 0) * (s.duree || 0)) > ((best.rpe || 0) * (best.duree || 0)) ? s : best)
+                : null;
+
+              // Longest run this month
+              const longestRun = thisMonth.filter(s => s.type === "Course" && s.distance).sort((a, b) => b.distance - a.distance)[0] || null;
+
+              // Highest RPE session
+              const hardestSession = thisMonth.length > 0
+                ? thisMonth.reduce((best, s) => (s.rpe || 0) > (best.rpe || 0) ? s : best)
+                : null;
+
+              const HIGHLIGHTS = [
+                thisWeek.length > 0 && { emoji: "🔥", label: "Séances cette semaine", value: thisWeek.length, sub: `${Math.round(weekKm * 10) / 10}km · ${Math.floor(weekMin / 60)}h${weekMin % 60}min`, color: "#FF9F0A" },
+                monthKm > 0 && { emoji: "🗺️", label: "Km ce mois", value: `${Math.round(monthKm)}km`, sub: `${monthSessions} séances`, color: "#007AFF" },
+                longestRun && { emoji: "🏃", label: "Sortie longue du mois", value: `${longestRun.distance}km`, sub: `${longestRun.date} · ${longestRun.type}`, color: "#30D158" },
+                hardestSession && { emoji: "💪", label: "Séance la plus dure", value: `RPE ${hardestSession.rpe}/10`, sub: `${hardestSession.type} · ${hardestSession.date}`, color: "#FF453A" },
+                weekLoad > 0 && { emoji: "⚡", label: "Charge hebdo (TRIMP)", value: Math.round(weekLoad), sub: "Durée × RPE/10", color: "#BF5AF2" },
+              ].filter(Boolean);
+
+              const QUOTES = [
+                "La régularité bat l'intensité sur le long terme.",
+                "Chaque séance est un investissement pour ta prochaine course.",
+                "Les champions s'entraînent même quand ils n'en ont pas envie.",
+                "Le corps s'adapte à ce qu'on lui demande. Demande-lui beaucoup.",
+                "Une semaine complète vaut mieux qu'une séance parfaite.",
+              ];
+              const quote = QUOTES[thisWeek.length % QUOTES.length];
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Highlights d'Entraînement</div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+                    {HIGHLIGHTS.slice(0, 4).map((h, i) => (
+                      <div key={i} style={{ background: `${h.color}10`, border: `1px solid ${h.color}25`, borderRadius: 10, padding: "10px 10px" }}>
+                        <div style={{ fontSize: 16, marginBottom: 2 }}>{h.emoji}</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: h.color }}>{h.value}</div>
+                        <div style={{ fontSize: 9, color: "#636366", marginTop: 1 }}>{h.sub}</div>
+                        <div style={{ fontSize: 8, color: "#3A3A3C", textTransform: "uppercase", marginTop: 2 }}>{h.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {HIGHLIGHTS[4] && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: `${HIGHLIGHTS[4].color}10`, borderRadius: 10, padding: "8px 12px", marginBottom: 10 }}>
+                      <span style={{ fontSize: 18 }}>{HIGHLIGHTS[4].emoji}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: HIGHLIGHTS[4].color }}>{HIGHLIGHTS[4].value}</div>
+                        <div style={{ fontSize: 9, color: "#636366" }}>{HIGHLIGHTS[4].label} · {HIGHLIGHTS[4].sub}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ background: "#C9A84015", borderRadius: 10, padding: "8px 12px", borderLeft: "3px solid var(--yellow)" }}>
+                    <div style={{ fontSize: 10, color: "var(--yellow)", fontStyle: "italic" }}>"{quote}"</div>
+                  </div>
                 </div>
               );
             })()}
@@ -20245,6 +20418,120 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── PERIODIZATION MACRO PLANNER ── */}
+      {(() => {
+        const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+        const weeksToRace = raceDate ? Math.max(1, Math.ceil((raceDate - new Date()) / (7 * 86400000))) : 16;
+
+        // Macro-cycle phases based on weeks to race
+        const buildPhases = (totalWeeks) => {
+          if (totalWeeks <= 4) return [
+            { name: "Affûtage", weeks: Math.max(1, totalWeeks - 1), color: "#BF5AF2", icon: "⚡", focus: "Réduction volume, maintien intensité, récupération maximale", volume: 60, intensity: 85 },
+            { name: "Compétition", weeks: 1, color: "#C9A840", icon: "🏁", focus: "Race day ! Exécution du plan de course", volume: 20, intensity: 100 },
+          ];
+          if (totalWeeks <= 8) return [
+            { name: "Spécifique", weeks: totalWeeks - 3, color: "#FF6B35", icon: "🎯", focus: "Entraînements HYROX spécifiques, simulation de course", volume: 90, intensity: 80 },
+            { name: "Affûtage", weeks: 2, color: "#BF5AF2", icon: "⚡", focus: "Réduction progressive du volume", volume: 60, intensity: 85 },
+            { name: "Compétition", weeks: 1, color: "#C9A840", icon: "🏁", focus: "Race day !", volume: 20, intensity: 100 },
+          ];
+          // > 8 weeks : full periodization
+          const baseW = Math.round(totalWeeks * 0.35);
+          const devW = Math.round(totalWeeks * 0.30);
+          const specW = Math.round(totalWeeks * 0.22);
+          const taperW = Math.max(2, totalWeeks - baseW - devW - specW - 1);
+          return [
+            { name: "Base aérobie", weeks: baseW, color: "#007AFF", icon: "🏃", focus: "Volume élevé, intensité faible (Z1-Z2), foncier cardio", volume: 100, intensity: 60 },
+            { name: "Développement", weeks: devW, color: "#30D158", icon: "💪", focus: "Force fonctionnelle, tempo runs, stations HYROX", volume: 90, intensity: 75 },
+            { name: "Spécifique", weeks: specW, color: "#FF6B35", icon: "🎯", focus: "Simulations HYROX, intensité haute, volume modéré", volume: 80, intensity: 88 },
+            { name: "Affûtage", weeks: taperW, color: "#BF5AF2", icon: "⚡", focus: "Réduction volume -40%, maintien intensité, récup maximale", volume: 60, intensity: 85 },
+            { name: "Compétition", weeks: 1, color: "#C9A840", icon: "🏁", focus: "Race day ! Exécution plan de course HYROX", volume: 20, intensity: 100 },
+          ];
+        };
+
+        const phases = buildPhases(weeksToRace);
+        const totalW = phases.reduce((s, p) => s + p.weeks, 0);
+
+        // Current week position
+        const now = new Date();
+        const weeksPassed = raceDate ? Math.max(0, weeksToRace - Math.ceil((raceDate - now) / (7 * 86400000))) : 0;
+        let cumW = 0;
+        let currentPhaseIdx = 0;
+        for (let i = 0; i < phases.length; i++) {
+          cumW += phases[i].weeks;
+          if (weeksPassed < cumW) { currentPhaseIdx = i; break; }
+          if (i === phases.length - 1) currentPhaseIdx = i;
+        }
+
+        const currentPhase = phases[currentPhaseIdx];
+
+        const FOCUS_TIPS = {
+          "Base aérobie": ["80% des séances en Z1-Z2", "Sortie longue 1x/semaine", "Pas de séance HYROX complète encore", "Construire le volume progressivement"],
+          "Développement": ["Ajouter 1-2 séances de force/semaine", "Tempo runs 20-40min à allure Z3", "Introduire les stations HYROX séparément", "VMA 1x/semaine (intervalles courts)"],
+          "Spécifique": ["Simulation HYROX 1x tous les 10 jours", "Course à allure objectif race", "Toutes les stations en condition", "Réduire les séances légères à 1/semaine"],
+          "Affûtage": ["Volume -40% mais même fréquence", "Garder 1 séance intense/semaine", "Sommeil et nutrition prioritaires", "Répétitions mentales de la course"],
+          "Compétition": ["Échauffement 15min avant départ", "Exécuter le plan de split", "Stations : rythme régulier > sprint", "Hydratation aux transitions"],
+        };
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Planification Macro-Cycle</div>
+              <div style={{ fontSize: 10, color: "#8E8E93" }}>{weeksToRace} semaines</div>
+            </div>
+            {raceDate && <div style={{ fontSize: 10, color: "#636366", marginBottom: 12 }}>Course : {raceDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>}
+
+            {/* Current phase highlight */}
+            <div style={{ background: `${currentPhase.color}15`, border: `1px solid ${currentPhase.color}40`, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 20 }}>{currentPhase.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: currentPhase.color }}>Phase actuelle : {currentPhase.name}</div>
+                  <div style={{ fontSize: 10, color: "#8E8E93" }}>{currentPhase.weeks} semaine{currentPhase.weeks > 1 ? "s" : ""} · {currentPhase.focus}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[{ label: "Volume", val: currentPhase.volume, color: "#007AFF" }, { label: "Intensité", val: currentPhase.intensity, color: "#FF9F0A" }].map(m => (
+                  <div key={m.label} style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366", marginBottom: 2 }}><span>{m.label}</span><span style={{ color: m.color }}>{m.val}%</span></div>
+                    <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2 }}><div style={{ height: "100%", width: `${m.val}%`, background: m.color, borderRadius: 2 }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div style={{ display: "flex", gap: 3, marginBottom: 12, alignItems: "stretch" }}>
+              {phases.map((p, i) => {
+                const widthPct = (p.weeks / totalW) * 100;
+                const isCurrent = i === currentPhaseIdx;
+                return (
+                  <div key={i} style={{ flex: p.weeks, background: isCurrent ? p.color : `${p.color}30`, borderRadius: 6, padding: "6px 4px", textAlign: "center", border: isCurrent ? `2px solid ${p.color}` : "none", minWidth: 30 }}>
+                    <div style={{ fontSize: 11 }}>{p.icon}</div>
+                    <div style={{ fontSize: 7, color: isCurrent ? "#fff" : p.color, fontWeight: isCurrent ? 800 : 400 }}>{p.name}</div>
+                    <div style={{ fontSize: 7, color: isCurrent ? "rgba(255,255,255,0.7)" : "#636366" }}>S{p.weeks}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tips for current phase */}
+            {FOCUS_TIPS[currentPhase.name] && (
+              <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                <div style={{ fontSize: 9, color: "#636366", marginBottom: 5, textTransform: "uppercase" }}>Focus {currentPhase.name}</div>
+                {FOCUS_TIPS[currentPhase.name].map((tip, i) => (
+                  <div key={i} style={{ display: "flex", gap: 6, marginBottom: 3 }}>
+                    <span style={{ color: currentPhase.color, fontSize: 10 }}>→</span>
+                    <span style={{ fontSize: 10, color: "var(--fg)" }}>{tip}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!raceDate && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Ajoutez votre date de course dans le profil pour personnaliser la planification</div>}
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
@@ -21789,6 +22076,91 @@ JSON: {
                     )}
                   </div>
                 ))}
+              </div>
+            );
+          })()}
+
+          {/* ── NUTRITION HISTORY ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 70;
+            const goal = profile.objectif || "performance";
+            const TARGET = goal === "perte de poids"
+              ? { p: Math.round(poids * 2.2), c: Math.round(poids * 3), f: Math.round(poids * 0.9) }
+              : { p: Math.round(poids * 2.0), c: Math.round(poids * 5), f: Math.round(poids * 1.2) };
+            TARGET.kcal = TARGET.p * 4 + TARGET.c * 4 + TARGET.f * 9;
+
+            // Load last 7 days of macro data
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date(); d.setDate(d.getDate() - i);
+              const dateStr = d.toISOString().slice(0, 10);
+              const logKey = `fitrace_macros_${profile.name}_${dateStr}`;
+              const entries = (() => { try { return JSON.parse(localStorage.getItem(logKey) || "[]"); } catch { return []; } })();
+              const totals = entries.reduce((s, e) => ({ p: s.p + e.p, c: s.c + e.c, f: s.f + e.f, kcal: s.kcal + e.kcal }), { p: 0, c: 0, f: 0, kcal: 0 });
+              days.push({ date: dateStr, label: d.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3), ...totals, logged: entries.length > 0 });
+            }
+
+            const loggedDays = days.filter(d => d.logged);
+            if (loggedDays.length < 2) return null;
+
+            const avgKcal = Math.round(loggedDays.reduce((s, d) => s + d.kcal, 0) / loggedDays.length);
+            const avgP = Math.round(loggedDays.reduce((s, d) => s + d.p, 0) / loggedDays.length);
+            const maxKcal = Math.max(...days.map(d => d.kcal), TARGET.kcal);
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Historique Nutrition · 7j</div>
+                  <div style={{ fontSize: 10, color: "#8E8E93" }}>Moy. {avgKcal} kcal · {avgP}g prot</div>
+                </div>
+
+                {/* Bar chart */}
+                <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 70, marginBottom: 6 }}>
+                  {days.map((d, i) => {
+                    const pct = d.kcal > 0 ? (d.kcal / maxKcal) * 60 : 0;
+                    const targetPct = (TARGET.kcal / maxKcal) * 60;
+                    const color = !d.logged ? "#2C2C2E" : d.kcal > TARGET.kcal * 1.1 ? "#FF453A" : d.kcal < TARGET.kcal * 0.85 ? "#007AFF" : "#30D158";
+                    return (
+                      <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                        {d.logged && <div style={{ fontSize: 7, color, fontWeight: 700 }}>{Math.round(d.kcal / 100) * 100}</div>}
+                        <div style={{ width: "100%", position: "relative" }}>
+                          <div style={{ width: "100%", height: `${pct || 4}px`, background: color, borderRadius: "3px 3px 0 0", opacity: d.logged ? 1 : 0.3 }} />
+                          {/* Target line */}
+                          <div style={{ position: "absolute", bottom: `${targetPct}px`, left: 0, right: 0, height: 1, background: "#C9A840", opacity: 0.5 }} />
+                        </div>
+                        <div style={{ fontSize: 7, color: i === 6 ? "var(--yellow)" : "#636366", fontWeight: i === 6 ? 700 : 400 }}>{d.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Target line legend */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
+                  <div style={{ width: 12, height: 1, background: "#C9A840" }} />
+                  <span style={{ fontSize: 8, color: "#636366" }}>Objectif {TARGET.kcal} kcal</span>
+                  <div style={{ width: 8, height: 8, background: "#30D158", borderRadius: 2, marginLeft: 8 }} /><span style={{ fontSize: 8, color: "#636366" }}>Atteint</span>
+                  <div style={{ width: 8, height: 8, background: "#FF453A", borderRadius: 2 }} /><span style={{ fontSize: 8, color: "#636366" }}>Excès</span>
+                  <div style={{ width: 8, height: 8, background: "#007AFF", borderRadius: 2 }} /><span style={{ fontSize: 8, color: "#636366" }}>Déficit</span>
+                </div>
+
+                {/* Weekly averages */}
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { label: "Kcal moy.", val: avgKcal, target: TARGET.kcal, color: "#FF9F0A" },
+                    { label: "Protéines", val: avgP, target: TARGET.p, color: "#FF453A" },
+                    { label: "Jours loggés", val: loggedDays.length, target: 7, color: "#30D158" },
+                  ].map(m => {
+                    const pct = Math.min(100, Math.round((m.val / m.target) * 100));
+                    return (
+                      <div key={m.label} style={{ flex: 1, background: `${m.color}10`, borderRadius: 8, padding: "6px 6px" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: m.color }}>{m.val}</div>
+                        <div style={{ fontSize: 7, color: "#636366" }}>/ {m.target} · {pct}%</div>
+                        <div style={{ height: 3, background: "#2C2C2E", borderRadius: 2, marginTop: 4 }}><div style={{ height: "100%", width: `${pct}%`, background: m.color, borderRadius: 2 }} /></div>
+                        <div style={{ fontSize: 7, color: "#3A3A3C", textTransform: "uppercase", marginTop: 2 }}>{m.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })()}
