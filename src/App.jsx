@@ -21872,6 +21872,153 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── MENTAL PERFORMANCE JOURNAL ── */}
+      {(() => {
+        const KEY = `fitrace_mental_${profile.name}`;
+        const todayStr = new Date().toISOString().slice(0,10);
+        const [entries, setEntries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [showLog, setShowLog] = React.useState(false);
+        const [form, setForm] = React.useState({ confidence:5, focus:5, motivation:5, reflection:"", phase:"pre" });
+
+        const PROMPTS = [
+          "Quel est mon objectif principal pour cette séance ?",
+          "Qu'est-ce qui pourrait me freiner aujourd'hui ?",
+          "Comment j'ai géré la pression lors de ma dernière compétition ?",
+          "Quelle technique vais-je améliorer aujourd'hui ?",
+          "Mon mot-clé de motivation pour cette séance est...",
+          "Ce que je veux ressentir à la fin de cet entraînement...",
+        ];
+        const [promptIdx] = React.useState(Math.floor(Math.random() * PROMPTS.length));
+
+        const save = () => {
+          const entry = { id:Date.now(), date:todayStr, ...form };
+          const next = [entry, ...entries].slice(0, 60);
+          setEntries(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowLog(false);
+          setForm({ confidence:5, focus:5, motivation:5, reflection:"", phase:"pre" });
+        };
+
+        const last7 = entries.slice(0, 7);
+        const avgConf = last7.length ? (last7.reduce((s,e)=>s+e.confidence,0)/last7.length).toFixed(1) : null;
+        const avgFocus = last7.length ? (last7.reduce((s,e)=>s+e.focus,0)/last7.length).toFixed(1) : null;
+        const avgMot = last7.length ? (last7.reduce((s,e)=>s+e.motivation,0)/last7.length).toFixed(1) : null;
+
+        const ScoreRow = ({ label, val, set, color }) => (
+          <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+            <div style={{ fontSize:10,color:"#8E8E93",width:80 }}>{label}</div>
+            <div style={{ display:"flex",gap:3 }}>
+              {[1,2,3,4,5,6,7,8,9,10].map(n=>(
+                <button key={n} onClick={()=>set(n)}
+                  style={{ width:20,height:20,borderRadius:3,border:"none",background:val>=n?color:"#2C2C2E",cursor:"pointer",transition:"background 0.15s" }}/>
+              ))}
+            </div>
+            <span style={{ fontSize:12,fontWeight:800,color,minWidth:16 }}>{val}</span>
+          </div>
+        );
+
+        // Sparkline for last 14 entries
+        const spark = entries.slice(0,14).reverse();
+        const W=300, H=50;
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Journal Mental 🧠</div>
+              <button onClick={()=>setShowLog(f=>!f)} style={{ background:"var(--bg3)",color:"#BF5AF2",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                {showLog?"Annuler":"+ Log mental"}
+              </button>
+            </div>
+
+            {/* Averages */}
+            {last7.length > 0 && !showLog && (
+              <>
+                <div style={{ display:"flex",gap:6,marginBottom:10 }}>
+                  {[
+                    { label:"Confiance", val:avgConf, color:"#007AFF" },
+                    { label:"Focus",     val:avgFocus, color:"#30D158" },
+                    { label:"Motivation",val:avgMot,   color:"#FF9F0A" },
+                  ].map(s=>(
+                    <div key={s.label} style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                      <div style={{ fontSize:18,fontWeight:900,color:s.color }}>{s.val}</div>
+                      <div style={{ fontSize:7,color:"#636366" }}>{s.label}</div>
+                      <div style={{ fontSize:7,color:"#636366" }}>/ 10 (7j)</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Trend sparklines */}
+                {spark.length >= 3 && (
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ marginBottom:8 }}>
+                    {[
+                      { key:"confidence", color:"#007AFF" },
+                      { key:"focus",      color:"#30D158" },
+                      { key:"motivation", color:"#FF9F0A" },
+                    ].map(series=>{
+                      const pts = spark.map((e,i)=>{
+                        const x = (i/(spark.length-1))*W;
+                        const y = H - (e[series.key]/10)*H;
+                        return `${x},${y}`;
+                      }).join(" ");
+                      return <polyline key={series.key} points={pts} fill="none" stroke={series.color} strokeWidth={1.5} opacity={0.8} strokeLinejoin="round"/>;
+                    })}
+                  </svg>
+                )}
+              </>
+            )}
+
+            {/* Log form */}
+            {showLog && (
+              <div>
+                {/* Phase */}
+                <div style={{ display:"flex",gap:6,marginBottom:10 }}>
+                  {["pre","post"].map(p=>(
+                    <button key={p} onClick={()=>setForm(f=>({...f,phase:p}))}
+                      style={{ flex:1,background:form.phase===p?"#BF5AF230":"var(--bg3)",color:form.phase===p?"#BF5AF2":"#636366",border:`1px solid ${form.phase===p?"#BF5AF2":"transparent"}`,borderRadius:8,padding:"5px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                      {p==="pre"?"Pré-entraînement":"Post-entraînement"}
+                    </button>
+                  ))}
+                </div>
+
+                <ScoreRow label="Confiance" val={form.confidence} set={v=>setForm(f=>({...f,confidence:v}))} color="#007AFF"/>
+                <ScoreRow label="Focus" val={form.focus} set={v=>setForm(f=>({...f,focus:v}))} color="#30D158"/>
+                <ScoreRow label="Motivation" val={form.motivation} set={v=>setForm(f=>({...f,motivation:v}))} color="#FF9F0A"/>
+
+                {/* Prompt */}
+                <div style={{ background:"var(--bg3)",borderRadius:10,padding:"8px 10px",marginBottom:6 }}>
+                  <div style={{ fontSize:8,color:"#BF5AF2",fontWeight:700,marginBottom:4 }}>PROMPT DU JOUR</div>
+                  <div style={{ fontSize:10,color:"#8E8E93",fontStyle:"italic",marginBottom:6 }}>"{PROMPTS[promptIdx]}"</div>
+                  <textarea value={form.reflection} onChange={e=>setForm(f=>({...f,reflection:e.target.value}))}
+                    placeholder="Ta réflexion..."
+                    style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 8px",color:"var(--white)",fontSize:11,resize:"none",height:60,boxSizing:"border-box" }}/>
+                </div>
+
+                <button onClick={save} style={{ width:"100%",background:"#BF5AF2",color:"#fff",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                  Enregistrer
+                </button>
+              </div>
+            )}
+
+            {/* Recent entries */}
+            {!showLog && entries.slice(0,3).map(e=>(
+              <div key={e.id} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:8,padding:"6px 10px",marginBottom:3 }}>
+                <div style={{ fontSize:9,color:"#636366",width:50 }}>{e.date.slice(5)} {e.phase==="pre"?"🌅":"🌙"}</div>
+                <div style={{ display:"flex",gap:8,flex:1 }}>
+                  <span style={{ fontSize:9,color:"#007AFF" }}>C:{e.confidence}</span>
+                  <span style={{ fontSize:9,color:"#30D158" }}>F:{e.focus}</span>
+                  <span style={{ fontSize:9,color:"#FF9F0A" }}>M:{e.motivation}</span>
+                </div>
+                {e.reflection && <div style={{ fontSize:8,color:"#636366",flex:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{e.reflection}</div>}
+              </div>
+            ))}
+
+            {entries.length === 0 && !showLog && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"12px 0" }}>Log ton état mental avant chaque séance →</div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── MOVEMENT QUALITY CHECKLIST ── */}
       {(() => {
         const checkKey = `fitrace_movement_${profile.name}`;
