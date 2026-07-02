@@ -16705,6 +16705,84 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         </div>
       </div>
 
+      {/* ── EQUIPMENT TRACKER ── */}
+      {(() => {
+        const gearKey = `fitrace_gear_${profile.name}`;
+        const [gear, setGear] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(gearKey) || "[]"); } catch { return []; }
+        });
+        const [showForm, setShowForm] = React.useState(false);
+        const [form, setForm] = React.useState({ name: "", type: "Chaussures", km: "0", maxKm: "800", date: new Date().toISOString().slice(0,10) });
+
+        const TYPES = ["Chaussures", "Chaussures race", "Chaussures trail", "Vêtements", "Ceinture FC", "Autre"];
+
+        const save = (g) => { setGear(g); localStorage.setItem(gearKey, JSON.stringify(g)); };
+        const addGear = () => {
+          if (!form.name) return;
+          save([...gear, { id: Date.now(), ...form, km: parseFloat(form.km)||0, maxKm: parseFloat(form.maxKm)||800 }]);
+          setShowForm(false); setForm({ name: "", type: "Chaussures", km: "0", maxKm: "800", date: new Date().toISOString().slice(0,10) });
+        };
+        const addKm = (id, km) => save(gear.map(g => g.id === id ? { ...g, km: Math.round((g.km + km) * 10) / 10 } : g));
+        const deleteGear = (id) => save(gear.filter(g => g.id !== id));
+
+        const sessions = profile.sessions || [];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, margin: "0 16px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Équipement</div>
+              <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Ajouter</button>
+            </div>
+
+            {showForm && (
+              <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                <input placeholder="Nom (ex: Nike Vaporfly Next%)" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "7px 8px", color: "var(--fg)", fontSize: 12, marginBottom: 6, boxSizing: "border-box" }} />
+                <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                  <select value={form.type} onChange={e => setForm(f => ({...f, type: e.target.value}))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 6px", color: "var(--fg)", fontSize: 12 }}>
+                    {TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                  <input type="number" placeholder="Km actuels" value={form.km} onChange={e => setForm(f => ({...f, km: e.target.value}))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 6px", color: "var(--fg)", fontSize: 12 }} />
+                  <input type="number" placeholder="Km max" value={form.maxKm} onChange={e => setForm(f => ({...f, maxKm: e.target.value}))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 6px", color: "var(--fg)", fontSize: 12 }} />
+                </div>
+                <button onClick={addGear} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "8px 0", fontWeight: 800, cursor: "pointer" }}>Ajouter</button>
+              </div>
+            )}
+
+            {gear.length === 0 && !showForm && (
+              <div style={{ textAlign: "center", color: "#636366", fontSize: 11, padding: "12px 0" }}>Aucun équipement enregistré</div>
+            )}
+
+            {gear.map(g => {
+              const pct = Math.min(100, Math.round((g.km / g.maxKm) * 100));
+              const color = pct >= 90 ? "#FF453A" : pct >= 70 ? "#FF9F0A" : "#30D158";
+              return (
+                <div key={g.id} style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)" }}>👟 {g.name}</div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>{g.type} · Depuis {g.date}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color }}>{Math.round(g.km)}<span style={{ fontSize: 9, fontWeight: 400 }}>/{g.maxKm}km</span></div>
+                      <button onClick={() => deleteGear(g.id)} style={{ background: "none", border: "none", color: "#FF453A", cursor: "pointer", fontSize: 11, padding: 0 }}>✕</button>
+                    </div>
+                  </div>
+                  <div style={{ height: 6, background: "#2C2C2E", borderRadius: 3, marginBottom: 6 }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.4s" }} />
+                  </div>
+                  {pct >= 90 && <div style={{ fontSize: 9, color: "#FF453A", marginBottom: 6 }}>⚠️ Remplacement recommandé ({g.maxKm - Math.round(g.km)}km restants)</div>}
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[5, 10, 20].map(km => (
+                      <button key={km} onClick={() => addKm(g.id, km)} style={{ flex: 1, background: "#2C2C2E", border: "none", borderRadius: 6, padding: "4px 0", color: "#8E8E93", fontSize: 10, cursor: "pointer" }}>+{km}km</button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── VO2MAX ESTIMATOR ── */}
       {(() => {
         const age = parseInt(profile.age) || 30;
