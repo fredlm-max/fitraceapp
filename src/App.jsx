@@ -13000,6 +13000,125 @@ JSON:
               );
             })()}
 
+            {/* ── INJURY & PAIN LOG ── */}
+            {(() => {
+              const KEY = `fitrace_injuries_${profile.name}`;
+              const [injuries, setInjuries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ zone:"", severity:3, date: new Date().toISOString().slice(0,10), note:"" });
+
+              const ZONES = ["Genou G","Genou D","Hanche G","Hanche D","Bas du dos","Épaule G","Épaule D","Mollet G","Mollet D","Cheville G","Cheville D","Poignet G","Poignet D","Cou","Autre"];
+              const SEVERITY = [
+                { val:1, label:"Gêne légère", color:"#30D158" },
+                { val:2, label:"Douleur modérée", color:"#FF9F0A" },
+                { val:3, label:"Douleur forte", color:"#FF453A" },
+                { val:4, label:"Incapacitant", color:"#BF5AF2" },
+              ];
+
+              const addInjury = () => {
+                if (!form.zone) return;
+                const next = [{ id: Date.now(), ...form, status:"active" }, ...injuries];
+                setInjuries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setShowForm(false);
+                setForm({ zone:"", severity:3, date: new Date().toISOString().slice(0,10), note:"" });
+              };
+
+              const toggleStatus = (id) => {
+                const next = injuries.map(inj => inj.id === id ? { ...inj, status: inj.status==="active"?"recovered":"active" } : inj);
+                setInjuries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+              };
+
+              const removeInj = (id) => {
+                const next = injuries.filter(i=>i.id!==id);
+                setInjuries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+              };
+
+              const active = injuries.filter(i=>i.status==="active");
+              const recovered = injuries.filter(i=>i.status==="recovered");
+
+              const sevColor = v => SEVERITY.find(s=>s.val===v)?.color || "#636366";
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Journal Blessures / Douleurs</div>
+                    <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"#FF453A",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                      {showForm?"Annuler":"+ Ajouter"}
+                    </button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                      <select value={form.zone} onChange={e=>setForm(f=>({...f,zone:e.target.value}))}
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 10px",color:"var(--white)",fontSize:12,marginBottom:8 }}>
+                        <option value="">Sélectionner zone...</option>
+                        {ZONES.map(z=><option key={z} value={z}>{z}</option>)}
+                      </select>
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:9,color:"#8E8E93",marginBottom:4 }}>Sévérité:</div>
+                        <div style={{ display:"flex",gap:4 }}>
+                          {SEVERITY.map(s=>(
+                            <button key={s.val} onClick={()=>setForm(f=>({...f,severity:s.val}))}
+                              style={{ flex:1,background:form.severity===s.val?s.color:"#2C2C2E",color:form.severity===s.val?"#000":"#8E8E93",border:"none",borderRadius:6,padding:"5px 4px",fontSize:9,fontWeight:700,cursor:"pointer" }}>
+                              {s.val}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ fontSize:9,color:sevColor(form.severity),marginTop:3 }}>{SEVERITY.find(s=>s.val===form.severity)?.label}</div>
+                      </div>
+                      <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,marginBottom:8,boxSizing:"border-box" }}/>
+                      <input type="text" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder="Note (optionnel)"
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,marginBottom:8,boxSizing:"border-box" }}/>
+                      <button onClick={addInjury} style={{ width:"100%",background:"#FF453A",color:"#fff",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  )}
+
+                  {active.length > 0 && (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:8,color:"#FF453A",fontWeight:800,letterSpacing:1,marginBottom:6 }}>EN COURS ({active.length})</div>
+                      {active.map(inj=>(
+                        <div key={inj.id} style={{ display:"flex",alignItems:"center",gap:8,background:"#2C1C1C",borderRadius:10,padding:"8px 10px",marginBottom:4,borderLeft:`3px solid ${sevColor(inj.severity)}` }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                              <span style={{ fontSize:12,fontWeight:700,color:sevColor(inj.severity) }}>{inj.zone}</span>
+                              <span style={{ fontSize:9,background:sevColor(inj.severity)+"30",color:sevColor(inj.severity),borderRadius:4,padding:"1px 5px",fontWeight:700 }}>N°{inj.severity}</span>
+                            </div>
+                            <div style={{ fontSize:9,color:"#636366",marginTop:1 }}>{inj.date}{inj.note?" · "+inj.note:""}</div>
+                          </div>
+                          <button onClick={()=>toggleStatus(inj.id)} style={{ background:"#1C3A24",color:"#30D158",border:"none",borderRadius:6,padding:"4px 8px",fontSize:10,cursor:"pointer" }}>✓ Guéri</button>
+                          <button onClick={()=>removeInj(inj.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {recovered.length > 0 && (
+                    <div>
+                      <div style={{ fontSize:8,color:"#30D158",fontWeight:800,letterSpacing:1,marginBottom:6 }}>GUÉRIS ({recovered.length})</div>
+                      {recovered.slice(0,3).map(inj=>(
+                        <div key={inj.id} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:10,padding:"6px 10px",marginBottom:3,opacity:0.6 }}>
+                          <span style={{ fontSize:11,color:"#8E8E93",flex:1 }}>✅ {inj.zone} <span style={{ color:"#636366" }}>· {inj.date}</span></span>
+                          <button onClick={()=>removeInj(inj.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:12,cursor:"pointer" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {injuries.length === 0 && (
+                    <div style={{ textAlign:"center",color:"#30D158",fontSize:12,padding:"16px 0",fontWeight:700 }}>
+                      Aucune blessure enregistrée ✅
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── MOBILITY PROGRESS TRACKER ── */}
             {(() => {
               const mobKey = `fitrace_mobility_${profile.name}`;
