@@ -10060,6 +10060,125 @@ JSON:
               );
             })()}
 
+            {/* ── PERFORMANCE CHALLENGES ── */}
+            {(() => {
+              const chalKey = `fitrace_challenges_${profile.name}`;
+              const sessions = profile.sessions || [];
+              const [challenges, setChallenges] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(chalKey) || "[]"); } catch { return []; }
+              });
+              const [showAdd, setShowAdd] = React.useState(false);
+              const [form, setForm] = React.useState({ name: "", target: "", unit: "séances", deadline: "", type: "count" });
+
+              // Default challenges from presets
+              const PRESETS = [
+                { name: "100 séances", target: 100, unit: "séances", type: "count", deadline: "" },
+                { name: "50h d'entraînement", target: 3000, unit: "minutes", type: "duration", deadline: "" },
+                { name: "30 jours streak", target: 30, unit: "jours consécutifs", type: "streak", deadline: "" },
+                { name: "Objectif pré-course", target: 60, unit: "séances", type: "count", deadline: profile.raceDate || "" },
+              ];
+
+              const saveChallenges = c => { setChallenges(c); localStorage.setItem(chalKey, JSON.stringify(c)); };
+
+              const getProgress = c => {
+                if (c.type === "count") return sessions.length;
+                if (c.type === "duration") return sessions.reduce((s, x) => s + (x.duree || 0), 0);
+                if (c.type === "streak") {
+                  // max streak
+                  const dates = [...new Set(sessions.map(s => s.date))].sort();
+                  let max = 0, cur = 0, prev = null;
+                  dates.forEach(d => {
+                    const diff = prev ? Math.round((new Date(d) - new Date(prev)) / 86400000) : 1;
+                    cur = diff === 1 ? cur + 1 : 1;
+                    if (cur > max) max = cur;
+                    prev = d;
+                  });
+                  return max;
+                }
+                return 0;
+              };
+
+              const addChallenge = (preset) => {
+                const c = preset || { ...form, id: Date.now(), target: parseFloat(form.target), createdAt: new Date().toISOString() };
+                if (!c.id) c.id = Date.now();
+                if (!c.createdAt) c.createdAt = new Date().toISOString();
+                saveChallenges([...challenges, c]);
+                setShowAdd(false);
+                setForm({ name: "", target: "", unit: "séances", deadline: "", type: "count" });
+              };
+
+              const removeChallenge = id => saveChallenges(challenges.filter(c => c.id !== id));
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🎯 CHALLENGES PERSO</div>
+                    <button onClick={() => setShowAdd(s => !s)} style={{ background: showAdd ? "#636366" : "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {showAdd ? "Annuler" : "+ Ajouter"}
+                    </button>
+                  </div>
+
+                  {showAdd && (
+                    <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 8 }}>Défis prédéfinis :</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                        {PRESETS.map(p => (
+                          <button key={p.name} onClick={() => addChallenge({ ...p, id: Date.now(), createdAt: new Date().toISOString() })} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "5px 10px", color: "var(--white)", fontSize: 11, cursor: "pointer" }}>
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 6 }}>Ou personnalisé :</div>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <input placeholder="Nom du défi" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <input type="number" placeholder="Objectif" value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--yellow)", fontSize: 14, fontWeight: 700 }} />
+                          <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value, unit: e.target.value === "count" ? "séances" : e.target.value === "duration" ? "minutes" : "jours consécutifs" }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }}>
+                            <option value="count">Nombre séances</option>
+                            <option value="duration">Volume (min)</option>
+                            <option value="streak">Streak jours</option>
+                          </select>
+                        </div>
+                        <input type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+                        <button onClick={() => addChallenge()} disabled={!form.name || !form.target} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: 8, fontWeight: 700, cursor: "pointer", opacity: (!form.name || !form.target) ? 0.5 : 1 }}>Créer le défi</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {challenges.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "16px 0", color: "#636366", fontSize: 12 }}>Aucun défi · Lance-toi un objectif !</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {challenges.map(c => {
+                        const progress = getProgress(c);
+                        const pct = Math.min(100, Math.round((progress / c.target) * 100));
+                        const done = pct >= 100;
+                        const daysLeft = c.deadline ? Math.ceil((new Date(c.deadline) - new Date()) / 86400000) : null;
+                        const displayVal = c.type === "duration" ? `${Math.round(progress / 60)}h/${Math.round(c.target / 60)}h` : `${progress}/${c.target} ${c.unit}`;
+                        return (
+                          <div key={c.id} style={{ background: done ? "#30D15810" : "var(--bg3)", border: `1px solid ${done ? "#30D158" : "#3A3A3C"}`, borderRadius: 10, padding: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: done ? "#30D158" : "var(--white)" }}>{done ? "✅ " : ""}{c.name}</div>
+                                <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 1 }}>{displayVal}{daysLeft !== null ? ` · ${daysLeft > 0 ? daysLeft + "j restants" : "Terminé !"}` : ""}</div>
+                              </div>
+                              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                <span style={{ fontSize: 14, fontWeight: 900, color: done ? "#30D158" : "var(--yellow)" }}>{pct}%</span>
+                                <button onClick={() => removeChallenge(c.id)} style={{ background: "none", border: "none", color: "#636366", fontSize: 14, cursor: "pointer" }}>✕</button>
+                              </div>
+                            </div>
+                            <div style={{ height: 6, background: "#3A3A3C", borderRadius: 99, overflow: "hidden" }}>
+                              <div style={{ width: `${pct}%`, height: "100%", background: done ? "#30D158" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
