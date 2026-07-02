@@ -7755,6 +7755,115 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY REVIEW DASHBOARD ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 2) return null;
+
+              const now = Date.now();
+              const getWeekSessions = (weeksAgo) => {
+                const start = new Date(now - (weeksAgo+1)*7*86400000).toISOString().slice(0,10);
+                const end   = new Date(now - weeksAgo*7*86400000).toISOString().slice(0,10);
+                return sessions.filter(s=>s.date>=start && s.date<end);
+              };
+
+              const thisW = getWeekSessions(0);
+              const lastW = getWeekSessions(1);
+
+              const weekStats = (wSessions) => ({
+                count:    wSessions.length,
+                km:       wSessions.reduce((s,e)=>s+(e.km||0),0),
+                trimp:    wSessions.reduce((s,e)=>s+(e.duration||30)*((e.rpe||5)/10),0),
+                avgRpe:   wSessions.length ? wSessions.reduce((s,e)=>s+(e.rpe||5),0)/wSessions.length : 0,
+                duration: wSessions.reduce((s,e)=>s+(e.duration||30),0),
+              });
+
+              const tw = weekStats(thisW);
+              const lw = weekStats(lastW);
+
+              const sleepKey7 = Array.from({length:7},(_,i)=>{
+                const d = new Date(now-i*86400000).toISOString().slice(0,10);
+                return `fitrace_sleep_${profile.name}_${d}`;  // wait, sleep is stored differently
+              });
+
+              const delta = (a,b,lowerBetter=false) => {
+                if (!b) return null;
+                const diff = a - b;
+                const pct = Math.round(Math.abs(diff)/b*100);
+                const up = diff >= 0;
+                const good = lowerBetter ? !up : up;
+                return { diff, pct, up, good };
+              };
+
+              const STATS = [
+                { label:"Séances",  cur:tw.count,              prev:lw.count,              unit:"",     icon:"📅", lowerBetter:false },
+                { label:"Distance", cur:parseFloat(tw.km.toFixed(1)), prev:parseFloat(lw.km.toFixed(1)), unit:"km", icon:"📏", lowerBetter:false },
+                { label:"TRIMP",    cur:Math.round(tw.trimp),  prev:Math.round(lw.trimp),  unit:"",     icon:"⚡", lowerBetter:false },
+                { label:"RPE moy",  cur:parseFloat(tw.avgRpe.toFixed(1)), prev:parseFloat(lw.avgRpe.toFixed(1)), unit:"", icon:"💥", lowerBetter:false },
+              ];
+
+              // Best performance this week
+              const bestSession = thisW.reduce((best,s)=>(!best||((s.km||0)>(best.km||0)))?s:best, null);
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Bilan de Semaine</div>
+                    <div style={{ fontSize:9,color:"#636366" }}>vs semaine dernière</div>
+                  </div>
+
+                  <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                    {STATS.map(s=>{
+                      const d = delta(s.cur, s.prev, s.lowerBetter);
+                      return (
+                        <div key={s.label} style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                          <div style={{ fontSize:9,color:"#636366",marginBottom:2 }}>{s.icon}</div>
+                          <div style={{ fontSize:15,fontWeight:900,color:"var(--white)" }}>{s.cur}{s.unit}</div>
+                          <div style={{ fontSize:8,color:"#636366",marginBottom:2 }}>{s.label}</div>
+                          {d && d.pct > 0 && (
+                            <div style={{ fontSize:8,fontWeight:700,color:d.good?"#30D158":"#FF453A" }}>
+                              {d.up?"▲":"▼"}{d.pct}%
+                            </div>
+                          )}
+                          {(!d || d.pct===0) && <div style={{ fontSize:8,color:"#636366" }}>–</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Duration bar */}
+                  {tw.duration > 0 && (
+                    <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
+                      <div style={{ fontSize:9,color:"#636366",width:70 }}>Durée totale</div>
+                      <div style={{ flex:1,height:6,background:"#2C2C2E",borderRadius:3,overflow:"hidden" }}>
+                        <div style={{ height:"100%",width:`${Math.min(100,tw.duration/(lw.duration||300)*100)}%`,background:"var(--yellow)",borderRadius:3 }}/>
+                      </div>
+                      <div style={{ fontSize:10,fontWeight:800,color:"var(--yellow)" }}>
+                        {Math.floor(tw.duration/60)}h{tw.duration%60>0?`${tw.duration%60}m`:""}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Highlight */}
+                  {bestSession && (
+                    <div style={{ background:"#1C3A24",borderRadius:10,padding:"8px 12px",display:"flex",alignItems:"center",gap:8 }}>
+                      <div style={{ fontSize:18 }}>🏅</div>
+                      <div>
+                        <div style={{ fontSize:10,fontWeight:700,color:"#30D158" }}>Meilleure séance</div>
+                        <div style={{ fontSize:9,color:"#8E8E93" }}>
+                          {bestSession.date} · {bestSession.type||"Entraînement"} · {(bestSession.km||0).toFixed(1)}km · RPE {bestSession.rpe||5}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {thisW.length === 0 && (
+                    <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"8px 0" }}>Aucune séance cette semaine</div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING STREAK CALENDAR ── */}
             {(() => {
               const sessions = profile.sessions || [];
