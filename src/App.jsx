@@ -14438,6 +14438,134 @@ function TechniqueTab({ profile = {} }) {
           ))}
         </div>
       )}
+
+      {/* ── STATION INTERVAL TIMER ── */}
+      {(() => {
+        const STATION_OPTS = [
+          { id: "skierg",   label: "SkiErg",        icon: "⛷️",  work: 60, rest: 60, sets: 4 },
+          { id: "sled_push",label: "Sled Push",     icon: "💪",  work: 45, rest: 90, sets: 4 },
+          { id: "sled_pull",label: "Sled Pull",     icon: "🔗",  work: 45, rest: 90, sets: 4 },
+          { id: "burpee",   label: "Burpee BJ",     icon: "🤸",  work: 30, rest: 60, sets: 5 },
+          { id: "rowing",   label: "Rowing",         icon: "🚣",  work: 60, rest: 60, sets: 4 },
+          { id: "farmers",  label: "Farmers Carry",  icon: "🏋️", work: 40, rest: 80, sets: 5 },
+          { id: "sandbag",  label: "Sandbag Lunges", icon: "🧱",  work: 50, rest: 70, sets: 4 },
+          { id: "wall_balls",label: "Wall Balls",   icon: "🏀",  work: 45, rest: 60, sets: 4 },
+        ];
+        const [selSt, setSelSt] = React.useState(0);
+        const [running, setRunning] = React.useState(false);
+        const [phase, setPhase] = React.useState("work");
+        const [timer, setTimer] = React.useState(null);
+        const [round, setRound] = React.useState(1);
+        const [done, setDone] = React.useState(false);
+        const st = STATION_OPTS[selSt];
+        const maxT = phase === "work" ? st.work : st.rest;
+
+        React.useEffect(() => {
+          if (timer === null) setTimer(st.work);
+        }, [selSt]);
+
+        React.useEffect(() => {
+          if (!running) return;
+          const id = setInterval(() => {
+            setTimer(t => {
+              if (t <= 1) {
+                // beep
+                try {
+                  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.connect(gain); gain.connect(ctx.destination);
+                  osc.frequency.value = phase === "work" ? 880 : 440;
+                  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                  osc.start(); osc.stop(ctx.currentTime + 0.3);
+                } catch {}
+                if (phase === "work") {
+                  setPhase("rest");
+                  return st.rest;
+                } else {
+                  if (round >= st.sets) {
+                    setRunning(false);
+                    setDone(true);
+                    return 0;
+                  }
+                  setRound(r => r + 1);
+                  setPhase("work");
+                  return st.work;
+                }
+              }
+              return t - 1;
+            });
+          }, 1000);
+          return () => clearInterval(id);
+        }, [running, phase, round, st]);
+
+        const pct = timer !== null && maxT > 0 ? timer / maxT : 1;
+        const radius = 52;
+        const circ = 2 * Math.PI * radius;
+        const phaseColor = phase === "work" ? "#FF453A" : "#30D158";
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginTop: 14 }}>
+            <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>⏱️ TIMER STATION</div>
+            {/* Station selector */}
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 14, paddingBottom: 4 }}>
+              {STATION_OPTS.map((s, i) => (
+                <button key={s.id} onClick={() => { if (!running) { setSelSt(i); setPhase("work"); setRound(1); setDone(false); setTimer(STATION_OPTS[i].work); }}}
+                  style={{ flexShrink: 0, padding: "6px 10px", borderRadius: 10, background: i === selSt ? "var(--yellow)" : "rgba(255,255,255,0.07)", border: "none", color: i === selSt ? "#000" : "#8E8E93", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                  {s.icon} {s.label}
+                </button>
+              ))}
+            </div>
+            {/* Info row */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: 10, color: "#8E8E93" }}>TRAVAIL</div>
+                <div className="bebas" style={{ fontSize: 20, color: "#FF453A" }}>{st.work}s</div>
+              </div>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: 10, color: "#8E8E93" }}>REPOS</div>
+                <div className="bebas" style={{ fontSize: 20, color: "#30D158" }}>{st.rest}s</div>
+              </div>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: 10, color: "#8E8E93" }}>SÉRIES</div>
+                <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)" }}>{st.sets}</div>
+              </div>
+            </div>
+            {/* Ring timer */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ position: "relative", width: 120, height: 120 }}>
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                  <circle cx="60" cy="60" r={radius} fill="none" stroke={done ? "#30D158" : phaseColor} strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
+                    transform="rotate(-90 60 60)" style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  {done ? (
+                    <div style={{ fontSize: 24 }}>✅</div>
+                  ) : (
+                    <>
+                      <div className="bebas" style={{ fontSize: 30, color: phaseColor, lineHeight: 1 }}>{timer ?? "–"}</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93", textTransform: "uppercase" }}>{phase === "work" ? "Travail" : "Repos"}</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>{round}/{st.sets}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Controls */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setRunning(false); setPhase("work"); setRound(1); setDone(false); setTimer(st.work); }}
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "none", color: "#8E8E93", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>↺ Reset</button>
+              <button onClick={() => { if (done) return; setRunning(r => !r); }}
+                style={{ flex: 2, padding: "12px 0", borderRadius: 12, background: done ? "#30D158" : running ? "#FF453A" : "var(--yellow)", border: "none", color: "#000", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                {done ? "✅ Terminé !" : running ? "⏸ Pause" : "▶ Démarrer"}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
