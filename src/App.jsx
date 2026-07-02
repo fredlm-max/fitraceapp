@@ -17793,6 +17793,109 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── INJURY RISK ASSESSMENT ── */}
+      {(() => {
+        const sessions = profile.sessions || [];
+        if (sessions.length < 3) return null;
+
+        const now = Date.now();
+        const msDay = 86400000;
+
+        const getWeekLoad = (daysBack, windowDays) => {
+          const cutoff = now - daysBack * msDay;
+          const start = now - (daysBack + windowDays) * msDay;
+          return sessions
+            .filter(s => { const t = new Date(s.date).getTime(); return t >= start && t < cutoff; })
+            .reduce((sum, s) => sum + (s.duree || 0) * ((s.rpe || 5) / 10), 0);
+        };
+
+        const thisWeek = getWeekLoad(0, 7);
+        const lastWeek = getWeekLoad(7, 7);
+        const weekSpike = lastWeek > 0 ? thisWeek / lastWeek : 1;
+
+        // High RPE sessions in last 7 days
+        const highRpeLast7 = sessions.filter(s => {
+          const t = new Date(s.date).getTime();
+          return (now - t) <= 7 * msDay && (s.rpe || 0) >= 8;
+        }).length;
+
+        // Consecutive training days (no rest)
+        const sortedDates = [...new Set(sessions.map(s => s.date))].sort().reverse();
+        let consecDays = 0;
+        let check = new Date(now).toISOString().slice(0, 10);
+        for (const d of sortedDates) {
+          if (d === check) { consecDays++; const nxt = new Date(check); nxt.setDate(nxt.getDate() - 1); check = nxt.toISOString().slice(0, 10); }
+          else break;
+        }
+
+        // Sleep quality from log
+        const sleepKey = `fitrace_sleep_${profile.name}`;
+        const sleepLog = (() => { try { return JSON.parse(localStorage.getItem(sleepKey) || "[]"); } catch { return []; } })();
+        const avgSleepH = sleepLog.length > 0 ? sleepLog.slice(0, 3).reduce((s, e) => s + (e.hours || 7), 0) / Math.min(sleepLog.length, 3) : 7;
+
+        // Risk scoring (0-100)
+        const risks = [
+          { name: "Pic de charge", val: Math.min(35, Math.max(0, (weekSpike - 1) * 35)), max: 35, threshold: weekSpike > 1.5, detail: `Charge ×${weekSpike.toFixed(2)} vs semaine passée` },
+          { name: "Séances intensives", val: Math.min(25, highRpeLast7 * 8), max: 25, threshold: highRpeLast7 >= 3, detail: `${highRpeLast7} séances RPE≥8 en 7j` },
+          { name: "Jours consécutifs", val: Math.min(20, Math.max(0, (consecDays - 3) * 5)), max: 20, threshold: consecDays >= 5, detail: `${consecDays} jours sans repos` },
+          { name: "Déficit sommeil", val: Math.min(20, Math.max(0, (7.5 - avgSleepH) * 6)), max: 20, threshold: avgSleepH < 6.5, detail: `Moy ${avgSleepH.toFixed(1)}h/nuit` },
+        ];
+
+        const totalRisk = Math.round(risks.reduce((s, r) => s + r.val, 0));
+
+        const getLevel = (r) => {
+          if (r < 20) return { label: "Faible", color: "#30D158", emoji: "🟢" };
+          if (r < 45) return { label: "Modéré", color: "#FF9F0A", emoji: "🟡" };
+          if (r < 65) return { label: "Élevé", color: "#FF6B35", emoji: "🟠" };
+          return { label: "Critique", color: "#FF453A", emoji: "🔴" };
+        };
+        const level = getLevel(totalRisk);
+
+        const RECS = [
+          weekSpike > 1.5 && "⚠️ Réduisez le volume cette semaine (règle des 10%)",
+          highRpeLast7 >= 3 && "⚠️ Trop d'intensité : ajoutez 1-2 séances légères",
+          consecDays >= 5 && "⚠️ Repos obligatoire demain — récupération active maximum",
+          avgSleepH < 6.5 && "⚠️ Sommeil insuffisant — priorisez 7-8h avant d'augmenter la charge",
+        ].filter(Boolean);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Risque Blessure</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ fontSize: 14 }}>{level.emoji}</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: level.color }}>{totalRisk}/100 · {level.label}</div>
+              </div>
+            </div>
+
+            {/* Risk bar */}
+            <div style={{ height: 8, background: "#2C2C2E", borderRadius: 4, marginBottom: 12, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${totalRisk}%`, background: `linear-gradient(to right, #30D158, #FF9F0A, #FF453A)`, borderRadius: 4, transition: "width 0.6s" }} />
+            </div>
+
+            {risks.map(r => (
+              <div key={r.name} style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
+                  <span style={{ color: r.threshold ? "#FF9F0A" : "#8E8E93", fontWeight: r.threshold ? 700 : 400 }}>{r.threshold ? "⚠ " : ""}{r.name}</span>
+                  <span style={{ color: "#636366" }}>{r.detail}</span>
+                </div>
+                <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2 }}>
+                  <div style={{ height: "100%", width: `${(r.val / r.max) * 100}%`, background: r.threshold ? "#FF9F0A" : "#30D158", borderRadius: 2 }} />
+                </div>
+              </div>
+            ))}
+
+            {RECS.length > 0 && (
+              <div style={{ background: "#FF9F0A12", borderRadius: 10, padding: 10, marginTop: 8 }}>
+                <div style={{ fontSize: 9, color: "#636366", marginBottom: 4, textTransform: "uppercase" }}>Recommandations</div>
+                {RECS.map((r, i) => <div key={i} style={{ fontSize: 10, color: "var(--fg)", marginBottom: 3 }}>{r}</div>)}
+              </div>
+            )}
+            {RECS.length === 0 && <div style={{ textAlign: "center", fontSize: 11, color: "#30D158", marginTop: 4 }}>✅ Risque faible — continuez votre programme !</div>}
+          </div>
+        );
+      })()}
+
       {/* ── INJURY PREVENTION PREHAB ── */}
       {(() => {
         const PREHAB = [
