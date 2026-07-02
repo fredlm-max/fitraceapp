@@ -25128,6 +25128,87 @@ JSON: {
             );
           })()}
 
+          {/* ── HYDRATION TRACKER ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0,10);
+            const KEY = `fitrace_hydration_${profile.name}_${todayStr}`;
+            const [ml, setMl] = React.useState(() => { try { return parseInt(localStorage.getItem(KEY)) || 0; } catch { return 0; } });
+
+            const poids = profile.poids || 70;
+            const goalMl = Math.round(poids * 35); // 35ml/kg
+            const pct = Math.min(100, Math.round(ml / goalMl * 100));
+            const remaining = Math.max(0, goalMl - ml);
+
+            const add = (amount) => {
+              const next = ml + amount;
+              setMl(next);
+              localStorage.setItem(KEY, String(next));
+            };
+            const reset = () => { setMl(0); localStorage.setItem(KEY, "0"); };
+
+            const status = pct >= 100 ? { label:"Hydraté ✅", color:"#30D158" }
+              : pct >= 70 ? { label:"Bon niveau 🟡", color:"#FF9F0A" }
+              : { label:"Boire plus 💧", color:"#FF453A" };
+
+            // Wave SVG animation via clip path
+            const waveY = Math.round((1 - pct/100) * 120);
+
+            return (
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Hydratation</div>
+                  <div style={{ fontSize:9,color:status.color,fontWeight:700 }}>{status.label}</div>
+                </div>
+
+                <div style={{ display:"flex",alignItems:"center",gap:16,marginBottom:14 }}>
+                  {/* Bottle SVG */}
+                  <svg width={60} height={130} viewBox="0 0 60 130" style={{ flexShrink:0 }}>
+                    <defs>
+                      <clipPath id="bottleClip">
+                        <path d="M18 10 L18 5 Q18 0 22 0 L38 0 Q42 0 42 5 L42 10 Q52 15 54 25 L54 115 Q54 125 44 128 L16 128 Q6 125 6 115 L6 25 Q8 15 18 10 Z"/>
+                      </clipPath>
+                    </defs>
+                    {/* Bottle outline */}
+                    <path d="M18 10 L18 5 Q18 0 22 0 L38 0 Q42 0 42 5 L42 10 Q52 15 54 25 L54 115 Q54 125 44 128 L16 128 Q6 125 6 115 L6 25 Q8 15 18 10 Z" fill="#2C2C2E" stroke="#3A3A3C" strokeWidth={1.5}/>
+                    {/* Water fill */}
+                    <rect x={0} y={waveY} width={60} height={130} fill="#007AFF" opacity={0.6} clipPath="url(#bottleClip)"/>
+                    {/* Wave */}
+                    <path d={`M0 ${waveY} Q15 ${waveY-5} 30 ${waveY} Q45 ${waveY+5} 60 ${waveY}`} fill="none" stroke="#007AFF" strokeWidth={2} clipPath="url(#bottleClip)" opacity={0.9}/>
+                    {/* % label */}
+                    <text x={30} y={75} textAnchor="middle" fill="white" fontSize={14} fontWeight={900}>{pct}%</text>
+                  </svg>
+
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:28,fontWeight:900,color:"#007AFF" }}>{(ml/1000).toFixed(2)}<span style={{ fontSize:14,fontWeight:400,color:"#636366" }}>L</span></div>
+                    <div style={{ fontSize:11,color:"#8E8E93" }}>Objectif: {(goalMl/1000).toFixed(1)}L ({poids}kg × 35ml)</div>
+                    <div style={{ fontSize:10,color:"#636366",marginTop:2 }}>Reste: <span style={{ color:"#FF9F0A",fontWeight:700 }}>{remaining}ml</span></div>
+
+                    {/* Progress bar */}
+                    <div style={{ height:6,background:"#2C2C2E",borderRadius:3,marginTop:8,overflow:"hidden" }}>
+                      <div style={{ height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#007AFF80,#007AFF)",borderRadius:3,transition:"width 0.4s" }}/>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick add buttons */}
+                <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+                  {[100,150,200,250,330,500].map(amt=>(
+                    <button key={amt} onClick={()=>add(amt)}
+                      style={{ flex:1,minWidth:50,background:"var(--bg3)",color:"#007AFF",border:"1px solid #007AFF30",borderRadius:8,padding:"6px 4px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                      +{amt}ml
+                    </button>
+                  ))}
+                </div>
+
+                {ml > 0 && (
+                  <button onClick={reset} style={{ width:"100%",background:"transparent",color:"#636366",border:"none",fontSize:10,marginTop:8,cursor:"pointer" }}>
+                    Réinitialiser
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── VOCAL NUTRITION LOG ── */}
           {(() => {
             const todayStr = new Date().toISOString().slice(0, 10);
