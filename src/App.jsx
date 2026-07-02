@@ -18599,6 +18599,109 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RUNNING PACE CALCULATOR ── */}
+      {(() => {
+        // pace in seconds/km
+        const [paceMin, setPaceMin] = React.useState(5);
+        const [paceSec, setPaceSec] = React.useState(30);
+        const [showCalc, setShowCalc] = React.useState(false);
+        const totalPaceSec = paceMin * 60 + paceSec;
+        const speedKmh = totalPaceSec > 0 ? (3600 / totalPaceSec).toFixed(1) : 0;
+        const fmtTime = sec => {
+          const h = Math.floor(sec / 3600);
+          const m = Math.floor((sec % 3600) / 60);
+          const s = sec % 60;
+          return h > 0 ? `${h}h${String(m).padStart(2,"0")}'${String(s).padStart(2,"0")}`
+            : `${m}'${String(s).padStart(2,"0")}`;
+        };
+        const DISTANCES = [
+          { label: "400m",    dist: 0.4,  icon: "🏟️" },
+          { label: "1 km",    dist: 1,    icon: "📍" },
+          { label: "Run HYROX (1km × 8)", dist: 8, icon: "🏃" },
+          { label: "5 km",    dist: 5,    icon: "🎽" },
+          { label: "10 km",   dist: 10,   icon: "🏅" },
+          { label: "Semi (21km)", dist: 21.097, icon: "🥈" },
+        ];
+        // Profile VMA-based paces
+        const vma = parseFloat(profile.vmaKmh);
+        const ZONE_PACES = vma ? [
+          { label: "Z1 Récup",  paceS: Math.round(3600 / (vma * 0.55)), color: "#3b82f6" },
+          { label: "Z2 Fond",   paceS: Math.round(3600 / (vma * 0.65)), color: "#22c55e" },
+          { label: "Z3 Tempo",  paceS: Math.round(3600 / (vma * 0.79)), color: "#eab308" },
+          { label: "Z4 Seuil",  paceS: Math.round(3600 / (vma * 0.87)), color: "#f97316" },
+          { label: "Z5 VMA",    paceS: Math.round(3600 / (vma * 0.97)), color: "#ef4444" },
+        ] : null;
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, marginBottom: 12, overflow: "hidden" }}>
+            <button onClick={() => setShowCalc(v => !v)} style={{ width: "100%", background: "none", border: "none", padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ textAlign: "left" }}>
+                <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>🏃 CALCULATEUR ALLURE</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>Pace → vitesse → temps par distance</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="bebas" style={{ fontSize: 18, color: "var(--yellow)" }}>{paceMin}:{String(paceSec).padStart(2,"0")}<span style={{ fontSize: 11, color: "#8E8E93" }}>/km</span></div>
+                <div style={{ fontSize: 12, color: "#8E8E93" }}>{showCalc ? "▲" : "▼"}</div>
+              </div>
+            </button>
+            {showCalc && (
+              <div style={{ padding: "0 16px 16px" }}>
+                {/* Pace input */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 6 }}>MINUTES</div>
+                    <input type="range" min="3" max="12" value={paceMin} onChange={e => setPaceMin(Number(e.target.value))}
+                      style={{ width: "100%", accentColor: "#C9A840" }} />
+                    <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", marginTop: 4 }}>{paceMin}</div>
+                  </div>
+                  <div style={{ fontSize: 24, color: "#8E8E93", fontWeight: 300 }}>:</div>
+                  <div style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 6 }}>SECONDES</div>
+                    <input type="range" min="0" max="59" step="5" value={paceSec} onChange={e => setPaceSec(Number(e.target.value))}
+                      style={{ width: "100%", accentColor: "#C9A840" }} />
+                    <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", marginTop: 4 }}>{String(paceSec).padStart(2,"0")}</div>
+                  </div>
+                  <div style={{ textAlign: "center", minWidth: 60 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>VITESSE</div>
+                    <div className="bebas" style={{ fontSize: 22, color: "#30D158" }}>{speedKmh}</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>km/h</div>
+                  </div>
+                </div>
+                {/* Distance projections */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: ZONE_PACES ? 14 : 0 }}>
+                  {DISTANCES.map(d => {
+                    const timeSec = Math.round(totalPaceSec * d.dist);
+                    return (
+                      <div key={d.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: d.label.includes("HYROX") ? "rgba(201,168,64,0.08)" : "rgba(255,255,255,0.03)", borderRadius: 8, border: d.label.includes("HYROX") ? "1px solid rgba(201,168,64,0.2)" : "none" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>{d.icon}</span>
+                          <span style={{ fontSize: 12, color: d.label.includes("HYROX") ? "var(--yellow)" : "var(--white)", fontWeight: d.label.includes("HYROX") ? 700 : 400 }}>{d.label}</span>
+                        </div>
+                        <div className="bebas" style={{ fontSize: 16, color: d.label.includes("HYROX") ? "var(--yellow)" : "#38bdf8" }}>{fmtTime(timeSec)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Zone pace presets */}
+                {ZONE_PACES && (
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Allures par zone (VMA {vma} km/h)</div>
+                    <div style={{ display: "flex", gap: 5 }}>
+                      {ZONE_PACES.map(z => (
+                        <button key={z.label} onClick={() => { const m = Math.floor(z.paceS/60); const s = z.paceS%60; setPaceMin(m); setPaceSec(s); }}
+                          style={{ flex: 1, padding: "6px 2px", borderRadius: 8, background: z.color + "22", border: `1px solid ${z.color}44`, color: z.color, fontSize: 10, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>
+                          <div>{z.label}</div>
+                          <div style={{ fontSize: 11, marginTop: 2 }}>{Math.floor(z.paceS/60)}:{String(z.paceS%60).padStart(2,"0")}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── RACE TIME BREAKDOWN ── */}
       {(() => {
         const fmtT = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
