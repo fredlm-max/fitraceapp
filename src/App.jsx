@@ -20568,6 +20568,145 @@ function TechniqueTab({ profile = {} }) {
         </div>
       )}
 
+      {/* ── STRENGTH TRAINING LOG ── */}
+      {(() => {
+        const KEY = `fitrace_strength_${profile.name}`;
+        const [log, setLog] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [selectedEx, setSelectedEx] = React.useState(null);
+        const [sets, setSets] = React.useState([{ reps:8, kg:0 }]);
+        const [dateStr] = React.useState(new Date().toISOString().slice(0,10));
+
+        const EXERCISES = [
+          { id:"squat",     name:"Back Squat",     icon:"🏋️", muscle:"Quadriceps" },
+          { id:"deadlift",  name:"Deadlift",        icon:"💪", muscle:"Ischio/Dos" },
+          { id:"kbswing",   name:"KB Swing",        icon:"🔔", muscle:"Fessiers/Core" },
+          { id:"pullup",    name:"Traction",        icon:"🦅", muscle:"Dos/Biceps" },
+          { id:"press",     name:"Overhead Press",  icon:"🙌", muscle:"Épaules" },
+          { id:"lunges",    name:"Fentes",          icon:"🦵", muscle:"Quadriceps/Fessiers" },
+          { id:"rdl",       name:"Romanian DL",     icon:"🔱", muscle:"Ischio" },
+          { id:"pushup",    name:"Pompes lesté",    icon:"⬆️", muscle:"Pectoraux" },
+          { id:"plank",     name:"Gainage",         icon:"🧘", muscle:"Core" },
+          { id:"row",       name:"Rowing haltères", icon:"🚣", muscle:"Dos" },
+        ];
+
+        const saveSession = () => {
+          if (!selectedEx || sets.every(s=>s.kg===0 && s.reps===0)) return;
+          const validSets = sets.filter(s=>s.reps>0);
+          const totalVol = validSets.reduce((s,set)=>s+set.reps*set.kg, 0);
+          const entry = { date: dateStr, exId: selectedEx, sets: validSets, volume: totalVol };
+          const next = [entry, ...log];
+          setLog(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setSets([{ reps:8, kg:0 }]);
+          setSelectedEx(null);
+        };
+
+        // Best per exercise
+        const prs = {};
+        log.forEach(e => {
+          const maxSet = e.sets.reduce((best,s)=>s.kg*s.reps>best.kg*best.reps?s:best, { reps:0,kg:0 });
+          if (!prs[e.exId] || maxSet.kg > prs[e.exId].kg) prs[e.exId] = maxSet;
+        });
+
+        // Last 5 sessions of selected ex
+        const history = selectedEx ? log.filter(e=>e.exId===selectedEx).slice(0,5) : [];
+
+        const addSet = () => setSets(s=>[...s,{ reps:8, kg:s[s.length-1]?.kg||0 }]);
+        const removeSet = (i) => setSets(s=>s.filter((_,idx)=>idx!==i));
+        const updateSet = (i, field, val) => setSets(s=>s.map((set,idx)=>idx===i?{...set,[field]:+val}:set));
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Journal Force</div>
+
+            {/* Exercise picker */}
+            <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:12 }}>
+              {EXERCISES.map(ex=>(
+                <button key={ex.id} onClick={()=>{ setSelectedEx(ex.id===selectedEx?null:ex.id); setSets([{ reps:8, kg:prs[ex.id]?.kg||0 }]); }}
+                  style={{ display:"flex",alignItems:"center",gap:4,background:selectedEx===ex.id?"var(--yellow)":"var(--bg3)",color:selectedEx===ex.id?"#000":"#8E8E93",border:"none",borderRadius:8,padding:"5px 8px",fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                  <span>{ex.icon}</span><span>{ex.name}</span>
+                  {prs[ex.id] && <span style={{ fontSize:8,opacity:0.7 }}>·{prs[ex.id].kg}kg</span>}
+                </button>
+              ))}
+            </div>
+
+            {selectedEx && (
+              <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                <div style={{ fontSize:11,color:"var(--yellow)",fontWeight:800,marginBottom:8 }}>
+                  {EXERCISES.find(e=>e.id===selectedEx)?.icon} {EXERCISES.find(e=>e.id===selectedEx)?.name}
+                  <span style={{ fontSize:9,color:"#636366",fontWeight:400,marginLeft:8 }}>{EXERCISES.find(e=>e.id===selectedEx)?.muscle}</span>
+                </div>
+
+                {/* Sets */}
+                {sets.map((set,i)=>(
+                  <div key={i} style={{ display:"flex",alignItems:"center",gap:6,marginBottom:6 }}>
+                    <div style={{ fontSize:9,color:"#636366",width:30 }}>Série {i+1}</div>
+                    <div style={{ display:"flex",alignItems:"center",gap:3 }}>
+                      <button onClick={()=>updateSet(i,"kg",Math.max(0,set.kg-2.5))} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:4,width:20,height:20,fontSize:12,cursor:"pointer" }}>−</button>
+                      <input type="number" value={set.kg} onChange={e=>updateSet(i,"kg",+e.target.value)} style={{ width:44,background:"#2C2C2E",border:"none",borderRadius:6,padding:"3px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                      <button onClick={()=>updateSet(i,"kg",set.kg+2.5)} style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:4,width:20,height:20,fontSize:12,cursor:"pointer" }}>+</button>
+                      <span style={{ fontSize:9,color:"#636366" }}>kg</span>
+                    </div>
+                    <div style={{ display:"flex",alignItems:"center",gap:3 }}>
+                      <button onClick={()=>updateSet(i,"reps",Math.max(1,set.reps-1))} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:4,width:20,height:20,fontSize:12,cursor:"pointer" }}>−</button>
+                      <span style={{ fontSize:13,fontWeight:800,color:"var(--white)",minWidth:22,textAlign:"center" }}>{set.reps}</span>
+                      <button onClick={()=>updateSet(i,"reps",set.reps+1)} style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:4,width:20,height:20,fontSize:12,cursor:"pointer" }}>+</button>
+                      <span style={{ fontSize:9,color:"#636366" }}>reps</span>
+                    </div>
+                    <div style={{ fontSize:10,color:"#FF9F0A",fontWeight:700,minWidth:44 }}>{(set.kg*set.reps).toFixed(0)}kg</div>
+                    {sets.length > 1 && <button onClick={()=>removeSet(i)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>×</button>}
+                  </div>
+                ))}
+
+                <div style={{ display:"flex",gap:6,marginTop:4 }}>
+                  <button onClick={addSet} style={{ flex:1,background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:8,padding:"6px",fontSize:11,cursor:"pointer" }}>+ Série</button>
+                  <button onClick={saveSession} style={{ flex:2,background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"6px",fontSize:12,fontWeight:800,cursor:"pointer" }}>
+                    Enregistrer · Vol: {sets.reduce((s,set)=>s+set.reps*set.kg,0).toFixed(0)}kg
+                  </button>
+                </div>
+
+                {/* History for this exercise */}
+                {history.length > 0 && (
+                  <div style={{ marginTop:10,borderTop:"1px solid #2C2C2E",paddingTop:8 }}>
+                    <div style={{ fontSize:8,color:"#636366",marginBottom:4 }}>HISTORIQUE</div>
+                    {history.map((e,i)=>(
+                      <div key={i} style={{ display:"flex",justifyContent:"space-between",fontSize:9,color:"#8E8E93",marginBottom:2 }}>
+                        <span style={{ color:"#636366" }}>{e.date.slice(5)}</span>
+                        <span>{e.sets.length} séries · <span style={{ color:"var(--yellow)",fontWeight:700 }}>{e.volume}kg vol.</span></span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Recent logs */}
+            {log.length > 0 && !selectedEx && (
+              <div>
+                <div style={{ fontSize:8,color:"#636366",marginBottom:6 }}>DERNIÈRES SÉANCES</div>
+                {log.slice(0,6).map((e,i)=>{
+                  const ex = EXERCISES.find(ex=>ex.id===e.exId);
+                  return (
+                    <div key={i} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:8,padding:"6px 10px",marginBottom:3 }}>
+                      <span style={{ fontSize:14 }}>{ex?.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10,fontWeight:700,color:"var(--white)" }}>{ex?.name}</div>
+                        <div style={{ fontSize:8,color:"#636366" }}>{e.date} · {e.sets.length} séries</div>
+                      </div>
+                      <div style={{ fontSize:10,color:"var(--yellow)",fontWeight:700 }}>{e.volume}kg</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {log.length === 0 && !selectedEx && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"12px 0" }}>Sélectionne un exercice pour commencer</div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── WORKOUT TEMPLATE LIBRARY ── */}
       {(() => {
         const [selTpl, setSelTpl] = React.useState(null);
