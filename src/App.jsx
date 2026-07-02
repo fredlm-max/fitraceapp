@@ -11640,6 +11640,162 @@ JSON:
               );
             })()}
 
+            {/* ── STRENGTH STANDARDS CHECKER ── */}
+            {(() => {
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const poids = parseFloat(profile.poids) || 70;
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const stdKey = `fitrace_strength_std_${profile.name}`;
+              const [perf, setPerf] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(stdKey) || "{}"); } catch { return {}; }
+              });
+              const [editing, setEditing] = React.useState(null);
+              const [inputVal, setInputVal] = React.useState("");
+
+              const savePerf = (id, val) => {
+                const updated = { ...perf, [id]: parseFloat(val) };
+                setPerf(updated); localStorage.setItem(stdKey, JSON.stringify(updated));
+                setEditing(null); setInputVal("");
+              };
+
+              // Standards by sex (in seconds for timed, reps for counted, kg for weighted)
+              const STANDARDS = [
+                {
+                  id: "skierg_1000",
+                  name: "SkiErg 1000m",
+                  unit: "sec",
+                  icon: "⛷️",
+                  color: "#5AC8FA",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes (ex: 240 = 4:00)",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 190 }, { label: "Pro", max: 230 }, { label: "Avancé", max: 270 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 220 }, { label: "Pro", max: 265 }, { label: "Avancé", max: 310 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "wallballs_100",
+                  name: "Wall Balls 100 reps",
+                  unit: "sec",
+                  icon: "🎯",
+                  color: "#C9A840",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 280 }, { label: "Pro", max: 360 }, { label: "Avancé", max: 450 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 300 }, { label: "Pro", max: 390 }, { label: "Avancé", max: 480 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "rowing_1000",
+                  name: "Rowing 1000m",
+                  unit: "sec",
+                  icon: "🚣",
+                  color: "#007AFF",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 200 }, { label: "Pro", max: 240 }, { label: "Avancé", max: 280 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 230 }, { label: "Pro", max: 270 }, { label: "Avancé", max: 320 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "burpee_80m",
+                  name: "Burpee BJ 80m",
+                  unit: "sec",
+                  icon: "🤸",
+                  color: "#FF453A",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 240 }, { label: "Pro", max: 300 }, { label: "Avancé", max: 380 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 270 }, { label: "Pro", max: 340 }, { label: "Avancé", max: 420 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "run_1km",
+                  name: "1km run",
+                  unit: "sec",
+                  icon: "🏃",
+                  color: "#FF9F0A",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 200 }, { label: "Pro", max: 240 }, { label: "Avancé", max: 290 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 230 }, { label: "Pro", max: 270 }, { label: "Avancé", max: 320 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+              ];
+
+              const getLevel = (std, val) => {
+                if (!val) return null;
+                for (const lv of std.levels) {
+                  if (std.lower ? val <= lv.max : val >= lv.max) return lv.label;
+                }
+                return std.levels[std.levels.length - 1].label;
+              };
+              const LEVEL_COLORS = { Elite: "#FFD60A", Pro: "#30D158", Avancé: "#007AFF", Débutant: "#636366" };
+
+              const getBarPct = (std, val) => {
+                if (!val) return 0;
+                const elite = std.levels[0].max;
+                const debut = std.levels[std.levels.length - 2].max;
+                if (std.lower) return Math.min(100, Math.max(0, Math.round(((debut - val) / (debut - elite)) * 100)));
+                return Math.min(100, Math.max(0, Math.round(((val - debut) / (elite - debut)) * 100)));
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Standards HYROX · {sex === "H" ? "Homme" : "Femme"}</div>
+
+                  {STANDARDS.map(std => {
+                    const val = perf[std.id] || null;
+                    const level = getLevel(std, val);
+                    const levelColor = level ? LEVEL_COLORS[level] : "#636366";
+                    const barPct = getBarPct(std, val);
+
+                    return (
+                      <div key={std.id} style={{ marginBottom: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 14 }}>{std.icon}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg)" }}>{std.name}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {val && <span style={{ fontSize: 11, fontWeight: 800, color: levelColor }}>{std.display(val)} · {level}</span>}
+                            <button onClick={() => { setEditing(editing === std.id ? null : std.id); setInputVal(val ? String(val) : ""); }}
+                              style={{ background: "var(--bg3)", border: "none", borderRadius: 6, padding: "3px 8px", color: "var(--fg)", cursor: "pointer", fontSize: 10 }}>
+                              {editing === std.id ? "✕" : val ? "✏" : "+ Saisir"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Progress bar showing level */}
+                        <div style={{ position: "relative", height: 6, background: "#2C2C2E", borderRadius: 3, marginBottom: 2 }}>
+                          <div style={{ height: "100%", width: `${barPct}%`, background: levelColor, borderRadius: 3, transition: "width 0.5s" }} />
+                          {/* Level markers */}
+                          {[33, 66].map((pct, i) => (
+                            <div key={i} style={{ position: "absolute", top: -1, left: `${pct}%`, width: 1, height: 8, background: "#2C2C2E" }} />
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#3A3A3C" }}>
+                          {std.levels.map(l => <span key={l.label} style={{ color: LEVEL_COLORS[l.label] }}>{l.label}</span>)}
+                        </div>
+
+                        {editing === std.id && (
+                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                            <input type="number" value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder={std.placeholder}
+                              style={{ flex: 1, background: "var(--bg3)", border: `1px solid ${std.color}50`, borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12 }} />
+                            <button onClick={() => savePerf(std.id, inputVal)} style={{ background: std.color, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontWeight: 700, cursor: "pointer" }}>✓</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
