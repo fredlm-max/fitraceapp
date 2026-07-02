@@ -6886,6 +6886,105 @@ JSON:
               );
             })()}
 
+            {/* ── CUSTOM GOALS TRACKER ── */}
+            {(() => {
+              const goalsKey = `fitrace_goals_${profile.name}`;
+              const [goals, setGoals] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(goalsKey) || "[]"); } catch { return []; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ title: "", target: "", current: "0", unit: "", deadline: "" });
+
+              const save = (g) => { setGoals(g); localStorage.setItem(goalsKey, JSON.stringify(g)); };
+
+              const addGoal = () => {
+                if (!form.title) return;
+                const goal = { id: Date.now(), ...form, target: parseFloat(form.target) || 0, current: parseFloat(form.current) || 0, createdAt: new Date().toISOString().slice(0, 10) };
+                save([...goals, goal]);
+                setShowForm(false); setForm({ title: "", target: "", current: "0", unit: "", deadline: "" });
+              };
+
+              const updateProgress = (id, val) => {
+                save(goals.map(g => g.id === id ? { ...g, current: Math.min(parseFloat(val) || 0, g.target) } : g));
+              };
+
+              const deleteGoal = (id) => save(goals.filter(g => g.id !== id));
+
+              const getColor = (pct) => pct >= 100 ? "#30D158" : pct >= 60 ? "#FF9F0A" : "#007AFF";
+
+              const SUGGESTIONS = [
+                { title: "Courir 10km en moins de 50min", target: 50, unit: "min", current: 0 },
+                { title: "Perdre du poids", target: 5, unit: "kg", current: 0 },
+                { title: "Faire 20 séances ce mois", target: 20, unit: "séances", current: (profile.sessions || []).filter(s => new Date(s.date).getMonth() === new Date().getMonth()).length },
+                { title: "Volume 100 km de running", target: 100, unit: "km", current: 0 },
+              ];
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Objectifs Personnels</div>
+                    <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Objectif</button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <input placeholder="Objectif (ex: Courir 10km en <50min)" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "7px 8px", color: "var(--fg)", fontSize: 12, marginBottom: 6, boxSizing: "border-box" }} />
+                      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                        <input type="number" placeholder="Cible" value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 6px", color: "var(--fg)", fontSize: 13 }} />
+                        <input placeholder="Unité" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 6px", color: "var(--fg)", fontSize: 13 }} />
+                        <input type="number" placeholder="Actuel" value={form.current} onChange={e => setForm(f => ({ ...f, current: e.target.value }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 6px", color: "var(--fg)", fontSize: 13 }} />
+                      </div>
+                      <input type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12, marginBottom: 6, boxSizing: "border-box" }} />
+                      <button onClick={addGoal} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "8px 0", fontWeight: 800, cursor: "pointer", fontSize: 12 }}>Créer l'objectif</button>
+
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>Suggestions rapides :</div>
+                        {SUGGESTIONS.map((s, i) => (
+                          <button key={i} onClick={() => setForm(f => ({ ...f, title: s.title, target: String(s.target), unit: s.unit, current: String(s.current) }))}
+                            style={{ display: "block", width: "100%", background: "none", border: "none", color: "#636366", fontSize: 10, textAlign: "left", cursor: "pointer", padding: "3px 0", textDecoration: "underline" }}>
+                            + {s.title}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {goals.length === 0 && !showForm && (
+                    <div style={{ textAlign: "center", padding: "20px 0", color: "#636366", fontSize: 11 }}>Aucun objectif · Créez votre premier objectif SMART</div>
+                  )}
+
+                  {goals.map(g => {
+                    const pct = g.target > 0 ? Math.min(100, Math.round((g.current / g.target) * 100)) : 0;
+                    const color = getColor(pct);
+                    const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline) - new Date()) / 86400000) : null;
+                    return (
+                      <div key={g.id} style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: pct >= 100 ? "#30D158" : "var(--fg)" }}>{pct >= 100 ? "🏆 " : ""}{g.title}</div>
+                            {daysLeft !== null && <div style={{ fontSize: 9, color: daysLeft < 7 ? "#FF453A" : "#636366" }}>{daysLeft > 0 ? `${daysLeft}j restants` : "Délai dépassé"}</div>}
+                          </div>
+                          <button onClick={() => deleteGoal(g.id)} style={{ background: "none", border: "none", color: "#FF453A", cursor: "pointer", fontSize: 12, padding: 0 }}>✕</button>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ flex: 1, height: 6, background: "#2C2C2E", borderRadius: 3 }}>
+                            <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3, transition: "width 0.5s" }} />
+                          </div>
+                          <span style={{ fontSize: 10, color, fontWeight: 700, whiteSpace: "nowrap" }}>{pct}%</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366", marginTop: 3 }}>
+                          <span>{g.current} / {g.target} {g.unit}</span>
+                          {!pct >= 100 && (
+                            <input type="number" value={g.current} onChange={e => updateProgress(g.id, e.target.value)} style={{ width: 50, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 4, padding: "1px 4px", color: "var(--fg)", fontSize: 10, textAlign: "right" }} />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── RECENT ACTIVITY FEED ── */}
             {(() => {
               const sessions = profile.sessions || [];
