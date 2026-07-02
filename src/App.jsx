@@ -8851,6 +8851,113 @@ JSON:
               );
             })()}
 
+            {/* ── CALORIE BURN ESTIMATOR ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const poids = parseFloat(profile.poids) || 75;
+              const sessions = profile.sessions || [];
+              const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
+              const recent = sessions.filter(s => s.date && new Date(s.date) >= cutoff);
+              if (recent.length === 0) return null;
+
+              // MET values by session type (Compendium of Physical Activities 2011)
+              const MET = {
+                running_zone2:     7.0,
+                running_qualite:   10.0,
+                force_stations:    6.5,
+                hybride_compromis: 9.0,
+                mobilite:          3.0,
+                coach:             8.0,
+                perso:             6.0,
+              };
+              // Calories = MET × weight(kg) × duration(h)
+              const calcCal = s => {
+                const met = MET[s.type] || 6.0;
+                const rpeBonus = ((s.difficulte || 5) - 5) * 0.05; // RPE adjustment
+                const effectiveMet = met * (1 + rpeBonus);
+                return Math.round(effectiveMet * poids * ((s.duree || 45) / 60));
+              };
+
+              const sessionsWithCal = recent.map(s => ({ ...s, cal: calcCal(s) }));
+              const totalCal = sessionsWithCal.reduce((a, s) => a + s.cal, 0);
+              const avgCal = Math.round(totalCal / sessionsWithCal.length);
+              const maxCal = Math.max(...sessionsWithCal.map(s => s.cal));
+
+              // Group by week (last 4 weeks)
+              const now = new Date();
+              const weekCals = Array.from({ length: 4 }, (_, w) => {
+                const wStart = new Date(now); wStart.setDate(now.getDate() - (3 - w) * 7 - ((now.getDay() + 6) % 7));
+                wStart.setHours(0,0,0,0);
+                const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate() + 7);
+                const wSessions = sessionsWithCal.filter(s => s.date && new Date(s.date) >= wStart && new Date(s.date) < wEnd);
+                return { cal: wSessions.reduce((a, s) => a + s.cal, 0), count: wSessions.length, w };
+              });
+              const maxWeekCal = Math.max(...weekCals.map(w => w.cal), 1);
+
+              // Equiv foods
+              const totalKg = (totalCal / 7700).toFixed(2);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🔥 CALORIES BRÛLÉES</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>28 derniers jours · méthode MET</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 26, color: "#FF9F0A", lineHeight: 1 }}>{totalCal.toLocaleString("fr")}</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>kcal total</div>
+                    </div>
+                  </div>
+
+                  {/* Weekly bars */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 64, marginBottom: 12 }}>
+                    {weekCals.map((w, i) => {
+                      const h = w.cal > 0 ? Math.max(8, Math.round((w.cal / maxWeekCal) * 56)) : 4;
+                      const isCurrent = i === 3;
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          {w.cal > 0 && <div style={{ fontSize: 9, color: isCurrent ? "#FF9F0A" : "#636366" }}>{w.cal > 999 ? `${(w.cal/1000).toFixed(1)}k` : w.cal}</div>}
+                          <div style={{ width: "100%", height: h, borderRadius: 5, background: isCurrent ? "#FF9F0A" : "rgba(255,159,10,0.3)" }} />
+                          <div style={{ fontSize: 9, color: isCurrent ? "var(--white)" : "#636366" }}>S{i + 1}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Stats row */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                    {[
+                      { l: "Moy./séance", v: `${avgCal}`, u: "kcal" },
+                      { l: "Max séance", v: `${maxCal}`, u: "kcal" },
+                      { l: "Équiv. graisse", v: totalKg, u: "kg" },
+                    ].map(s => (
+                      <div key={s.l} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>{s.l}</div>
+                        <div className="bebas" style={{ fontSize: 16, color: "#FF9F0A" }}>{s.v}</div>
+                        <div style={{ fontSize: 9, color: "#636366" }}>{s.u}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Last 5 sessions */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {sessionsWithCal.slice(-5).reverse().map((s, i) => {
+                      const barW = Math.round((s.cal / maxCal) * 100);
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ fontSize: 10, color: "#8E8E93", minWidth: 65 }}>{s.date ? new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div>
+                          <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 99 }}>
+                            <div style={{ width: `${barW}%`, height: "100%", background: "#FF9F0A", borderRadius: 99 }} />
+                          </div>
+                          <div style={{ fontSize: 10, color: "#FF9F0A", fontWeight: 700, minWidth: 45, textAlign: "right" }}>{s.cal} kcal</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING LOAD DISTRIBUTION ── */}
             {(profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
