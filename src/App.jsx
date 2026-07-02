@@ -8817,6 +8817,77 @@ JSON:
               );
             })()}
 
+            {/* ── RPE TREND LINE ── */}
+            {(profile.sessions||[]).length >= 5 && (() => {
+              const sessions = (profile.sessions || []).filter(s => s.difficulte && s.date).slice(-20);
+              if (sessions.length < 5) return null;
+              const pts = sessions.map((s, i) => ({ rpe: s.difficulte, date: s.date, i }));
+              // 3-point moving average
+              const ma = pts.map((p, i) => {
+                const slice = pts.slice(Math.max(0, i - 1), i + 2);
+                return slice.reduce((a, x) => a + x.rpe, 0) / slice.length;
+              });
+              const W = 280, H = 70, PAD = 10;
+              const cx = i => PAD + (i / (pts.length - 1)) * (W - PAD * 2);
+              const cy = v => H - PAD - ((v - 1) / 9) * (H - PAD * 2);
+              const barPath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(p.rpe)}`).join(" ");
+              const maPath = ma.map((v, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(v)}`).join(" ");
+              const areaPath = barPath + ` L${cx(pts.length-1)},${H} L${PAD},${H} Z`;
+              const avgRpe = (pts.reduce((a, p) => a + p.rpe, 0) / pts.length).toFixed(1);
+              const trend = ma[ma.length - 1] - ma[0];
+              const trendColor = trend > 1.5 ? "#FF453A" : trend < -1 ? "#30D158" : "#C9A840";
+              const trendLabel = trend > 1.5 ? "↑ Charge en hausse" : trend < -1 ? "↓ Récupération" : "→ Stable";
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>💥 TENDANCE RPE</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{pts.length} dernières séances</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 20, color: trendColor, lineHeight: 1 }}>{avgRpe}<span style={{ fontSize: 11 }}>/10</span></div>
+                      <div style={{ fontSize: 10, color: trendColor }}>{trendLabel}</div>
+                    </div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+                    <defs>
+                      <linearGradient id="rpeGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#FF453A" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#FF453A" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    {/* Reference lines */}
+                    {[3, 5, 7, 9].map(r => (
+                      <line key={r} x1={PAD} y1={cy(r)} x2={W - PAD} y2={cy(r)}
+                        stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="3,3" />
+                    ))}
+                    {[3, 5, 7, 9].map(r => (
+                      <text key={r} x={PAD - 2} y={cy(r) + 3} fontSize="7" fill="#636366" textAnchor="end">{r}</text>
+                    ))}
+                    {/* Area */}
+                    <path d={areaPath} fill="url(#rpeGrad)" />
+                    {/* Bar dots */}
+                    {pts.map((p, i) => (
+                      <circle key={i} cx={cx(i)} cy={cy(p.rpe)} r="3" fill="#FF453A" opacity="0.5" />
+                    ))}
+                    {/* Moving average line */}
+                    <path d={maPath} fill="none" stroke="#FF453A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {/* Last dot */}
+                    <circle cx={cx(pts.length-1)} cy={cy(pts[pts.length-1].rpe)} r="4.5" fill="#FF453A" stroke="#000" strokeWidth="1.5" />
+                  </svg>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <div style={{ fontSize: 10, color: "#636366" }}>{pts[0].date ? new Date(pts[0].date).toLocaleDateString("fr-FR", { day:"numeric", month:"short" }) : ""}</div>
+                    <div style={{ fontSize: 10, color: "#636366" }}>Auj.</div>
+                  </div>
+                  {trend > 1.5 && (
+                    <div style={{ marginTop: 10, padding: "8px 10px", background: "rgba(255,69,58,0.1)", borderRadius: 8, fontSize: 11, color: "#FF453A" }}>
+                      ⚠️ RPE en hausse sur les dernières séances — envisage une semaine de décharge
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── PR PROGRESSION CHART ── */}
             {(profile.sessions||[]).length >= 3 && (() => {
               const sessions = profile.sessions || [];
