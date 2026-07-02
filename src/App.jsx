@@ -11187,6 +11187,121 @@ JSON:
               );
             })()}
 
+            {/* ── HEART RATE ZONE TRAINER ── */}
+            {(() => {
+              const maxHR = profile.age ? Math.round(208 - 0.7 * profile.age) : 190;
+              const ZONES = [
+                { id:1, name:"Zone 1", label:"Récup active", pct:[50,60], color:"#636366" },
+                { id:2, name:"Zone 2", label:"Aérobie base", pct:[60,70], color:"#30D158" },
+                { id:3, name:"Zone 3", label:"Tempo", pct:[70,80], color:"#FF9F0A" },
+                { id:4, name:"Zone 4", label:"Seuil", pct:[80,90], color:"#FF453A" },
+                { id:5, name:"Zone 5", label:"VO₂max", pct:[90,100], color:"#BF5AF2" },
+              ];
+
+              const KEY = `fitrace_hr_zones_${profile.name}`;
+              const [hrZoneSessions, setHrZoneSessions] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+              });
+              const [hrZoneForm, setHrZoneForm] = React.useState({ date: new Date().toISOString().slice(0,10), minutes: [0,0,0,0,0] });
+              const [hrZoneView, setHrZoneView] = React.useState("stats");
+
+              const saveZoneSession = () => {
+                const next = [...hrZoneSessions, { date: hrZoneForm.date, minutes: hrZoneForm.minutes }];
+                setHrZoneSessions(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setHrZoneForm({ date: new Date().toISOString().slice(0,10), minutes: [0,0,0,0,0] });
+                setHrZoneView("stats");
+              };
+
+              const totals = ZONES.map((_,i) => hrZoneSessions.reduce((s,sess) => s + (sess.minutes[i]||0), 0));
+              const grandTotal = totals.reduce((a,b)=>a+b,0) || 1;
+              const lowPct = Math.round((totals[0]+totals[1])/grandTotal*100);
+              const highPct = 100 - lowPct;
+              const balanceOk = lowPct >= 75;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Zones FC · FCmax {maxHR}</div>
+                    <button onClick={()=>setHrZoneView(hrZoneView==="log"?"stats":"log")} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                      {hrZoneView==="log"?"← Stats":"+ Log séance"}
+                    </button>
+                  </div>
+
+                  <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                    {ZONES.map(z=>{
+                      const lo = Math.round(maxHR*z.pct[0]/100);
+                      const hi = Math.round(maxHR*z.pct[1]/100);
+                      return (
+                        <div key={z.id} style={{ flex:1,background:"var(--bg3)",borderRadius:8,padding:"6px 4px",textAlign:"center" }}>
+                          <div style={{ fontSize:10,fontWeight:800,color:z.color }}>Z{z.id}</div>
+                          <div style={{ fontSize:8,color:"#8E8E93" }}>{lo}-{hi}</div>
+                          <div style={{ fontSize:7,color:"#636366" }}>bpm</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {hrZoneView==="log" ? (
+                    <div>
+                      <input type="date" value={hrZoneForm.date} onChange={e=>setHrZoneForm(f=>({...f,date:e.target.value}))}
+                        style={{ background:"var(--bg3)",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,width:"100%",boxSizing:"border-box",marginBottom:8 }}/>
+                      {ZONES.map((z,i)=>(
+                        <div key={z.id} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:6 }}>
+                          <div style={{ width:8,height:8,borderRadius:"50%",background:z.color,flexShrink:0 }}/>
+                          <div style={{ fontSize:11,color:"#8E8E93",flex:1 }}>{z.name} <span style={{ color:"#636366",fontSize:9 }}>{z.label}</span></div>
+                          <button onClick={()=>setHrZoneForm(f=>{ const m=[...f.minutes]; m[i]=Math.max(0,m[i]-5); return {...f,minutes:m}; })}
+                            style={{ background:"var(--bg3)",color:"#8E8E93",border:"none",borderRadius:4,width:22,height:22,fontSize:14,cursor:"pointer" }}>−</button>
+                          <span style={{ fontSize:13,fontWeight:700,color:"var(--white)",minWidth:28,textAlign:"center" }}>{hrZoneForm.minutes[i]}m</span>
+                          <button onClick={()=>setHrZoneForm(f=>{ const m=[...f.minutes]; m[i]=m[i]+5; return {...f,minutes:m}; })}
+                            style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:4,width:22,height:22,fontSize:14,cursor:"pointer" }}>+</button>
+                        </div>
+                      ))}
+                      <button onClick={saveZoneSession} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:10,fontSize:13,fontWeight:800,marginTop:8,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      {grandTotal > 1 && (
+                        <div style={{ height:20,borderRadius:10,overflow:"hidden",display:"flex",marginBottom:8 }}>
+                          {ZONES.map((z,i)=>( <div key={z.id} style={{ flex:totals[i]||0.01,background:z.color }}/> ))}
+                        </div>
+                      )}
+                      {ZONES.map((z,i)=>{
+                        const pct = Math.round(totals[i]/grandTotal*100);
+                        return (
+                          <div key={z.id} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:5 }}>
+                            <div style={{ width:8,height:8,borderRadius:"50%",background:z.color,flexShrink:0 }}/>
+                            <div style={{ fontSize:10,color:"#8E8E93",width:56 }}>{z.name}</div>
+                            <div style={{ flex:1,height:6,background:"#2C2C2E",borderRadius:3,overflow:"hidden" }}>
+                              <div style={{ height:"100%",width:`${pct}%`,background:z.color,borderRadius:3 }}/>
+                            </div>
+                            <div style={{ fontSize:10,color:"#8E8E93",width:28,textAlign:"right" }}>{totals[i]}m</div>
+                            <div style={{ fontSize:9,color:z.color,width:24,textAlign:"right" }}>{pct}%</div>
+                          </div>
+                        );
+                      })}
+                      {grandTotal > 10 && (
+                        <div style={{ background:balanceOk?"#1C3A24":"#3A1C1C",borderRadius:10,padding:"8px 12px",marginTop:10,display:"flex",alignItems:"center",gap:8 }}>
+                          <div style={{ fontSize:16 }}>{balanceOk?"✅":"⚠️"}</div>
+                          <div>
+                            <div style={{ fontSize:11,fontWeight:700,color:balanceOk?"#30D158":"#FF9F0A" }}>
+                              {balanceOk?"Polarisation 80/20 ✓":"Trop d'intensité ⚠️"}
+                            </div>
+                            <div style={{ fontSize:9,color:"#8E8E93",marginTop:1 }}>Basse {lowPct}% · Haute {highPct}% · Cible: 80/20</div>
+                          </div>
+                        </div>
+                      )}
+                      {hrZoneSessions.length === 0 && (
+                        <div style={{ textAlign:"center",color:"#636366",fontSize:11,paddingTop:8 }}>Logge ta première séance →</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SWEAT RATE CALCULATOR ── */}
             {(() => {
               const poids = parseFloat(profile.poids) || 70;
