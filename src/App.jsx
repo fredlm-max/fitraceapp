@@ -20974,6 +20974,199 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── BREATHING & RECOVERY TIMER ── */}
+      {(() => {
+        const PROTOCOLS = [
+          {
+            id: "box",
+            name: "Box Breathing",
+            icon: "🟦",
+            desc: "Cohérence cardiaque · Pré-compétition",
+            color: "#007AFF",
+            phases: [
+              { label:"Inspirez", duration:4 },
+              { label:"Retenez", duration:4 },
+              { label:"Expirez", duration:4 },
+              { label:"Retenez", duration:4 },
+            ],
+            rounds: 4,
+          },
+          {
+            id: "478",
+            name: "4-7-8",
+            icon: "🌙",
+            desc: "Relaxation · Récupération post-effort",
+            color: "#BF5AF2",
+            phases: [
+              { label:"Inspirez", duration:4 },
+              { label:"Retenez", duration:7 },
+              { label:"Expirez", duration:8 },
+            ],
+            rounds: 4,
+          },
+          {
+            id: "wimhof",
+            name: "Wim Hof",
+            icon: "❄️",
+            desc: "Activation · Pré-entraînement",
+            color: "#30D158",
+            phases: [
+              { label:"30x Inspire fort", duration:30 },
+              { label:"Expire & Retenez", duration:15 },
+              { label:"Inspirez & Retenez", duration:15 },
+            ],
+            rounds: 3,
+          },
+          {
+            id: "combat",
+            name: "Combat Breath",
+            icon: "🔥",
+            desc: "Gestion stress intense · Pendant l'effort",
+            color: "#FF453A",
+            phases: [
+              { label:"Inspirez fort", duration:2 },
+              { label:"Expirez fort", duration:2 },
+            ],
+            rounds: 6,
+          },
+        ];
+
+        const [selProto, setSelProto] = React.useState(null);
+        const [running, setRunning] = React.useState(false);
+        const [phaseIdx, setPhaseIdx] = React.useState(0);
+        const [roundIdx, setRoundIdx] = React.useState(0);
+        const [tick, setTick] = React.useState(0);
+        const [done, setDone] = React.useState(false);
+
+        const proto = PROTOCOLS.find(p=>p.id===selProto);
+
+        React.useEffect(() => {
+          if (!running || !proto) return;
+          const phase = proto.phases[phaseIdx];
+          if (!phase) return;
+          if (tick >= phase.duration) {
+            const nextPhase = phaseIdx + 1;
+            if (nextPhase >= proto.phases.length) {
+              const nextRound = roundIdx + 1;
+              if (nextRound >= proto.rounds) {
+                setRunning(false);
+                setDone(true);
+                return;
+              }
+              setRoundIdx(nextRound);
+              setPhaseIdx(0);
+            } else {
+              setPhaseIdx(nextPhase);
+            }
+            setTick(0);
+            return;
+          }
+          const id = setTimeout(() => setTick(t => t + 1), 1000);
+          return () => clearTimeout(id);
+        }, [running, tick, phaseIdx, roundIdx, proto]);
+
+        const start = (id) => {
+          setSelProto(id);
+          setRunning(true);
+          setPhaseIdx(0);
+          setRoundIdx(0);
+          setTick(0);
+          setDone(false);
+        };
+
+        const stop = () => {
+          setRunning(false);
+          setDone(false);
+        };
+
+        const currentPhase = proto ? proto.phases[phaseIdx] : null;
+        const phasePct = currentPhase ? (tick / currentPhase.duration) * 100 : 0;
+        const isInhale = currentPhase?.label?.toLowerCase().includes("inspir");
+        const isHold = currentPhase?.label?.toLowerCase().includes("retene") || currentPhase?.label?.toLowerCase().includes("retenu");
+
+        // Animated circle scale: inhale = grow, exhale = shrink, hold = stable
+        const circleScale = isInhale ? 0.6 + (phasePct/100)*0.4 : isHold ? 1 : 1 - (phasePct/100)*0.4;
+        const circleSize = Math.round(80 * circleScale);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Respiration & Récupération</div>
+
+            {!running && !done && (
+              <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                {PROTOCOLS.map(p=>(
+                  <button key={p.id} onClick={()=>start(p.id)}
+                    style={{ display:"flex",alignItems:"center",gap:12,background:"var(--bg3)",border:`1px solid ${p.color}20`,borderRadius:12,padding:"10px 12px",cursor:"pointer",textAlign:"left" }}>
+                    <span style={{ fontSize:22 }}>{p.icon}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12,fontWeight:800,color:p.color }}>{p.name}</div>
+                      <div style={{ fontSize:9,color:"#8E8E93",marginTop:1 }}>{p.desc}</div>
+                      <div style={{ fontSize:8,color:"#636366",marginTop:2 }}>
+                        {p.phases.map(ph=>`${ph.label} ${ph.duration}s`).join(" · ")} · {p.rounds} cycles
+                      </div>
+                    </div>
+                    <div style={{ fontSize:20,color:p.color }}>▶</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {running && proto && currentPhase && (
+              <div style={{ textAlign:"center",padding:"8px 0" }}>
+                <div style={{ fontSize:11,color:proto.color,fontWeight:700,marginBottom:4 }}>
+                  {proto.name} · Cycle {roundIdx+1}/{proto.rounds}
+                </div>
+
+                {/* Animated circle */}
+                <div style={{ display:"flex",justifyContent:"center",alignItems:"center",height:120,marginBottom:12 }}>
+                  <div style={{ position:"relative",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                    {/* Outer ring */}
+                    <div style={{ width:110,height:110,borderRadius:"50%",border:`3px solid ${proto.color}30`,position:"absolute" }}/>
+                    {/* Animated fill circle */}
+                    <div style={{ width:circleSize,height:circleSize,borderRadius:"50%",background:`radial-gradient(circle,${proto.color}50,${proto.color}20)`,border:`2px solid ${proto.color}`,transition:"width 0.3s,height 0.3s",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                      <div style={{ textAlign:"center" }}>
+                        <div style={{ fontSize:22,fontWeight:900,color:"var(--white)" }}>{currentPhase.duration - tick}</div>
+                        <div style={{ fontSize:8,color:proto.color,fontWeight:700 }}>s</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize:18,fontWeight:900,color:"var(--white)",marginBottom:4 }}>{currentPhase.label}</div>
+
+                {/* Phase progress */}
+                <div style={{ height:4,background:"#2C2C2E",borderRadius:2,marginBottom:12,overflow:"hidden",maxWidth:200,margin:"0 auto 12px" }}>
+                  <div style={{ height:"100%",width:`${phasePct}%`,background:proto.color,borderRadius:2,transition:"width 1s linear" }}/>
+                </div>
+
+                {/* Phase indicators */}
+                <div style={{ display:"flex",justifyContent:"center",gap:4,marginBottom:12 }}>
+                  {proto.phases.map((_,i)=>(
+                    <div key={i} style={{ width:8,height:8,borderRadius:"50%",background:i===phaseIdx?proto.color:"#3A3A3C",transition:"background 0.3s" }}/>
+                  ))}
+                </div>
+
+                <button onClick={stop} style={{ background:"#3A3A3C",color:"#8E8E93",border:"none",borderRadius:10,padding:"8px 24px",fontSize:12,cursor:"pointer" }}>
+                  Arrêter
+                </button>
+              </div>
+            )}
+
+            {done && proto && (
+              <div style={{ textAlign:"center",padding:"16px 0" }}>
+                <div style={{ fontSize:32,marginBottom:8 }}>✅</div>
+                <div style={{ fontSize:16,fontWeight:800,color:"#30D158",marginBottom:4 }}>Session terminée !</div>
+                <div style={{ fontSize:11,color:"#8E8E93",marginBottom:12 }}>{proto.name} · {proto.rounds} cycles complétés</div>
+                <button onClick={()=>{ setDone(false); setSelProto(null); }}
+                  style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:"8px 24px",fontSize:12,fontWeight:800,cursor:"pointer" }}>
+                  Recommencer
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX RACE TIMER ── */}
       {(() => {
         const SEQUENCE = [
