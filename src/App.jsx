@@ -17088,6 +17088,157 @@ function TechniqueTab({ profile = {} }) {
         </div>
       )}
 
+      {/* ── HYROX STATION SIMULATOR ── */}
+      {(() => {
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const poids = parseFloat(profile.poids) || 70;
+        const [activeStation, setActiveStation] = React.useState(null);
+        const simKey = `fitrace_station_targets_${profile.name}`;
+        const [targets, setTargets] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(simKey) || "{}"); } catch { return {}; }
+        });
+
+        const saveTarget = (id, val) => {
+          const updated = { ...targets, [id]: val };
+          setTargets(updated);
+          localStorage.setItem(simKey, JSON.stringify(updated));
+        };
+
+        const STATIONS = [
+          {
+            id: "skierg",
+            name: "SkiErg",
+            icon: "⛷️",
+            color: "#5AC8FA",
+            distance: "1000m",
+            target_H: "3:30-4:30",
+            target_F: "4:00-5:00",
+            weight: null,
+            tips: ["Tirez avec les deux bras simultanément", "Gainez le core, dos droit", "Respirez en montant les bras", "Allure régulière, pas de sprint"],
+          },
+          {
+            id: "sled_push",
+            name: "Sled Push",
+            icon: "🚜",
+            color: "#FF9F0A",
+            distance: "50m (×2 = 100m)",
+            target_H: "1:30-2:30",
+            target_F: "2:00-3:30",
+            weight: sex === "H" ? `${Math.round(102 + poids * 0.5)}kg` : `${Math.round(52 + poids * 0.3)}kg`,
+            tips: ["Position basse, hanche fléchie à 45°", "Poussez avec les jambes, pas le dos", "Petits pas rapides", "Ne perdez pas le contact"],
+          },
+          {
+            id: "sled_pull",
+            name: "Sled Pull",
+            icon: "⛓️",
+            color: "#BF5AF2",
+            distance: "50m (×2 = 100m)",
+            target_H: "2:00-3:00",
+            target_F: "2:30-4:00",
+            weight: sex === "H" ? "103kg" : "53kg",
+            tips: ["Marche arrière, foulées courtes", "Cordes tendues, tirez de vos bras ET jambes", "Ne regardez pas la corde", "Restez bas"],
+          },
+          {
+            id: "burpee",
+            name: "Burpee Broad Jump",
+            icon: "🤸",
+            color: "#FF453A",
+            distance: "80m",
+            target_H: "4:00-6:00",
+            target_F: "5:00-7:00",
+            weight: null,
+            tips: ["Sautez aussi loin que possible", "Atterrissez en souplesse", "Enchaînez sans pause", "Respirez à chaque saut"],
+          },
+          {
+            id: "rowing",
+            name: "Rowing",
+            icon: "🚣",
+            color: "#007AFF",
+            distance: "1000m",
+            target_H: "3:30-4:30",
+            target_F: "4:00-5:30",
+            weight: null,
+            tips: ["Drive des jambes en premier", "Puis tirez les bras", "Ratio effort/récup 1:2", "Visualisez 2 splits/500m"],
+          },
+          {
+            id: "farmer",
+            name: "Farmer Carry",
+            icon: "🏗️",
+            color: "#30D158",
+            distance: "200m",
+            target_H: "1:45-2:30",
+            target_F: "2:00-3:00",
+            weight: sex === "H" ? "2×32kg" : "2×16kg",
+            tips: ["Épaules en arrière et basses", "Core engagé, dos plat", "Regard droit devant", "Pas courts et réguliers"],
+          },
+          {
+            id: "lunges",
+            name: "Sandbag Lunges",
+            icon: "🎒",
+            color: "#FF6B35",
+            distance: "100m",
+            target_H: "3:00-5:00",
+            target_F: "3:30-5:30",
+            weight: sex === "H" ? "20kg" : "10kg",
+            tips: ["Sac sur l'épaule ou devant", "Genou arrière près du sol", "Restez droit", "Alternez les jambes"],
+          },
+          {
+            id: "wallballs",
+            name: "Wall Balls",
+            icon: "🎯",
+            color: "#C9A840",
+            distance: "100 reps",
+            target_H: "5:00-8:00",
+            target_F: "5:00-8:00",
+            weight: sex === "H" ? "6kg / 9ft" : "4kg / 9ft",
+            tips: ["Squat profond, cuisses parallèles", "Explosivité à la montée", "Visez la cible à chaque fois", "Réglez le rythme : 20 reps/min"],
+          },
+        ];
+
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Simulateur Stations HYROX · {sex === "H" ? "Homme" : "Femme"} {Math.round(poids)}kg</div>
+            {STATIONS.map(s => (
+              <div key={s.id} style={{ marginBottom: 6 }}>
+                <button onClick={() => setActiveStation(activeStation === s.id ? null : s.id)}
+                  style={{ width: "100%", background: activeStation === s.id ? `${s.color}18` : "var(--bg2)", border: `1px solid ${activeStation === s.id ? s.color : "#2C2C2E"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>{s.icon}</span>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: s.color }}>{s.name}</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>{s.distance}{s.weight ? ` · ${s.weight}` : ""}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 10, color: "#636366" }}>Cible</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: s.color }}>{sex === "H" ? s.target_H : s.target_F}</div>
+                  </div>
+                  <span style={{ color: "#636366", fontSize: 11 }}>{activeStation === s.id ? "▲" : "▼"}</span>
+                </button>
+                {activeStation === s.id && (
+                  <div style={{ background: `${s.color}08`, border: `1px solid ${s.color}20`, borderRadius: 10, padding: 12, marginTop: 2 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 9, color: "#636366", marginBottom: 4, textTransform: "uppercase" }}>Techniques clés</div>
+                      {s.tips.map((tip, i) => (
+                        <div key={i} style={{ display: "flex", gap: 6, marginBottom: 3 }}>
+                          <span style={{ color: s.color, fontSize: 10 }}>→</span>
+                          <span style={{ fontSize: 10, color: "var(--fg)" }}>{tip}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Mon chrono cible :</div>
+                      <input
+                        type="text" placeholder="ex: 3:45" value={targets[s.id] || ""}
+                        onChange={e => saveTarget(s.id, e.target.value)}
+                        style={{ flex: 1, background: "var(--bg2)", border: `1px solid ${s.color}50`, borderRadius: 8, padding: "5px 8px", color: s.color, fontSize: 13, fontWeight: 700 }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* ── COOLDOWN ROUTINE GENERATOR ── */}
       {(() => {
         const sessions = profile.sessions || [];
