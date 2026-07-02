@@ -6722,6 +6722,93 @@ JSON:
               );
             })()}
 
+            {/* ── STRESS & WELLNESS LOG ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0, 10);
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(wellKey) || "[]"); } catch { return []; }
+              });
+              const [mood, setMood] = React.useState(3);
+              const [stress, setStress] = React.useState(2);
+              const [energy, setEnergy] = React.useState(3);
+              const [saved, setSaved] = React.useState(() => {
+                try {
+                  const l = JSON.parse(localStorage.getItem(wellKey) || "[]");
+                  return l.length > 0 && l[0].date === new Date().toISOString().slice(0, 10);
+                } catch { return false; }
+              });
+
+              const save = () => {
+                const entry = { date: todayStr, mood, stress, energy, score: Math.round((mood + (6 - stress) + energy) / 3 * 10) / 10 };
+                const updated = [entry, ...log.filter(e => e.date !== todayStr)].slice(0, 30);
+                setLog(updated); localStorage.setItem(wellKey, JSON.stringify(updated)); setSaved(true);
+              };
+
+              const last7 = log.slice(0, 7).reverse();
+              const avgScore = last7.length ? Math.round(last7.reduce((s, e) => s + e.score, 0) / last7.length * 10) / 10 : null;
+
+              const MOOD_LABELS = ["", "😩 Épuisé", "😟 Fatigué", "😐 Normal", "😊 Bien", "🔥 Excellent"];
+              const STRESS_LABELS = ["", "😌 Zen", "🙂 Calme", "😐 Modéré", "😤 Tendu", "😰 Stressé"];
+              const ENERGY_LABELS = ["", "💤 À plat", "😴 Faible", "⚡ Correct", "💪 Bon", "🚀 Élevé"];
+
+              const getColor = (score) => score >= 4 ? "#30D158" : score >= 3 ? "#FF9F0A" : "#FF453A";
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Bien-être du Jour</div>
+                    {avgScore && <div style={{ fontSize: 11, color: getColor(avgScore), fontWeight: 700 }}>Moy. 7j : {avgScore}/5</div>}
+                  </div>
+
+                  {!saved ? (
+                    <div>
+                      {[
+                        { label: "Humeur", val: mood, set: setMood, labels: MOOD_LABELS, color: "#007AFF" },
+                        { label: "Stress", val: stress, set: setStress, labels: STRESS_LABELS, color: "#FF453A" },
+                        { label: "Énergie", val: energy, set: setEnergy, labels: ENERGY_LABELS, color: "#30D158" },
+                      ].map(item => (
+                        <div key={item.label} style={{ marginBottom: 12 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, color: "#636366" }}>{item.label}</span>
+                            <span style={{ fontSize: 11, color: item.color, fontWeight: 600 }}>{item.labels[item.val]}</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <button key={n} onClick={() => item.set(n)}
+                                style={{ flex: 1, height: 28, borderRadius: 8, border: "none", background: item.val >= n ? item.color : "#2C2C2E", cursor: "pointer", transition: "background 0.2s" }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <button onClick={save} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 10, padding: "10px 0", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>Enregistrer</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ textAlign: "center", padding: "8px 0 14px" }}>
+                        <div style={{ fontSize: 30 }}>✅</div>
+                        <div style={{ fontSize: 12, color: "#8E8E93", marginTop: 4 }}>Check-in d'aujourd'hui enregistré</div>
+                        <button onClick={() => setSaved(false)} style={{ marginTop: 6, background: "none", border: "none", color: "#636366", fontSize: 10, cursor: "pointer", textDecoration: "underline" }}>Modifier</button>
+                      </div>
+
+                      {/* 7-day trend */}
+                      {last7.length >= 2 && (
+                        <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 50 }}>
+                          {last7.map((e, i) => (
+                            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                              <div style={{ fontSize: 8, color: getColor(e.score), fontWeight: 700 }}>{e.score}</div>
+                              <div style={{ width: "100%", height: `${(e.score / 5) * 40}px`, background: getColor(e.score), borderRadius: "3px 3px 0 0", minHeight: 4 }} />
+                              <div style={{ fontSize: 7, color: "#636366" }}>{e.date.slice(8)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SESSION JOURNAL ── */}
             {(() => {
               const sessions = profile.sessions || [];
