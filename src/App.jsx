@@ -12154,6 +12154,84 @@ JSON:
                 );
               })()}
 
+              {/* ── MENTAL TRAINING GUIDE ── */}
+              {(() => {
+                const daysLeft = profile.raceDate ? Math.ceil((new Date(profile.raceDate) - new Date()) / 86400000) : null;
+                const [activeTab, setActiveTab] = React.useState("visualize");
+                const TABS = [
+                  { id: "visualize", label: "Visualisation", icon: "🧠" },
+                  { id: "selftalk",  label: "Self-Talk",    icon: "💬" },
+                  { id: "stress",    label: "Stress race",  icon: "🏁" },
+                ];
+                const CONTENT = {
+                  visualize: {
+                    intro: "La visualisation mentale active les mêmes circuits neuronaux que la pratique réelle (Driskell 1994). 10 min/jour = gains mesurables en performance.",
+                    steps: [
+                      { title: "Ferme les yeux — 2 min", desc: "Assieds-toi confortablement. Respire lentement. Détends chaque muscle du visage jusqu'aux pieds." },
+                      { title: "Le départ — 3 min", desc: `Visualise la ligne de départ HYROX. L'ambiance, les odeurs, la foule. Tu es calme, concentré·e. Le starter compte : 3… 2… 1…` },
+                      { title: "Chaque station — 3 min", desc: "Passe mentalement chaque station une par une. Tu vois ta technique parfaite, tu entends ta respiration, tu sens tes muscles travailler." },
+                      { title: "L'arrivée — 2 min", desc: `Tu franchis la ligne. La sensation dans le corps. La fierté. Ancre cette émotion — elle t'y emmènera le jour J.` },
+                    ],
+                  },
+                  selftalk: {
+                    intro: "Le dialogue intérieur positif améliore les performances de 4–17% selon Hardy (2006). Prépare tes mantras maintenant.",
+                    steps: [
+                      { title: "Sur les runs", mantras: ["Je suis fort·e et régulier·ère", "Chaque foulée me rapproche", "Je gère mon allure, je maîtrise", "Souple et efficace"] },
+                      { title: "Aux stations difficiles", mantras: ["La douleur est temporaire, la fierté est permanente", "Je m'y suis entraîné·e pour ça", "Une répétition après l'autre", "Mon corps peut le faire"] },
+                      { title: "Quand ça fait mal", mantras: ["C'est là que se gagne la course", "Tout le monde souffre — je continue", "Je suis plus fort·e que cette sensation", "Presque fini·e — donne tout"] },
+                      { title: "Ton mantra personnel", mantras: [profile.name ? `"${profile.name.split(" ")[0]}, tu es fait·e pour ça"` : "Crée ton mantra maintenant", "Court (2–5 mots), rythmé sur ta foulée", "Positif et au présent (pas de 'ne pas')", "Teste-le à l'entraînement d'abord"] },
+                    ],
+                  },
+                  stress: {
+                    intro: "Le stress pré-course est normal — c'est de l'excitation mal interprétée. Voici comment le recadrer.",
+                    steps: [
+                      { title: "La veille", desc: "Prépare ton sac, couche-toi tôt. Pas de décisions de dernière minute. Confie-toi à la préparation déjà faite." },
+                      { title: "Le matin J", desc: "Réveil +3h avant. Petit-déjeuner habituel. Pas d'aliment nouveau. Musique motivante. Arrive tôt sur site." },
+                      { title: "Avant le départ", desc: "Échauffement 15 min. Technique box breathing. Relis tes 3 mantras. Rappelle-toi 1 séance difficile que tu as surmontée." },
+                      { title: "Recadrage du stress", desc: `Dis-toi : "Je suis excité·e, pas stressé·e." Tes battements de cœur rapides = ton corps se prépare à performer. C'est positif.` },
+                    ],
+                  },
+                };
+                const content = CONTENT[activeTab];
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🧠 PRÉPARATION MENTALE</div>
+                      {daysLeft !== null && daysLeft >= 0 && daysLeft <= 30 && (
+                        <div style={{ fontSize: 11, color: "#8E8E93" }}>J-{daysLeft}</div>
+                      )}
+                    </div>
+                    {/* Tab selector */}
+                    <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                      {TABS.map(t => (
+                        <button key={t.id} onClick={() => setActiveTab(t.id)}
+                          style={{ flex: 1, padding: "8px 4px", borderRadius: 10, background: activeTab === t.id ? "rgba(201,168,64,0.15)" : "rgba(255,255,255,0.04)", border: activeTab === t.id ? "1.5px solid rgba(201,168,64,0.4)" : "1px solid transparent", color: activeTab === t.id ? "var(--yellow)" : "#8E8E93", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          {t.icon}<br />{t.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Content */}
+                    <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "12px 14px", marginBottom: 10, fontSize: 12, color: "#aaa", lineHeight: 1.6, fontStyle: "italic" }}>
+                      {content.intro}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {content.steps.map((step, i) => (
+                        <div key={i} style={{ display: "flex", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, borderLeft: "3px solid var(--yellow)" }}>
+                          <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", minWidth: 20, paddingTop: 1 }}>{i + 1}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 700, marginBottom: 4 }}>{step.title}</div>
+                            {step.desc && <div style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1.5 }}>{step.desc}</div>}
+                            {step.mantras && step.mantras.map((m, j) => (
+                              <div key={j} style={{ fontSize: 11, color: j === 0 ? "var(--yellow)" : "#8E8E93", marginBottom: 2 }}>"{m}"</div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── ENERGY SYSTEMS GUIDE ── */}
               {(() => {
                 const SYSTEMS = [
