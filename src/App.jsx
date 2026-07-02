@@ -6116,6 +6116,93 @@ JSON:
               );
             })()}
 
+            {/* ── APEX PERFORMANCE SCORE ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              // 1. Fitness score (CTL proxy) — based on recent session frequency & intensity
+              const last28 = sessions.filter(s => s.date && (Date.now() - new Date(s.date)) < 28 * 86400000);
+              const last7  = sessions.filter(s => s.date && (Date.now() - new Date(s.date)) < 7 * 86400000);
+              const trimp28 = last28.reduce((a, s) => a + ((s.duree || 45) * (s.difficulte || 5) / 10), 0);
+              const fitnessScore = Math.min(100, Math.round(trimp28 / 3));
+
+              // 2. Consistency score — days with session out of 28
+              const activeDays = new Set(last28.map(s => s.date)).size;
+              const consistencyScore = Math.round((activeDays / 16) * 100); // 16 sessions/28j = 100%
+
+              // 3. Recovery score — today's daily check-in
+              const todayKey = getDailyLogKey(profile.name, new Date().toISOString().slice(0,10));
+              let todayLog = {};
+              try { todayLog = JSON.parse(localStorage.getItem(todayKey) || "{}"); } catch {}
+              const recovScore = (todayLog.fatigue || todayLog.sleepHours) ? calcRecoveryScore(todayLog, profile) : 70;
+
+              // 4. Progression score — TRIMP last 14d vs prior 14d
+              const last14 = sessions.filter(s => s.date && (Date.now() - new Date(s.date)) < 14 * 86400000);
+              const prev14 = sessions.filter(s => {
+                const d = Date.now() - new Date(s.date);
+                return s.date && d >= 14 * 86400000 && d < 28 * 86400000;
+              });
+              const trimp14 = last14.reduce((a, s) => a + ((s.duree||45)*(s.difficulte||5)/10), 0);
+              const trimpPrev = prev14.reduce((a, s) => a + ((s.duree||45)*(s.difficulte||5)/10), 0);
+              const progRatio = trimpPrev > 0 ? trimp14 / trimpPrev : 1;
+              const progressScore = progRatio >= 1.05 && progRatio <= 1.25 ? 100
+                : progRatio >= 0.9 ? 75 : progRatio > 1.25 ? 60 : 40;
+
+              const apexScore = Math.round(
+                fitnessScore * 0.30 +
+                Math.min(100, consistencyScore) * 0.25 +
+                recovScore * 0.25 +
+                progressScore * 0.20
+              );
+
+              const scoreColor = apexScore >= 80 ? "#30D158" : apexScore >= 65 ? "#C9A840" : apexScore >= 45 ? "#FF9F0A" : "#FF453A";
+              const scoreLabel = apexScore >= 80 ? "PEAK" : apexScore >= 65 ? "EN FORME" : apexScore >= 45 ? "PROGRESSION" : "RÉCUP";
+              const R = 52, circ = 2 * Math.PI * R;
+
+              return (
+                <div style={{ background: `linear-gradient(135deg, ${scoreColor}18 0%, rgba(10,10,10,1) 60%)`, border: `1px solid ${scoreColor}30`, borderRadius: 18, padding: "18px 16px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 14 }}>Score APEX du jour</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    {/* Ring */}
+                    <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
+                      <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+                        <circle cx="60" cy="60" r={R} fill="none" stroke={scoreColor} strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(apexScore / 100) * circ} ${circ}`}
+                          transform="rotate(-90 60 60)"
+                          style={{ transition: "stroke-dasharray 1s ease", filter: `drop-shadow(0 0 6px ${scoreColor}88)` }} />
+                      </svg>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <div className="bebas" style={{ fontSize: 34, color: scoreColor, lineHeight: 1 }}>{apexScore}</div>
+                        <div style={{ fontSize: 10, color: scoreColor, fontWeight: 700 }}>{scoreLabel}</div>
+                      </div>
+                    </div>
+                    {/* Sub-scores */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {[
+                        { l: "Fitness", v: fitnessScore,   color: "#38bdf8",  w: 0.30 },
+                        { l: "Consistance", v: Math.min(100, consistencyScore), color: "#C9A840", w: 0.25 },
+                        { l: "Récupération", v: recovScore, color: "#30D158",  w: 0.25 },
+                        { l: "Progression", v: progressScore, color: "#BF5AF2", w: 0.20 },
+                      ].map(s => (
+                        <div key={s.l}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <div style={{ fontSize: 11, color: "#8E8E93" }}>{s.l}</div>
+                            <div style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.v}</div>
+                          </div>
+                          <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                            <div style={{ width: `${s.v}%`, height: "100%", background: s.color, borderRadius: 99, transition: "width 0.8s ease" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── POST-SESSION RECOVERY PROTOCOL ── */}
             {(() => {
               const lastSess = (profile.sessions || []).slice(-1)[0];
