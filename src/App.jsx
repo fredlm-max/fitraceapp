@@ -20166,23 +20166,34 @@ function TechniqueTab({ profile = {} }) {
 
       {/* ── INTERVAL TRAINING TIMER ── */}
       {(() => {
-        const [workSec, setWorkSec] = React.useState(40);
-        const [restSec, setRestSec] = React.useState(20);
+        const [workMin, setWorkMin] = React.useState(0);
+        const [workSecInput, setWorkSecInput] = React.useState(40);
+        const [restMin, setRestMin] = React.useState(0);
+        const [restSecInput, setRestSecInput] = React.useState(20);
         const [rounds, setRounds] = React.useState(8);
-        const [phase, setPhase] = React.useState("idle"); // idle | work | rest | done
+        const [sets, setSets] = React.useState(1);
+        const [restBetweenSets, setRestBetweenSets] = React.useState(60);
+        const [phase, setPhase] = React.useState("idle"); // idle | countdown | work | rest | setrest | done
         const [currentRound, setCurrentRound] = React.useState(1);
-        const [timeLeft, setTimeLeft] = React.useState(workSec);
+        const [currentSet, setCurrentSet] = React.useState(1);
+        const [timeLeft, setTimeLeft] = React.useState(3);
         const [isRunning, setIsRunning] = React.useState(false);
         const timerRef = React.useRef(null);
 
-        const beep = (freq = 880, dur = 0.1) => {
+        const workSec = workMin * 60 + workSecInput;
+        const restSec = restMin * 60 + restSecInput;
+
+        const beep = (freq = 880, dur = 0.1, times = 1) => {
           try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.frequency.value = freq; gain.gain.value = 0.3;
-            osc.start(); osc.stop(ctx.currentTime + dur);
+            for (let i = 0; i < times; i++) {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.frequency.value = freq; gain.gain.value = 0.3;
+              osc.start(ctx.currentTime + i * 0.3);
+              osc.stop(ctx.currentTime + i * 0.3 + dur);
+            }
           } catch {}
         };
 
@@ -20190,99 +20201,206 @@ function TechniqueTab({ profile = {} }) {
           if (!isRunning) return;
           timerRef.current = setTimeout(() => {
             if (timeLeft <= 1) {
-              if (phase === "work") {
-                if (currentRound >= rounds) { setPhase("done"); setIsRunning(false); beep(1200, 0.3); return; }
-                beep(440, 0.2);
-                setPhase("rest"); setTimeLeft(restSec);
-              } else {
-                beep(880, 0.1);
-                setPhase("work"); setCurrentRound(r => r + 1); setTimeLeft(workSec);
+              if (phase === "countdown") {
+                beep(880, 0.15); setPhase("work"); setTimeLeft(workSec);
+              } else if (phase === "work") {
+                if (currentRound >= rounds) {
+                  if (currentSet >= sets) {
+                    beep(1200, 0.3, 3); setPhase("done"); setIsRunning(false);
+                  } else {
+                    beep(440, 0.2, 2); setPhase("setrest"); setTimeLeft(restBetweenSets);
+                  }
+                } else {
+                  beep(440, 0.15); setPhase("rest"); setTimeLeft(restSec);
+                }
+              } else if (phase === "rest") {
+                beep(880, 0.1); setPhase("work"); setCurrentRound(r => r + 1); setTimeLeft(workSec);
+              } else if (phase === "setrest") {
+                beep(880, 0.2, 2); setCurrentSet(s => s + 1); setCurrentRound(1); setPhase("work"); setTimeLeft(workSec);
               }
             } else {
-              if (timeLeft <= 3) beep(660, 0.05);
+              if (timeLeft <= 4 && phase !== "countdown") beep(660, 0.04);
               setTimeLeft(t => t - 1);
             }
           }, 1000);
           return () => clearTimeout(timerRef.current);
-        }, [isRunning, timeLeft, phase, currentRound, rounds, workSec, restSec]);
+        }, [isRunning, timeLeft, phase, currentRound, currentSet, rounds, sets, workSec, restSec, restBetweenSets]);
 
         const start = () => {
-          setPhase("work"); setCurrentRound(1); setTimeLeft(workSec); setIsRunning(true);
-          beep(880, 0.1);
+          setPhase("countdown"); setCurrentRound(1); setCurrentSet(1); setTimeLeft(3); setIsRunning(true);
+          beep(660, 0.1);
         };
         const stop = () => { setIsRunning(false); setPhase("idle"); clearTimeout(timerRef.current); };
+        const togglePause = () => setIsRunning(v => !v);
+        const skipPhase = () => { clearTimeout(timerRef.current); setTimeLeft(1); };
 
-        const total = (workSec + restSec) * rounds;
-        const totalMin = Math.floor(total / 60);
-        const phaseBg = phase === "work" ? "#FF453A" : phase === "rest" ? "#30D158" : phase === "done" ? "#C9A840" : "#2C2C2E";
-        const phaseLabel = phase === "work" ? "EFFORT" : phase === "rest" ? "REPOS" : phase === "done" ? "TERMINÉ !" : "PRÊT";
-        const progress = phase === "work" ? (workSec - timeLeft) / workSec : phase === "rest" ? (restSec - timeLeft) / restSec : 0;
-        const R = 44, circum = 2 * Math.PI * R;
+        const total = (workSec + restSec) * rounds * sets + restBetweenSets * Math.max(0, sets - 1);
+        const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+        const phaseColor = { countdown: "#FF9F0A", work: "#FF453A", rest: "#30D158", setrest: "#007AFF", done: "#C9A840", idle: "#2C2C2E" }[phase];
+        const phaseLabel = { countdown: "PRÊT...", work: "EFFORT", rest: "REPOS", setrest: "PAUSE SÉRIE", done: "TERMINÉ !", idle: "" }[phase];
+        const phaseDuration = phase === "work" ? workSec : phase === "rest" ? restSec : phase === "setrest" ? restBetweenSets : phase === "countdown" ? 3 : 1;
+        const progress = phaseDuration > 0 ? (phaseDuration - timeLeft) / phaseDuration : 0;
+        const R = 54, circum = 2 * Math.PI * R;
 
         const PRESETS = [
-          { name: "Tabata", w: 20, r: 10, n: 8 },
-          { name: "EMOM 40/20", w: 40, r: 20, n: 10 },
-          { name: "30/30", w: 30, r: 30, n: 6 },
-          { name: "HYROX Sim", w: 60, r: 30, n: 8 },
+          { name: "Tabata", wm: 0, ws: 20, rm: 0, rs: 10, n: 8, s: 1, sb: 60 },
+          { name: "40/20", wm: 0, ws: 40, rm: 0, rs: 20, n: 10, s: 1, sb: 90 },
+          { name: "30/30", wm: 0, ws: 30, rm: 0, rs: 30, n: 6, s: 3, sb: 120 },
+          { name: "1min/30s", wm: 1, ws: 0, rm: 0, rs: 30, n: 5, s: 2, sb: 90 },
+          { name: "HYROX", wm: 1, ws: 0, rm: 0, rs: 30, n: 8, s: 1, sb: 120 },
         ];
+
+        const NumInput = ({ label, color, min, max, value, onChange, unit }) => (
+          <div style={{ flex: 1, background: "#1C1C1E", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <button onClick={() => onChange(Math.max(min, value - 1))} style={{ width: 26, height: 26, borderRadius: 8, background: "#2C2C2E", border: "none", color: "var(--fg)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+              <input
+                type="number" value={value} min={min} max={max}
+                onChange={e => onChange(Math.min(max, Math.max(min, parseInt(e.target.value) || min)))}
+                style={{ width: 48, background: "transparent", border: "none", color, fontSize: 22, fontWeight: 900, textAlign: "center", fontVariantNumeric: "tabular-nums" }}
+              />
+              <button onClick={() => onChange(Math.min(max, value + 1))} style={{ width: 26, height: 26, borderRadius: 8, background: "#2C2C2E", border: "none", color: "var(--fg)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+            </div>
+            {unit && <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>{unit}</div>}
+          </div>
+        );
 
         return (
           <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
             <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Minuteur Intervalles HIIT</div>
 
-            {/* Presets */}
             {phase === "idle" && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                {PRESETS.map(p => (
-                  <button key={p.name} onClick={() => { setWorkSec(p.w); setRestSec(p.r); setRounds(p.n); }}
-                    style={{ flex: 1, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "5px 2px", color: "var(--fg)", fontSize: 9, cursor: "pointer", fontWeight: 600 }}>
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
+              <>
+                {/* Presets */}
+                <div style={{ display: "flex", gap: 5, marginBottom: 14, flexWrap: "wrap" }}>
+                  {PRESETS.map(p => (
+                    <button key={p.name} onClick={() => { setWorkMin(p.wm); setWorkSecInput(p.ws); setRestMin(p.rm); setRestSecInput(p.rs); setRounds(p.n); setSets(p.s); setRestBetweenSets(p.sb); }}
+                      style={{ flex: 1, minWidth: 60, background: "#2C2C2E", border: "1px solid #3A3A3C", borderRadius: 8, padding: "5px 4px", color: "var(--fg)", fontSize: 9, cursor: "pointer", fontWeight: 600 }}>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Config */}
-            {phase === "idle" && (
-              <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center" }}>
-                {[["Effort (s)", workSec, setWorkSec, 10, 120, "#FF453A"], ["Repos (s)", restSec, setRestSec, 5, 60, "#30D158"], ["Rounds", rounds, setRounds, 2, 20, "#FF9F0A"]].map(([label, val, setter, min, max, col]) => (
-                  <div key={label} style={{ flex: 1, textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>{label}</div>
-                    <input type="number" value={val} min={min} max={max} onChange={e => setter(parseInt(e.target.value) || min)}
-                      style={{ width: "100%", background: "var(--bg3)", border: `1px solid ${col}50`, borderRadius: 8, padding: "6px 4px", color: col, fontSize: 16, fontWeight: 800, textAlign: "center" }} />
+                {/* WORK TIME */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: "#FF453A", fontWeight: 700, marginBottom: 6 }}>⏱ TEMPS DE TRAVAIL</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <NumInput label="Minutes" color="#FF453A" min={0} max={59} value={workMin} onChange={setWorkMin} unit="min" />
+                    <NumInput label="Secondes" color="#FF453A" min={0} max={59} value={workSecInput} onChange={setWorkSecInput} unit="sec" />
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {/* REST TIME */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: "#30D158", fontWeight: 700, marginBottom: 6 }}>😮‍💨 TEMPS DE REPOS</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <NumInput label="Minutes" color="#30D158" min={0} max={59} value={restMin} onChange={setRestMin} unit="min" />
+                    <NumInput label="Secondes" color="#30D158" min={0} max={59} value={restSecInput} onChange={setRestSecInput} unit="sec" />
+                  </div>
+                </div>
+
+                {/* ROUNDS & SETS */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#FF9F0A", fontWeight: 700, marginBottom: 6 }}>🔁 RÉPÉTITIONS</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <NumInput label="Rounds" color="#FF9F0A" min={1} max={50} value={rounds} onChange={setRounds} unit="tours" />
+                    <NumInput label="Séries" color="#007AFF" min={1} max={10} value={sets} onChange={setSets} unit="séries" />
+                    {sets > 1 && <NumInput label="Pause série" color="#007AFF" min={10} max={300} value={restBetweenSets} onChange={setRestBetweenSets} unit="sec" />}
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div style={{ background: "#1C1C1E", borderRadius: 10, padding: 10, marginBottom: 12, display: "flex", justifyContent: "space-around", textAlign: "center" }}>
+                  <div><div style={{ fontSize: 9, color: "#636366" }}>Travail</div><div style={{ fontSize: 13, fontWeight: 800, color: "#FF453A" }}>{fmt(workSec)}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#636366" }}>Repos</div><div style={{ fontSize: 13, fontWeight: 800, color: "#30D158" }}>{fmt(restSec)}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#636366" }}>Rounds×Séries</div><div style={{ fontSize: 13, fontWeight: 800, color: "#FF9F0A" }}>{rounds}×{sets}</div></div>
+                  <div><div style={{ fontSize: 9, color: "#636366" }}>Durée totale</div><div style={{ fontSize: 13, fontWeight: 800, color: "#C9A840" }}>{fmt(total)}</div></div>
+                </div>
+
+                <button onClick={start} disabled={workSec < 1} style={{ width: "100%", background: workSec < 1 ? "#2C2C2E" : "#FF453A", color: workSec < 1 ? "#636366" : "#fff", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 16, fontWeight: 900, cursor: workSec < 1 ? "not-allowed" : "pointer", letterSpacing: 0.5 }}>▶ DÉMARRER</button>
+              </>
             )}
 
-            {/* Ring timer */}
+            {/* Active timer */}
             {phase !== "idle" && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
-                <svg width="120" height="120" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r={R} fill="none" stroke="#2C2C2E" strokeWidth="8" />
-                  <circle cx="60" cy="60" r={R} fill="none" stroke={phaseBg} strokeWidth="8"
-                    strokeDasharray={circum} strokeDashoffset={circum * (1 - progress)}
-                    strokeLinecap="round" transform="rotate(-90 60 60)" style={{ transition: "stroke-dashoffset 0.9s linear" }} />
-                  <text x="60" y="55" textAnchor="middle" fill="var(--fg)" fontSize="28" fontWeight="900">{timeLeft}</text>
-                  <text x="60" y="72" textAnchor="middle" fill={phaseBg} fontSize="10" fontWeight="700">{phaseLabel}</text>
-                </svg>
-                {phase !== "done" && <div style={{ fontSize: 12, color: "#8E8E93", marginTop: 6 }}>Round {currentRound} / {rounds}</div>}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                {/* Ring */}
+                <div style={{ position: "relative", marginBottom: 10 }}>
+                  <svg width="140" height="140" viewBox="0 0 140 140">
+                    <circle cx="70" cy="70" r={R} fill="none" stroke="#2C2C2E" strokeWidth="10" />
+                    <circle cx="70" cy="70" r={R} fill="none" stroke={phaseColor} strokeWidth="10"
+                      strokeDasharray={circum} strokeDashoffset={circum * (1 - progress)}
+                      strokeLinecap="round" transform="rotate(-90 70 70)"
+                      style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+                    {phase === "done" ? (
+                      <text x="70" y="78" textAnchor="middle" fill="#C9A840" fontSize="36">🏆</text>
+                    ) : (
+                      <>
+                        <text x="70" y="62" textAnchor="middle" fill="var(--fg)" fontSize="32" fontWeight="900" fontVariantNumeric="tabular-nums">
+                          {Math.floor(timeLeft / 60) > 0 ? `${Math.floor(timeLeft/60)}:${String(timeLeft%60).padStart(2,"0")}` : timeLeft}
+                        </text>
+                        <text x="70" y="80" textAnchor="middle" fill={phaseColor} fontSize="11" fontWeight="800">{phaseLabel}</text>
+                      </>
+                    )}
+                  </svg>
+                </div>
+
+                {/* Round / Set info */}
+                {phase !== "done" && (
+                  <div style={{ display: "flex", gap: 16, marginBottom: 12, textAlign: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Round</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#FF9F0A" }}>{phase === "setrest" ? "—" : currentRound}<span style={{ fontSize: 11, color: "#636366" }}>/{rounds}</span></div>
+                    </div>
+                    {sets > 1 && (
+                      <div>
+                        <div style={{ fontSize: 9, color: "#636366" }}>Série</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: "#007AFF" }}>{currentSet}<span style={{ fontSize: 11, color: "#636366" }}>/{sets}</span></div>
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Prochain</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: phase === "work" ? "#30D158" : "#FF453A" }}>
+                        {phase === "work" ? `Repos ${fmt(restSec)}` : phase === "rest" ? `Effort ${fmt(workSec)}` : phase === "setrest" ? `Série ${currentSet + 1}` : "—"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Progress bar of full session */}
+                {phase !== "done" && (
+                  <div style={{ width: "100%", marginBottom: 12 }}>
+                    <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2 }}>
+                      <div style={{ height: "100%", borderRadius: 2, background: "var(--yellow)",
+                        width: `${Math.round(((currentSet - 1) * rounds + (currentRound - 1) + (phase === "rest" || phase === "setrest" ? 0.5 : 0)) / (rounds * sets) * 100)}%`,
+                        transition: "width 1s linear"
+                      }} />
+                    </div>
+                    <div style={{ fontSize: 9, color: "#636366", textAlign: "right", marginTop: 2 }}>
+                      {Math.round(((currentSet - 1) * rounds + currentRound - 1) / (rounds * sets) * 100)}% terminé
+                    </div>
+                  </div>
+                )}
+
+                {/* Controls */}
+                <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                  {phase !== "done" && (
+                    <>
+                      <button onClick={togglePause} style={{ flex: 2, background: isRunning ? "#FF9F0A" : "#30D158", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+                        {isRunning ? "⏸ PAUSE" : "▶ REPRENDRE"}
+                      </button>
+                      <button onClick={skipPhase} title="Passer à la phase suivante" style={{ flex: 1, background: "#2C2C2E", color: "#8E8E93", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⏭ Skip</button>
+                      <button onClick={stop} title="Arrêter" style={{ background: "#2C2C2E", color: "#FF453A", border: "none", borderRadius: 10, padding: "12px 14px", fontSize: 14, cursor: "pointer" }}>■</button>
+                    </>
+                  )}
+                  {phase === "done" && (
+                    <button onClick={stop} style={{ flex: 1, background: "#C9A840", color: "#000", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>🏆 Recommencer</button>
+                  )}
+                </div>
               </div>
             )}
-
-            {/* Controls */}
-            <div style={{ display: "flex", gap: 8 }}>
-              {phase === "idle" && <button onClick={start} style={{ flex: 1, background: "#FF453A", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>▶ START</button>}
-              {phase !== "idle" && phase !== "done" && (
-                <>
-                  <button onClick={() => setIsRunning(v => !v)} style={{ flex: 1, background: isRunning ? "#FF9F0A" : "#30D158", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{isRunning ? "⏸ PAUSE" : "▶ REPRISE"}</button>
-                  <button onClick={stop} style={{ background: "#2C2C2E", color: "#FF453A", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>■</button>
-                </>
-              )}
-              {phase === "done" && <button onClick={stop} style={{ flex: 1, background: "var(--yellow)", color: "#000", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>🏆 Recommencer</button>}
-            </div>
-
-            {phase === "idle" && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Durée totale : {totalMin}:{String(total % 60).padStart(2, "0")} · {rounds} rounds</div>}
           </div>
         );
       })()}
