@@ -18202,6 +18202,78 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── PERFORMANCE BENCHMARK ── */}
+      {(() => {
+        const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
+        // Reference finish times in minutes (HYROX official data 2023-2024, Open category)
+        const BENCHMARKS = isMale ? [
+          { cat: "Débutant",    time: 120, color: "#636366", pct: 90 },
+          { cat: "Intermédiaire", time: 95, color: "#38bdf8", pct: 70 },
+          { cat: "Confirmé",    time: 80,  color: "#30D158", pct: 50 },
+          { cat: "Expert",      time: 70,  color: "#C9A840", pct: 25 },
+          { cat: "Elite",       time: 60,  color: "#BF5AF2", pct: 5  },
+        ] : [
+          { cat: "Débutante",   time: 130, color: "#636366", pct: 90 },
+          { cat: "Intermédiaire", time: 105, color: "#38bdf8", pct: 70 },
+          { cat: "Confirmée",   time: 90,  color: "#30D158", pct: 50 },
+          { cat: "Experte",     time: 78,  color: "#C9A840", pct: 25 },
+          { cat: "Élite",       time: 65,  color: "#BF5AF2", pct: 5  },
+        ];
+        const fmtT = m => `${Math.floor(m)}'${String(Math.round((m % 1) * 60)).padStart(2,"0")}`;
+        // User's best race time from sessions (type coach or perso with duration)
+        const raceSessions = (profile.sessions || []).filter(s => s.type === "course" || (s.titre && s.titre.toLowerCase().includes("hyrox")));
+        const bestMin = raceSessions.length ? Math.min(...raceSessions.map(s => (s.duree || 0))) : null;
+        // Find user level
+        const userLevel = bestMin ? BENCHMARKS.findIndex(b => bestMin <= b.time) : -1;
+        const minTime = Math.min(...BENCHMARKS.map(b => b.time));
+        const maxTime = Math.max(...BENCHMARKS.map(b => b.time));
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>🏆 BENCHMARK HYROX</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>Temps de référence catégorie {isMale ? "Hommes" : "Femmes"} Open</div>
+              </div>
+              {bestMin && <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 10, color: "#8E8E93" }}>Ton meilleur</div>
+                <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)" }}>{fmtT(bestMin)}</div>
+              </div>}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {BENCHMARKS.map((b, i) => {
+                const barPct = Math.round(((maxTime - b.time) / (maxTime - minTime)) * 80 + 10);
+                const isUser = bestMin && bestMin <= b.time && (i === 0 || bestMin > BENCHMARKS[i-1].time);
+                return (
+                  <div key={b.cat} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: isUser ? b.color + "18" : "rgba(255,255,255,0.03)", border: isUser ? `1.5px solid ${b.color}` : "1px solid transparent" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, color: isUser ? b.color : "var(--white)", fontWeight: isUser ? 700 : 400 }}>
+                          {b.cat} {isUser ? "← Toi" : ""}
+                        </div>
+                        <div style={{ fontSize: 12, color: b.color, fontWeight: 700 }}>{fmtT(b.time)}</div>
+                      </div>
+                      <div style={{ position: "relative", height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                        <div style={{ width: `${barPct}%`, height: "100%", background: b.color, borderRadius: 99, opacity: 0.7 }} />
+                        {bestMin && Math.abs(bestMin - b.time) < 5 && (
+                          <div style={{ position: "absolute", top: -4, left: `${Math.round(((maxTime - bestMin) / (maxTime - minTime)) * 80 + 10)}%`, width: 12, height: 12, borderRadius: "50%", background: "var(--yellow)", border: "2px solid #000", transform: "translateX(-50%)" }} />
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 9, color: "#636366", minWidth: 32, textAlign: "right" }}>Top {b.pct}%</div>
+                  </div>
+                );
+              })}
+            </div>
+            {!bestMin && (
+              <div style={{ marginTop: 12, padding: "8px 10px", background: "rgba(201,168,64,0.08)", borderRadius: 8, fontSize: 11, color: "#8E8E93" }}>
+                💡 Enregistre une séance HYROX complète pour voir ton niveau dans ce classement
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX RACE CIRCUIT VISUALIZATION ── */}
       {(() => {
         const CIRCUIT = [
