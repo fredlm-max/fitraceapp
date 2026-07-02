@@ -10742,6 +10742,132 @@ JSON:
               );
             })()}
 
+            {/* ── SLEEP TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_sleep_${profile.name}`;
+              const [sleepLog, setSleepLog] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+              const [bedH, setBedH] = React.useState(23);
+              const [bedM, setBedM] = React.useState(0);
+              const [wakeH, setWakeH] = React.useState(7);
+              const [wakeM, setWakeM] = React.useState(0);
+              const [quality, setQuality] = React.useState(3);
+              const [showForm, setShowForm] = React.useState(false);
+
+              const logSleep = () => {
+                const bedMin = bedH * 60 + bedM;
+                const wakeMin = wakeH * 60 + wakeM;
+                let durMin = wakeMin - bedMin;
+                if (durMin < 0) durMin += 24 * 60;
+                const dur = parseFloat((durMin / 60).toFixed(1));
+                const today = new Date().toISOString().slice(0, 10);
+                const next = [...sleepLog.filter(e => e.date !== today), { date: today, dur, quality }];
+                setSleepLog(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setShowForm(false);
+              };
+
+              const last7 = sleepLog.slice(-7);
+              const avgDur = last7.length ? (last7.reduce((s,e)=>s+e.dur,0)/last7.length).toFixed(1) : null;
+              const avgQuality = last7.length ? (last7.reduce((s,e)=>s+e.quality,0)/last7.length).toFixed(1) : null;
+              const TARGET = 8;
+              const sleepDebt = avgDur ? Math.max(0, (TARGET - parseFloat(avgDur)) * 7).toFixed(1) : null;
+
+              const qualColor = q => q >= 4 ? "#30D158" : q >= 3 ? "#FF9F0A" : "#FF453A";
+              const durColor = d => d >= 7.5 ? "#30D158" : d >= 6 ? "#FF9F0A" : "#FF453A";
+
+              const W = 300, H = 60, barW = Math.floor(W / 8) - 4;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Suivi du Sommeil 💤</div>
+                    <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                      {showForm?"Annuler":"+ Log"}
+                    </button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ marginBottom:12 }}>
+                      <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:8 }}>
+                        <span style={{ fontSize:10,color:"#8E8E93",width:50 }}>Coucher:</span>
+                        <input type="number" min={0} max={23} value={bedH} onChange={e=>setBedH(+e.target.value)}
+                          style={{ width:40,background:"var(--bg3)",border:"none",borderRadius:6,padding:"4px 6px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                        <span style={{ color:"#636366" }}>h</span>
+                        <input type="number" min={0} max={59} value={bedM} onChange={e=>setBedM(+e.target.value)}
+                          style={{ width:40,background:"var(--bg3)",border:"none",borderRadius:6,padding:"4px 6px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                        <span style={{ color:"#636366" }}>min</span>
+                      </div>
+                      <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:8 }}>
+                        <span style={{ fontSize:10,color:"#8E8E93",width:50 }}>Réveil:</span>
+                        <input type="number" min={0} max={23} value={wakeH} onChange={e=>setWakeH(+e.target.value)}
+                          style={{ width:40,background:"var(--bg3)",border:"none",borderRadius:6,padding:"4px 6px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                        <span style={{ color:"#636366" }}>h</span>
+                        <input type="number" min={0} max={59} value={wakeM} onChange={e=>setWakeM(+e.target.value)}
+                          style={{ width:40,background:"var(--bg3)",border:"none",borderRadius:6,padding:"4px 6px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                        <span style={{ color:"#636366" }}>min</span>
+                      </div>
+                      <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom:8 }}>
+                        <span style={{ fontSize:10,color:"#8E8E93",width:50 }}>Qualité:</span>
+                        {[1,2,3,4,5].map(q=>(
+                          <button key={q} onClick={()=>setQuality(q)}
+                            style={{ width:28,height:28,borderRadius:"50%",border:`2px solid ${quality>=q?"var(--yellow)":"#3A3A3C"}`,background:quality>=q?"var(--yellow)":"transparent",color:quality>=q?"#000":"#636366",fontSize:11,fontWeight:800,cursor:"pointer" }}>
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                      <button onClick={logSleep} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  )}
+
+                  {last7.length > 0 ? (
+                    <>
+                      {/* Summary row */}
+                      <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                        <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                          <div style={{ fontSize:18,fontWeight:900,color:avgDur?durColor(parseFloat(avgDur)):"#636366" }}>{avgDur}<span style={{ fontSize:10,fontWeight:400 }}>h</span></div>
+                          <div style={{ fontSize:8,color:"#636366" }}>Moy. durée</div>
+                        </div>
+                        <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                          <div style={{ fontSize:18,fontWeight:900,color:avgQuality?qualColor(parseFloat(avgQuality)):"#636366" }}>{avgQuality}<span style={{ fontSize:10,fontWeight:400 }}>/5</span></div>
+                          <div style={{ fontSize:8,color:"#636366" }}>Qualité moy.</div>
+                        </div>
+                        <div style={{ flex:1,background:parseFloat(sleepDebt||0)>2?"#3A1C1C":"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                          <div style={{ fontSize:18,fontWeight:900,color:parseFloat(sleepDebt||0)>2?"#FF453A":"#30D158" }}>{sleepDebt}<span style={{ fontSize:10,fontWeight:400 }}>h</span></div>
+                          <div style={{ fontSize:8,color:"#636366" }}>Dette sommeil</div>
+                        </div>
+                      </div>
+
+                      {/* 7-day bars */}
+                      <svg width="100%" viewBox={`0 0 ${W} ${H+20}`} style={{ overflow:"visible" }}>
+                        {last7.map((e,i)=>{
+                          const barH = Math.round((e.dur/10)*H);
+                          const x = i*(W/7)+2;
+                          const y = H-barH;
+                          const day = new Date(e.date+"T12:00:00").toLocaleDateString("fr",{weekday:"short"}).slice(0,1).toUpperCase();
+                          return (
+                            <g key={i}>
+                              <rect x={x} y={y} width={barW} height={barH} rx={3} fill={durColor(e.dur)} opacity={0.8}/>
+                              {/* Quality dot */}
+                              <circle cx={x+barW/2} cy={y-5} r={3} fill={qualColor(e.quality)}/>
+                              <text x={x+barW/2} y={y-12} textAnchor="middle" fill="#8E8E93" fontSize={8}>{e.dur}h</text>
+                              <text x={x+barW/2} y={H+12} textAnchor="middle" fill="#636366" fontSize={8}>{day}</text>
+                            </g>
+                          );
+                        })}
+                        {/* Target line */}
+                        <line x1={0} x2={W} y1={H-Math.round((TARGET/10)*H)} y2={H-Math.round((TARGET/10)*H)} stroke="#BF5AF2" strokeWidth={1} strokeDasharray="4 3" opacity={0.5}/>
+                        <text x={W-2} y={H-Math.round((TARGET/10)*H)-3} textAnchor="end" fill="#BF5AF2" fontSize={7}>{TARGET}h</text>
+                      </svg>
+                    </>
+                  ) : (
+                    <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"16px 0" }}>Commence à logger ton sommeil →</div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── WELLNESS HISTORY CHART ── */}
             {(() => {
               const wellKey = `fitrace_wellness_${profile.name}`;
