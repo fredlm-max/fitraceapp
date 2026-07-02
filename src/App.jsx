@@ -13217,6 +13217,99 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── FITNESS AGE ── */}
+      {(() => {
+        const age = parseInt(profile.age);
+        const vma = parseFloat(profile.vmaKmh);
+        if (!age || !vma) return null;
+
+        const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
+        const vo2max = Math.round(vma * 3.5);
+        const fcRest = parseInt(profile.fcRest) || 60;
+        const sessions7d = (profile.sessions || []).filter(s => s.date && (Date.now() - new Date(s.date)) < 7 * 86400000).length;
+
+        // Fitness age estimation based on HUNT Fitness Study (Nes et al. 2013)
+        // VO2max norms by age/sex → find equivalent "fitness age"
+        // Male VO2max averages by decade: 20s=47, 30s=44, 40s=40, 50s=36, 60s=31
+        // Female: 20s=40, 30s=37, 40s=33, 50s=29, 60s=25
+        const VO2_NORMS = isMale
+          ? [{ age: 20, v: 50 }, { age: 30, v: 46 }, { age: 40, v: 41 }, { age: 50, v: 36 }, { age: 60, v: 31 }, { age: 70, v: 26 }]
+          : [{ age: 20, v: 43 }, { age: 30, v: 39 }, { age: 40, v: 34 }, { age: 50, v: 29 }, { age: 60, v: 25 }, { age: 70, v: 21 }];
+
+        // Find which age bracket has closest VO2max
+        let fitnessAge = age;
+        let minDiff = Infinity;
+        for (let a = 18; a <= 75; a++) {
+          // Interpolate norm for age a
+          let norm = VO2_NORMS[0].v;
+          for (let i = 0; i < VO2_NORMS.length - 1; i++) {
+            if (a >= VO2_NORMS[i].age && a <= VO2_NORMS[i+1].age) {
+              const t = (a - VO2_NORMS[i].age) / (VO2_NORMS[i+1].age - VO2_NORMS[i].age);
+              norm = VO2_NORMS[i].v + t * (VO2_NORMS[i+1].v - VO2_NORMS[i].v);
+              break;
+            }
+          }
+          const diff = Math.abs(vo2max - norm);
+          if (diff < minDiff) { minDiff = diff; fitnessAge = a; }
+        }
+
+        // Adjust for resting HR (lower = younger physiologically)
+        if (fcRest < 50) fitnessAge -= 3;
+        else if (fcRest < 60) fitnessAge -= 1;
+        else if (fcRest > 80) fitnessAge += 3;
+        else if (fcRest > 70) fitnessAge += 1;
+
+        // Adjust for training frequency
+        if (sessions7d >= 5) fitnessAge -= 2;
+        else if (sessions7d >= 3) fitnessAge -= 1;
+        else if (sessions7d <= 1) fitnessAge += 2;
+
+        fitnessAge = Math.max(18, Math.min(75, fitnessAge));
+        const delta = age - fitnessAge;
+        const deltaColor = delta >= 5 ? "#30D158" : delta >= 0 ? "#C9A840" : "#FF453A";
+        const deltaLabel = delta >= 10 ? "Athlète d'élite !" : delta >= 5 ? "Excellent" : delta >= 0 ? "Au-dessus de la moyenne" : "À améliorer";
+
+        return (
+          <div style={{ background: "linear-gradient(135deg, rgba(48,209,88,0.08) 0%, rgba(10,10,10,1) 60%)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+            <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1, marginBottom: 14 }}>🧬 ÂGE PHYSIQUE</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 14 }}>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>ÂGE CIVIL</div>
+                <div className="bebas" style={{ fontSize: 48, color: "#8E8E93", lineHeight: 1 }}>{age}</div>
+                <div style={{ fontSize: 10, color: "#636366" }}>ans</div>
+              </div>
+              <div style={{ fontSize: 28, color: "#8E8E93" }}>→</div>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>ÂGE PHYSIQUE</div>
+                <div className="bebas" style={{ fontSize: 48, color: deltaColor, lineHeight: 1 }}>{fitnessAge}</div>
+                <div style={{ fontSize: 10, color: deltaColor }}>{delta > 0 ? `−${delta} ans` : delta < 0 ? `+${Math.abs(delta)} ans` : "="}  ans</div>
+              </div>
+            </div>
+            <div style={{ padding: "10px 14px", background: deltaColor + "15", borderRadius: 10, marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: deltaColor, fontWeight: 700, marginBottom: 4 }}>{delta >= 0 ? "🌟" : "💡"} {deltaLabel}</div>
+              <div style={{ fontSize: 11, color: "#aaa" }}>
+                {delta >= 5 ? `Ton VO2max de ${vo2max} ml/kg/min correspond à un athlète de ${fitnessAge} ans. Continue comme ça !`
+                  : delta >= 0 ? `Tu es plus jeune physiologiquement que ton âge. VO2max: ${vo2max} ml/kg/min.`
+                  : `Augmente ton volume aérobie Zone 2 pour améliorer ton VO2max (${vo2max} ml/kg/min) et rajeunir ta biologie.`}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[
+                { l: "VO2max", v: `${vo2max}`, u: "ml/kg/min" },
+                { l: "FC Repos", v: fcRest, u: "bpm" },
+                { l: "Séances/sem", v: sessions7d, u: "ce mois" },
+              ].map(s => (
+                <div key={s.l} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>{s.l}</div>
+                  <div className="bebas" style={{ fontSize: 16, color: "var(--white)" }}>{s.v}</div>
+                  <div style={{ fontSize: 9, color: "#636366" }}>{s.u}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── BODY COMPOSITION ── */}
       {(() => {
         const poids = parseFloat(profile.poids);
