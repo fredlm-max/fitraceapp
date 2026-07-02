@@ -7158,6 +7158,60 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY GOAL PROGRESS ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const now = Date.now();
+              const startOfWeek = now - new Date().getDay() * 86400000;
+              const weekSessions = sessions.filter(s => new Date(s.date).getTime() >= startOfWeek - 86400000 * new Date().getDay());
+              const weekKm = weekSessions.reduce((t, s) => t + (parseFloat(s.distance) || 0), 0);
+              const weekTrimp = weekSessions.reduce((t, s) => t + Math.round((s.duree || 0) * (s.rpe || 5) / 10), 0);
+              const weekCount = weekSessions.length;
+
+              const targets = [
+                { label: "Sessions", val: weekCount, target: 4, unit: "", color: "#007AFF", icon: "🏋️" },
+                { label: "Distance", val: Math.round(weekKm * 10) / 10, target: parseFloat(profile.kmObjectif) || 30, unit: "km", color: "#30D158", icon: "📍" },
+                { label: "TRIMP", val: weekTrimp, target: 300, unit: "pts", color: "#C9A840", icon: "⚡" },
+              ];
+
+              const Ring = ({ pct, color, size = 48 }) => {
+                const r = size / 2 - 5;
+                const circ = 2 * Math.PI * r;
+                const dash = Math.min(pct / 100, 1) * circ;
+                return (
+                  <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+                    <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2C2C2E" strokeWidth={5} />
+                    <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5}
+                      strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
+                  </svg>
+                );
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Objectifs Semaine</div>
+                  <div style={{ display: "flex", justifyContent: "space-around" }}>
+                    {targets.map(t => {
+                      const pct = Math.round((t.val / t.target) * 100);
+                      return (
+                        <div key={t.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ position: "relative", width: 48, height: 48 }}>
+                            <Ring pct={pct} color={t.color} />
+                            <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: 14 }}>{t.icon}</span>
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: t.color }}>{t.val}<span style={{ fontSize: 9, color: "#8E8E93" }}>{t.unit}</span></div>
+                          <div style={{ fontSize: 9, color: "#636366" }}>/{t.target}{t.unit}</div>
+                          <div style={{ fontSize: 10, color: pct >= 100 ? "#30D158" : "var(--fg)" }}>{t.label}</div>
+                          {pct >= 100 && <div style={{ fontSize: 9, color: "#30D158", fontWeight: 700 }}>✓</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {weekCount === 0 && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Aucune session cette semaine — Go !</div>}
+                </div>
+              );
+            })()}
+
             {/* ── CUSTOM GOALS TRACKER ── */}
             {(() => {
               const goalsKey = `fitrace_goals_${profile.name}`;
@@ -18610,6 +18664,102 @@ function TechniqueTab({ profile = {} }) {
                 )}
               </div>
             ))}
+          </div>
+        );
+      })()}
+
+      {/* ── LIVE SESSION TRACKER ── */}
+      {(() => {
+        const [liveActive, setLiveActive] = React.useState(false);
+        const [liveStart, setLiveStart] = React.useState(null);
+        const [liveElapsed, setLiveElapsed] = React.useState(0);
+        const [liveType, setLiveType] = React.useState("Course");
+        const [liveRPE, setLiveRPE] = React.useState(6);
+        const [liveKm, setLiveKm] = React.useState("");
+        const [liveSaved, setLiveSaved] = React.useState(false);
+
+        React.useEffect(() => {
+          if (!liveActive) return;
+          const id = setInterval(() => setLiveElapsed(Math.floor((Date.now() - liveStart) / 1000)), 1000);
+          return () => clearInterval(id);
+        }, [liveActive, liveStart]);
+
+        const fmt = (s) => {
+          const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+          return h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+        };
+
+        const startSession = () => {
+          setLiveStart(Date.now());
+          setLiveElapsed(0);
+          setLiveActive(true);
+          setLiveSaved(false);
+        };
+
+        const stopAndSave = () => {
+          setLiveActive(false);
+          const duree = Math.round(liveElapsed / 60);
+          const newSession = {
+            date: new Date().toISOString().slice(0, 10),
+            heure: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+            type: liveType,
+            duree,
+            distance: parseFloat(liveKm) || 0,
+            rpe: liveRPE,
+            notes: "Session live tracker"
+          };
+          const updated = { ...profile, sessions: [...(profile.sessions || []), newSession] };
+          localStorage.setItem(`fitrace_${profile.name}`, JSON.stringify(updated));
+          if (typeof setProfile === "function") setProfile(updated);
+          setLiveSaved(true);
+        };
+
+        const types = ["Course", "HYROX Complet", "Force", "Vélo", "Natation", "Mobilité", "Récupération"];
+        const rpeColors = ["","","#30D158","#30D158","#30D158","#FF9F0A","#FF9F0A","#FF9F0A","#FF453A","#FF453A","#FF453A"];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Live Session Tracker</div>
+
+            {!liveActive && !liveSaved && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>Type d'activité</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {types.map(t => (
+                      <button key={t} onClick={() => setLiveType(t)} style={{ padding: "4px 10px", borderRadius: 20, border: "none", fontSize: 10, fontWeight: 600, cursor: "pointer", background: liveType === t ? "var(--yellow)" : "#3A3A3C", color: liveType === t ? "#000" : "var(--fg)" }}>{t}</button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={startSession} style={{ background: "#30D158", color: "#000", border: "none", borderRadius: 14, padding: "14px 0", fontSize: 16, fontWeight: 900, cursor: "pointer", letterSpacing: 0.5 }}>▶ DÉMARRER</button>
+              </div>
+            )}
+
+            {liveActive && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 52, fontWeight: 900, color: "#30D158", fontVariantNumeric: "tabular-nums", letterSpacing: 2 }}>{fmt(liveElapsed)}</div>
+                <div style={{ fontSize: 11, color: "#8E8E93" }}>{liveType} · RPE {liveRPE}</div>
+                <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93" }}>Distance (km)</div>
+                  <input type="number" step="0.1" value={liveKm} onChange={e => setLiveKm(e.target.value)} placeholder="0.0" style={{ background: "#1C1C1E", color: "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 10px", fontSize: 14, width: "100%", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 4 }}>RPE: {liveRPE}</div>
+                  <input type="range" min={1} max={10} value={liveRPE} onChange={e => setLiveRPE(Number(e.target.value))} style={{ width: "100%" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366" }}>
+                    <span>Facile</span><span>Modéré</span><span>Max</span>
+                  </div>
+                </div>
+                <button onClick={stopAndSave} style={{ background: "#FF453A", color: "#fff", border: "none", borderRadius: 14, padding: "12px 0", fontSize: 15, fontWeight: 900, cursor: "pointer", width: "100%" }}>⏹ ARRÊTER & SAUVEGARDER</button>
+              </div>
+            )}
+
+            {liveSaved && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ fontSize: 36 }}>✅</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#30D158" }}>Session sauvegardée !</div>
+                <div style={{ fontSize: 11, color: "#8E8E93" }}>{liveType} · {fmt(liveElapsed)} · {liveKm || 0}km · RPE {liveRPE}</div>
+                <button onClick={() => { setLiveSaved(false); setLiveElapsed(0); setLiveKm(""); }} style={{ background: "#3A3A3C", color: "var(--fg)", border: "none", borderRadius: 12, padding: "8px 20px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Nouvelle session</button>
+              </div>
+            )}
           </div>
         );
       })()}
