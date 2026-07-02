@@ -18572,6 +18572,122 @@ function TechniqueTab({ profile = {} }) {
         </div>
       )}
 
+      {/* ── WORKOUT TEMPLATE LIBRARY ── */}
+      {(() => {
+        const [selTpl, setSelTpl] = React.useState(null);
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const poids = parseFloat(profile.poids) || 70;
+
+        const TEMPLATES = [
+          {
+            id: "hyrox_sim",
+            name: "HYROX Simulation",
+            duration: 75,
+            difficulty: "⭐⭐⭐⭐",
+            type: "HYROX Complet",
+            focus: "Race prep",
+            color: "#C9A840",
+            steps: [
+              { label: "Échauffement", dur: "10 min", detail: "Course légère + mobilité articulaire" },
+              { label: "Run 1km", dur: "4-6 min", detail: "Allure course HYROX (~85% VMA)" },
+              { label: "SkiErg 1000m", dur: "4-5 min", detail: sex === "H" ? "80kg de résistance" : "60kg de résistance" },
+              { label: "Run 1km", dur: "4-6 min", detail: "Maintien allure, gestion effort" },
+              { label: "Sled Push 50m", dur: "2-3 min", detail: sex === "H" ? `${102+poids}kg total` : `${78+poids}kg total` },
+              { label: "Run 1km", dur: "4-6 min", detail: "Récupération active" },
+              { label: "Sled Pull 50m", dur: "2-3 min", detail: sex === "H" ? `${102+poids}kg total` : `${78+poids}kg total` },
+              { label: "Run 1km", dur: "4-6 min", detail: "Maintien technique" },
+              { label: "Burpee Broad Jump 80m", dur: "5-7 min", detail: "Contrôle la cadence, pas de sprint" },
+              { label: "Retour au calme", dur: "10 min", detail: "Étirements + hydratation" },
+            ]
+          },
+          {
+            id: "threshold",
+            name: "Séance Seuil",
+            duration: 50,
+            difficulty: "⭐⭐⭐",
+            type: "Course",
+            focus: "VMA / Endurance",
+            color: "#007AFF",
+            steps: [
+              { label: "Échauffement", dur: "10 min", detail: "Course légère + gammes" },
+              { label: "3×10 min @ 85% VMA", dur: "30 min", detail: "Récup 2 min entre chaque bloc" },
+              { label: "Retour au calme", dur: "10 min", detail: "Course lente + étirements" },
+            ]
+          },
+          {
+            id: "force_hyrox",
+            name: "Force Fonctionnelle",
+            duration: 45,
+            difficulty: "⭐⭐⭐",
+            type: "Force",
+            focus: "Force + Endurance",
+            color: "#30D158",
+            steps: [
+              { label: "Échauffement", dur: "8 min", detail: "Mobilité hanches, épaules, squats légers" },
+              { label: "Wall Balls 4×15", dur: "12 min", detail: sex === "H" ? "9kg" : "6kg" + " · Récup 90s" },
+              { label: "Rowing 4×500m", dur: "16 min", detail: "Intensité modérée-haute · Récup 2 min" },
+              { label: "Farmer's Carry 4×40m", dur: "8 min", detail: sex === "H" ? "2×24kg" : "2×16kg" + " · Sans pause" },
+            ]
+          },
+          {
+            id: "recovery",
+            name: "Récupération Active",
+            duration: 30,
+            difficulty: "⭐",
+            type: "Récupération",
+            focus: "Mobilité / Récup",
+            color: "#636366",
+            steps: [
+              { label: "Marche ou vélo léger", dur: "15 min", detail: "FC < 120 bpm" },
+              { label: "Étirements globaux", dur: "10 min", detail: "Quadriceps, ischio, mollets, épaules" },
+              { label: "Respiration / Yoga", dur: "5 min", detail: "Cohérence cardiaque ou box breathing" },
+            ]
+          },
+        ];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Bibliothèque de Séances</div>
+
+            {!selTpl ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {TEMPLATES.map(t => (
+                  <button key={t.id} onClick={() => setSelTpl(t.id)} style={{ background: "#1C1C1E", border: `1px solid ${t.color}30`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: t.color }}>{t.name}</div>
+                      <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>{t.focus} · {t.duration} min · {t.difficulty}</div>
+                    </div>
+                    <div style={{ fontSize: 18, color: "#636366" }}>›</div>
+                  </button>
+                ))}
+              </div>
+            ) : (() => {
+              const tpl = TEMPLATES.find(t => t.id === selTpl);
+              return (
+                <div>
+                  <button onClick={() => setSelTpl(null)} style={{ background: "none", border: "none", color: "#8E8E93", fontSize: 11, cursor: "pointer", marginBottom: 10, padding: 0 }}>← Retour</button>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: tpl.color }}>{tpl.name}</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>{tpl.focus} · {tpl.duration} min · {tpl.difficulty}</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {tpl.steps.map((step, i) => (
+                      <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 0", borderBottom: "1px solid #2C2C2E" }}>
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: tpl.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#000", flexShrink: 0 }}>{i + 1}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg)" }}>{step.label}</div>
+                          <div style={{ fontSize: 9, color: "#8E8E93" }}>{step.dur} — {step.detail}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX STATION SIMULATOR ── */}
       {(() => {
         const sex = profile.sexe === "F" ? "F" : "H";
@@ -20606,6 +20722,72 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
             )}
 
             <div style={{ marginTop: 10, fontSize: 9, color: "#3A3A3C", textAlign: "center" }}>Dates approximatives · Vérifie hyrox.com pour les inscriptions officielles</div>
+          </div>
+        );
+      })()}
+
+      {/* ── TAPER CALCULATOR ── */}
+      {(() => {
+        const sessions = profile.sessions || [];
+        const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+        const daysLeft = raceDate ? Math.ceil((raceDate - Date.now()) / 86400000) : null;
+
+        // Calculate last 4 weeks volume (km)
+        const weekVol = (weeksAgo) => {
+          const end = Date.now() - weeksAgo * 7 * 86400000;
+          const start = end - 7 * 86400000;
+          return sessions.filter(s => { const t = new Date(s.date).getTime(); return t >= start && t < end; })
+            .reduce((s, x) => s + (parseFloat(x.distance) || 0), 0);
+        };
+        const vols = [0, 1, 2, 3].map(w => Math.round(weekVol(w) * 10) / 10);
+        const baseVol = Math.max(...vols.slice(1));
+
+        // Taper plan: 3-week taper
+        const taperPlan = [
+          { week: "J-21 à J-15", pct: 100, label: "Volume max", tip: "Dernière semaine chargée, qualité maximale" },
+          { week: "J-14 à J-8", pct: 70, label: "Réduction", tip: "Réduire volume, maintenir intensité" },
+          { week: "J-7 à J-3", pct: 50, label: "Affûtage", tip: "Peu de volume, quelques accélérations" },
+          { week: "J-2 à J-1", pct: 20, label: "Repos actif", tip: "Marche, mobilité, récupération" },
+        ];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Calculateur d'Affûtage</div>
+            {daysLeft ? (
+              <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 12 }}>Race dans <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{daysLeft} jours</span></div>
+            ) : (
+              <div style={{ fontSize: 10, color: "#636366", marginBottom: 12 }}>Configure ta date de course dans ton profil</div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+              {taperPlan.map(t => {
+                const targetKm = Math.round(baseVol * t.pct / 100 * 10) / 10;
+                const isActive = daysLeft && (
+                  (t.pct === 100 && daysLeft >= 15 && daysLeft <= 21) ||
+                  (t.pct === 70 && daysLeft >= 8 && daysLeft <= 14) ||
+                  (t.pct === 50 && daysLeft >= 3 && daysLeft <= 7) ||
+                  (t.pct === 20 && daysLeft >= 1 && daysLeft <= 2)
+                );
+                return (
+                  <div key={t.week} style={{ background: isActive ? "#C9A84018" : "#1C1C1E", borderRadius: 10, padding: "8px 12px", border: isActive ? "1px solid #C9A84060" : "1px solid transparent" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: isActive ? "#C9A840" : "var(--fg)" }}>{t.week} — {t.label}</div>
+                        <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>{t.tip}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: isActive ? "#C9A840" : "#8E8E93" }}>{t.pct}%</div>
+                        {baseVol > 0 && <div style={{ fontSize: 9, color: "#636366" }}>{targetKm}km</div>}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 5, height: 3, background: "#2C2C2E", borderRadius: 2 }}>
+                      <div style={{ height: "100%", width: `${t.pct}%`, background: isActive ? "#C9A840" : "#3A3A3C", borderRadius: 2 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {baseVol === 0 && <div style={{ fontSize: 10, color: "#636366", textAlign: "center" }}>Loggez des sessions avec distance pour voir les cibles de volume</div>}
           </div>
         );
       })()}
