@@ -10465,6 +10465,103 @@ JSON:
               );
             })()}
 
+            {/* ── ACHIEVEMENT BADGES ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const totalSessions = sessions.length;
+              const totalKm = sessions.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0);
+              const totalMin = sessions.reduce((s, x) => s + (x.duree || 0), 0);
+              const totalH = totalMin / 60;
+              const hyroxSessions = sessions.filter(s => s.type === "HYROX Complet").length;
+              const runSessions = sessions.filter(s => s.type === "Course").length;
+
+              // Streak calc
+              const sortedDates = [...new Set(sessions.map(s => s.date))].sort().reverse();
+              let streak = 0;
+              const today = new Date().toISOString().slice(0, 10);
+              let checkDate = today;
+              for (const d of sortedDates) {
+                if (d === checkDate) { streak++; const next = new Date(checkDate); next.setDate(next.getDate() - 1); checkDate = next.toISOString().slice(0, 10); }
+                else if (d < checkDate) break;
+              }
+
+              // High RPE sessions
+              const highRpe = sessions.filter(s => (s.rpe || 0) >= 9).length;
+              const earlyBird = sessions.filter(s => (s.heure || "12:00") < "07:30").length;
+              const nightOwl = sessions.filter(s => (s.heure || "12:00") >= "20:00").length;
+
+              const BADGES = [
+                { id: "first", emoji: "🌟", name: "Première Session", desc: "Débuter c'est gagner", unlocked: totalSessions >= 1 },
+                { id: "s5", emoji: "🔥", name: "5 Sessions", desc: "La routine s'installe", unlocked: totalSessions >= 5 },
+                { id: "s10", emoji: "💪", name: "10 Sessions", desc: "Vous êtes sérieux !", unlocked: totalSessions >= 10 },
+                { id: "s25", emoji: "⚡", name: "25 Sessions", desc: "Athlète confirmé", unlocked: totalSessions >= 25 },
+                { id: "s50", emoji: "🏆", name: "50 Sessions", desc: "Champion en devenir", unlocked: totalSessions >= 50 },
+                { id: "s100", emoji: "👑", name: "100 Sessions", desc: "Légende APEX", unlocked: totalSessions >= 100 },
+                { id: "km50", emoji: "🗺️", name: "50 km", desc: "Distance franchie", unlocked: totalKm >= 50 },
+                { id: "km100", emoji: "🌍", name: "100 km", desc: "Cap du centenaire", unlocked: totalKm >= 100 },
+                { id: "km500", emoji: "🚀", name: "500 km", desc: "Ultramarathonien", unlocked: totalKm >= 500 },
+                { id: "h10", emoji: "⏱️", name: "10h d'entraînement", desc: "Investissement payant", unlocked: totalH >= 10 },
+                { id: "h50", emoji: "⌚", name: "50h d'entraînement", desc: "Dédication totale", unlocked: totalH >= 50 },
+                { id: "h100", emoji: "🎖️", name: "100h d'entraînement", desc: "Hors-norme", unlocked: totalH >= 100 },
+                { id: "streak3", emoji: "🔆", name: "Série 3 jours", desc: "Constance primordiale", unlocked: streak >= 3 },
+                { id: "streak7", emoji: "📅", name: "Série 7 jours", desc: "Une semaine sans faille", unlocked: streak >= 7 },
+                { id: "streak14", emoji: "🌙", name: "Série 14 jours", desc: "Machine de régularité", unlocked: streak >= 14 },
+                { id: "hyrox1", emoji: "🏋️", name: "1er HYROX", desc: "Initiation terminée", unlocked: hyroxSessions >= 1 },
+                { id: "hyrox5", emoji: "🏅", name: "5 HYROX", desc: "Spécialiste certifié", unlocked: hyroxSessions >= 5 },
+                { id: "run10", emoji: "👟", name: "10 runs", desc: "Coureur dans l'âme", unlocked: runSessions >= 10 },
+                { id: "beast", emoji: "💀", name: "Beast Mode", desc: "5 sessions RPE ≥9", unlocked: highRpe >= 5 },
+                { id: "earlybird", emoji: "🌅", name: "Early Bird", desc: "3 sessions avant 7h30", unlocked: earlyBird >= 3 },
+                { id: "nightowl", emoji: "🦉", name: "Night Owl", desc: "3 sessions après 20h", unlocked: nightOwl >= 3 },
+              ];
+
+              const unlocked = BADGES.filter(b => b.unlocked);
+              const locked = BADGES.filter(b => !b.unlocked);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Achievements</div>
+                    <div style={{ fontSize: 11, color: "var(--yellow)", fontWeight: 700 }}>{unlocked.length} / {BADGES.length}</div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ height: 6, background: "#2C2C2E", borderRadius: 3, marginBottom: 12 }}>
+                    <div style={{ height: "100%", width: `${(unlocked.length / BADGES.length) * 100}%`, background: "var(--yellow)", borderRadius: 3, transition: "width 0.5s" }} />
+                  </div>
+
+                  {/* Unlocked */}
+                  {unlocked.length > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Débloqués</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {unlocked.map(b => (
+                          <div key={b.id} title={b.desc} style={{ background: "#C9A84020", border: "1px solid #C9A84060", borderRadius: 10, padding: "6px 8px", textAlign: "center", minWidth: 56 }}>
+                            <div style={{ fontSize: 20 }}>{b.emoji}</div>
+                            <div style={{ fontSize: 8, color: "var(--yellow)", fontWeight: 700, marginTop: 2 }}>{b.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Locked preview */}
+                  {locked.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>À débloquer ({locked.length})</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {locked.slice(0, 6).map(b => (
+                          <div key={b.id} title={b.desc} style={{ background: "#2C2C2E", borderRadius: 10, padding: "6px 8px", textAlign: "center", minWidth: 56, opacity: 0.4 }}>
+                            <div style={{ fontSize: 20, filter: "grayscale(1)" }}>{b.emoji}</div>
+                            <div style={{ fontSize: 8, color: "#636366", fontWeight: 700, marginTop: 2 }}>{b.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── PERFORMANCE CHALLENGES ── */}
             {(() => {
               const chalKey = `fitrace_challenges_${profile.name}`;
