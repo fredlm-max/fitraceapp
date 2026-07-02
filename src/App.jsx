@@ -12132,6 +12132,92 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY TRAINING LOAD ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const now = Date.now();
+              // Build 8 weeks of data
+              const weeks = Array.from({ length: 8 }, (_, i) => {
+                const weekAgo = 7 - i; // i=0 = oldest, i=7 = current
+                const start = new Date(now - (7 - i) * 7 * 86400000);
+                const end = new Date(now - (7 - i - 1) * 7 * 86400000);
+                const startStr = start.toISOString().slice(0,10);
+                const endStr = end.toISOString().slice(0,10);
+                const weekSessions = sessions.filter(s => s.date >= startStr && s.date < endStr);
+                const trimp = weekSessions.reduce((s, sess) => s + (sess.duration||30) * ((sess.rpe||5)/10), 0);
+                const label = `S-${7-i}`;
+                return { label: i===7?"Cette sem":label, trimp: Math.round(trimp), count: weekSessions.length };
+              });
+
+              // CTL as rolling 6-week avg (simplified for display)
+              const maxTrimp = Math.max(...weeks.map(w=>w.trimp), 1);
+              const avgTrimp = Math.round(weeks.reduce((s,w)=>s+w.trimp,0)/8);
+
+              // SVG dims
+              const W = 320, H = 120, PAD = { t:10, b:24, l:30, r:10 };
+              const chartW = W - PAD.l - PAD.r;
+              const chartH = H - PAD.t - PAD.b;
+              const barW = Math.floor(chartW / 8) - 3;
+
+              // CTL line points (6-week rolling avg)
+              const ctlPoints = weeks.map((_, i) => {
+                const slice = weeks.slice(Math.max(0, i-5), i+1);
+                const avg = slice.reduce((s,w)=>s+w.trimp,0)/slice.length;
+                const x = PAD.l + i * (chartW/8) + barW/2 + 1.5;
+                const y = PAD.t + chartH - (avg/maxTrimp)*chartH;
+                return `${x},${y}`;
+              }).join(" ");
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Charge d'Entraînement</div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>Moy. <span style={{ color:"var(--yellow)",fontWeight:700 }}>{avgTrimp} TRIMP</span>/sem</div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible" }}>
+                    {/* Grid lines */}
+                    {[0.25,0.5,0.75,1].map(f=>(
+                      <line key={f} x1={PAD.l} x2={W-PAD.r} y1={PAD.t+chartH*(1-f)} y2={PAD.t+chartH*(1-f)} stroke="#2C2C2E" strokeWidth={0.5}/>
+                    ))}
+                    {/* Y label */}
+                    <text x={PAD.l-4} y={PAD.t+chartH*(1-0.5)} textAnchor="end" fill="#636366" fontSize={7} dominantBaseline="middle">{Math.round(maxTrimp*0.5)}</text>
+                    <text x={PAD.l-4} y={PAD.t} textAnchor="end" fill="#636366" fontSize={7} dominantBaseline="middle">{maxTrimp}</text>
+
+                    {/* Bars */}
+                    {weeks.map((w,i)=>{
+                      const barH = w.trimp > 0 ? Math.max(2, (w.trimp/maxTrimp)*chartH) : 0;
+                      const x = PAD.l + i*(chartW/8) + 1.5;
+                      const y = PAD.t + chartH - barH;
+                      const isCurrent = i === 7;
+                      return (
+                        <g key={i}>
+                          <rect x={x} y={y} width={barW} height={barH} rx={2}
+                            fill={isCurrent ? "var(--yellow)" : w.trimp > avgTrimp ? "#30D158" : "#3A3A3C"} opacity={0.85}/>
+                          <text x={x+barW/2} y={H-PAD.b+8} textAnchor="middle" fill="#636366" fontSize={7}>{w.label}</text>
+                          {w.trimp > 0 && (
+                            <text x={x+barW/2} y={y-3} textAnchor="middle" fill={isCurrent?"var(--yellow)":"#8E8E93"} fontSize={7}>{w.trimp}</text>
+                          )}
+                        </g>
+                      );
+                    })}
+                    {/* CTL trend line */}
+                    {weeks.some(w=>w.trimp>0) && (
+                      <polyline points={ctlPoints} fill="none" stroke="#BF5AF2" strokeWidth={1.5} strokeDasharray="3 2" opacity={0.8}/>
+                    )}
+                    {/* Legend */}
+                    <circle cx={W-PAD.r-50} cy={PAD.t+5} r={3} fill="#BF5AF2" opacity={0.8}/>
+                    <text x={W-PAD.r-45} y={PAD.t+9} fill="#636366" fontSize={7}>CTL (6 sem)</text>
+                  </svg>
+                  <div style={{ display:"flex",gap:10,marginTop:4 }}>
+                    <div style={{ fontSize:9,color:"#636366" }}>🟢 <span style={{ color:"#8E8E93" }}>Charge élevée</span></div>
+                    <div style={{ fontSize:9,color:"#636366" }}>🟡 <span style={{ color:"#8E8E93" }}>Semaine actuelle</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RPE DISTRIBUTION CHART ── */}
             {(() => {
               const sessions = profile.sessions || [];
