@@ -23589,6 +23589,200 @@ JSON: {
             );
           })()}
 
+          {/* ── VOCAL NUTRITION LOG ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const macroKey = `fitrace_macros_${profile.name}_${todayStr}`;
+
+            const [listening, setListening] = React.useState(false);
+            const [transcript, setTranscript] = React.useState("");
+            const [detected, setDetected] = React.useState([]);
+            const [saved, setSaved] = React.useState(false);
+            const [error, setError] = React.useState("");
+            const recRef = React.useRef(null);
+
+            // Food database with French keywords
+            const FOOD_DB = [
+              { keywords: ["banane", "bananes"], name: "Banane", kcal: 89, p: 1, c: 23, f: 0, icon: "🍌" },
+              { keywords: ["pomme", "pommes"], name: "Pomme", kcal: 72, p: 0, c: 19, f: 0, icon: "🍎" },
+              { keywords: ["oeuf", "oeufs", "œuf", "œufs"], name: "Œuf", kcal: 78, p: 6, c: 1, f: 5, icon: "🥚" },
+              { keywords: ["poulet", "blanc de poulet"], name: "Blanc de poulet 150g", kcal: 165, p: 31, c: 0, f: 4, icon: "🍗" },
+              { keywords: ["riz", "riz cuit"], name: "Riz cuit 200g", kcal: 260, p: 5, c: 57, f: 1, icon: "🍚" },
+              { keywords: ["pâtes", "pate", "pasta", "spaghetti", "macaroni"], name: "Pâtes cuites 200g", kcal: 280, p: 10, c: 54, f: 2, icon: "🍝" },
+              { keywords: ["yaourt", "yaourt grec", "fromage blanc"], name: "Yaourt grec 150g", kcal: 130, p: 15, c: 9, f: 3, icon: "🥛" },
+              { keywords: ["lait"], name: "Lait 200ml", kcal: 98, p: 7, c: 10, f: 3, icon: "🥛" },
+              { keywords: ["amandes", "amande", "noix"], name: "Amandes 30g", kcal: 174, p: 6, c: 6, f: 15, icon: "🌰" },
+              { keywords: ["whey", "protéine", "shake", "shaker"], name: "Whey protéine 30g", kcal: 120, p: 24, c: 3, f: 2, icon: "💪" },
+              { keywords: ["avocat"], name: "Avocat 100g", kcal: 160, p: 2, c: 9, f: 15, icon: "🥑" },
+              { keywords: ["pain", "baguette", "tartine", "toast"], name: "Pain 2 tranches", kcal: 150, p: 6, c: 28, f: 2, icon: "🍞" },
+              { keywords: ["saumon", "thon", "poisson", "sardine"], name: "Saumon 150g", kcal: 280, p: 30, c: 0, f: 18, icon: "🐟" },
+              { keywords: ["flocons", "avoine", "porridge", "muesli"], name: "Flocons avoine 60g", kcal: 230, p: 8, c: 40, f: 5, icon: "🌾" },
+              { keywords: ["gel", "gel énergie", "gel énergétique"], name: "Gel énergétique", kcal: 100, p: 0, c: 25, f: 0, icon: "⚡" },
+              { keywords: ["café", "café noir"], name: "Café", kcal: 5, p: 0, c: 1, f: 0, icon: "☕" },
+              { keywords: ["beurre de cacahuète", "cacahuète", "peanut butter"], name: "Beurre cacahuète 30g", kcal: 188, p: 8, c: 6, f: 16, icon: "🥜" },
+              { keywords: ["steak", "boeuf", "viande rouge", "bifteck"], name: "Steak bœuf 150g", kcal: 270, p: 35, c: 0, f: 14, icon: "🥩" },
+              { keywords: ["salade", "légume", "légumes", "brocoli", "épinard"], name: "Légumes 200g", kcal: 60, p: 4, c: 10, f: 1, icon: "🥗" },
+              { keywords: ["pomme de terre", "patate douce", "patates"], name: "Patate douce 200g", kcal: 180, p: 4, c: 42, f: 0, icon: "🍠" },
+              { keywords: ["fromage", "gruyère", "emmental", "camembert"], name: "Fromage 30g", kcal: 110, p: 7, c: 0, f: 9, icon: "🧀" },
+              { keywords: ["barre", "barre protéinée", "barre de céréales"], name: "Barre protéinée", kcal: 200, p: 20, c: 22, f: 6, icon: "🍫" },
+              { keywords: ["orange", "oranges", "jus d'orange"], name: "Orange", kcal: 62, p: 1, c: 15, f: 0, icon: "🍊" },
+              { keywords: ["myrtilles", "fraises", "framboises", "fruits rouges"], name: "Fruits rouges 100g", kcal: 55, p: 1, c: 13, f: 0, icon: "🍓" },
+            ];
+
+            // Parse transcript → find foods
+            const parseTranscript = (text) => {
+              const lower = text.toLowerCase();
+              const found = [];
+              FOOD_DB.forEach(food => {
+                if (food.keywords.some(kw => lower.includes(kw))) {
+                  // Check for quantity multipliers
+                  let qty = 1;
+                  const qtyMatch = lower.match(/(\d+)\s*(oeuf|riz|pomme|banane|tranche|verre|portion)/);
+                  if (qtyMatch) qty = Math.min(parseInt(qtyMatch[1]), 5);
+                  found.push({ ...food, qty });
+                }
+              });
+              return found;
+            };
+
+            const startListening = () => {
+              const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+              if (!SpeechRecognition) { setError("Reconnaissance vocale non supportée sur ce navigateur. Essayez Chrome."); return; }
+              setError(""); setTranscript(""); setDetected([]); setSaved(false);
+              const rec = new SpeechRecognition();
+              rec.lang = "fr-FR";
+              rec.interimResults = true;
+              rec.continuous = false;
+              recRef.current = rec;
+
+              rec.onstart = () => setListening(true);
+              rec.onresult = (e) => {
+                const text = Array.from(e.results).map(r => r[0].transcript).join(" ");
+                setTranscript(text);
+                if (e.results[e.results.length - 1].isFinal) {
+                  const foods = parseTranscript(text);
+                  setDetected(foods);
+                }
+              };
+              rec.onerror = (e) => { setError(`Erreur: ${e.error}`); setListening(false); };
+              rec.onend = () => {
+                setListening(false);
+                if (transcript) {
+                  const foods = parseTranscript(transcript);
+                  setDetected(foods);
+                }
+              };
+              rec.start();
+            };
+
+            const stopListening = () => { recRef.current?.stop(); setListening(false); };
+
+            const saveDetected = () => {
+              const current = (() => { try { return JSON.parse(localStorage.getItem(macroKey) || "[]"); } catch { return []; } })();
+              const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+              const newItems = detected.flatMap(f => {
+                return Array(f.qty).fill(null).map((_, i) => ({
+                  name: f.name, kcal: f.kcal, p: f.p, c: f.c, f: f.f, icon: f.icon, heure, id: Date.now() + i, source: "vocal"
+                }));
+              });
+              localStorage.setItem(macroKey, JSON.stringify([...current, ...newItems]));
+              setSaved(true);
+              setDetected([]);
+              setTranscript("");
+              setTimeout(() => setSaved(false), 3000);
+            };
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14, border: listening ? "1px solid #FF453A" : "1px solid transparent" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Journal Vocal</div>
+                    <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>Dites ce que vous mangez</div>
+                  </div>
+                  {saved && <div style={{ fontSize: 10, color: "#30D158", fontWeight: 700 }}>✓ Sauvegardé !</div>}
+                </div>
+
+                {/* Mic button */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                  <button
+                    onClick={listening ? stopListening : startListening}
+                    style={{
+                      width: 72, height: 72, borderRadius: "50%", border: "none", cursor: "pointer",
+                      background: listening ? "#FF453A" : "#1C1C1E",
+                      boxShadow: listening ? "0 0 0 8px #FF453A30, 0 0 0 16px #FF453A15" : "0 0 0 4px #3A3A3C",
+                      transition: "all 0.3s", display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 28
+                    }}
+                  >
+                    {listening ? "⏹" : "🎙️"}
+                  </button>
+
+                  <div style={{ fontSize: 11, color: listening ? "#FF453A" : "#636366", fontWeight: listening ? 700 : 400 }}>
+                    {listening ? "Écoute en cours... Parlez !" : "Appuyez pour parler"}
+                  </div>
+
+                  {/* Animated dots while listening */}
+                  {listening && (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {[0, 1, 2].map(i => (
+                        <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF453A", animation: `pulse 1s ease-in-out ${i * 0.2}s infinite` }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Transcript display */}
+                {transcript && (
+                  <div style={{ marginTop: 12, padding: 10, background: "#1C1C1E", borderRadius: 10, borderLeft: "3px solid var(--yellow)" }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 3 }}>Transcription :</div>
+                    <div style={{ fontSize: 11, color: "var(--fg)", fontStyle: "italic" }}>"{transcript}"</div>
+                  </div>
+                )}
+
+                {/* Detected foods */}
+                {detected.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 9, color: "#30D158", fontWeight: 700, marginBottom: 6 }}>✓ {detected.length} aliment{detected.length > 1 ? "s" : ""} détecté{detected.length > 1 ? "s" : ""} :</div>
+                    {detected.map((food, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "#30D15812", borderRadius: 8, marginBottom: 4 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 16 }}>{food.icon}</span>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg)" }}>{food.qty > 1 ? `${food.qty}× ` : ""}{food.name}</div>
+                            <div style={{ fontSize: 9, color: "#8E8E93" }}>{food.p}g P · {food.c}g G · {food.f}g L</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#30D158" }}>{food.kcal * food.qty} kcal</div>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <button onClick={saveDetected} style={{ flex: 1, background: "#30D158", color: "#000", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                        Ajouter au journal ✓
+                      </button>
+                      <button onClick={() => { setDetected([]); setTranscript(""); }} style={{ background: "#3A3A3C", color: "var(--fg)", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 12, cursor: "pointer" }}>✕</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Not recognized */}
+                {transcript && detected.length === 0 && !listening && (
+                  <div style={{ marginTop: 10, padding: 8, background: "#FF9F0A15", borderRadius: 8, fontSize: 10, color: "#FF9F0A" }}>
+                    ⚠️ Aucun aliment reconnu. Essayez : "j'ai mangé du poulet avec du riz et une banane"
+                  </div>
+                )}
+
+                {error && <div style={{ marginTop: 8, fontSize: 10, color: "#FF453A" }}>{error}</div>}
+
+                <div style={{ marginTop: 10, padding: 8, background: "#1C1C1E", borderRadius: 8 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>Exemples à dire :</div>
+                  {["J'ai mangé deux œufs et du pain", "J'ai pris un shake whey avec une banane", "Poulet riz et légumes au déjeuner"].map(ex => (
+                    <div key={ex} style={{ fontSize: 9, color: "#8E8E93", marginBottom: 2 }}>• {ex}</div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── QUICK ADD NUTRITION ── */}
           {(() => {
             const todayStr = new Date().toISOString().slice(0, 10);
