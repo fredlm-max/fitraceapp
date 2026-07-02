@@ -25253,6 +25253,96 @@ JSON: {
             );
           })()}
 
+          {/* ── MACRO WHEEL ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0,10);
+            const macroKey = `fitrace_macros_${profile.name}_${todayStr}`;
+            const entries = (() => { try { return JSON.parse(localStorage.getItem(macroKey)) || []; } catch { return []; } })();
+
+            const totalP = entries.reduce((s,e)=>s+(e.p||0),0);
+            const totalC = entries.reduce((s,e)=>s+(e.c||0),0);
+            const totalF = entries.reduce((s,e)=>s+(e.f||0),0);
+            const totalKcal = entries.reduce((s,e)=>s+(e.kcal||0),0);
+
+            const kcalP = totalP * 4;
+            const kcalC = totalC * 4;
+            const kcalF = totalF * 9;
+            const kcalTotal = kcalP + kcalC + kcalF || 1;
+
+            // Targets from profile
+            const poids = profile.poids || 70;
+            const targetP = Math.round(poids * 1.8);
+            const targetC = Math.round(poids * 4);
+            const targetF = Math.round(poids * 1);
+            const targetKcal = targetP*4 + targetC*4 + targetF*9;
+
+            // SVG donut
+            const W = 160, cx = W/2, cy = W/2, R = 60, r = 38;
+            const slices = [
+              { val: kcalP, color: "#BF5AF2", label: "P" },
+              { val: kcalC, color: "#FF9F0A", label: "G" },
+              { val: kcalF, color: "#FF453A", label: "L" },
+            ];
+            let cumulAngle = -Math.PI / 2;
+            const toRad = d => d;
+            const paths = slices.map(s => {
+              const frac = s.val / kcalTotal;
+              const angle = frac * 2 * Math.PI;
+              const x1 = cx + R * Math.cos(cumulAngle);
+              const y1 = cy + R * Math.sin(cumulAngle);
+              const x2 = cx + R * Math.cos(cumulAngle + angle);
+              const y2 = cy + R * Math.sin(cumulAngle + angle);
+              const large = angle > Math.PI ? 1 : 0;
+              const xi1 = cx + r * Math.cos(cumulAngle);
+              const yi1 = cy + r * Math.sin(cumulAngle);
+              const xi2 = cx + r * Math.cos(cumulAngle + angle);
+              const yi2 = cy + r * Math.sin(cumulAngle + angle);
+              const path = `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${r} ${r} 0 ${large} 0 ${xi1} ${yi1} Z`;
+              cumulAngle += angle;
+              return { ...s, path, pct: Math.round(frac*100) };
+            });
+
+            return (
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Répartition Macros</div>
+                <div style={{ display:"flex",alignItems:"center",gap:16 }}>
+                  <svg width={W} height={W} style={{ flexShrink:0 }}>
+                    {kcalTotal > 1 ? paths.map((p,i)=>(
+                      <path key={i} d={p.path} fill={p.color} opacity={0.85}/>
+                    )) : (
+                      <circle cx={cx} cy={cy} r={R} fill="#2C2C2E"/>
+                    )}
+                    <circle cx={cx} cy={cy} r={r-2} fill="#1C1C1E"/>
+                    <text x={cx} y={cy-6} textAnchor="middle" fill="var(--white)" fontSize={18} fontWeight={900}>{totalKcal}</text>
+                    <text x={cx} y={cy+10} textAnchor="middle" fill="#636366" fontSize={9}>kcal</text>
+                    <text x={cx} y={cy+22} textAnchor="middle" fill="#8E8E93" fontSize={8}>/ {targetKcal}</text>
+                  </svg>
+                  <div style={{ flex:1 }}>
+                    {[
+                      { label:"Protéines", val:totalP, target:targetP, color:"#BF5AF2", unit:"g" },
+                      { label:"Glucides",  val:totalC, target:targetC, color:"#FF9F0A", unit:"g" },
+                      { label:"Lipides",   val:totalF, target:targetF, color:"#FF453A", unit:"g" },
+                    ].map(m=>{
+                      const pct = Math.min(100, Math.round(m.val/m.target*100));
+                      return (
+                        <div key={m.label} style={{ marginBottom:8 }}>
+                          <div style={{ display:"flex",justifyContent:"space-between",marginBottom:2 }}>
+                            <span style={{ fontSize:10,color:m.color,fontWeight:700 }}>{m.label}</span>
+                            <span style={{ fontSize:10,color:"#8E8E93" }}>{m.val}<span style={{ color:"#636366" }}>/{m.target}{m.unit}</span></span>
+                          </div>
+                          <div style={{ height:5,background:"#2C2C2E",borderRadius:3 }}>
+                            <div style={{ height:"100%",width:`${pct}%`,background:m.color,borderRadius:3,transition:"width 0.4s" }}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize:9,color:"#636366",marginTop:4 }}>{entries.length} aliment{entries.length!==1?"s":""} aujourd'hui</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── QUICK ADD NUTRITION ── */}
           {(() => {
             const todayStr = new Date().toISOString().slice(0, 10);
