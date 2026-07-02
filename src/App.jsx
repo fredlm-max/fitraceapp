@@ -19837,6 +19837,147 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── COMPETITION HISTORY LOG ── */}
+      {(() => {
+        const histKey = `fitrace_race_history_${profile.name}`;
+        const [history, setHistory] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(histKey) || "[]"); } catch { return []; }
+        });
+        const [showForm, setShowForm] = React.useState(false);
+        const [form, setForm] = React.useState({ date: "", location: "", time: "", category: "Open", rank: "", participants: "", notes: "" });
+
+        const saveHistory = (h) => { setHistory(h); localStorage.setItem(histKey, JSON.stringify(h)); };
+
+        const parseTime = t => {
+          const m = t.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
+          if (!m) return null;
+          return parseInt(m[1]) * 60 + parseInt(m[2]) + (parseInt(m[3] || 0)) / 60;
+        };
+
+        const addRace = () => {
+          if (!form.date || !form.time) return;
+          const entry = { ...form, id: Date.now() };
+          const h = [entry, ...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+          saveHistory(h);
+          setShowForm(false);
+          setForm({ date: "", location: "", time: "", category: "Open", rank: "", participants: "", notes: "" });
+        };
+
+        const removeRace = id => saveHistory(history.filter(r => r.id !== id));
+
+        const best = history.reduce((b, r) => {
+          const t = parseTime(r.time);
+          if (!b || (t && t < parseTime(b.time))) return r;
+          return b;
+        }, null);
+
+        const CATS = ["Open", "Pro", "Masters 40", "Masters 45", "Masters 50", "Masters 55+"];
+
+        return (
+          <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🏆 HISTORIQUE COURSES</div>
+              <button onClick={() => setShowForm(s => !s)} style={{ background: showForm ? "#636366" : "var(--yellow)", color: showForm ? "#fff" : "#000", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {showForm ? "Annuler" : "+ Ajouter"}
+              </button>
+            </div>
+
+            {showForm && (
+              <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>DATE</div>
+                    <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--white)", fontSize: 12, boxSizing: "border-box" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>LIEU / VILLE</div>
+                    <input type="text" placeholder="Paris, Lyon…" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--white)", fontSize: 12, boxSizing: "border-box" }} />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>TEMPS (mm:ss ou h:mm:ss)</div>
+                    <input type="text" placeholder="1:15:42" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--yellow)", fontSize: 14, fontWeight: 700, boxSizing: "border-box" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>CATÉGORIE</div>
+                    <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--white)", fontSize: 12, boxSizing: "border-box" }}>
+                      {CATS.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>CLASSEMENT</div>
+                    <input type="number" placeholder="ex: 42" value={form.rank} onChange={e => setForm(f => ({ ...f, rank: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--white)", fontSize: 12, boxSizing: "border-box" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>NB PARTICIPANTS</div>
+                    <input type="number" placeholder="ex: 200" value={form.participants} onChange={e => setForm(f => ({ ...f, participants: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--white)", fontSize: 12, boxSizing: "border-box" }} />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>NOTES</div>
+                  <textarea placeholder="Sensations, météo, stratégie…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "6px 8px", color: "var(--white)", fontSize: 12, resize: "none", boxSizing: "border-box" }} />
+                </div>
+                <button onClick={addRace} disabled={!form.date || !form.time} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "8px", fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: (!form.date || !form.time) ? 0.5 : 1 }}>
+                  Enregistrer la course
+                </button>
+              </div>
+            )}
+
+            {history.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#636366", fontSize: 13 }}>
+                Aucune course enregistrée · Ajoute ta première performance
+              </div>
+            ) : (
+              <>
+                {best && (
+                  <div style={{ background: "linear-gradient(135deg,#C9A84020,#C9A84008)", border: "1px solid #C9A840", borderRadius: 10, padding: 10, marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontSize: 28 }}>🥇</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: "#C9A840", fontWeight: 700, marginBottom: 2 }}>MEILLEUR TEMPS</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "var(--yellow)", fontFamily: "monospace" }}>{best.time}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93" }}>{best.location || "—"} · {best.date} · {best.category}</div>
+                    </div>
+                  </div>
+                )}
+                {history.map((r, i) => {
+                  const isBest = r.id === best?.id;
+                  const percentile = r.rank && r.participants ? Math.round((1 - r.rank / r.participants) * 100) : null;
+                  return (
+                    <div key={r.id} style={{ background: isBest ? "#C9A84015" : "var(--bg3)", border: `1px solid ${isBest ? "#C9A840" : "#3A3A3C"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: "var(--yellow)", fontFamily: "monospace" }}>{r.time}</span>
+                            {isBest && <span style={{ fontSize: 9, background: "#C9A840", color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>PR</span>}
+                            {i > 0 && history[i - 1] && (() => {
+                              const prev = parseTime(history[i-1].time), cur = parseTime(r.time);
+                              if (!prev || !cur) return null;
+                              const diff = prev - cur;
+                              if (Math.abs(diff) < 0.1) return null;
+                              return <span style={{ fontSize: 10, color: diff > 0 ? "#30D158" : "#FF453A", fontWeight: 700 }}>{diff > 0 ? "▲" : "▼"} {Math.abs(Math.round(diff))} min</span>;
+                            })()}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#8E8E93" }}>{r.date} · {r.location || "—"} · {r.category}</div>
+                          {r.rank && <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>#{r.rank}{r.participants ? `/${r.participants}` : ""}{percentile !== null ? ` — Top ${100 - percentile}%` : ""}</div>}
+                          {r.notes && <div style={{ fontSize: 11, color: "#AEAEB2", marginTop: 4, fontStyle: "italic" }}>{r.notes}</div>}
+                        </div>
+                        <button onClick={() => removeRace(r.id)} style={{ background: "none", border: "none", color: "#636366", fontSize: 16, cursor: "pointer", padding: "0 4px" }}>✕</button>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ fontSize: 10, color: "#636366", textAlign: "center", marginTop: 6 }}>
+                  {history.length} course{history.length > 1 ? "s" : ""} enregistrée{history.length > 1 ? "s" : ""}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── RACE GEAR CHECKLIST ── */}
       {(() => {
         const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
