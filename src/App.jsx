@@ -29065,6 +29065,178 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── COMPETITION HISTORY LOG ── */}
+      {(() => {
+        const KEY = `fitrace_comp_history_${profile.name}`;
+        const [races, setRaces] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [showForm, setShowForm] = React.useState(false);
+        const [form, setForm] = React.useState({ date:"", location:"", category:"Open Hommes", timeH:1, timeM:30, timeS:0, rank:"", total:"", notes:"" });
+
+        const CATS = ["Open Hommes","Open Femmes","Pro Hommes","Pro Femmes","Masters H 40+","Masters F 40+","Masters H 50+","Masters F 50+","Doubles","Relay"];
+
+        const addRace = () => {
+          if (!form.date || !form.location) return;
+          const timeSec = form.timeH*3600 + form.timeM*60 + form.timeS;
+          const next = [{ id:Date.now(), ...form, timeSec }, ...races].sort((a,b)=>a.date>b.date?-1:1);
+          setRaces(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowForm(false);
+          setForm({ date:"", location:"", category:"Open Hommes", timeH:1, timeM:30, timeS:0, rank:"", total:"", notes:"" });
+        };
+
+        const removeRace = (id) => {
+          const next = races.filter(r=>r.id!==id);
+          setRaces(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const fmtTime = (sec) => {
+          const h = Math.floor(sec/3600);
+          const m = Math.floor((sec%3600)/60);
+          const s = sec%60;
+          return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+        };
+
+        // Sorted by date asc for chart
+        const sorted = [...races].sort((a,b)=>a.date<b.date?-1:1);
+        const timeSecs = sorted.map(r=>r.timeSec).filter(Boolean);
+        const minTime = Math.min(...timeSecs) || 0;
+        const maxTime = Math.max(...timeSecs) || 1;
+
+        // PR
+        const pr = races.reduce((best,r)=>(!best||r.timeSec<best.timeSec)?r:best, null);
+        const improvement = sorted.length>=2 ? sorted[0].timeSec - sorted[sorted.length-1].timeSec : 0;
+
+        const W=300, H=80, PAD=16;
+        const chartW = W-PAD*2;
+        const points = sorted.filter(r=>r.timeSec).map((r,i)=>{
+          const x = PAD + (i/(Math.max(sorted.filter(s=>s.timeSec).length-1,1)))*chartW;
+          const y = H - PAD - ((maxTime-r.timeSec)/(maxTime-minTime||1))*(H-PAD*2);
+          return `${x},${y}`;
+        }).join(" ");
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🏁 Historique Compétitions</div>
+              <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                {showForm?"Annuler":"+ Race"}
+              </button>
+            </div>
+
+            {/* Summary */}
+            {races.length > 0 && (
+              <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                  <div style={{ fontSize:16,fontWeight:900,color:"var(--yellow)" }}>{races.length}</div>
+                  <div style={{ fontSize:8,color:"#636366" }}>Courses</div>
+                </div>
+                {pr && (
+                  <div style={{ flex:2,background:"#1C3A24",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                    <div style={{ fontSize:14,fontWeight:900,color:"#30D158" }}>🏆 {fmtTime(pr.timeSec)}</div>
+                    <div style={{ fontSize:8,color:"#636366" }}>PR · {pr.location}</div>
+                  </div>
+                )}
+                {improvement > 0 && (
+                  <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                    <div style={{ fontSize:13,fontWeight:900,color:"#30D158" }}>-{Math.floor(improvement/60)}min</div>
+                    <div style={{ fontSize:8,color:"#636366" }}>Progression</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Progression chart */}
+            {sorted.filter(r=>r.timeSec).length >= 2 && (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:8,color:"#636366",marginBottom:4 }}>Évolution des temps</div>
+                <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible" }}>
+                  <defs>
+                    <linearGradient id="raceGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--yellow)" stopOpacity="0.3"/>
+                      <stop offset="100%" stopColor="var(--yellow)" stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  {/* Area fill */}
+                  {points && <polyline points={points} fill="none" stroke="var(--yellow)" strokeWidth={2} strokeLinejoin="round"/>}
+                  {sorted.filter(r=>r.timeSec).map((r,i)=>{
+                    const x = PAD + (i/(Math.max(sorted.filter(s=>s.timeSec).length-1,1)))*chartW;
+                    const y = H - PAD - ((maxTime-r.timeSec)/(maxTime-minTime||1))*(H-PAD*2);
+                    const isPR = r.id===pr?.id;
+                    return (
+                      <g key={r.id}>
+                        <circle cx={x} cy={y} r={isPR?5:3} fill={isPR?"#30D158":"var(--yellow)"}/>
+                        <text x={x} y={y-8} textAnchor="middle" fill="#8E8E93" fontSize={7}>{fmtTime(r.timeSec)}</text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            )}
+
+            {/* Form */}
+            {showForm && (
+              <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                  <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                  <input type="text" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} placeholder="Ville / Event"
+                    style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                </div>
+                <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}
+                  style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11,marginBottom:8 }}>
+                  {CATS.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+                <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom:8 }}>
+                  <span style={{ fontSize:10,color:"#8E8E93" }}>Temps:</span>
+                  {[{val:form.timeH,set:"timeH",max:3,lbl:"h"},{val:form.timeM,set:"timeM",max:59,lbl:"m"},{val:form.timeS,set:"timeS",max:59,lbl:"s"}].map(f=>(
+                    <div key={f.lbl} style={{ display:"flex",alignItems:"center",gap:3 }}>
+                      <button onClick={()=>setForm(prev=>({...prev,[f.set]:Math.max(0,prev[f.set]-1)}))}
+                        style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:4,width:18,height:18,fontSize:12,cursor:"pointer" }}>−</button>
+                      <span style={{ fontSize:13,fontWeight:800,color:"var(--yellow)",minWidth:20,textAlign:"center" }}>{String(f.val).padStart(2,"0")}</span>
+                      <button onClick={()=>setForm(prev=>({...prev,[f.set]:Math.min(f.max,prev[f.set]+1)}))}
+                        style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:4,width:18,height:18,fontSize:12,cursor:"pointer" }}>+</button>
+                      <span style={{ fontSize:9,color:"#636366" }}>{f.lbl}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                  <input type="text" value={form.rank} onChange={e=>setForm(f=>({...f,rank:e.target.value}))} placeholder="Classement (ex: 45)"
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                  <input type="text" value={form.total} onChange={e=>setForm(f=>({...f,total:e.target.value}))} placeholder="/ Total partants"
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                </div>
+                <input type="text" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Notes (conditions, ressenti...)"
+                  style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11,marginBottom:8,boxSizing:"border-box" }}/>
+                <button onClick={addRace} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                  Enregistrer la course
+                </button>
+              </div>
+            )}
+
+            {/* Race list */}
+            {races.map(r=>(
+              <div key={r.id} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:10,padding:"8px 10px",marginBottom:4 }}>
+                <div style={{ fontSize:16 }}>{r.id===pr?.id?"🏆":"🏅"}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                    <span style={{ fontSize:12,fontWeight:800,color:r.id===pr?.id?"#30D158":"var(--white)" }}>{r.timeSec?fmtTime(r.timeSec):"–"}</span>
+                    {r.rank && <span style={{ fontSize:9,color:"#FF9F0A",fontWeight:700 }}>#{r.rank}{r.total?"/"+r.total:""}</span>}
+                  </div>
+                  <div style={{ fontSize:9,color:"#636366" }}>{r.date} · {r.location} · {r.category}</div>
+                  {r.notes && <div style={{ fontSize:8,color:"#8E8E93",marginTop:1 }}>{r.notes}</div>}
+                </div>
+                <button onClick={()=>removeRace(r.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+              </div>
+            ))}
+
+            {races.length === 0 && !showForm && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"16px 0" }}>Enregistre ta première compétition →</div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── MULTI-DISTANCE RACE PREDICTOR ── */}
       {(() => {
         const vma = parseFloat(profile.vma) || 14;
