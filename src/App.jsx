@@ -9555,6 +9555,99 @@ JSON:
               );
             })()}
 
+            {/* ── HEART RATE RECOVERY TRACKER ── */}
+            {(() => {
+              const hrrKey = `fitrace_hrr_${profile.name}`;
+              const [hrrLog, setHrrLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(hrrKey) || "[]"); } catch { return []; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [hrPeak, setHrPeak] = React.useState("");
+              const [hr1min, setHr1min] = React.useState("");
+              const [hrDate, setHrDate] = React.useState(new Date().toISOString().slice(0, 10));
+
+              const save = (log) => { setHrrLog(log); localStorage.setItem(hrrKey, JSON.stringify(log)); };
+
+              const addEntry = () => {
+                const peak = parseInt(hrPeak), r1 = parseInt(hr1min);
+                if (!peak || !r1 || peak <= r1) return;
+                const hrr = peak - r1;
+                const entry = { date: hrDate, peak, r1, hrr, id: Date.now() };
+                const updated = [entry, ...hrrLog].slice(0, 30);
+                save(updated);
+                setShowForm(false); setHrPeak(""); setHr1min("");
+              };
+
+              const getFitness = (hrr) => {
+                if (hrr >= 25) return { label: "Excellent", color: "#30D158" };
+                if (hrr >= 20) return { label: "Bon", color: "#34C759" };
+                if (hrr >= 15) return { label: "Moyen", color: "#FF9F0A" };
+                return { label: "Faible", color: "#FF453A" };
+              };
+
+              const last5 = hrrLog.slice(0, 5);
+              const avgHrr = last5.length ? Math.round(last5.reduce((s, e) => s + e.hrr, 0) / last5.length) : null;
+              const fitness = avgHrr !== null ? getFitness(avgHrr) : null;
+              const trend = last5.length >= 2 ? last5[0].hrr - last5[last5.length - 1].hrr : null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>HRR · Récupération FC</div>
+                      {avgHrr !== null && <div style={{ fontSize: 11, color: fitness.color, marginTop: 2 }}>Moy. {avgHrr} bpm · {fitness.label}</div>}
+                    </div>
+                    <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Log</button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: "#636366", marginBottom: 8 }}>FC peak (fin session) → FC après 1 min repos</div>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                        <input type="number" placeholder="FC peak" value={hrPeak} onChange={e => setHrPeak(e.target.value)} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 13 }} />
+                        <input type="number" placeholder="FC 1 min" value={hr1min} onChange={e => setHr1min(e.target.value)} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 13 }} />
+                        <input type="date" value={hrDate} onChange={e => setHrDate(e.target.value)} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12 }} />
+                      </div>
+                      <button onClick={addEntry} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "7px 0", fontWeight: 700, cursor: "pointer" }}>Enregistrer</button>
+                    </div>
+                  )}
+
+                  {/* Trend bars */}
+                  {last5.length > 0 && (() => {
+                    const max = Math.max(...last5.map(e => e.hrr), 30);
+                    return (
+                      <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 50, marginBottom: 8 }}>
+                        {[...last5].reverse().map((e, i) => {
+                          const f = getFitness(e.hrr);
+                          return (
+                            <div key={e.id} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                              <div style={{ fontSize: 8, color: f.color, fontWeight: 700 }}>{e.hrr}</div>
+                              <div style={{ width: "100%", height: `${(e.hrr / max) * 40}px`, background: f.color, borderRadius: "3px 3px 0 0", minHeight: 4 }} />
+                              <div style={{ fontSize: 7, color: "#636366" }}>{e.date.slice(5)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {[{v:"≥25",l:"Excel.",c:"#30D158"},{v:"20-24",l:"Bon",c:"#34C759"},{v:"15-19",l:"Moyen",c:"#FF9F0A"},{v:"<15",l:"Faible",c:"#FF453A"}].map(z => (
+                      <div key={z.l} style={{ flex: 1, background: `${z.c}15`, borderRadius: 6, padding: "3px 4px", textAlign: "center" }}>
+                        <div style={{ fontSize: 8, color: z.c, fontWeight: 700 }}>{z.v}</div>
+                        <div style={{ fontSize: 7, color: "#636366" }}>{z.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {trend !== null && (
+                    <div style={{ marginTop: 8, fontSize: 10, color: trend > 0 ? "#30D158" : trend < 0 ? "#FF453A" : "#636366", textAlign: "center" }}>
+                      {trend > 0 ? `↑ +${trend} bpm progression sur ${last5.length} sessions` : trend < 0 ? `↓ ${trend} bpm régression — vérifier récupération` : "→ Stable"}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── CALORIE BURN ESTIMATOR ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const poids = parseFloat(profile.poids) || 75;
