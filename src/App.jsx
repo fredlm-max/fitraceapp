@@ -1044,6 +1044,15 @@ function recoveryLabel(score) {
 // Storage clé quotidienne
 const getDailyLogKey = (name, dateStr) => `fitrace_daily_log_${name}_${dateStr}`;
 
+// Helper — lit les séances d'un profil depuis localStorage
+function getSessionsForProfile(name) {
+  try {
+    const profiles = JSON.parse(localStorage.getItem("fitrace_profiles") || "[]");
+    const p = profiles.find(p => p.name === name);
+    return p?.sessions || [];
+  } catch { return []; }
+}
+
 // ============================================================
 // PMC — Performance Management Chart (CTL / ATL / TSB)
 // Modèle Banister impulse-response, standard coaching pro
