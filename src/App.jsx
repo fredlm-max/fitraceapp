@@ -17220,6 +17220,50 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── TRAINING LOG EXPORT ── */}
+      {(() => {
+        const sessions = profile.sessions || [];
+
+        const exportCSV = () => {
+          const headers = ["Date", "Type", "Durée (min)", "Distance (km)", "RPE", "Heure", "Notes"];
+          const rows = sessions.map(s => [s.date, s.type, s.duree || "", s.distance || "", s.rpe || "", s.heure || "", (s.notes || "").replace(/,/g, ";")]);
+          const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a"); a.href = url; a.download = `fitrace_${profile.name}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        const exportJSON = () => {
+          const data = { profile: { name: profile.name, age: profile.age, poids: profile.poids, vmaKmh: profile.vmaKmh, sexe: profile.sexe }, sessions, exportedAt: new Date().toISOString() };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a"); a.href = url; a.download = `fitrace_${profile.name}_backup.json`; a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        const totalKm = sessions.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0);
+        const totalH = Math.round(sessions.reduce((s, x) => s + (x.duree || 0), 0) / 60 * 10) / 10;
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, margin: "0 16px 14px" }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Export & Sauvegarde</div>
+            <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 12 }}>{sessions.length} séances · {Math.round(totalKm)}km · {totalH}h d'entraînement</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={exportCSV} disabled={sessions.length === 0}
+                style={{ flex: 1, background: sessions.length > 0 ? "#30D158" : "#2C2C2E", color: sessions.length > 0 ? "#fff" : "#636366", border: "none", borderRadius: 10, padding: "10px 0", fontWeight: 700, fontSize: 12, cursor: sessions.length > 0 ? "pointer" : "not-allowed" }}>
+                📊 Exporter CSV
+              </button>
+              <button onClick={exportJSON} disabled={sessions.length === 0}
+                style={{ flex: 1, background: sessions.length > 0 ? "#007AFF" : "#2C2C2E", color: sessions.length > 0 ? "#fff" : "#636366", border: "none", borderRadius: 10, padding: "10px 0", fontWeight: 700, fontSize: 12, cursor: sessions.length > 0 ? "pointer" : "not-allowed" }}>
+                💾 Backup JSON
+              </button>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 9, color: "#636366", textAlign: "center" }}>Compatible Excel, Google Sheets, TrainingPeaks</div>
+          </div>
+        );
+      })()}
+
       {/* ── DÉCONNEXION ── */}
       <div style={{ marginTop: 8, marginBottom: 32 }}>
         <Btn variant="danger" onClick={onLogout} style={{ width: "100%", opacity: 0.8 }}>
@@ -22063,6 +22107,82 @@ JSON: {
                 <div style={{ marginTop: 10, fontSize: 10, color: "#636366" }}>
                   Basé sur {weight}kg · Ajuste selon ta tolérance digestive à l'entraînement
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* ── CALORIE BALANCE CALCULATOR ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 70;
+            const age = parseInt(profile.age) || 30;
+            const sex = profile.sexe === "F" ? "F" : "H";
+            const taille = parseFloat(profile.taille) || (sex === "H" ? 175 : 165);
+            const sessions = profile.sessions || [];
+
+            const bmr = sex === "H"
+              ? Math.round(10 * poids + 6.25 * taille - 5 * age + 5)
+              : Math.round(10 * poids + 6.25 * taille - 5 * age - 161);
+
+            const sessionsLast7 = sessions.filter(s => (Date.now() - new Date(s.date).getTime()) <= 7 * 86400000).length;
+            const activityFactor = sessionsLast7 <= 1 ? 1.2 : sessionsLast7 <= 3 ? 1.375 : sessionsLast7 <= 5 ? 1.55 : 1.725;
+            const tdee = Math.round(bmr * activityFactor);
+
+            const today = new Date().toISOString().slice(0, 10);
+            const todaySessions = sessions.filter(s => s.date === today);
+            const MET_MAP = { "Course": 9.8, "HYROX Complet": 11, "Force": 5, "Vélo": 7.5, "Natation": 8, "Mobilité": 3, "Récupération": 2.5 };
+            const exerciseKcal = todaySessions.reduce((s, sess) => {
+              const met = MET_MAP[sess.type] || 6;
+              return s + Math.round(met * poids * (sess.duree || 0) / 60);
+            }, 0);
+
+            const macroKey = `fitrace_macros_${profile.name}_${today}`;
+            const macroEntries = (() => { try { return JSON.parse(localStorage.getItem(macroKey) || "[]"); } catch { return []; } })();
+            const intakeKcal = macroEntries.reduce((s, e) => s + (e.kcal || 0), 0);
+
+            const totalNeeds = tdee + exerciseKcal;
+            const balance = intakeKcal - totalNeeds;
+            const balanceColor = Math.abs(balance) < 100 ? "#30D158" : balance > 0 ? "#FF9F0A" : "#007AFF";
+            const balanceLabel = balance > 200 ? "Surplus calorique" : balance < -300 ? "Déficit calorique" : "Équilibre";
+            const goal = profile.objectif || "performance";
+            const targetBalance = goal === "perte de poids" ? -500 : goal === "prise de muscle" ? 300 : 0;
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Balance Calorique</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: `${balanceColor}18`, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#636366" }}>Balance aujourd'hui</div>
+                    <div style={{ fontSize: 26, fontWeight: 900, color: balanceColor }}>{balance > 0 ? "+" : ""}{balance} kcal</div>
+                    <div style={{ fontSize: 10, color: balanceColor }}>{balanceLabel}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 10, color: "#636366" }}>Objectif</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#8E8E93" }}>{targetBalance > 0 ? "+" : ""}{targetBalance} kcal</div>
+                    <div style={{ fontSize: 9, color: "#636366" }}>{goal}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {[
+                    { label: "Métabolisme de base (BMR)", val: bmr, color: "#007AFF", icon: "💤" },
+                    { label: "Activité quotidienne", val: Math.round(bmr * (activityFactor - 1)), color: "#30D158", icon: "🚶" },
+                    { label: "Exercice aujourd'hui", val: exerciseKcal, color: "#FF9F0A", icon: "🏃" },
+                    { label: "Total besoins (TDEE)", val: totalNeeds, color: "#8E8E93", icon: "⚡", bold: true },
+                    { label: "Apports loggés", val: intakeKcal, color: intakeKcal > 0 ? "#C9A840" : "#636366", icon: "🍽️", bold: true },
+                  ].map(m => (
+                    <div key={m.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid #2C2C2E" }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <span style={{ fontSize: 12 }}>{m.icon}</span>
+                        <span style={{ fontSize: 10, color: m.bold ? "var(--fg)" : "#8E8E93", fontWeight: m.bold ? 700 : 400 }}>{m.label}</span>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: m.bold ? 800 : 600, color: m.color }}>{m.val > 0 ? m.val : "--"} kcal</span>
+                    </div>
+                  ))}
+                </div>
+                {intakeKcal === 0 && (
+                  <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>
+                    Loggez vos repas dans le Macro Tracker pour voir la balance
+                  </div>
+                )}
               </div>
             );
           })()}
