@@ -8938,6 +8938,96 @@ JSON:
               );
             })()}
 
+            {/* ── VO2MAX PROGRESSION ── */}
+            {profile.vmaKmh && (() => {
+              // Read VMA history from localStorage (saved on each profile update)
+              const vmaHistKey = `fitrace_vma_history_${profile.name}`;
+              let vmaHistory = [];
+              try { vmaHistory = JSON.parse(localStorage.getItem(vmaHistKey) || "[]"); } catch {}
+
+              // Always include current VMA
+              const today = new Date().toISOString().slice(0,10);
+              const currentVma = parseFloat(profile.vmaKmh);
+              const currentVo2 = Math.round(currentVma * 3.5);
+
+              // If current not in history, add it
+              if (!vmaHistory.find(h => h.date === today)) {
+                vmaHistory = [...vmaHistory, { date: today, vma: currentVma }].slice(-12);
+                try { localStorage.setItem(vmaHistKey, JSON.stringify(vmaHistory)); } catch {}
+              }
+
+              if (vmaHistory.length < 2) {
+                // Single data point — show current + HYROX context
+                const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
+                const hyroxFinisher = isMale ? 45 : 38;
+                const hyroxElite = isMale ? 60 : 52;
+                return (
+                  <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 10 }}>📈 VO2MAX ACTUEL</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div className="bebas" style={{ fontSize: 42, color: "var(--yellow)", lineHeight: 1 }}>{currentVo2}</div>
+                        <div style={{ fontSize: 11, color: "#8E8E93" }}>ml/kg/min · VMA {currentVma} km/h</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 11, color: currentVo2 >= hyroxElite ? "#BF5AF2" : currentVo2 >= hyroxFinisher ? "#30D158" : "#FF9F0A" }}>
+                          {currentVo2 >= hyroxElite ? "🏆 Niveau élite HYROX" : currentVo2 >= hyroxFinisher ? "✅ Niveau finisher HYROX" : `+${hyroxFinisher - currentVo2} pour finisher HYROX`}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#636366", marginTop: 4 }}>Reteste régulièrement pour voir ta progression</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Multi-point chart
+              const pts = vmaHistory.sort((a, b) => a.date.localeCompare(b.date));
+              const vo2pts = pts.map(p => ({ ...p, vo2: Math.round(p.vma * 3.5) }));
+              const minVo2 = Math.min(...vo2pts.map(p => p.vo2)) - 2;
+              const maxVo2 = Math.max(...vo2pts.map(p => p.vo2)) + 2;
+              const W = 280, H = 80, PAD = 12;
+              const cx = i => PAD + (i / (vo2pts.length - 1)) * (W - PAD * 2);
+              const cy = v => H - PAD - ((v - minVo2) / (maxVo2 - minVo2)) * (H - PAD * 2);
+              const pathD = vo2pts.map((p, i) => `${i === 0 ? "M" : "L"}${cx(i)},${cy(p.vo2)}`).join(" ");
+              const areaD = pathD + ` L${cx(vo2pts.length-1)},${H} L${PAD},${H} Z`;
+              const delta = vo2pts[vo2pts.length-1].vo2 - vo2pts[0].vo2;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📈 PROGRESSION VO2MAX</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{vo2pts.length} mesures · VMA {currentVma} km/h</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", lineHeight: 1 }}>{currentVo2}</div>
+                      {delta !== 0 && <div style={{ fontSize: 10, color: delta > 0 ? "#30D158" : "#FF453A" }}>{delta > 0 ? "+" : ""}{delta} ml/kg/min</div>}
+                    </div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+                    <defs>
+                      <linearGradient id="vo2Grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C9A840" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#C9A840" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={areaD} fill="url(#vo2Grad)" />
+                    <path d={pathD} fill="none" stroke="#C9A840" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {vo2pts.map((p, i) => (
+                      <g key={i}>
+                        <circle cx={cx(i)} cy={cy(p.vo2)} r="4" fill="#C9A840" stroke="#000" strokeWidth="1.5" />
+                        <text x={cx(i)} y={cy(p.vo2) - 7} textAnchor="middle" fontSize="8" fill="#C9A840">{p.vo2}</text>
+                      </g>
+                    ))}
+                  </svg>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <div style={{ fontSize: 10, color: "#636366" }}>{new Date(pts[0].date).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" })}</div>
+                    <div style={{ fontSize: 10, color: "#636366" }}>Auj.</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── CALORIE BURN ESTIMATOR ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const poids = parseFloat(profile.poids) || 75;
