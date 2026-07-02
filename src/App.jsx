@@ -5963,7 +5963,12 @@ JSON:
             )}
 
             {/* ── RACE COUNTDOWN ALERT (J-14 to J-day) ── */}
-            {profile.raceDate && (() => {
+            {(() => {
+              const checklistKey = `fitrace_race_checklist_${profile.name}_${profile.raceDate}`;
+              const [checked, setChecked] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(checklistKey) || "{}"); } catch { return {}; }
+              });
+              if (!profile.raceDate) return null;
               const raceDate = new Date(profile.raceDate);
               raceDate.setHours(0,0,0,0);
               const now = new Date(); now.setHours(0,0,0,0);
@@ -5989,10 +5994,6 @@ JSON:
                 { icon: "🧘", text: "Visualisation de course 10 min/jour", done: false },
               ];
 
-              const checklistKey = `fitrace_race_checklist_${profile.name}_${profile.raceDate}`;
-              const [checked, setChecked] = React.useState(() => {
-                try { return JSON.parse(localStorage.getItem(checklistKey) || "{}"); } catch { return {}; }
-              });
               const toggleCheck = (i) => {
                 const next = { ...checked, [i]: !checked[i] };
                 setChecked(next);
@@ -6474,8 +6475,9 @@ JSON:
             })()}
 
             {/* ── SESSION JOURNAL ── */}
-            {(profile.sessions||[]).length >= 1 && (() => {
+            {(() => {
               const sessions = profile.sessions || [];
+              if (sessions.length < 1) return null;
               const notesKey = `fitrace_notes_${profile.name}`;
               const [notes, setNotes] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(notesKey) || "{}"); } catch { return {}; }
@@ -9874,8 +9876,10 @@ JSON:
             })()}
 
             {/* ── PR PROGRESSION CHART ── */}
-            {(profile.sessions||[]).length >= 3 && (() => {
+            {(() => {
+              const [selEx, setSelEx] = React.useState(0);
               const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
               // Build per-exercise sorted history from all sessions
               const exMap = {};
               sessions.forEach(s => {
@@ -9898,7 +9902,6 @@ JSON:
                 return ex;
               }).sort((a, b) => b.history.length - a.history.length).slice(0, 4);
               if (exList.length === 0) return null;
-              const [selEx, setSelEx] = React.useState(0);
               const ex = exList[Math.min(selEx, exList.length - 1)];
               const pts = ex.history;
               const vals = pts.map(p => p.peak);
@@ -10249,8 +10252,10 @@ JSON:
             })()}
 
             {/* ── SESSION COMPARISON ── */}
-            {(profile.sessions||[]).length >= 4 && (() => {
+            {(() => {
+              const [compareType, setCompareType] = React.useState("running_zone2");
               const sessions = profile.sessions || [];
+              if (sessions.length < 4) return null;
               const TYPE_CONF = {
                 running_zone2: { label: "Zone 2", color: "#30D158", icon: "🏃" },
                 force_stations: { label: "Force", color: "#C9A840", icon: "🏋️" },
@@ -10258,7 +10263,6 @@ JSON:
                 hybride_compromis: { label: "Hybride", color: "#BF5AF2", icon: "🔀" },
               };
               const SESSION_TYPES = Object.keys(TYPE_CONF);
-              const [compareType, setCompareType] = React.useState("running_zone2");
 
               const typeSessions = sessions.filter(s => s.type === compareType).slice(-2);
               if (typeSessions.length < 2) return null;
@@ -10329,7 +10333,8 @@ JSON:
             })()}
 
             {/* ── TRAINING DIARY ── */}
-            {(profile.sessions||[]).length >= 1 && (() => {
+            {(() => {
+              if ((profile.sessions||[]).length < 1) return null;
               const diaryKey = `fitrace_diary_${profile.name}`;
               const [diary, setDiary] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(diaryKey) || "{}"); } catch { return {}; }
@@ -10716,8 +10721,10 @@ JSON:
             })()}
 
             {/* ── HEATMAP CHARGE JOURNALIÈRE ── */}
-            {(profile.sessions||[]).length >= 1 && (() => {
+            {(() => {
+              const [hoveredCell, setHoveredCell] = React.useState(null);
               const sessions = profile.sessions || [];
+              if (sessions.length < 1) return null;
               // Build day → TRIMP map for last 56 days
               const dayMap = {};
               sessions.forEach(s => {
@@ -10783,8 +10790,6 @@ JSON:
                 const d = w[0].date;
                 return `S${Math.ceil((d.getDate()) / 7)} ${d.toLocaleDateString("fr-FR", { month: "short" })}`;
               });
-
-              const [hoveredCell, setHoveredCell] = React.useState(null);
 
               return (
                 <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
@@ -11877,7 +11882,9 @@ JSON:
             })()}
 
             {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
-            {profile.vmaKmh && (() => {
+            {(() => {
+              const [expandedZone, setExpandedZone] = React.useState(null);
+              if (!profile.vmaKmh) return null;
               const vma = parseFloat(profile.vmaKmh);
               const fcMax = profile.fcMax || (220 - (parseInt(profile.age) || 30));
               const fcRepos = profile.fcRepos || 55;
@@ -11920,8 +11927,6 @@ JSON:
               function fcRange(lo, hi) {
                 return `${Math.round(fcRepos + fcRes * lo / 100)}–${Math.round(fcRepos + fcRes * hi / 100)}`;
               }
-
-              const [expandedZone, setExpandedZone] = React.useState(null);
 
               return (
                 <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
