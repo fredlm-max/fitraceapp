@@ -11884,6 +11884,85 @@ JSON:
                 );
               })()}
 
+              {/* ── MOBILITY TRACKER ── */}
+              {(() => {
+                const mobKey = `fitrace_mobility_${profile.name}`;
+                const ZONES = [
+                  { id: "hanches",    label: "Hanches",     icon: "🦵", desc: "Flexion, rotation interne/externe" },
+                  { id: "epaules",    label: "Épaules",     icon: "💪", desc: "Rotation, overhead reach" },
+                  { id: "thoracique", label: "Thoracique",  icon: "🫁", desc: "Rotation, extension dorsale" },
+                  { id: "ischio",     label: "Ischio",      icon: "🏃", desc: "Flexion hanches, mollets" },
+                  { id: "chevilles",  label: "Chevilles",   icon: "🦶", desc: "Dorsiflexion — clé pour le squat HYROX" },
+                ];
+                const today = new Date().toISOString().slice(0, 10);
+                const [log, setLog] = React.useState(() => {
+                  try { return JSON.parse(localStorage.getItem(mobKey) || "{}"); } catch { return {}; }
+                });
+                const todayLog = log[today] || {};
+                const setScore = (zoneId, score) => {
+                  const updated = { ...log, [today]: { ...todayLog, [zoneId]: score } };
+                  setLog(updated);
+                  localStorage.setItem(mobKey, JSON.stringify(updated));
+                };
+                const avgScore = ZONES.filter(z => todayLog[z.id]).length > 0
+                  ? Math.round(ZONES.filter(z => todayLog[z.id]).reduce((a, z) => a + todayLog[z.id], 0) / ZONES.filter(z => todayLog[z.id]).length)
+                  : null;
+                const avgColor = avgScore >= 4 ? "#30D158" : avgScore >= 3 ? "#C9A840" : avgScore >= 2 ? "#FF9F0A" : "#FF453A";
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div>
+                        <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🧘 MOBILITÉ DU JOUR</div>
+                        <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>Évalue chaque zone · 1 = raide → 5 = excellent</div>
+                      </div>
+                      {avgScore && <div className="bebas" style={{ fontSize: 24, color: avgColor }}>{avgScore}<span style={{ fontSize: 12, color: "#8E8E93" }}>/5</span></div>}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {ZONES.map(z => {
+                        const score = todayLog[z.id] || 0;
+                        return (
+                          <div key={z.id} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "10px 12px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 16 }}>{z.icon}</span>
+                                <div>
+                                  <div style={{ fontSize: 13, color: "var(--white)", fontWeight: 600 }}>{z.label}</div>
+                                  <div style={{ fontSize: 10, color: "#636366" }}>{z.desc}</div>
+                                </div>
+                              </div>
+                              {score > 0 && (
+                                <div style={{ fontSize: 12, color: score >= 4 ? "#30D158" : score >= 3 ? "#C9A840" : "#FF9F0A", fontWeight: 700 }}>{score}/5</div>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {[1,2,3,4,5].map(n => {
+                                const c = n <= 2 ? "#FF453A" : n <= 3 ? "#FF9F0A" : n <= 4 ? "#C9A840" : "#30D158";
+                                return (
+                                  <button key={n} onClick={() => setScore(z.id, n)}
+                                    style={{ flex: 1, height: 28, borderRadius: 6, background: score >= n ? c + "33" : "rgba(255,255,255,0.06)", border: `1.5px solid ${score >= n ? c : "rgba(255,255,255,0.08)"}`, color: score >= n ? c : "#636366", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+                                    {n}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {avgScore >= 4 && (
+                      <div style={{ marginTop: 10, padding: "8px 10px", background: "rgba(48,209,88,0.1)", borderRadius: 8, fontSize: 11, color: "#30D158" }}>
+                        🌟 Excellente mobilité aujourd'hui — conditions optimales pour une séance intense
+                      </div>
+                    )}
+                    {avgScore <= 2 && avgScore > 0 && (
+                      <div style={{ marginTop: 10, padding: "8px 10px", background: "rgba(255,69,58,0.1)", borderRadius: 8, fontSize: 11, color: "#FF453A" }}>
+                        ⚠️ Mobilité réduite — privilégie une séance de récupération ou mobilité aujourd'hui
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* ── JOURNAL DOULEURS / BLESSURES ── */}
               {(() => {
                 const injuryKey = `fitrace_injuries_${profile.name}`;
