@@ -15691,6 +15691,89 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── TAPERING GUIDE ── */}
+      {profile.raceDate && (() => {
+        const raceDate = new Date(profile.raceDate);
+        const now = new Date(); now.setHours(0,0,0,0);
+        const daysLeft = Math.ceil((raceDate - now) / 86400000);
+        if (daysLeft > 21 || daysLeft < 0) return null;
+
+        const TAPER_WEEKS = daysLeft > 14
+          ? [ // 3-week taper
+              { week: "J-21 → J-14", vol: 70, intensity: 95, label: "Réduction volume", color: "#C9A840", tips: ["Maintien séances qualité", "Volume -30% vs semaine normale", "Conserve toutes les intensités"] },
+              { week: "J-14 → J-7",  vol: 50, intensity: 90, label: "Affûtage progressif", color: "#FF9F0A", tips: ["Volume -50%", "Séances courtes et percutantes", "Récup 48h entre séances intenses"] },
+              { week: "J-7 → J-0",   vol: 30, intensity: 85, label: "Semaine de course", color: "#30D158", tips: ["Volume minimal", "Activation légère J-2", "Repos complet J-1", "Sommeil 8h+"] },
+            ]
+          : daysLeft > 7
+          ? [ // 2-week taper
+              { week: "J-14 → J-7",  vol: 60, intensity: 90, label: "Réduction volume", color: "#FF9F0A", tips: ["Volume -40%", "1 séance qualité max", "Récup prioritaire"] },
+              { week: "J-7 → J-0",   vol: 30, intensity: 85, label: "Semaine de course", color: "#30D158", tips: ["Volume -70%", "Activation 20min J-2", "Repos J-1", "Focus mental"] },
+            ]
+          : [ // Race week only
+              { week: `J-${daysLeft} → J-0`, vol: 20, intensity: 80, label: "Semaine course", color: "#30D158", tips: [`Repos actif J-${Math.min(daysLeft, 2)}`, "Activation légère 15-20min", "Zéro séance intense", "Hydratation maximale"] },
+            ];
+
+        const currentWeek = daysLeft > 14 ? 0 : daysLeft > 7 ? (TAPER_WEEKS.length === 3 ? 1 : 0) : TAPER_WEEKS.length - 1;
+
+        // Today's recommended session
+        const dayRec = daysLeft === 1
+          ? { label: "REPOS COMPLET", color: "#30D158", icon: "😴", desc: "Pas de séance. Hydrate, prépare ton sac, visualise ta course." }
+          : daysLeft === 2
+          ? { label: "ACTIVATION", color: "#C9A840", icon: "⚡", desc: "20 min footing léger Z2 + 4×30s accélérations. Rien de plus." }
+          : daysLeft <= 7
+          ? { label: "VOLUME RÉDUIT", color: "#FF9F0A", icon: "🏃", desc: "Séance courte, intensité maintenue. Max 45 min." }
+          : { label: "AFFÛTAGE", color: "#C9A840", icon: "📉", desc: "Volume -40%. Qualité sur quantité." };
+
+        return (
+          <div style={{ background: "linear-gradient(135deg, rgba(15,20,5,1) 0%, rgba(10,10,15,1) 100%)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <div className="bebas" style={{ fontSize: 18, color: "#30D158", letterSpacing: 1 }}>📉 GUIDE D'AFFÛTAGE</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>Course dans <span style={{ color: "#30D158", fontWeight: 700 }}>J-{daysLeft}</span> · {raceDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div className="bebas" style={{ fontSize: 28, color: "#30D158", lineHeight: 1 }}>J-{daysLeft}</div>
+              </div>
+            </div>
+
+            {/* Today recommendation */}
+            <div style={{ background: dayRec.color + "18", border: `1px solid ${dayRec.color}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 18 }}>{dayRec.icon}</span>
+                <div className="bebas" style={{ fontSize: 14, color: dayRec.color, letterSpacing: 1 }}>AUJOURD'HUI : {dayRec.label}</div>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--white)", lineHeight: 1.5 }}>{dayRec.desc}</div>
+            </div>
+
+            {/* Week-by-week breakdown */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {TAPER_WEEKS.map((w, i) => {
+                const isCurrent = i === currentWeek;
+                return (
+                  <div key={i} style={{ background: isCurrent ? w.color + "15" : "rgba(255,255,255,0.03)", border: `1px solid ${isCurrent ? w.color : "rgba(255,255,255,0.06)"}`, borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, color: isCurrent ? w.color : "var(--white)", fontWeight: isCurrent ? 700 : 400 }}>
+                        {isCurrent ? "📍 " : ""}{w.week}
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ fontSize: 10, background: w.color + "22", color: w.color, borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>Vol: {w.vol}%</div>
+                        <div style={{ fontSize: 10, background: "rgba(255,255,255,0.06)", color: "#8E8E93", borderRadius: 6, padding: "2px 7px" }}>Int: {w.intensity}%</div>
+                      </div>
+                    </div>
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginBottom: 8 }}>
+                      <div style={{ width: `${w.vol}%`, height: "100%", background: w.color, borderRadius: 99 }} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {w.tips.map((t, j) => <div key={j} style={{ fontSize: 10, color: isCurrent ? "#ccc" : "#636366" }}>· {t}</div>)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
