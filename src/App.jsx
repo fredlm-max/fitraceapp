@@ -23329,6 +23329,167 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── GOAL SETTING & TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_goals_${profile.name}`;
+        const [goals, setGoals] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [showForm, setShowForm] = React.useState(false);
+        const [form, setForm] = React.useState({ title:"", type:"time", target:"", unit:"", deadline:"", current:"" });
+
+        const GOAL_TYPES = [
+          { key:"time",     label:"Temps de course", icon:"⏱️", unit:"min:ss", example:"ex: 75:00" },
+          { key:"weight",   label:"Poids cible",     icon:"⚖️", unit:"kg",    example:"ex: 72.5" },
+          { key:"vma",      label:"VMA",             icon:"🏃", unit:"km/h",  example:"ex: 17" },
+          { key:"sessions", label:"Séances/semaine", icon:"📅", unit:"séances",example:"ex: 5" },
+          { key:"distance", label:"Distance totale", icon:"📏", unit:"km",    example:"ex: 200" },
+          { key:"custom",   label:"Objectif perso",  icon:"🎯", unit:"",      example:"valeur numérique" },
+        ];
+
+        const addGoal = () => {
+          if (!form.title || !form.target) return;
+          const next = [...goals, { id:Date.now(), ...form, createdAt: new Date().toISOString().slice(0,10), achieved:false }];
+          setGoals(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowForm(false);
+          setForm({ title:"", type:"time", target:"", unit:"", deadline:"", current:"" });
+        };
+
+        const updateCurrent = (id, val) => {
+          const next = goals.map(g => g.id===id ? { ...g, current: val } : g);
+          setGoals(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const toggleAchieved = (id) => {
+          const next = goals.map(g => g.id===id ? { ...g, achieved:!g.achieved } : g);
+          setGoals(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const removeGoal = (id) => {
+          const next = goals.filter(g=>g.id!==id);
+          setGoals(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const calcPct = (g) => {
+          const cur = parseFloat(g.current);
+          const tgt = parseFloat(g.target);
+          const start = parseFloat(g.startVal || 0);
+          if (isNaN(cur) || isNaN(tgt) || tgt === 0) return 0;
+          // For time goals: lower is better
+          if (g.type === "time") {
+            return Math.min(100, Math.max(0, Math.round((start - cur) / (start - tgt) * 100)));
+          }
+          return Math.min(100, Math.max(0, Math.round(cur / tgt * 100)));
+        };
+
+        const daysLeft = (deadline) => {
+          if (!deadline) return null;
+          const diff = Math.ceil((new Date(deadline) - new Date()) / 86400000);
+          return diff;
+        };
+
+        const active = goals.filter(g=>!g.achieved);
+        const achieved = goals.filter(g=>g.achieved);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🎯 Objectifs Saison</div>
+              <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                {showForm?"Annuler":"+ Objectif"}
+              </button>
+            </div>
+
+            {showForm && (
+              <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                <input type="text" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="Titre de l'objectif"
+                  style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 10px",color:"var(--white)",fontSize:12,marginBottom:8,boxSizing:"border-box" }}/>
+
+                <div style={{ display:"flex",gap:4,flexWrap:"wrap",marginBottom:8 }}>
+                  {GOAL_TYPES.map(t=>(
+                    <button key={t.key} onClick={()=>setForm(f=>({...f,type:t.key,unit:t.unit}))}
+                      style={{ background:form.type===t.key?"var(--yellow)":"#2C2C2E",color:form.type===t.key?"#000":"#8E8E93",border:"none",borderRadius:6,padding:"4px 8px",fontSize:10,cursor:"pointer" }}>
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display:"flex",gap:8,marginBottom:8 }}>
+                  <input type="text" value={form.target} onChange={e=>setForm(f=>({...f,target:e.target.value}))}
+                    placeholder={`Cible (${GOAL_TYPES.find(t=>t.key===form.type)?.example})`}
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 10px",color:"var(--white)",fontSize:12,boxSizing:"border-box" }}/>
+                  <input type="date" value={form.deadline} onChange={e=>setForm(f=>({...f,deadline:e.target.value}))}
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 10px",color:"var(--white)",fontSize:12 }}/>
+                </div>
+
+                <button onClick={addGoal} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                  Ajouter l'objectif
+                </button>
+              </div>
+            )}
+
+            {active.map(g => {
+              const pct = calcPct(g);
+              const days = daysLeft(g.deadline);
+              const type = GOAL_TYPES.find(t=>t.key===g.type);
+              const color = pct >= 75 ? "#30D158" : pct >= 40 ? "#FF9F0A" : "#007AFF";
+              return (
+                <div key={g.id} style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:8 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6 }}>
+                    <div>
+                      <div style={{ fontSize:12,fontWeight:700,color:"var(--white)" }}>{type?.icon} {g.title}</div>
+                      <div style={{ fontSize:9,color:"#636366",marginTop:1 }}>
+                        Cible: <span style={{ color:"var(--yellow)",fontWeight:700 }}>{g.target} {g.unit}</span>
+                        {days !== null && <span style={{ marginLeft:8,color:days<14?"#FF453A":days<30?"#FF9F0A":"#636366" }}> · {days > 0 ? `${days}j restants` : "Échéance dépassée"}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex",gap:4 }}>
+                      <button onClick={()=>toggleAchieved(g.id)} style={{ background:"#1C3A24",color:"#30D158",border:"none",borderRadius:6,padding:"3px 7px",fontSize:10,cursor:"pointer" }}>✓</button>
+                      <button onClick={()=>removeGoal(g.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ height:6,background:"#2C2C2E",borderRadius:3,marginBottom:6,overflow:"hidden" }}>
+                    <div style={{ height:"100%",width:`${pct}%`,background:color,borderRadius:3,transition:"width 0.4s" }}/>
+                  </div>
+
+                  {/* Current value input */}
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <span style={{ fontSize:9,color:"#636366" }}>Valeur actuelle:</span>
+                    <input type="text" value={g.current||""} onChange={e=>updateCurrent(g.id,e.target.value)}
+                      placeholder="0"
+                      style={{ width:60,background:"#2C2C2E",border:"none",borderRadius:6,padding:"3px 6px",color:"var(--yellow)",fontSize:12,fontWeight:700,textAlign:"center" }}/>
+                    <span style={{ fontSize:9,color:"#636366" }}>{g.unit}</span>
+                    <span style={{ marginLeft:"auto",fontSize:11,fontWeight:800,color }}>{pct}%</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {achieved.length > 0 && (
+              <div style={{ marginTop:8 }}>
+                <div style={{ fontSize:8,color:"#30D158",fontWeight:800,letterSpacing:1,marginBottom:6 }}>ATTEINTS 🏆 ({achieved.length})</div>
+                {achieved.map(g=>(
+                  <div key={g.id} style={{ display:"flex",alignItems:"center",gap:8,background:"#1C3A24",borderRadius:8,padding:"6px 10px",marginBottom:3 }}>
+                    <span style={{ fontSize:12 }}>✅</span>
+                    <span style={{ fontSize:11,color:"#30D158",fontWeight:600 }}>{g.title}</span>
+                    <span style={{ marginLeft:"auto",fontSize:9,color:"#636366" }}>{g.target} {g.unit}</span>
+                    <button onClick={()=>removeGoal(g.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:12,cursor:"pointer" }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {goals.length === 0 && !showForm && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"16px 0" }}>Définis tes objectifs de saison →</div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── TAPER CALCULATOR ── */}
       {(() => {
         const sessions = profile.sessions || [];
