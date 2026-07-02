@@ -15829,6 +15829,168 @@ function TechniqueTab({ profile = {} }) {
         </div>
       )}
 
+      {/* ── COOLDOWN ROUTINE GENERATOR ── */}
+      {(() => {
+        const sessions = profile.sessions || [];
+        const lastSession = sessions.length ? sessions[sessions.length - 1] : null;
+
+        const ROUTINES = {
+          running_zone2: {
+            label: "Récup. Course Z2",
+            color: "#30D158",
+            stretches: [
+              { name: "Psoas fléchi debout", duration: 45, target: "Fléchisseurs hanche", side: true },
+              { name: "Quadriceps debout", duration: 45, target: "Quadriceps", side: true },
+              { name: "Ischio assis sol", duration: 60, target: "Ischio-jambiers", side: false },
+              { name: "Mollet mur penché", duration: 45, target: "Mollets", side: true },
+              { name: "Pigeon au sol", duration: 60, target: "Fessiers / IT band", side: true },
+              { name: "Respiration diaphragmatique", duration: 60, target: "Système nerveux", side: false },
+            ]
+          },
+          running_qualite: {
+            label: "Récup. Course Qualité",
+            color: "#FF9F0A",
+            stretches: [
+              { name: "Marche 5 min décontractée", duration: 300, target: "Transition active", side: false },
+              { name: "Ischio debout (appui)", duration: 60, target: "Ischio-jambiers", side: true },
+              { name: "Quadriceps allongé", duration: 45, target: "Quadriceps", side: true },
+              { name: "Mollet droit + fléchi", duration: 45, target: "Solaire / Mollet", side: true },
+              { name: "Fente basse profonde", duration: 60, target: "Hip flexors", side: true },
+              { name: "Rouleau mousse cuisse", duration: 90, target: "Auto-massage", side: false },
+            ]
+          },
+          force_stations: {
+            label: "Récup. Force",
+            color: "#BF5AF2",
+            stretches: [
+              { name: "Étirement pec porte", duration: 45, target: "Pectoraux / Épaules", side: true },
+              { name: "Dos chat/vache", duration: 60, target: "Dorsaux / Lombaires", side: false },
+              { name: "Enfant / Child pose", duration: 60, target: "Dos complet", side: false },
+              { name: "Biceps au mur", duration: 30, target: "Biceps / Avant-bras", side: true },
+              { name: "Squat profond tenu", duration: 45, target: "Hanches / Quadriceps", side: false },
+              { name: "Cobra / Upward dog", duration: 45, target: "Abdominaux / Hip flexors", side: false },
+            ]
+          },
+          hybride_compromis: {
+            label: "Récup. Hybride",
+            color: "var(--yellow)",
+            stretches: [
+              { name: "Fente basse + twist", duration: 45, target: "Hip flexors + rotation", side: true },
+              { name: "Ischio assis sol", duration: 60, target: "Ischio-jambiers", side: false },
+              { name: "Étirement pec porte", duration: 45, target: "Épaules antérieures", side: true },
+              { name: "Mollet mur", duration: 45, target: "Mollets", side: true },
+              { name: "Pigeon modifié", duration: 60, target: "Fessiers", side: true },
+              { name: "Respiration 4-7-8", duration: 120, target: "Parasympathique", side: false },
+            ]
+          },
+          default: {
+            label: "Récup. Générale",
+            color: "#636366",
+            stretches: [
+              { name: "Quadriceps debout", duration: 45, target: "Quadriceps", side: true },
+              { name: "Ischio assis sol", duration: 60, target: "Ischio-jambiers", side: false },
+              { name: "Mollet mur", duration: 45, target: "Mollets", side: true },
+              { name: "Dos chat/vache", duration: 60, target: "Dos", side: false },
+              { name: "Enfant / Child pose", duration: 60, target: "Dos / Hanches", side: false },
+              { name: "Respiration calme", duration: 60, target: "SN parasympathique", side: false },
+            ]
+          }
+        };
+
+        const routine = ROUTINES[lastSession?.type] || ROUTINES.default;
+        const totalMin = Math.round(routine.stretches.reduce((s, x) => s + x.duration * (x.side ? 2 : 1), 0) / 60);
+
+        const [activeIdx, setActiveIdx] = React.useState(null);
+        const [timerSec, setTimerSec] = React.useState(0);
+        const [running, setRunning] = React.useState(false);
+        const [done, setDone] = React.useState([]);
+
+        React.useEffect(() => {
+          if (!running || activeIdx === null) return;
+          const stretch = routine.stretches[activeIdx];
+          const totalDur = stretch.duration * (stretch.side ? 2 : 1);
+          if (timerSec >= totalDur) {
+            setRunning(false);
+            setDone(d => [...d, activeIdx]);
+            return;
+          }
+          const t = setTimeout(() => setTimerSec(s => s + 1), 1000);
+          return () => clearTimeout(t);
+        }, [running, timerSec, activeIdx]);
+
+        const startStretch = idx => {
+          setActiveIdx(idx);
+          setTimerSec(0);
+          setRunning(true);
+        };
+
+        const resetAll = () => { setActiveIdx(null); setTimerSec(0); setRunning(false); setDone([]); };
+
+        return (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🧘 COOLDOWN GENERATOR</div>
+              <div style={{ fontSize: 11, color: routine.color, fontWeight: 700 }}>{routine.label} · {totalMin} min</div>
+            </div>
+
+            {!lastSession && <div style={{ fontSize: 12, color: "#636366", marginBottom: 12 }}>Enregistre une séance pour une routine personnalisée.</div>}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {routine.stretches.map((stretch, idx) => {
+                const isActive = activeIdx === idx && running;
+                const isDone = done.includes(idx);
+                const totalDur = stretch.duration * (stretch.side ? 2 : 1);
+                const pct = isActive ? Math.round((timerSec / totalDur) * 100) : isDone ? 100 : 0;
+                const secLeft = isActive ? Math.max(0, totalDur - timerSec) : totalDur;
+                const halfTime = stretch.duration;
+                const inSecondSide = isActive && stretch.side && timerSec >= halfTime;
+
+                return (
+                  <div key={idx} style={{ background: isDone ? "#30D15815" : isActive ? routine.color + "15" : "var(--bg3)", border: `1px solid ${isDone ? "#30D158" : isActive ? routine.color : "#3A3A3C"}`, borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 14, color: isDone ? "#30D158" : isActive ? routine.color : "var(--white)", fontWeight: 700 }}>{stretch.name}</span>
+                          {isDone && <span style={{ fontSize: 12 }}>✅</span>}
+                          {inSecondSide && <span style={{ fontSize: 10, background: routine.color, color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>AUTRE CÔTÉ</span>}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>
+                          {stretch.target} · {stretch.side ? `${stretch.duration}s × 2 côtés` : `${stretch.duration}s`}
+                        </div>
+                        {isActive && (
+                          <div style={{ marginTop: 6 }}>
+                            <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                              <div style={{ width: `${pct}%`, height: "100%", background: routine.color, borderRadius: 99, transition: "width 0.5s" }} />
+                            </div>
+                            <div style={{ fontSize: 11, color: routine.color, marginTop: 3, fontWeight: 700 }}>
+                              {Math.floor(secLeft / 60) > 0 ? `${Math.floor(secLeft / 60)}:` : ""}{String(secLeft % 60).padStart(2, "0")} restant
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => isDone ? null : isActive ? (setRunning(false), setActiveIdx(null)) : startStretch(idx)}
+                        disabled={isDone}
+                        style={{ background: isDone ? "transparent" : isActive ? "#FF453A" : routine.color, color: isDone ? "transparent" : "#000", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: isDone ? "default" : "pointer", minWidth: 52 }}
+                      >
+                        {isDone ? "✓" : isActive ? "Stop" : "Go"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {done.length > 0 && (
+              <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 12, color: "#30D158", fontWeight: 700 }}>{done.length}/{routine.stretches.length} exercices complétés</div>
+                <button onClick={resetAll} style={{ background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "4px 10px", color: "#8E8E93", fontSize: 11, cursor: "pointer" }}>Recommencer</button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── INJURY PREVENTION PREHAB ── */}
       {(() => {
         const PREHAB = [
