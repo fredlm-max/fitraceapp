@@ -15696,6 +15696,108 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         </div>
       </div>
 
+      {/* ── VO2MAX ESTIMATOR ── */}
+      {(() => {
+        const age = parseInt(profile.age) || 30;
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const vma = parseFloat(profile.vmaKmh) || null;
+        const fcMax = profile.fcMax || Math.round(208 - 0.7 * age);
+        const fcRest = parseInt(profile.fcRepos) || null;
+
+        // Method 1: VMA (Léger) — VO2max ≈ VMA × 3.5
+        const vo2vma = vma ? Math.round(vma * 3.5) : null;
+
+        // Method 2: Karvonen (Heart Rate Reserve) — VO2max ≈ 15 × (fcMax/fcRest)
+        const vo2hr = fcRest ? Math.round(15 * (fcMax / fcRest)) : null;
+
+        // Method 3: from sessions — best average pace
+        const runs = (profile.sessions || []).filter(s => s.type === "Course" && s.distance && s.duree);
+        const vo2pace = runs.length > 0 ? (() => {
+          const fastest = runs.reduce((best, s) => {
+            const pace = s.duree / parseFloat(s.distance);
+            return pace < best ? pace : best;
+          }, Infinity);
+          const speedKmh = 60 / fastest;
+          return Math.round(speedKmh * 3.5);
+        })() : null;
+
+        // Fitness age from VO2max (Ntnu formula simplified)
+        const bestVo2 = Math.max(vo2vma || 0, vo2hr || 0, vo2pace || 0) || null;
+        const fitnessAge = bestVo2 ? (() => {
+          // Reference table (men) — simplified
+          const ref = sex === "H"
+            ? [50, 48, 46, 43, 40, 37, 33, 30]
+            : [46, 43, 40, 37, 34, 31, 28, 24];
+          const ages = [20, 25, 30, 35, 40, 45, 50, 55];
+          let fa = ages[ages.length - 1];
+          for (let i = 0; i < ref.length; i++) {
+            if (bestVo2 >= ref[i]) { fa = ages[i]; break; }
+          }
+          return fa;
+        })() : null;
+
+        const getVo2Level = (v) => {
+          if (!v) return null;
+          if (sex === "H") {
+            if (v >= 55) return { label: "Excellent", color: "#30D158" };
+            if (v >= 45) return { label: "Bon", color: "#34C759" };
+            if (v >= 35) return { label: "Moyen", color: "#FF9F0A" };
+            return { label: "Faible", color: "#FF453A" };
+          } else {
+            if (v >= 48) return { label: "Excellent", color: "#30D158" };
+            if (v >= 38) return { label: "Bon", color: "#34C759" };
+            if (v >= 30) return { label: "Moyen", color: "#FF9F0A" };
+            return { label: "Faible", color: "#FF453A" };
+          }
+        };
+
+        if (!vo2vma && !vo2hr && !vo2pace) return null;
+
+        const methods = [
+          vo2vma && { label: "Via VMA", value: vo2vma, desc: "VMA × 3.5", icon: "🏃" },
+          vo2hr && { label: "Via FC", value: vo2hr, desc: "15 × FCmax/FCrepos", icon: "❤️" },
+          vo2pace && { label: "Via Allure", value: vo2pace, desc: "Meilleure sortie", icon: "⏱️" },
+        ].filter(Boolean);
+
+        const level = getVo2Level(bestVo2);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, margin: "0 16px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>VO2max Estimé</div>
+              {bestVo2 && level && <div style={{ fontSize: 11, color: level.color, fontWeight: 700 }}>{level.label}</div>}
+            </div>
+
+            {bestVo2 && (
+              <div style={{ textAlign: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: 42, fontWeight: 900, color: level?.color || "var(--yellow)", lineHeight: 1 }}>{bestVo2}</div>
+                <div style={{ fontSize: 11, color: "#636366" }}>ml/kg/min (meilleure estimation)</div>
+                {fitnessAge && (
+                  <div style={{ marginTop: 6, fontSize: 12, color: fitnessAge < age ? "#30D158" : fitnessAge > age ? "#FF9F0A" : "#8E8E93" }}>
+                    Âge fitness : <strong>{fitnessAge} ans</strong> {fitnessAge < age ? `(${age - fitnessAge} ans de moins que votre âge !)` : fitnessAge > age ? `(${fitnessAge - age} ans de plus — progression possible)` : "(dans la moyenne)"}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 6 }}>
+              {methods.map(m => {
+                const lvl = getVo2Level(m.value);
+                return (
+                  <div key={m.label} style={{ flex: 1, background: `${lvl?.color || "#C9A840"}12`, border: `1px solid ${lvl?.color || "#C9A840"}25`, borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                    <div style={{ fontSize: 13 }}>{m.icon}</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: lvl?.color || "var(--yellow)" }}>{m.value}</div>
+                    <div style={{ fontSize: 8, color: "#636366" }}>{m.label}</div>
+                    <div style={{ fontSize: 7, color: "#3A3A3C" }}>{m.desc}</div>
+                  </div>
+                );
+              })}
+            </div>
+            {!fcRest && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Ajoutez votre FC repos dans le profil pour affiner l'estimation</div>}
+          </div>
+        );
+      })()}
+
       {/* ── DÉCONNEXION ── */}
       <div style={{ marginTop: 8, marginBottom: 32 }}>
         <Btn variant="danger" onClick={onLogout} style={{ width: "100%", opacity: 0.8 }}>
