@@ -18631,6 +18631,128 @@ JSON: {
             );
           })()}
 
+          {/* ── RACE DAY NUTRITION PLAN ── */}
+          {(() => {
+            const weight = profile.poids || 70;
+            const [targetMin, setTargetMin] = React.useState(90); // target time in minutes
+            const hours = targetMin / 60;
+
+            // Carb needs during race: ~60g/h for <75min, 90g/h for longer (with fructose mix)
+            const carbsDuringG = targetMin <= 75 ? 60 : 90;
+            const totalCarbsDuring = Math.round(carbsDuringG * hours);
+
+            // Pre-race carb loading (g per kg, 3-4h before)
+            const preRaceCarbs = Math.round(weight * 2.5);
+            const preRaceProtein = Math.round(weight * 0.3);
+
+            // Post-race recovery
+            const postCarbs = Math.round(weight * 1.2);
+            const postProtein = Math.round(weight * 0.4);
+
+            const h = Math.floor(targetMin / 60);
+            const m = targetMin % 60;
+
+            const PHASES = [
+              {
+                label: "J-1 VEILLE DE COURSE",
+                emoji: "📅",
+                color: "#007AFF",
+                items: [
+                  { time: "Déjeuner", desc: `Pâtes/riz ${Math.round(weight * 1.5)}g + légumes + protéine légère (poulet)` },
+                  { time: "Goûter", desc: "Banane + pain de mie + confiture" },
+                  { time: "Dîner", desc: `Riz blanc ${Math.round(weight * 2)}g + sauce tomate + viande maigre · Évite fibres & graisses` },
+                  { time: "Avant lit", desc: "1 verre de lait ou fromage blanc (caséine = récup nocturne)" },
+                  { time: "Hydratation", desc: `${Math.round(weight * 0.04)}L eau sur la journée + 500ml bouillon le soir` },
+                ],
+              },
+              {
+                label: "MATIN DE COURSE (3-4h avant)",
+                emoji: "🌅",
+                color: "#FF9F0A",
+                items: [
+                  { time: "Petit-déj", desc: `${preRaceCarbs}g glucides : flocons d'avoine + banane + pain blanc + miel` },
+                  { time: "Protéine", desc: `${preRaceProtein}g : œufs brouillés ou yaourt grec · Limiter les fibres` },
+                  { time: "1h avant", desc: "250ml eau + éventuellement gel énergétique si appétit coupé" },
+                  { time: "30min avant", desc: "Café (3mg/kg soit ~200mg caféine) = +3-5% performance ✅" },
+                  { time: "Échauffement", desc: "Dernière gorgée d'eau 10min avant le départ" },
+                ],
+              },
+              {
+                label: `PENDANT LA COURSE (~${h}h${m > 0 ? m + "min" : ""})`,
+                emoji: "🏃",
+                color: "var(--yellow)",
+                items: [
+                  { time: "Objectif", desc: `${carbsDuringG}g glucides/h = ${totalCarbsDuring}g total · mix glucose+fructose (2:1)` },
+                  { time: "Gels", desc: `1 gel (${Math.round(totalCarbsDuring / 25)} gels) toutes les ${Math.round(targetMin / Math.round(totalCarbsDuring / 25))} min · prendre avec eau` },
+                  { time: "Boissons", desc: `${Math.round(targetMin * 10)}ml total · 150-200ml aux points de ravitaillement` },
+                  { time: "Sel", desc: targetMin > 75 ? "1 pastille sel à mi-course (500mg sodium) pour éviter crampes" : "Pas nécessaire < 75 min" },
+                  { time: "Caféine", desc: "Gel caféiné 20-30min avant la fin si besoin de boost final" },
+                ],
+              },
+              {
+                label: "RÉCUPÉRATION (0-30min après)",
+                emoji: "✅",
+                color: "#30D158",
+                items: [
+                  { time: "Immédiat", desc: `${Math.round(weight * 0.5)}g glucides rapides (banane, boisson récup, barre) dans les 30 min` },
+                  { time: "Protéines", desc: `${postProtein}g protéines (shake whey ou lait) pour synthèse musculaire` },
+                  { time: "1-2h après", desc: `Repas complet : ${postCarbs}g glucides + ${postProtein}g protéines + légumes` },
+                  { time: "Hydratation", desc: `Pèse-toi : 1.5L d'eau par kg perdu · Continue à boire les 6h suivantes` },
+                  { time: "Antioxydants", desc: "Jus de cerise tart (250ml) ou curcuma + gingembre anti-inflammatoire" },
+                ],
+              },
+            ];
+
+            const [activePhase, setActivePhase] = React.useState(0);
+
+            return (
+              <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>🏁 PLAN NUTRITION COURSE</div>
+
+                {/* Target time slider */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: "#8E8E93" }}>Objectif temps</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "var(--yellow)", fontFamily: "monospace" }}>{h}h{m > 0 ? String(m).padStart(2, "0") : "00"}</span>
+                  </div>
+                  <input type="range" min={55} max={150} value={targetMin} onChange={e => setTargetMin(parseInt(e.target.value))} style={{ width: "100%", accentColor: "var(--yellow)" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366" }}>
+                    <span>55min</span><span>Elite</span><span>Pro</span><span>Open</span><span>2h30</span>
+                  </div>
+                </div>
+
+                {/* Phase tabs */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto" }}>
+                  {PHASES.map((p, i) => (
+                    <button key={i} onClick={() => setActivePhase(i)} style={{ flexShrink: 0, background: activePhase === i ? p.color : "var(--bg3)", color: activePhase === i ? "#000" : "#8E8E93", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                      {p.emoji} {p.label.split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active phase */}
+                {(() => {
+                  const p = PHASES[activePhase];
+                  return (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: p.color, marginBottom: 10 }}>{p.emoji} {p.label}</div>
+                      {p.items.map(item => (
+                        <div key={item.time} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
+                          <div style={{ minWidth: 80, fontSize: 10, color: p.color, fontWeight: 700, paddingTop: 1 }}>{item.time}</div>
+                          <div style={{ fontSize: 11, color: "#AEAEB2", flex: 1 }}>{item.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                <div style={{ marginTop: 10, fontSize: 10, color: "#636366" }}>
+                  Basé sur {weight}kg · Ajuste selon ta tolérance digestive à l'entraînement
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── MEAL PLAN TEMPLATES ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 75;
