@@ -18649,6 +18649,124 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── BODY COMPOSITION TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_body_comp_${profile.name}`;
+        const [entries, setEntries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [bfInput, setBfInput] = React.useState("");
+        const [wtInput, setWtInput] = React.useState(profile.poids ? String(profile.poids) : "");
+        const [showForm, setShowForm] = React.useState(false);
+
+        const addEntry = () => {
+          const wt = parseFloat(wtInput);
+          const bf = parseFloat(bfInput);
+          if (!wt || wt < 30 || wt > 200) return;
+          const next = [...entries, { date: new Date().toISOString().slice(0,10), wt, bf: isNaN(bf) ? null : bf }];
+          setEntries(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setBfInput(""); setShowForm(false);
+        };
+
+        const last = entries[entries.length - 1];
+        const prev = entries.length >= 2 ? entries[entries.length - 2] : null;
+        const taille = (profile.taille || 175) / 100;
+        const bmi = last ? (last.wt / (taille * taille)).toFixed(1) : null;
+        const bmiCat = bmi ? (bmi < 18.5 ? "Maigreur" : bmi < 25 ? "Normal" : bmi < 30 ? "Surpoids" : "Obésité") : null;
+        const bmiColor = bmi ? (bmi < 18.5 ? "#FF9F0A" : bmi < 25 ? "#30D158" : bmi < 30 ? "#FF9F0A" : "#FF453A") : null;
+        const fatMass = (last && last.bf) ? (last.wt * last.bf / 100).toFixed(1) : null;
+        const leanMass = (last && last.bf) ? (last.wt - last.wt * last.bf / 100).toFixed(1) : null;
+
+        // 30-day sparkline
+        const last30 = entries.slice(-30);
+        const sparkW = 300, sparkH = 50;
+        const wts = last30.map(e=>e.wt);
+        const minW = Math.min(...wts) - 0.5;
+        const maxW = Math.max(...wts) + 0.5;
+        const sparkPoints = last30.map((e,i) => {
+          const x = (i / Math.max(last30.length-1,1)) * sparkW;
+          const y = sparkH - ((e.wt - minW) / (maxW - minW || 1)) * sparkH;
+          return `${x},${y}`;
+        }).join(" ");
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Composition Corporelle</div>
+              <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                {showForm?"Annuler":"+ Mesure"}
+              </button>
+            </div>
+
+            {showForm && (
+              <div style={{ display:"flex",gap:6,marginBottom:12,alignItems:"center",flexWrap:"wrap" }}>
+                <input type="number" value={wtInput} onChange={e=>setWtInput(e.target.value)} placeholder="Poids (kg)"
+                  style={{ flex:1,background:"var(--bg3)",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,minWidth:100 }}/>
+                <input type="number" value={bfInput} onChange={e=>setBfInput(e.target.value)} placeholder="% Gras (optionnel)"
+                  style={{ flex:1,background:"var(--bg3)",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,minWidth:100 }}/>
+                <button onClick={addEntry} style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:800,cursor:"pointer" }}>OK</button>
+              </div>
+            )}
+
+            {last ? (
+              <>
+                {/* Current stats */}
+                <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                  <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                    <div style={{ fontSize:18,fontWeight:900,color:"var(--yellow)" }}>{last.wt}<span style={{ fontSize:10,fontWeight:400 }}>kg</span></div>
+                    <div style={{ fontSize:8,color:"#636366" }}>Poids</div>
+                    {prev && <div style={{ fontSize:8,color:last.wt<prev.wt?"#30D158":"#FF453A",marginTop:2 }}>{last.wt<prev.wt?"▼":"▲"}{Math.abs(last.wt-prev.wt).toFixed(1)}kg</div>}
+                  </div>
+                  <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                    <div style={{ fontSize:18,fontWeight:900,color:bmiColor }}>{bmi}</div>
+                    <div style={{ fontSize:8,color:"#636366" }}>IMC</div>
+                    <div style={{ fontSize:8,color:bmiColor }}>{bmiCat}</div>
+                  </div>
+                  {last.bf && (
+                    <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                      <div style={{ fontSize:18,fontWeight:900,color:"#FF9F0A" }}>{last.bf}<span style={{ fontSize:10,fontWeight:400 }}>%</span></div>
+                      <div style={{ fontSize:8,color:"#636366" }}>Masse grasse</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lean vs Fat bar */}
+                {last.bf && (
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ display:"flex",justifyContent:"space-between",fontSize:9,color:"#8E8E93",marginBottom:3 }}>
+                      <span>💪 Masse maigre: <strong style={{ color:"#30D158" }}>{leanMass}kg</strong></span>
+                      <span>🫀 Masse grasse: <strong style={{ color:"#FF9F0A" }}>{fatMass}kg</strong></span>
+                    </div>
+                    <div style={{ height:10,borderRadius:5,overflow:"hidden",display:"flex" }}>
+                      <div style={{ flex:parseFloat(leanMass),background:"#30D158",opacity:0.8 }}/>
+                      <div style={{ flex:parseFloat(fatMass),background:"#FF9F0A",opacity:0.8 }}/>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sparkline */}
+                {last30.length >= 3 && (
+                  <>
+                    <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Évolution du poids (30j)</div>
+                    <svg width="100%" viewBox={`0 0 ${sparkW} ${sparkH}`} style={{ overflow:"visible" }}>
+                      <polyline points={sparkPoints} fill="none" stroke="var(--yellow)" strokeWidth={2} strokeLinejoin="round"/>
+                      {last30.map((e,i) => {
+                        const x = (i/Math.max(last30.length-1,1))*sparkW;
+                        const y = sparkH - ((e.wt-minW)/(maxW-minW||1))*sparkH;
+                        return i===last30.length-1 ? <circle key={i} cx={x} cy={y} r={3} fill="var(--yellow)"/> : null;
+                      })}
+                      <text x={0} y={sparkH+12} fill="#636366" fontSize={8}>{last30[0]?.date?.slice(5)}</text>
+                      <text x={sparkW} y={sparkH+12} fill="#636366" fontSize={8} textAnchor="end">{last30[last30.length-1]?.date?.slice(5)}</text>
+                    </svg>
+                  </>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"16px 0" }}>Ajoute ta première mesure ↗</div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── ATHLETE PERFORMANCE CARD ── */}
       {(() => {
         const sessions = profile.sessions || [];
