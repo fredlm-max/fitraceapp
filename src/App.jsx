@@ -6253,6 +6253,88 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING READINESS SCORE ── */}
+            {(() => {
+              const sleepKey = `fitrace_sleep_${profile.name}`;
+              const hrrKey = `fitrace_hrr_${profile.name}`;
+              const sleepLog = (() => { try { return JSON.parse(localStorage.getItem(sleepKey) || "[]"); } catch { return []; } })();
+              const hrrLog = (() => { try { return JSON.parse(localStorage.getItem(hrrKey) || "[]"); } catch { return []; } })();
+              const sessions = profile.sessions || [];
+
+              // Sleep score (0-40): last night sleep hours & quality
+              const lastSleep = sleepLog[0];
+              let sleepScore = 20; // neutral if no data
+              if (lastSleep) {
+                const hScore = Math.min(lastSleep.hours / 8, 1) * 20;
+                const qScore = (lastSleep.quality / 5) * 20;
+                sleepScore = Math.round(hScore + qScore);
+              }
+
+              // HRR score (0-30): latest vs baseline
+              let hrrScore = 15;
+              if (hrrLog.length >= 2) {
+                const latest = hrrLog[0].hrr;
+                const baseline = Math.round(hrrLog.slice(0, 5).reduce((s, e) => s + e.hrr, 0) / Math.min(hrrLog.length, 5));
+                const ratio = latest / baseline;
+                hrrScore = Math.round(Math.min(ratio, 1.3) * 23);
+              }
+
+              // Load score (0-30): penalize heavy load in last 48h
+              const now = Date.now();
+              const recentLoad = sessions
+                .filter(s => (now - new Date(s.date).getTime()) < 48 * 3600000)
+                .reduce((s, x) => s + (x.duree || 0) * ((x.rpe || 5) / 10), 0);
+              const loadScore = Math.max(0, 30 - Math.round(recentLoad / 12));
+
+              const total = Math.min(100, sleepScore + hrrScore + loadScore);
+
+              const getStatus = (s) => {
+                if (s >= 75) return { label: "PRÊT", color: "#30D158", desc: "Condition optimale — séance intense OK", emoji: "🟢" };
+                if (s >= 50) return { label: "MODÉRÉ", color: "#FF9F0A", desc: "Séance modérée recommandée", emoji: "🟡" };
+                return { label: "REPOS", color: "#FF453A", desc: "Récupération prioritaire aujourd'hui", emoji: "🔴" };
+              };
+              const status = getStatus(total);
+
+              const circumference = 2 * Math.PI * 38;
+              const offset = circumference * (1 - total / 100);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Readiness du Jour</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    {/* Ring */}
+                    <svg width="90" height="90" viewBox="0 0 90 90">
+                      <circle cx="45" cy="45" r="38" fill="none" stroke="#2C2C2E" strokeWidth="8" />
+                      <circle cx="45" cy="45" r="38" fill="none" stroke={status.color} strokeWidth="8"
+                        strokeDasharray={circumference} strokeDashoffset={offset}
+                        strokeLinecap="round" transform="rotate(-90 45 45)" style={{ transition: "stroke-dashoffset 0.6s ease" }} />
+                      <text x="45" y="42" textAnchor="middle" fill={status.color} fontSize="20" fontWeight="900">{total}</text>
+                      <text x="45" y="55" textAnchor="middle" fill="#636366" fontSize="8">/100</text>
+                    </svg>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: status.color, marginBottom: 2 }}>{status.emoji} {status.label}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>{status.desc}</div>
+                      {[
+                        { label: "Sommeil", score: sleepScore, max: 40, color: "#007AFF" },
+                        { label: "HRR", score: hrrScore, max: 30, color: "#BF5AF2" },
+                        { label: "Charge", score: loadScore, max: 30, color: "#FF9F0A" },
+                      ].map(b => (
+                        <div key={b.label} style={{ marginBottom: 5 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366", marginBottom: 2 }}>
+                            <span>{b.label}</span><span>{b.score}/{b.max}</span>
+                          </div>
+                          <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2 }}>
+                            <div style={{ height: "100%", width: `${(b.score / b.max) * 100}%`, background: b.color, borderRadius: 2, transition: "width 0.5s" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {!lastSleep && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Loggez votre sommeil pour améliorer la précision</div>}
+                </div>
+              );
+            })()}
+
             {/* ── HYDRATION STATION ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
