@@ -6203,6 +6203,90 @@ JSON:
               );
             })()}
 
+            {/* ── SEASONAL TRAINING ADVISOR ── */}
+            {(() => {
+              const month = new Date().getMonth(); // 0-11
+              const hour = new Date().getHours();
+
+              const SEASONS = {
+                summer: { months: [5, 6, 7], emoji: "☀️", label: "ÉTÉ", color: "#FF9F0A" },
+                autumn: { months: [8, 9, 10], emoji: "🍂", label: "AUTOMNE", color: "#FF6B00" },
+                winter: { months: [11, 0, 1], emoji: "❄️", label: "HIVER", color: "#007AFF" },
+                spring: { months: [2, 3, 4], emoji: "🌸", label: "PRINTEMPS", color: "#30D158" },
+              };
+
+              const season = Object.entries(SEASONS).find(([, s]) => s.months.includes(month))?.[0] || "spring";
+              const seasonInfo = SEASONS[season];
+
+              const bestTime = season === "summer"
+                ? (hour < 10 ? "Idéal : tu es dans la fenêtre matinale fraîche ✅" : hour < 19 ? "Attends 19h+ — chaleur trop élevée ⚠️" : "Bonne heure pour courir (après 19h) ✅")
+                : season === "winter"
+                ? (hour < 9 ? "Trop froid et sombre — attends 10h+ ⚠️" : hour < 16 ? "Fenêtre idéale, profite de la lumière ✅" : "Nuit tôt — lampe frontale conseillée 🔦")
+                : "Toute la journée est favorable aujourd'hui ✅";
+
+              const TIPS = {
+                summer: [
+                  { icon: "🕖", title: "Horaires décalés", tip: "Cours avant 9h ou après 19h pour éviter la chaleur (>25°C = risque)" },
+                  { icon: "💧", title: "Surhydratation", tip: "+500ml/h d'effort + électrolytes. Pèse-toi avant/après (1kg perdu = 1L bu)" },
+                  { icon: "👕", title: "Tenue technique", tip: "Blanc ou couleur claire, tissu respirant, casquette + lunettes" },
+                  { icon: "⬇️", title: "Intensité réduite", tip: "RPE cible -1 à -2 par 5°C au-dessus de 20°C. Adapte les allures" },
+                  { icon: "❄️", title: "Récup. fraîche", tip: "Bain froid ou douche froide post-effort pour accélérer la récup" },
+                ],
+                autumn: [
+                  { icon: "🧥", title: "Superposition", tip: "3 couches : base thermique + milieu soufflant + coupe-vent extérieur" },
+                  { icon: "🌧️", title: "Terrain mouillé", tip: "Réduire l'allure de 5-10% sur sol glissant. Chaussures trail si nécessaire" },
+                  { icon: "🔦", title: "Visibilité", tip: "La nuit tombe tôt — vêtements réfléchissants et lampe frontale" },
+                  { icon: "🍎", title: "Immunité", tip: "Augmente vitamines C et D avec la baisse de luminosité" },
+                  { icon: "📈", title: "Volume", tip: "Saison parfaite pour construire la base aérobie avant l'hiver" },
+                ],
+                winter: [
+                  { icon: "🌡️", title: "Échauffement long", tip: "15-20 min minimum. Les muscles froids = risque de blessure × 3" },
+                  { icon: "🧤", title: "Extrémités", tip: "Gants + bonnet + chaussettes thermiques. On perd 30% de chaleur par la tête" },
+                  { icon: "😮‍💨", title: "Respiration froide", tip: "Cache-nez pour réchauffer l'air. Respire par le nez jusqu'à -5°C" },
+                  { icon: "🏠", title: "Alternative indoor", tip: "En dessous de -5°C ou verglas : remplace la course par rameur/vélo indoor" },
+                  { icon: "☀️", title: "Vitamine D", tip: "Supplémentation 1000-2000 UI/j recommandée d'octobre à mars" },
+                ],
+                spring: [
+                  { icon: "📈", title: "Progression", tip: "Printemps = moment idéal pour augmenter le volume (+10% max par semaine)" },
+                  { icon: "🌡️", title: "Ré-acclimatation", tip: "Après l'hiver, l'organisme s'adapte aux variations thermiques — reste flexible" },
+                  { icon: "🌧️", title: "Pluie printanière", tip: "Profite de la fraîcheur ! La pluie légère est idéale pour les longues sorties" },
+                  { icon: "🏃", title: "Compétitions", tip: "Printemps = saison HYROX peak. Maintien la forme construite cet hiver" },
+                  { icon: "🌿", title: "Allergies", tip: "Pollens ? Antihistaminique 30 min avant la sortie si nécessaire" },
+                ],
+              };
+
+              const tips = TIPS[season];
+              const [expanded, setExpanded] = React.useState(false);
+
+              return (
+                <div style={{ marginBottom: 16, background: `linear-gradient(135deg, ${seasonInfo.color}15, ${seasonInfo.color}05)`, border: `1px solid ${seasonInfo.color}30`, borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 22 }}>{seasonInfo.emoji}</span>
+                      <div>
+                        <div className="bebas" style={{ fontSize: 15, color: seasonInfo.color, letterSpacing: 1 }}>CONSEILS {seasonInfo.label}</div>
+                        <div style={{ fontSize: 10, color: "#8E8E93" }}>{bestTime}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => setExpanded(s => !s)} style={{ background: "none", border: `1px solid ${seasonInfo.color}50`, borderRadius: 8, padding: "4px 10px", color: seasonInfo.color, fontSize: 11, cursor: "pointer" }}>
+                      {expanded ? "Réduire" : "Voir tout"}
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {(expanded ? tips : tips.slice(0, 2)).map(t => (
+                      <div key={t.title} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "7px 10px" }}>
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>{t.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--white)" }}>{t.title}</div>
+                          <div style={{ fontSize: 11, color: "#AEAEB2", marginTop: 2 }}>{t.tip}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── SLEEP QUALITY TRACKER ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
