@@ -22631,6 +22631,153 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── TRAINING CONDITIONS LOG ── */}
+      {(() => {
+        const KEY = `fitrace_conditions_${profile.name}`;
+        const [logs, setLogs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [showForm, setShowForm] = React.useState(false);
+        const [form, setForm] = React.useState({
+          date: new Date().toISOString().slice(0,10),
+          temp: 20, humidity: 50, altitude: 0,
+          surface: "Piste", weather: "Ensoleillé",
+          perf: 7, note: ""
+        });
+
+        const SURFACES = ["Piste","Route","Trail","Tapis","Salle","Extérieur mixte"];
+        const WEATHERS = ["Ensoleillé","Nuageux","Pluie légère","Vent fort","Froid","Très chaud","Humide"];
+
+        const save = () => {
+          const next = [{ id:Date.now(), ...form }, ...logs].slice(0,50);
+          setLogs(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowForm(false);
+        };
+
+        // Correlation: temp vs perf
+        const withTemp = logs.filter(l=>l.temp!==undefined && l.perf);
+        const optimalTemp = withTemp.length >= 3 ? (() => {
+          const bestLogs = withTemp.filter(l=>l.perf>=8);
+          return bestLogs.length ? Math.round(bestLogs.reduce((s,l)=>s+l.temp,0)/bestLogs.length) : null;
+        })() : null;
+
+        // Temp comfort zone badge
+        const tempAdvice = (t) => {
+          if (t <= 10) return { label:"Froid", color:"#007AFF", tip:"Bien s'échauffer, attention aux muscles" };
+          if (t <= 20) return { label:"Idéal", color:"#30D158", tip:"Zone optimale pour la performance" };
+          if (t <= 28) return { label:"Chaud", color:"#FF9F0A", tip:"+hydratation, réduire l'intensité -5%" };
+          return { label:"Très chaud", color:"#FF453A", tip:"Risque coup de chaleur, sortie matinale" };
+        };
+
+        const currentAdvice = tempAdvice(form.temp);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Conditions d'Entraînement 🌡️</div>
+              <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"#007AFF",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                {showForm?"Annuler":"+ Log"}
+              </button>
+            </div>
+
+            {showForm && (
+              <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
+                  style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 8px",color:"var(--white)",fontSize:11,marginBottom:8,boxSizing:"border-box" }}/>
+
+                {/* Temp slider */}
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:3 }}>
+                    <span style={{ fontSize:9,color:"#8E8E93" }}>Température</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:tempAdvice(form.temp).color }}>{form.temp}°C · {tempAdvice(form.temp).label}</span>
+                  </div>
+                  <input type="range" min={-10} max={45} value={form.temp} onChange={e=>setForm(f=>({...f,temp:+e.target.value}))}
+                    style={{ width:"100%",accentColor:tempAdvice(form.temp).color }}/>
+                  <div style={{ fontSize:8,color:"#636366",marginTop:2 }}>💡 {tempAdvice(form.temp).tip}</div>
+                </div>
+
+                {/* Humidity */}
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:3 }}>
+                    <span style={{ fontSize:9,color:"#8E8E93" }}>Humidité</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:"#007AFF" }}>{form.humidity}%</span>
+                  </div>
+                  <input type="range" min={0} max={100} value={form.humidity} onChange={e=>setForm(f=>({...f,humidity:+e.target.value}))}
+                    style={{ width:"100%",accentColor:"#007AFF" }}/>
+                </div>
+
+                {/* Altitude */}
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:3 }}>
+                    <span style={{ fontSize:9,color:"#8E8E93" }}>Altitude</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:"#8E8E93" }}>{form.altitude}m</span>
+                  </div>
+                  <input type="range" min={0} max={3000} step={50} value={form.altitude} onChange={e=>setForm(f=>({...f,altitude:+e.target.value}))}
+                    style={{ width:"100%",accentColor:"#8E8E93" }}/>
+                  {form.altitude > 1500 && <div style={{ fontSize:8,color:"#FF9F0A",marginTop:2 }}>⛰️ Altitude significative — acclimatation conseillée</div>}
+                </div>
+
+                {/* Surface & Weather */}
+                <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                  <select value={form.surface} onChange={e=>setForm(f=>({...f,surface:e.target.value}))}
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 8px",color:"var(--white)",fontSize:11 }}>
+                    {SURFACES.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select value={form.weather} onChange={e=>setForm(f=>({...f,weather:e.target.value}))}
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 8px",color:"var(--white)",fontSize:11 }}>
+                    {WEATHERS.map(w=><option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
+
+                {/* Performance felt */}
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:3 }}>
+                    <span style={{ fontSize:9,color:"#8E8E93" }}>Performance ressentie</span>
+                    <span style={{ fontSize:11,fontWeight:800,color:"var(--yellow)" }}>{form.perf}/10</span>
+                  </div>
+                  <input type="range" min={1} max={10} value={form.perf} onChange={e=>setForm(f=>({...f,perf:+e.target.value}))}
+                    style={{ width:"100%",accentColor:"var(--yellow)" }}/>
+                </div>
+
+                <button onClick={save} style={{ width:"100%",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                  Enregistrer
+                </button>
+              </div>
+            )}
+
+            {/* Optimal temp insight */}
+            {optimalTemp && (
+              <div style={{ background:"#1C3A24",borderRadius:10,padding:"8px 12px",marginBottom:10,display:"flex",alignItems:"center",gap:8 }}>
+                <span style={{ fontSize:16 }}>🎯</span>
+                <div>
+                  <div style={{ fontSize:10,fontWeight:700,color:"#30D158" }}>Temp. optimale personnelle: {optimalTemp}°C</div>
+                  <div style={{ fontSize:8,color:"#8E8E93" }}>Basé sur tes meilleures performances</div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent conditions */}
+            {logs.slice(0,5).map(l=>(
+              <div key={l.id} style={{ display:"flex",alignItems:"center",gap:6,background:"var(--bg3)",borderRadius:8,padding:"6px 10px",marginBottom:3 }}>
+                <div style={{ fontSize:12 }}>
+                  {l.temp>30?"🔥":l.temp<10?"❄️":l.weather?.includes("Pluie")?"🌧️":l.weather?.includes("Vent")?"💨":"☀️"}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:10,color:"var(--white)",fontWeight:600 }}>{l.temp}°C · {l.humidity}% · {l.surface}</div>
+                  <div style={{ fontSize:8,color:"#636366" }}>{l.date} · {l.weather}{l.altitude>0?` · ${l.altitude}m`:""}</div>
+                </div>
+                <div style={{ fontSize:11,fontWeight:800,color:l.perf>=8?"#30D158":l.perf>=6?"#FF9F0A":"#FF453A" }}>
+                  {l.perf}/10
+                </div>
+              </div>
+            ))}
+
+            {logs.length === 0 && !showForm && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"12px 0" }}>Commence à logger tes conditions →</div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── CADENCE OPTIMIZER ── */}
       {(() => {
         const vma = parseFloat(profile.vma) || 14;
