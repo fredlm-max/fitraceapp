@@ -9108,6 +9108,88 @@ JSON:
               );
             })()}
 
+            {/* ── YEAR CONSISTENCY CALENDAR ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = profile.sessions || [];
+              const sessMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                if (!sessMap[s.date]) sessMap[s.date] = { rpe: s.difficulte || 5, count: 0 };
+                sessMap[s.date].count++;
+                if ((s.difficulte || 5) > sessMap[s.date].rpe) sessMap[s.date].rpe = s.difficulte;
+              });
+
+              const now = new Date();
+              // Show last 26 weeks (6 months)
+              const WEEKS = 26;
+              const today = now.toISOString().slice(0, 10);
+              const dow = (now.getDay() + 6) % 7; // Monday = 0
+              const cells = Array.from({ length: WEEKS * 7 }, (_, i) => {
+                const d = new Date(now);
+                d.setDate(now.getDate() - (WEEKS * 7 - 1 - i) + (6 - dow));
+                const ds = d.toISOString().slice(0, 10);
+                return { ds, data: sessMap[ds] || null, isToday: ds === today, isFuture: ds > today };
+              });
+
+              const totalDays = cells.filter(c => c.data).length;
+              const maxStreak = (() => {
+                let max = 0, cur = 0;
+                cells.forEach(c => { if (c.data) { cur++; max = Math.max(max, cur); } else cur = 0; });
+                return max;
+              })();
+
+              const getColor = (cell) => {
+                if (cell.isFuture) return "transparent";
+                if (!cell.data) return "rgba(255,255,255,0.04)";
+                const rpe = cell.data.rpe;
+                if (rpe >= 9) return "#FF453A";
+                if (rpe >= 7) return "#FF9F0A";
+                if (rpe >= 5) return "#C9A840";
+                return "rgba(201,168,64,0.4)";
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📅 CONSISTANCE 6 MOIS</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{totalDays} jours actifs · streak max {maxStreak}j</div>
+                    </div>
+                  </div>
+                  {/* Day labels */}
+                  <div style={{ display: "flex", gap: 3, marginBottom: 4, paddingLeft: 2 }}>
+                    {["L","M","M","J","V","S","D"].map((d, i) => (
+                      <div key={i} style={{ width: 10, fontSize: 7, color: "#636366", textAlign: "center" }}>{d}</div>
+                    ))}
+                  </div>
+                  {/* Grid: rows = days of week, cols = weeks */}
+                  <div style={{ display: "flex", gap: 2 }}>
+                    {Array.from({ length: WEEKS }, (_, w) => (
+                      <div key={w} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {cells.slice(w * 7, w * 7 + 7).map((cell, d) => (
+                          <div key={d} style={{
+                            width: 10, height: 10, borderRadius: 2,
+                            background: getColor(cell),
+                            border: cell.isToday ? "1px solid #C9A840" : "none",
+                          }} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Legend */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                    <div style={{ fontSize: 9, color: "#636366" }}>Intensité:</div>
+                    {[{ c: "rgba(201,168,64,0.4)", l: "Légère" }, { c: "#C9A840", l: "Modérée" }, { c: "#FF9F0A", l: "Intense" }, { c: "#FF453A", l: "Max" }].map(l => (
+                      <div key={l.l} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: l.c }} />
+                        <div style={{ fontSize: 9, color: "#636366" }}>{l.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RPE TREND LINE ── */}
             {(profile.sessions||[]).length >= 5 && (() => {
               const sessions = (profile.sessions || []).filter(s => s.difficulte && s.date).slice(-20);
