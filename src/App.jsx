@@ -16559,6 +16559,99 @@ JSON: {
             );
           })()}
 
+          {/* ── MEAL PLAN TEMPLATES ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 75;
+            const p = Math.round(poids * 2.0); // 2g/kg protein training day
+            const [activeDay, setActiveDay] = React.useState("training");
+            const PLANS = {
+              training: {
+                label: "Entraînement",
+                icon: "⚡",
+                color: "#C9A840",
+                kcal: Math.round(poids * 38),
+                macros: { p, g: Math.round(poids * 5.5), l: Math.round(poids * 1.2) },
+                meals: [
+                  { time: "7h00", name: "Petit-déjeuner", items: [`Flocons d'avoine ${Math.round(poids*0.8)}g`, `Banane 1`, `Lait/yaourt ${Math.round(poids*1.5)}g`, `Whey ${Math.round(poids*0.3)}g`] },
+                  { time: "10h00", name: "Collation pré-séance", items: [`Riz blanc ${Math.round(poids*0.5)}g`, `Miel 1 cs`, `Café noir`] },
+                  { time: "12h30", name: "Déjeuner post-séance", items: [`Poulet ${Math.round(poids*1.2)}g`, `Riz complet ${Math.round(poids*1)}g`, `Brocolis 200g`, `Huile olive 1 cs`] },
+                  { time: "16h00", name: "Collation", items: [`Fromage blanc ${Math.round(poids*1.5)}g`, `Fruits rouges 100g`] },
+                  { time: "19h30", name: "Dîner", items: [`Saumon ${Math.round(poids*1)}g`, `Patate douce ${Math.round(poids*1.2)}g`, `Salade verte`, `Avocat ½`] },
+                ],
+              },
+              repos: {
+                label: "Repos",
+                icon: "😴",
+                color: "#38bdf8",
+                kcal: Math.round(poids * 30),
+                macros: { p: Math.round(poids * 2.2), g: Math.round(poids * 3), l: Math.round(poids * 1) },
+                meals: [
+                  { time: "8h00", name: "Petit-déjeuner", items: [`Œufs brouillés 3`, `Épinards sautés 100g`, `Pain complet 2 tranches`] },
+                  { time: "13h00", name: "Déjeuner", items: [`Thon en boîte ${Math.round(poids*0.8)}g`, `Quinoa ${Math.round(poids*0.7)}g`, `Légumes rôtis 200g`] },
+                  { time: "16h00", name: "Collation légère", items: [`Amandes 30g`, `Pomme 1`] },
+                  { time: "19h00", name: "Dîner", items: [`Poulet vapeur ${Math.round(poids*0.9)}g`, `Légumes verts 300g`, `Huile coco 1 cc`] },
+                ],
+              },
+              race: {
+                label: "Compétition",
+                icon: "🏁",
+                color: "#30D158",
+                kcal: Math.round(poids * 42),
+                macros: { p: Math.round(poids * 1.8), g: Math.round(poids * 7), l: Math.round(poids * 0.8) },
+                meals: [
+                  { time: "J-1 soir", name: "Charge glucidique", items: [`Pâtes ${Math.round(poids*1.5)}g`, `Sauce tomate maison`, `Pain blanc 3 tranches`, `Jus d'orange 400ml`] },
+                  { time: "J Matin -3h", name: "Avant-course", items: [`Riz blanc ${Math.round(poids*0.9)}g`, `Banane 2`, `Café 1`, `Eau 500ml`] },
+                  { time: "-30 min", name: "Activation", items: [`Gel énergie 1 (25g glucides)`, `Eau 200ml`] },
+                  { time: "Pendant", name: "Ravitaillement", items: [`Gel tous les 30 min si >60min`, `Eau à chaque station`] },
+                  { time: "Post-race", name: "Récupération", items: [`Whey ${Math.round(poids*0.4)}g + lait`, `Banane 2`, `Eau + électrolytes 750ml`] },
+                ],
+              },
+            };
+            const plan = PLANS[activeDay];
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+                <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>🍽️ PLAN ALIMENTAIRE TYPE</div>
+                {/* Day selector */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {Object.entries(PLANS).map(([k, v]) => (
+                    <button key={k} onClick={() => setActiveDay(k)}
+                      style={{ flex: 1, padding: "8px 4px", borderRadius: 10, background: activeDay === k ? v.color + "22" : "rgba(255,255,255,0.05)", border: activeDay === k ? `1.5px solid ${v.color}` : "1px solid transparent", color: activeDay === k ? v.color : "#8E8E93", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {v.icon}<br />{v.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Macros summary */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {[
+                    { l: "Calories", v: `${plan.kcal} kcal`, c: plan.color },
+                    { l: "Protéines", v: `${plan.macros.p}g`, c: "#30D158" },
+                    { l: "Glucides", v: `${plan.macros.g}g`, c: "#FF9F0A" },
+                    { l: "Lipides", v: `${plan.macros.l}g`, c: "#BF5AF2" },
+                  ].map(m => (
+                    <div key={m.l} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>{m.l}</div>
+                      <div className="bebas" style={{ fontSize: 14, color: m.c, lineHeight: 1 }}>{m.v}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Meal list */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {plan.meals.map((meal, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, borderLeft: `3px solid ${plan.color}` }}>
+                      <div style={{ fontSize: 10, color: plan.color, fontWeight: 700, minWidth: 46, paddingTop: 2 }}>{meal.time}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600, marginBottom: 4 }}>{meal.name}</div>
+                        {meal.items.map((item, j) => (
+                          <div key={j} style={{ fontSize: 11, color: "#8E8E93", marginBottom: 1 }}>· {item}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Meal Timing Timeline */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ position: "relative", height: 40, display: "flex", alignItems: "center" }}>
