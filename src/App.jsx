@@ -29019,6 +29019,128 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RACE DAY CHECKLIST ── */}
+      {(() => {
+        const KEY = `fitrace_raceday_checklist_${profile.name}`;
+        const [checked, setChecked] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+        const [collapsed, setCollapsed] = React.useState({});
+
+        const CHECKLIST = [
+          {
+            phase: "🌙 Veille de course",
+            color: "#BF5AF2",
+            items: [
+              { id:"sleep_early", label:"Coucher tôt (22h max)" },
+              { id:"bag_packed", label:"Sac préparé la veille" },
+              { id:"bib_pinned", label:"Dossard épinglé sur la tenue" },
+              { id:"nutrition_prep", label:"Repas du soir: pâtes/riz + protéines" },
+              { id:"gear_check", label:"Chaussures, vêtements, ceinture cardiaque" },
+              { id:"belt_bag", label:"Ceinture d'hydratation / gels préparés" },
+              { id:"phone_charged", label:"Téléphone & montre chargés" },
+              { id:"alarm_set", label:"Réveil réglé (3h avant départ minimum)" },
+            ]
+          },
+          {
+            phase: "☀️ Matin de course",
+            color: "#FF9F0A",
+            items: [
+              { id:"breakfast", label:"Petit-déj: glucides + protéines (3h avant)" },
+              { id:"coffee", label:"Café 60min avant (si habitude)" },
+              { id:"creatine_m", label:"Créatine matinale prise" },
+              { id:"hydration_m", label:"500ml d'eau au réveil" },
+              { id:"warmup_dyn", label:"Échauffement dynamique 15min" },
+              { id:"mental_prep", label:"Visualisation de la course" },
+              { id:"wristbands", label:"Wristbands / chalk bag préparés" },
+            ]
+          },
+          {
+            phase: "📍 Sur site",
+            color: "#30D158",
+            items: [
+              { id:"bib_check", label:"Dossard vérifié & épinglé" },
+              { id:"bag_drop", label:"Sac déposé au vestiaire" },
+              { id:"course_walk", label:"Repérage du tracé & stations" },
+              { id:"toilet", label:"Passage aux toilettes" },
+              { id:"gel_pocket", label:"Gels en poche (si autorisés)" },
+              { id:"headphones", label:"Écouteurs testés / retirés" },
+            ]
+          },
+          {
+            phase: "🔥 Échauffement (30min avant)",
+            color: "#FF453A",
+            items: [
+              { id:"light_jog", label:"Trot léger 5min" },
+              { id:"dynamic_str", label:"Étirements dynamiques" },
+              { id:"activation", label:"Activation fessiers & épaules" },
+              { id:"skierg_test", label:"SkiErg: 10 coups d'essai" },
+              { id:"hr_up", label:"FC à +70% FCmax atteinte" },
+              { id:"caffeine_t", label:"Caféine prise (si pas le matin)" },
+              { id:"mental_cue", label:"Mot/phrase d'ancrage mental" },
+            ]
+          },
+        ];
+
+        const toggle = (id) => {
+          const next = { ...checked, [id]: !checked[id] };
+          setChecked(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const toggleCollapse = (phase) => setCollapsed(c=>({...c,[phase]:!c[phase]}));
+
+        const resetAll = () => { setChecked({}); localStorage.setItem(KEY, "{}"); };
+
+        const allItems = CHECKLIST.flatMap(c=>c.items);
+        const doneCount = allItems.filter(i=>checked[i.id]).length;
+        const totalCount = allItems.length;
+        const pct = Math.round(doneCount/totalCount*100);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Checklist Jour de Course</div>
+              <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                <span style={{ fontSize:10,color:"var(--yellow)",fontWeight:700 }}>{doneCount}/{totalCount}</span>
+                {doneCount > 0 && <button onClick={resetAll} style={{ background:"transparent",color:"#636366",border:"none",fontSize:10,cursor:"pointer" }}>Reset</button>}
+              </div>
+            </div>
+
+            {/* Global progress */}
+            <div style={{ height:6,background:"#2C2C2E",borderRadius:3,marginBottom:14,overflow:"hidden" }}>
+              <div style={{ height:"100%",width:`${pct}%`,background:pct===100?"#30D158":"linear-gradient(90deg,#FF9F0A,var(--yellow))",borderRadius:3,transition:"width 0.3s" }}/>
+            </div>
+            {pct === 100 && (
+              <div style={{ textAlign:"center",fontSize:14,fontWeight:800,color:"#30D158",marginBottom:12 }}>🏁 Tu es prêt(e) à performer !</div>
+            )}
+
+            {CHECKLIST.map(cat => {
+              const catDone = cat.items.filter(i=>checked[i.id]).length;
+              const isCollapsed = collapsed[cat.phase];
+              return (
+                <div key={cat.phase} style={{ marginBottom:10 }}>
+                  <button onClick={()=>toggleCollapse(cat.phase)}
+                    style={{ width:"100%",display:"flex",alignItems:"center",gap:8,background:"transparent",border:"none",cursor:"pointer",padding:"4px 0",textAlign:"left" }}>
+                    <div style={{ fontSize:11,fontWeight:800,color:cat.color,flex:1 }}>{cat.phase}</div>
+                    <span style={{ fontSize:9,color:"#8E8E93" }}>{catDone}/{cat.items.length}</span>
+                    <span style={{ fontSize:10,color:"#636366" }}>{isCollapsed?"▶":"▼"}</span>
+                  </button>
+
+                  {!isCollapsed && cat.items.map(item => (
+                    <button key={item.id} onClick={()=>toggle(item.id)}
+                      style={{ width:"100%",display:"flex",alignItems:"center",gap:10,background:checked[item.id]?"#1C3A24":"var(--bg3)",border:`1px solid ${checked[item.id]?cat.color+"40":"transparent"}`,borderRadius:8,padding:"7px 10px",marginBottom:3,cursor:"pointer",textAlign:"left" }}>
+                      <div style={{ width:18,height:18,borderRadius:4,border:`2px solid ${checked[item.id]?cat.color:"#3A3A3C"}`,background:checked[item.id]?cat.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                        {checked[item.id] && <span style={{ color:"#000",fontSize:11,fontWeight:900,lineHeight:1 }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize:11,color:checked[item.id]?"#8E8E93":"var(--white)",textDecoration:checked[item.id]?"line-through":"none" }}>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX PACING CALCULATOR ── */}
       {(() => {
         // Station durations in seconds (average for recreational athlete)
