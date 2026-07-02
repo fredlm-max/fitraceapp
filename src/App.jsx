@@ -5505,6 +5505,84 @@ JSON:
               );
             })()}
 
+            {/* ── WORKOUT READINESS SCORE ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const wellKey = `fitrace_wellness_${profile.name}_${todayStr}`;
+              const well = (() => { try { return JSON.parse(localStorage.getItem(wellKey)) || {}; } catch { return {}; } })();
+              const sleep = well.sleep || 0;   // 1-10
+              const energy = well.energy || 0; // 1-10
+              const stress = well.stress || 5; // 1-10 (lower = better)
+              const mood = well.mood || 0;     // 1-10
+
+              // TSB proxy
+              const sessions = profile.sessions || [];
+              const kATL = 1 - Math.exp(-1/7);
+              const kCTL = 1 - Math.exp(-1/42);
+              let atl = 0, ctl = 0;
+              const sorted = [...sessions].sort((a,b)=>a.date>b.date?1:-1);
+              sorted.forEach(s => {
+                const trimp = (s.duration||30) * ((s.rpe||5)/10);
+                atl = atl + kATL*(trimp - atl);
+                ctl = ctl + kCTL*(trimp - ctl);
+              });
+              const tsb = ctl - atl;
+
+              const hasTodayData = sleep > 0 && energy > 0;
+              if (!hasTodayData) return null;
+
+              // Readiness formula (0-100)
+              const sleepScore = (sleep / 10) * 30;
+              const energyScore = (energy / 10) * 25;
+              const stressScore = ((10 - stress) / 10) * 20;
+              const moodScore = (mood / 10) * 10;
+              const tsbScore = Math.min(15, Math.max(0, (tsb + 10) / 20 * 15));
+              const readiness = Math.round(sleepScore + energyScore + stressScore + moodScore + tsbScore);
+
+              const color = readiness >= 75 ? "#30D158" : readiness >= 50 ? "#FF9F0A" : "#FF453A";
+              const status = readiness >= 75 ? "Prêt à performer" : readiness >= 50 ? "Entraînement modéré" : "Récupération conseillée";
+              const rec = readiness >= 75 ? "Séance haute intensité OK ✅" : readiness >= 50 ? "Zone 2 ou technique 🟡" : "Mobilité ou repos 🔴";
+
+              // Gauge arc SVG
+              const r = 40, cx = 60, cy = 55;
+              const startAngle = 210, endAngle = 330;
+              const range = startAngle + (360 - endAngle) + endAngle - startAngle; // 240 deg
+              const angle = startAngle + (readiness/100) * 240;
+              const toRad = d => d * Math.PI / 180;
+              const arcX = (deg, radius) => cx + radius * Math.cos(toRad(deg));
+              const arcY = (deg, radius) => cy + radius * Math.sin(toRad(deg));
+              const describeArc = (start, end, rad) => {
+                const s = { x: arcX(start, rad), y: arcY(start, rad) };
+                const e = { x: arcX(end, rad), y: arcY(end, rad) };
+                const largeArc = (end - start + 360) % 360 > 180 ? 1 : 0;
+                return `M ${s.x} ${s.y} A ${rad} ${rad} 0 ${largeArc} 1 ${e.x} ${e.y}`;
+              };
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Readiness du Jour</div>
+                  <div style={{ display:"flex",alignItems:"center",gap:16 }}>
+                    <svg width={120} height={80} style={{ flexShrink:0 }}>
+                      <path d={describeArc(210, 210+240, r)} fill="none" stroke="#2C2C2E" strokeWidth={10} strokeLinecap="round"/>
+                      <path d={describeArc(210, Math.min(210 + readiness/100*240, 450), r)} fill="none" stroke={color} strokeWidth={10} strokeLinecap="round"/>
+                      <text x={cx} y={cy+6} textAnchor="middle" fill={color} fontSize={22} fontWeight={900}>{readiness}</text>
+                      <text x={cx} y={cy+20} textAnchor="middle" fill="#636366" fontSize={8}>/ 100</text>
+                    </svg>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:14,fontWeight:800,color }}>{status}</div>
+                      <div style={{ fontSize:11,color:"#8E8E93",marginTop:4 }}>{rec}</div>
+                      <div style={{ display:"flex",gap:8,marginTop:8,flexWrap:"wrap" }}>
+                        <div style={{ fontSize:9,color:"#636366" }}>😴 Sommeil <span style={{ color:"var(--white)",fontWeight:700 }}>{sleep}/10</span></div>
+                        <div style={{ fontSize:9,color:"#636366" }}>⚡ Énergie <span style={{ color:"var(--white)",fontWeight:700 }}>{energy}/10</span></div>
+                        <div style={{ fontSize:9,color:"#636366" }}>🧠 Stress <span style={{ color:"var(--white)",fontWeight:700 }}>{stress}/10</span></div>
+                        <div style={{ fontSize:9,color:"#636366" }}>TSB <span style={{ color:tsb>0?"#30D158":"#FF453A",fontWeight:700 }}>{tsb.toFixed(0)}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ATHLETE STATS CARD ── */}
             {(() => {
               const vma = parseFloat(profile.vmaKmh) || null;
