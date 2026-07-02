@@ -7153,6 +7153,104 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING CONSISTENCY SCORE ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 7) return null;
+
+              const now = Date.now();
+              const sessionDates = new Set(sessions.map(s => s.date));
+
+              // Score sur 4 semaines glissantes (0-100)
+              // Semaine 1 (la plus récente) pèse plus
+              const weekScores = [0,1,2,3].map(wAgo => {
+                let days = 0;
+                for (let d = 0; d < 7; d++) {
+                  const dt = new Date(now - (wAgo*7 + d) * 86400000).toISOString().slice(0,10);
+                  if (sessionDates.has(dt)) days++;
+                }
+                return days;
+              });
+
+              // Cible : 4-5 séances/semaine = 100%
+              const targetDays = 4;
+              const weights = [0.4, 0.3, 0.2, 0.1];
+              const score = Math.min(100, Math.round(
+                weekScores.reduce((s, w, i) => s + (w / targetDays) * weights[i] * 100, 0)
+              ));
+
+              // Streak
+              let streak = 0;
+              for (let i = 0; i < 365; i++) {
+                const d = new Date(now - i * 86400000).toISOString().slice(0,10);
+                if (sessionDates.has(d)) streak++;
+                else if (i > 0) break;
+              }
+
+              // Variance (régularité des jours de la semaine)
+              const dayCount = Array(7).fill(0);
+              sessions.forEach(s => { dayCount[new Date(s.date).getDay()]++; });
+              const avg = sessions.length / 7;
+              const variance = dayCount.reduce((s,c) => s + Math.pow(c - avg, 2), 0) / 7;
+              const regularityScore = Math.max(0, Math.round(100 - variance * 5));
+
+              const globalScore = Math.round(score * 0.6 + regularityScore * 0.4);
+              const color = globalScore >= 75 ? "#30D158" : globalScore >= 50 ? "#FF9F0A" : "#FF453A";
+              const label = globalScore >= 75 ? "Excellent" : globalScore >= 50 ? "Bon" : "À améliorer";
+
+              const DAY_LABELS = ["D","L","M","M","J","V","S"];
+              const maxDay = Math.max(...dayCount, 1);
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Score de Consistance</div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:22,fontWeight:900,color }}>{globalScore}</div>
+                      <div style={{ fontSize:9,color,fontWeight:700 }}>{label}</div>
+                    </div>
+                  </div>
+
+                  {/* Score bar */}
+                  <div style={{ height:8,background:"#2C2C2E",borderRadius:4,marginBottom:12,overflow:"hidden" }}>
+                    <div style={{ height:"100%",width:`${globalScore}%`,background:`linear-gradient(90deg,${color}80,${color})`,borderRadius:4,transition:"width 0.5s" }}/>
+                  </div>
+
+                  {/* 4 weeks blocks */}
+                  <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                    {weekScores.map((w,i) => {
+                      const pct = Math.min(100, Math.round(w/targetDays*100));
+                      const wColor = pct >= 100 ? "#30D158" : pct >= 60 ? "#FF9F0A" : "#FF453A";
+                      return (
+                        <div key={i} style={{ flex:1,background:"#1C1C1E",borderRadius:8,padding:"6px 4px",textAlign:"center" }}>
+                          <div style={{ fontSize:11,fontWeight:800,color:wColor }}>{w}/{targetDays}</div>
+                          <div style={{ fontSize:8,color:"#636366" }}>S-{i}</div>
+                          <div style={{ height:3,background:"#2C2C2E",borderRadius:2,marginTop:4 }}>
+                            <div style={{ height:"100%",width:`${pct}%`,background:wColor,borderRadius:2 }}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Day of week distribution */}
+                  <div style={{ display:"flex",gap:3,alignItems:"flex-end",height:40,marginBottom:4 }}>
+                    {dayCount.map((c,i) => (
+                      <div key={i} style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2 }}>
+                        <div style={{ width:"100%",height:Math.round((c/maxDay)*30)+2,background:c>0?"var(--yellow)":"#2C2C2E",borderRadius:"2px 2px 0 0",opacity:0.3+0.7*(c/maxDay) }}/>
+                        <div style={{ fontSize:8,color:"#636366" }}>{DAY_LABELS[i]}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display:"flex",justifyContent:"space-between",marginTop:8 }}>
+                    <div style={{ fontSize:9,color:"#636366" }}>Régularité: <span style={{ color:regularityScore>=70?"#30D158":"#FF9F0A",fontWeight:700 }}>{regularityScore}%</span></div>
+                    <div style={{ fontSize:9,color:"#636366" }}>Streak: <span style={{ color:"#FF9F0A",fontWeight:700 }}>{streak}j 🔥</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── DAILY MOTIVATION ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -18268,6 +18366,164 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               </button>
             </div>
             <div style={{ marginTop: 8, fontSize: 9, color: "#636366", textAlign: "center" }}>Compatible Excel, Google Sheets, TrainingPeaks</div>
+          </div>
+        );
+      })()}
+
+      {/* ── ATHLETE PERFORMANCE CARD ── */}
+      {(() => {
+        const sessions = profile.sessions || [];
+        const vma = parseFloat(profile.vma) || null;
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const poids = parseFloat(profile.poids) || 70;
+
+        const totalSessions = sessions.length;
+        const totalKm = Math.round(sessions.reduce((s,x)=>s+(parseFloat(x.distance)||0),0));
+        const hyroxSessions = sessions.filter(s=>s.type==="HYROX Complet"&&s.duree);
+        const bestHyrox = hyroxSessions.length ? Math.min(...hyroxSessions.map(s=>s.duree)) : null;
+        const fmtMin = (m) => m ? `${Math.floor(m)}:${String(Math.round((m%1)*60)).padStart(2,"0")}` : "--";
+
+        // Streak
+        const dates = new Set(sessions.map(s=>s.date));
+        let streak = 0;
+        for (let i=0;i<365;i++) {
+          const d=new Date();d.setDate(d.getDate()-i);
+          if(dates.has(d.toISOString().slice(0,10)))streak++;
+          else if(i>0)break;
+        }
+
+        // Level
+        const level = !vma ? "Débutant" : vma >= 18 ? "Elite" : vma >= 16 ? "Avancé" : vma >= 14 ? "Intermédiaire" : "Débutant";
+        const levelColor = { Elite: "#C9A840", Avancé: "#007AFF", Intermédiaire: "#30D158", Débutant: "#636366" }[level];
+
+        // ATL/CTL
+        const kCTL = 1 - Math.exp(-1/42);
+        let ctl = 0;
+        [...sessions].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(s => {
+          ctl = ctl + kCTL * ((s.duree||0)*(s.rpe||5)/10 - ctl);
+        });
+
+        const cardRef = React.useRef(null);
+
+        const downloadCard = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 800; canvas.height = 420;
+          const ctx = canvas.getContext("2d");
+
+          // Background
+          const grad = ctx.createLinearGradient(0,0,800,420);
+          grad.addColorStop(0,"#0A0A0A");
+          grad.addColorStop(1,"#1C1C1E");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0,0,800,420);
+
+          // Gold accent bar
+          ctx.fillStyle = "#C9A840";
+          ctx.fillRect(0,0,4,420);
+          ctx.fillRect(0,0,800,3);
+
+          // APEX logo text
+          ctx.fillStyle = "#C9A840";
+          ctx.font = "bold 13px sans-serif";
+          ctx.fillText("APEX PERFORMANCE", 30, 35);
+          ctx.fillStyle = "#636366";
+          ctx.font = "11px sans-serif";
+          ctx.fillText("HYROX TRAINING", 30, 52);
+
+          // Name & level
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = "bold 48px sans-serif";
+          ctx.fillText(profile.name || "ATHLETE", 30, 120);
+
+          ctx.fillStyle = levelColor;
+          ctx.fillRect(30, 132, 90, 24);
+          ctx.fillStyle = "#000";
+          ctx.font = "bold 11px sans-serif";
+          ctx.fillText(level.toUpperCase(), 38, 148);
+
+          // Divider
+          ctx.strokeStyle = "#2C2C2E";
+          ctx.lineWidth = 1;
+          ctx.beginPath();ctx.moveTo(30,175);ctx.lineTo(770,175);ctx.stroke();
+
+          // Stats grid
+          const stats = [
+            { label: "VMA", val: vma ? `${vma} km/h` : "--", sub: vma ? `VO₂max ~${Math.round(vma*3.5)}` : "" },
+            { label: "BEST HYROX", val: fmtMin(bestHyrox), sub: hyroxSessions.length ? `${hyroxSessions.length} course${hyroxSessions.length>1?"s":""}` : "Pas encore" },
+            { label: "SESSIONS", val: totalSessions, sub: `${totalKm} km total` },
+            { label: "STREAK", val: `${streak}j`, sub: "consécutifs" },
+            { label: "FITNESS", val: Math.round(ctl), sub: "CTL score" },
+            { label: "POIDS", val: `${poids}kg`, sub: sex === "H" ? "Homme" : "Femme" },
+          ];
+
+          stats.forEach((s,i) => {
+            const x = 30 + (i % 3) * 250, y = i < 3 ? 210 : 310;
+            ctx.fillStyle = "#C9A840";
+            ctx.font = "bold 28px sans-serif";
+            ctx.fillText(String(s.val), x, y);
+            ctx.fillStyle = "#636366";
+            ctx.font = "11px sans-serif";
+            ctx.fillText(s.label, x, y+18);
+            ctx.fillStyle = "#8E8E93";
+            ctx.font = "10px sans-serif";
+            ctx.fillText(s.sub, x, y+34);
+          });
+
+          // Footer
+          ctx.strokeStyle = "#2C2C2E";
+          ctx.beginPath();ctx.moveTo(30,380);ctx.lineTo(770,380);ctx.stroke();
+          ctx.fillStyle = "#636366";
+          ctx.font = "10px sans-serif";
+          ctx.fillText(`fitrace.app · ${new Date().toLocaleDateString("fr-FR")}`, 30, 400);
+
+          canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `${profile.name || "athlete"}_hyrox_card.png`; a.click();
+          });
+        };
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Carte Athlète</div>
+
+            {/* Card preview */}
+            <div ref={cardRef} style={{ background:"linear-gradient(135deg,#0A0A0A 0%,#1C1C1E 100%)",borderRadius:14,padding:20,border:"2px solid #C9A840",marginBottom:12,position:"relative",overflow:"hidden" }}>
+              <div style={{ position:"absolute",top:0,left:0,width:3,height:"100%",background:"#C9A840" }}/>
+              <div style={{ position:"absolute",top:0,left:0,width:"100%",height:2,background:"#C9A840" }}/>
+
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
+                <div>
+                  <div style={{ fontSize:9,color:"#C9A840",fontWeight:700,letterSpacing:2 }}>APEX PERFORMANCE</div>
+                  <div style={{ fontSize:20,fontWeight:900,color:"#fff",marginTop:2 }}>{profile.name || "ATHLETE"}</div>
+                  <div style={{ display:"inline-block",background:levelColor,borderRadius:6,padding:"2px 8px",marginTop:4 }}>
+                    <span style={{ fontSize:9,fontWeight:800,color:"#000" }}>{level.toUpperCase()}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize:32 }}>🏆</div>
+              </div>
+
+              <div style={{ borderTop:"1px solid #2C2C2E",paddingTop:12,display:"flex",flexWrap:"wrap",gap:12 }}>
+                {[
+                  { l:"VMA",v:vma?`${vma}km/h`:"--",s:vma?`VO₂≈${Math.round(vma*3.5)}`:"-" },
+                  { l:"HYROX",v:fmtMin(bestHyrox),s:bestHyrox?"record perso":"" },
+                  { l:"SESSIONS",v:totalSessions,s:`${totalKm}km` },
+                  { l:"STREAK",v:`${streak}j`,s:"consécutifs" },
+                ].map(m => (
+                  <div key={m.l} style={{ flex:"1 1 80px" }}>
+                    <div style={{ fontSize:16,fontWeight:900,color:"#C9A840" }}>{m.v}</div>
+                    <div style={{ fontSize:8,color:"#636366",textTransform:"uppercase",letterSpacing:1 }}>{m.l}</div>
+                    {m.s && <div style={{ fontSize:8,color:"#8E8E93" }}>{m.s}</div>}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop:10,fontSize:8,color:"#3A3A3C" }}>fitrace.app · {new Date().toLocaleDateString("fr-FR")}</div>
+            </div>
+
+            <button onClick={downloadCard} style={{ width:"100%",background:"#C9A840",color:"#000",border:"none",borderRadius:12,padding:"12px 0",fontSize:13,fontWeight:900,cursor:"pointer" }}>
+              📸 Télécharger la carte PNG
+            </button>
           </div>
         );
       })()}
