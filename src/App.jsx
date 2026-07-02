@@ -16452,6 +16452,85 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── HYROX RULES & GLOSSARY ── */}
+      {(() => {
+        const RULES = [
+          {
+            category: "📋 FORMAT OFFICIEL",
+            color: "var(--yellow)",
+            items: [
+              { term: "Circuit", def: "8 runs de 1km + 8 stations fonctionnelles dans l'ordre imposé" },
+              { term: "Distance totale", def: "8km de course + stations (equivalence ~12km effort total)" },
+              { term: "Catégories", def: "Open, Pro, Mixed Doubles, Women/Men Doubles, Masters (40/45/50/55+)" },
+              { term: "Chrono", def: "Commence au départ de la 1ère course, finit à la dernière répétition de ski erg" },
+            ]
+          },
+          {
+            category: "🏋️ STATIONS OFFICIELLES",
+            color: "#BF5AF2",
+            items: [
+              { term: "1 · SkiErg", def: "1 000m · Position verticale, tirades complètes, pieds au sol" },
+              { term: "2 · Sled Push", def: "50m · Chargement selon catégorie (Open H: +102kg, F: +72kg)" },
+              { term: "3 · Sled Pull", def: "50m · Corde ou harnais · Pas de jambes qui glissent" },
+              { term: "4 · Burpee Broad Jump", def: "80m · Chest-to-floor obligatoire, saut vers l'avant mesuré" },
+              { term: "5 · Rowing", def: "1 000m · Pieds dans les sangles, tirade complète" },
+              { term: "6 · Farmer's Carry", def: "200m aller-retour · Pas de dépôt du kettlebell (pénalité)" },
+              { term: "7 · Sandbag Lunges", def: "100m · Sac sur épaule, genou au sol à chaque pas" },
+              { term: "8 · Wall Balls", def: "75-100 reps · Cible à 9 ou 10 pieds, squat parallèle obligatoire" },
+            ]
+          },
+          {
+            category: "⚠️ PÉNALITÉS COURANTES",
+            color: "#FF453A",
+            items: [
+              { term: "Non-rep", def: "Répétition non comptée → refaire · Ex: genoux pas au sol lunges, pas full squat wall ball" },
+              { term: "Farmer's carry drop", def: "+10 reps de burpees par dépôt de kettlebell" },
+              { term: "Sled technique", def: "Corps en dessous de 45° au push = non-valide, juge peut faire refaire" },
+              { term: "Ligne de couloir", def: "Rester dans son couloir au running · Sortie = avertissement" },
+              { term: "Burpee incomplet", def: "Poitrine doit toucher le sol ET les deux pieds atterrir ensemble au saut" },
+            ]
+          },
+          {
+            category: "📏 CHARGES PAR CATÉGORIE",
+            color: "#FF9F0A",
+            items: [
+              { term: "Open Homme", def: "Sled +102kg · Farmer 2×32kg · Sandbag 20kg · Wall ball 9kg/10ft" },
+              { term: "Open Femme", def: "Sled +72kg · Farmer 2×24kg · Sandbag 10kg · Wall ball 6kg/9ft" },
+              { term: "Pro Homme", def: "Sled +152kg · Farmer 2×32kg · Sandbag 25kg · Wall ball 9kg/10ft" },
+              { term: "Pro Femme", def: "Sled +102kg · Farmer 2×32kg · Sandbag 20kg · Wall ball 9kg/10ft" },
+              { term: "Masters 40/45", def: "Même qu'Open · Masters 50+ : charges réduites (consulter hyrox.com)" },
+            ]
+          },
+        ];
+
+        const [openCat, setOpenCat] = React.useState(null);
+
+        return (
+          <div style={{ marginBottom: 16 }}>
+            <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>📖 RÈGLES & GLOSSAIRE HYROX</div>
+            {RULES.map(cat => (
+              <div key={cat.category} style={{ marginBottom: 8 }}>
+                <button onClick={() => setOpenCat(o => o === cat.category ? null : cat.category)} style={{ width: "100%", background: "var(--bg2)", border: `1px solid ${cat.color}40`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: cat.color }}>{cat.category}</span>
+                  <span style={{ color: cat.color, fontSize: 14 }}>{openCat === cat.category ? "▲" : "▼"}</span>
+                </button>
+                {openCat === cat.category && (
+                  <div style={{ background: "var(--bg3)", borderRadius: "0 0 10px 10px", padding: "8px 12px", border: `1px solid ${cat.color}20`, borderTop: "none" }}>
+                    {cat.items.map(item => (
+                      <div key={item.term} style={{ display: "flex", gap: 10, paddingVertical: 5, paddingTop: 5, paddingBottom: 5, borderBottom: "1px solid #2C2C2E" }}>
+                        <div style={{ minWidth: 120, fontSize: 11, color: cat.color, fontWeight: 700 }}>{item.term}</div>
+                        <div style={{ fontSize: 11, color: "#AEAEB2", flex: 1 }}>{item.def}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={{ fontSize: 9, color: "#3A3A3C", textAlign: "center", marginTop: 4 }}>Source: règlement officiel hyrox.com · Vérifie avant chaque compétition</div>
+          </div>
+        );
+      })()}
+
       {/* ── MUSIC BPM GUIDE ── */}
       {(() => {
         const STATION_BPM = [
