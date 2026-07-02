@@ -10697,6 +10697,82 @@ JSON:
               );
             })()}
 
+            {/* ── SWEAT RATE CALCULATOR ── */}
+            {(() => {
+              const poids = parseFloat(profile.poids) || 70;
+              const [temp, setTemp] = React.useState(20);
+              const [duree, setDuree] = React.useState(60);
+              const [intensity, setIntensity] = React.useState("modérée");
+
+              const baseSweat = { "légère": 0.5, "modérée": 0.9, "intense": 1.4, "HYROX": 1.8 }[intensity];
+              const tempFactor = 1 + Math.max(0, (temp - 15) * 0.04);
+              const sweatRateL = Math.round(baseSweat * (poids / 70) * tempFactor * 10) / 10;
+              const totalSweat = Math.round(sweatRateL * (duree / 60) * 10) / 10;
+              const drinkBeforeL = 0.5;
+              const drinkDuringL = Math.round(totalSweat * 0.7 * 10) / 10;
+              const drinkAfterL = Math.round(totalSweat * 1.5 * 10) / 10;
+              const electrolytes = totalSweat > 0.8;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Calculateur Sudation</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <span style={{ fontSize: 10, color: "#8E8E93" }}>Température</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: temp > 25 ? "#FF453A" : "var(--fg)" }}>{temp}°C</span>
+                      </div>
+                      <input type="range" min={-5} max={40} value={temp} onChange={e => setTemp(Number(e.target.value))} style={{ width: "100%" }} />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <span style={{ fontSize: 10, color: "#8E8E93" }}>Durée</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--fg)" }}>{duree} min</span>
+                      </div>
+                      <input type="range" min={15} max={180} step={5} value={duree} onChange={e => setDuree(Number(e.target.value))} style={{ width: "100%" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>Intensité</div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {["légère", "modérée", "intense", "HYROX"].map(i => (
+                          <button key={i} onClick={() => setIntensity(i)} style={{ flex: 1, padding: "4px 2px", borderRadius: 8, border: "none", fontSize: 9, fontWeight: 600, cursor: "pointer", background: intensity === i ? "var(--yellow)" : "#3A3A3C", color: intensity === i ? "#000" : "var(--fg)" }}>{i}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#1C1C1E", borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Taux de sudation estimé</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "#007AFF" }}>{sweatRateL} L/h</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Pertes totales</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: totalSweat > 1.5 ? "#FF453A" : "#FF9F0A" }}>{totalSweat} L</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {[
+                      { label: "Avant (J-2h)", val: `${drinkBeforeL}L`, icon: "💧", color: "#007AFF" },
+                      { label: "Pendant (toutes les 20 min)", val: `${Math.round(drinkDuringL / (duree / 20) * 100) / 100}L`, icon: "🚰", color: "#30D158" },
+                      { label: "Après (récupération)", val: `${drinkAfterL}L`, icon: "🍶", color: "#FF9F0A" },
+                    ].map(item => (
+                      <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid #2C2C2E" }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span>{item.icon}</span>
+                          <span style={{ fontSize: 10, color: "#8E8E93" }}>{item.label}</span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: item.color }}>{item.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {electrolytes && <div style={{ marginTop: 8, padding: 6, background: "#FF9F0A18", borderRadius: 8, fontSize: 10, color: "#FF9F0A" }}>⚡ Pertes importantes — ajouter électrolytes (sodium, potassium)</div>}
+                </div>
+              );
+            })()}
+
             {/* ── CALORIE BURN ESTIMATOR ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const poids = parseFloat(profile.poids) || 75;
@@ -19339,6 +19415,61 @@ function TechniqueTab({ profile = {} }) {
               </div>
             )}
             {RECS.length === 0 && <div style={{ textAlign: "center", fontSize: 11, color: "#30D158", marginTop: 4 }}>✅ Risque faible — continuez votre programme !</div>}
+          </div>
+        );
+      })()}
+
+      {/* ── MOVEMENT QUALITY CHECKLIST ── */}
+      {(() => {
+        const checkKey = `fitrace_movement_${profile.name}`;
+        const [checks, setChecks] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(checkKey) || "{}"); } catch { return {}; }
+        });
+
+        const MOVEMENTS = [
+          { cat: "Course", icon: "🏃", items: ["Cadence ≥170 spm", "Appui médio-pied", "Regard horizontal", "Bras à 90°", "Épaules basses"] },
+          { cat: "SkiErg", icon: "⛷️", items: ["Double poussée symétrique", "Flexion hanches puis genoux", "Bras jusqu'aux cuisses", "Dos droit en position haute"] },
+          { cat: "Wall Ball", icon: "🏀", items: ["Squat à 90° minimum", "Extension complète", "Lancer du poignet", "Cible au niveau des yeux"] },
+          { cat: "Burpee", icon: "💪", items: ["Planche stable", "Poitrine au sol", "Saut large et explosif", "Rythme constant"] },
+        ];
+
+        const toggle = (key) => {
+          const updated = { ...checks, [key]: !checks[key] };
+          setChecks(updated);
+          localStorage.setItem(checkKey, JSON.stringify(updated));
+        };
+
+        const total = MOVEMENTS.reduce((s, m) => s + m.items.length, 0);
+        const done = Object.values(checks).filter(Boolean).length;
+        const pct = Math.round(done / total * 100);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Qualité Gestuelle</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: pct >= 80 ? "#30D158" : "#FF9F0A" }}>{done}/{total} points</div>
+            </div>
+            <div style={{ height: 4, background: "#2C2C2E", borderRadius: 2, marginBottom: 12 }}>
+              <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? "#30D158" : "#FF9F0A", borderRadius: 2 }} />
+            </div>
+
+            {MOVEMENTS.map(m => (
+              <div key={m.cat} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--yellow)", marginBottom: 5 }}>{m.icon} {m.cat}</div>
+                {m.items.map(item => {
+                  const key = `${m.cat}_${item}`;
+                  return (
+                    <div key={item} onClick={() => toggle(key)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, background: checks[key] ? "#30D158" : "#2C2C2E", border: checks[key] ? "none" : "1px solid #3A3A3C", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {checks[key] && <span style={{ fontSize: 10, color: "#000" }}>✓</span>}
+                      </div>
+                      <span style={{ fontSize: 10, color: checks[key] ? "#8E8E93" : "var(--fg)", textDecoration: checks[key] ? "line-through" : "none" }}>{item}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            <button onClick={() => { setChecks({}); localStorage.removeItem(checkKey); }} style={{ marginTop: 4, background: "none", border: "none", color: "#636366", fontSize: 10, cursor: "pointer", padding: 0 }}>Réinitialiser</button>
           </div>
         );
       })()}
