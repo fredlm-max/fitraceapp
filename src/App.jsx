@@ -11112,6 +11112,61 @@ JSON:
               );
             })()}
 
+            {/* ── RPE DISTRIBUTION CHART ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const counts = Array(11).fill(0);
+              sessions.forEach(s => { const r = parseInt(s.rpe); if (r >= 1 && r <= 10) counts[r]++; });
+              const max = Math.max(...counts.slice(1));
+              const rpeColors = ["","#30D158","#30D158","#30D158","#30D158","#FF9F0A","#FF9F0A","#FF9F0A","#FF453A","#FF453A","#FF453A"];
+              const rpeLabels = ["","Très facile","Facile","Modéré","Modéré+","Challenging","Challenging+","Difficile","Très difficile","Presque max","Max absolu"];
+
+              const avgRPE = sessions.reduce((s, x) => s + (parseInt(x.rpe) || 5), 0) / sessions.length;
+              const zone80 = sessions.filter(s => parseInt(s.rpe) <= 6).length / sessions.length * 100;
+              const zone20 = sessions.filter(s => parseInt(s.rpe) > 6).length / sessions.length * 100;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Distribution RPE</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: "#8E8E93" }}>RPE moyen: <span style={{ color: "var(--fg)", fontWeight: 700 }}>{avgRPE.toFixed(1)}</span></div>
+                    <div style={{ fontSize: 9, color: "#8E8E93" }}>Zone 80/20: <span style={{ color: "#30D158", fontWeight: 700 }}>{Math.round(zone80)}%</span>/<span style={{ color: "#FF453A", fontWeight: 700 }}>{Math.round(zone20)}%</span></div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 70 }}>
+                    {counts.slice(1).map((c, i) => {
+                      const rpe = i + 1;
+                      const h = max > 0 ? (c / max) * 60 : 0;
+                      return (
+                        <div key={rpe} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          {c > 0 && <div style={{ fontSize: 8, color: rpeColors[rpe], fontWeight: 700 }}>{c}</div>}
+                          <div title={`RPE ${rpe}: ${c} sessions`} style={{ width: "100%", height: Math.max(h, 2), background: rpeColors[rpe], borderRadius: "3px 3px 0 0", opacity: c === 0 ? 0.15 : 1 }} />
+                          <div style={{ fontSize: 8, color: "#636366" }}>{rpe}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <div style={{ flex: 1, background: "#30D15818", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Endurance (1-6)</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#30D158" }}>{Math.round(zone80)}%</div>
+                    </div>
+                    <div style={{ flex: 1, background: "#FF453A18", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Intensif (7-10)</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#FF453A" }}>{Math.round(zone20)}%</div>
+                    </div>
+                    <div style={{ flex: 1, background: "#2C2C2E", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Cible 80/20</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: Math.abs(zone80 - 80) < 10 ? "#30D158" : "#FF9F0A" }}>{Math.abs(zone80 - 80) < 10 ? "✓ Optimal" : "Ajuster"}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING LOAD DISTRIBUTION ── */}
             {(profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
@@ -25199,6 +25254,76 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 </button>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* ── HYROX LEADERBOARD COMPARISON ── */}
+      {(() => {
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const vma = parseFloat(profile.vma) || 14;
+
+        // Reference times for different categories (minutes)
+        const CATEGORIES = [
+          { cat: "Elite Pro", times: { H: 60, F: 68 }, color: "#C9A840" },
+          { cat: "Top 10%", times: { H: 72, F: 82 }, color: "#007AFF" },
+          { cat: "Top 25%", times: { H: 82, F: 93 }, color: "#30D158" },
+          { cat: "Top 50%", times: { H: 95, F: 108 }, color: "#FF9F0A" },
+          { cat: "Finisher", times: { H: 115, F: 130 }, color: "#636366" },
+        ];
+
+        // Estimate user time from VMA (run portion ~5.9km at ~85% VMA + stations ~20min)
+        const runPaceMs = (vma * 0.85 * 1000) / 60; // m/min
+        const runTimeMin = Math.round(5900 / runPaceMs);
+        const stationTimeMin = sex === "H" ? 22 : 24;
+        const estimatedMin = runTimeMin + stationTimeMin;
+
+        const fmtMin = (m) => `${Math.floor(m)}:${String(Math.round((m % 1) * 60)).padStart(2, "0")}`;
+        const sessions = profile.sessions || [];
+        const hyroxSessions = sessions.filter(s => s.type === "HYROX Complet" && s.duree);
+        const bestHyrox = hyroxSessions.length > 0 ? Math.min(...hyroxSessions.map(s => s.duree)) : null;
+        const displayMin = bestHyrox || estimatedMin;
+
+        const userCategory = CATEGORIES.find(c => displayMin <= c.times[sex]) || CATEGORIES[CATEGORIES.length - 1];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Classement HYROX</div>
+            <div style={{ fontSize: 9, color: "#636366", marginBottom: 12 }}>{bestHyrox ? "Basé sur ta meilleure course" : "Estimé depuis ta VMA"}</div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: `${userCategory.color}18`, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+              <div style={{ fontSize: 36 }}>🏆</div>
+              <div>
+                <div style={{ fontSize: 10, color: "#8E8E93" }}>Ton niveau estimé</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: userCategory.color }}>{userCategory.cat}</div>
+                <div style={{ fontSize: 12, color: "var(--fg)", fontWeight: 700 }}>{Math.floor(displayMin)}:{String(Math.round((displayMin % 1) * 60)).padStart(2,"0")} min</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {CATEGORIES.map(c => {
+                const ref = c.times[sex];
+                const isCurrent = c.cat === userCategory.cat;
+                const diff = displayMin - ref;
+                return (
+                  <div key={c.cat} style={{ display: "flex", alignItems: "center", gap: 8, background: isCurrent ? `${c.color}15` : "transparent", borderRadius: 8, padding: "6px 8px", border: isCurrent ? `1px solid ${c.color}40` : "1px solid transparent" }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 11, fontWeight: isCurrent ? 800 : 500, color: isCurrent ? c.color : "var(--fg)" }}>{c.cat}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>&lt; {Math.floor(ref)}:{String(Math.round((ref % 1) * 60)).padStart(2,"0")}</div>
+                    {!isCurrent && diff > 0 && <div style={{ fontSize: 9, color: "#636366" }}>-{Math.round(diff)}min</div>}
+                    {isCurrent && <div style={{ fontSize: 9, color: c.color, fontWeight: 700 }}>← TOI</div>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {!bestHyrox && (
+              <div style={{ marginTop: 10, padding: 8, background: "#2C2C2E", borderRadius: 8, fontSize: 10, color: "#8E8E93", textAlign: "center" }}>
+                Log une session HYROX Complet pour affiner ton estimation
+              </div>
+            )}
           </div>
         );
       })()}
