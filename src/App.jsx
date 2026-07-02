@@ -20030,6 +20030,107 @@ JSON: {
             );
           })()}
 
+          {/* ── NUTRITION TIMING GUIDE ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 70;
+            const sessions = profile.sessions || [];
+            const lastSession = sessions[0] || null;
+            const rpe = lastSession ? (lastSession.rpe || 6) : 6;
+            const durH = lastSession ? (lastSession.duree || 60) / 60 : 1;
+
+            const WINDOWS = [
+              {
+                id: "pre3h",
+                label: "J-3h · Repas pré-séance",
+                icon: "🍝",
+                color: "#FF9F0A",
+                timing: "3 heures avant",
+                items: [
+                  { name: "Glucides complexes", qty: `${Math.round(poids * 1.5)}g`, ex: "riz, pâtes, patate douce" },
+                  { name: "Protéines légères", qty: `${Math.round(poids * 0.3)}g`, ex: "poulet, œufs, tofu" },
+                  { name: "Lipides faibles", qty: "<10g", ex: "éviter graisses saturées" },
+                ],
+                tip: "Dernier vrai repas. Doit être digéré avant l'effort.",
+              },
+              {
+                id: "pre1h",
+                label: "J-1h · Snack pré-séance",
+                icon: "🍌",
+                color: "#FFD60A",
+                timing: "60 min avant",
+                items: [
+                  { name: "Glucides rapides", qty: `${Math.round(poids * 0.5)}g`, ex: "banane, gel, dattes" },
+                  { name: "Eau", qty: "500ml", ex: "hyperhydratation" },
+                  { name: "Caféine (optionnel)", qty: "3mg/kg", ex: `→ ${Math.round(poids * 3)}mg` },
+                ],
+                tip: "Boost énergie rapide. Éviter fibres et graisses.",
+              },
+              {
+                id: "during",
+                label: "Pendant · Intra-workout",
+                icon: "⚡",
+                color: "#30D158",
+                timing: "Toutes les 20-30 min",
+                items: [
+                  { name: "Glucides/heure", qty: rpe >= 7 ? `${Math.round(60 + durH * 20)}g` : "30-40g", ex: "gels, boisson isotonique" },
+                  { name: "Eau", qty: `${Math.round(500 + rpe * 50)}ml/h`, ex: "avec électrolytes si >60 min" },
+                  { name: "Sodium", qty: "300-600mg/h", ex: "sel, boisson sport" },
+                ],
+                tip: rpe >= 8 ? "Effort intense : maximiser les glucides." : "Effort modéré : eau suffisante.",
+              },
+              {
+                id: "post30",
+                label: "J+30min · Fenêtre anabolique",
+                icon: "💪",
+                color: "#FF453A",
+                timing: "Dans les 30 minutes",
+                items: [
+                  { name: "Protéines rapides", qty: `${Math.round(poids * 0.4)}g`, ex: "whey, blanc d'œuf, lait" },
+                  { name: "Glucides rapides", qty: `${Math.round(poids * 0.8)}g`, ex: "riz blanc, banane, pain blanc" },
+                  { name: "Eau", qty: `${Math.round(500 + rpe * 100)}ml`, ex: "réhydratation post-effort" },
+                ],
+                tip: "Fenêtre optimale de récupération musculaire.",
+              },
+            ];
+
+            const [activeWindow, setActiveWindow] = React.useState(null);
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Timing Nutritionnel</div>
+                <div style={{ fontSize: 10, color: "#636366", marginBottom: 12 }}>Basé sur {poids}kg · RPE {rpe}</div>
+
+                {WINDOWS.map(w => (
+                  <div key={w.id}>
+                    <button onClick={() => setActiveWindow(activeWindow === w.id ? null : w.id)}
+                      style={{ width: "100%", background: activeWindow === w.id ? `${w.color}20` : "var(--bg3)", border: `1px solid ${activeWindow === w.id ? w.color : "#2C2C2E"}`, borderRadius: 10, padding: "10px 12px", marginBottom: 4, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 18 }}>{w.icon}</span>
+                      <div style={{ flex: 1, textAlign: "left" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: w.color }}>{w.label}</div>
+                        <div style={{ fontSize: 9, color: "#8E8E93" }}>{w.timing}</div>
+                      </div>
+                      <span style={{ color: "#636366", fontSize: 12 }}>{activeWindow === w.id ? "▲" : "▼"}</span>
+                    </button>
+                    {activeWindow === w.id && (
+                      <div style={{ background: `${w.color}08`, borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                        {w.items.map(item => (
+                          <div key={item.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                            <div>
+                              <div style={{ fontSize: 11, color: "var(--fg)", fontWeight: 600 }}>{item.name}</div>
+                              <div style={{ fontSize: 9, color: "#636366" }}>{item.ex}</div>
+                            </div>
+                            <div style={{ fontSize: 12, color: w.color, fontWeight: 800, whiteSpace: "nowrap" }}>{item.qty}</div>
+                          </div>
+                        ))}
+                        <div style={{ marginTop: 6, padding: "6px 8px", background: `${w.color}15`, borderRadius: 6, fontSize: 10, color: w.color, fontStyle: "italic" }}>💡 {w.tip}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* ── MACRO TRACKER ── */}
           {(() => {
             const todayStr = new Date().toISOString().slice(0, 10);
