@@ -7452,6 +7452,88 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING STREAK CALENDAR ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const sessionDates = new Set(sessions.map(s => s.date));
+
+              // Calculate current streak
+              let streak = 0;
+              const today = new Date();
+              for (let i = 0; i < 365; i++) {
+                const d = new Date(today); d.setDate(d.getDate() - i);
+                const ds = d.toISOString().slice(0, 10);
+                if (sessionDates.has(ds)) streak++;
+                else if (i > 0) break;
+              }
+
+              // Last 5 weeks grid (Mon-Sun)
+              const weeks = [];
+              const startDay = new Date(today);
+              startDay.setDate(startDay.getDate() - 34);
+              for (let w = 0; w < 5; w++) {
+                const week = [];
+                for (let d = 0; d < 7; d++) {
+                  const day = new Date(startDay); day.setDate(startDay.getDate() + w * 7 + d);
+                  const ds = day.toISOString().slice(0, 10);
+                  const hasSession = sessionDates.has(ds);
+                  const isFuture = day > today;
+                  const isToday = ds === today.toISOString().slice(0, 10);
+                  week.push({ ds, hasSession, isFuture, isToday, dayNum: day.getDate() });
+                }
+                weeks.push(week);
+              }
+
+              const typeColors = { "Course": "#30D158", "HYROX Complet": "#C9A840", "Force": "#007AFF", "Vélo": "#FF9F0A", "Natation": "#5AC8FA", "Mobilité": "#AF52DE", "Récupération": "#636366" };
+              const getColor = (ds) => {
+                const sess = sessions.filter(s => s.date === ds);
+                if (sess.length === 0) return null;
+                return typeColors[sess[0].type] || "#8E8E93";
+              };
+
+              const dayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Activité Récente</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>🔥</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: streak > 0 ? "#FF9F0A" : "#636366" }}>{streak} jour{streak > 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                    {dayLabels.map((l, i) => <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: "#636366" }}>{l}</div>)}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {weeks.map((week, wi) => (
+                      <div key={wi} style={{ display: "flex", gap: 3 }}>
+                        {week.map((day, di) => {
+                          const color = getColor(day.ds);
+                          return (
+                            <div key={di} style={{ flex: 1, aspectRatio: "1", borderRadius: 4, background: day.isFuture ? "#1C1C1E" : color || "#2C2C2E", border: day.isToday ? "1px solid var(--yellow)" : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {day.isToday && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--yellow)" }} />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                    {Object.entries(typeColors).slice(0, 4).map(([type, color]) => (
+                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                        <span style={{ fontSize: 8, color: "#636366" }}>{type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY SUMMARY ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
@@ -19696,6 +19778,66 @@ function TechniqueTab({ profile = {} }) {
             </div>
 
             {phase === "idle" && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Durée totale : {totalMin}:{String(total % 60).padStart(2, "0")} · {rounds} rounds</div>}
+          </div>
+        );
+      })()}
+
+      {/* ── CADENCE OPTIMIZER ── */}
+      {(() => {
+        const vma = parseFloat(profile.vma) || 14;
+        const [speed, setSpeed] = React.useState(Math.round(vma * 0.75 * 10) / 10);
+
+        const speedMs = speed * 1000 / 3600; // m/s
+        const targetCadence = 170 + Math.round((speed - 10) * 2); // ~170 spm at 10km/h, +2 per km/h
+        const strideLen = Math.round((speedMs / (targetCadence / 60)) * 100) / 100; // meters
+
+        const intensityLabel = speed < vma * 0.7 ? "Endurance fondamentale" : speed < vma * 0.82 ? "Allure seuil 1" : speed < vma * 0.9 ? "Allure seuil 2" : "VMA / intensif";
+        const intensityColor = speed < vma * 0.7 ? "#30D158" : speed < vma * 0.82 ? "#FF9F0A" : "#FF453A";
+
+        const TIPS = [
+          "Augmente la cadence progressivement (+5 spm/semaine max)",
+          "Utilise un métronome à la cible pendant 10 min puis cours naturellement",
+          "La cadence idéale réduit le temps de contact au sol",
+          "Regarde droit devant, bras à 90°, épaules relâchées",
+        ];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Optimiseur de Cadence</div>
+
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: "#8E8E93" }}>Vitesse</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: intensityColor }}>{speed} km/h — {intensityLabel}</span>
+              </div>
+              <input type="range" min={6} max={Math.round(vma * 1.05)} step={0.5} value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} style={{ width: "100%" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366" }}>
+                <span>6 km/h</span><span>{Math.round(vma * 1.05)} km/h (VMA+)</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <div style={{ flex: 1, background: "#1C1C1E", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                <div style={{ fontSize: 9, color: "#636366" }}>Cadence cible</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "var(--yellow)" }}>{targetCadence}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93" }}>spm</div>
+              </div>
+              <div style={{ flex: 1, background: "#1C1C1E", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                <div style={{ fontSize: 9, color: "#636366" }}>Foulée</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "#007AFF" }}>{strideLen}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93" }}>m</div>
+              </div>
+              <div style={{ flex: 1, background: "#1C1C1E", borderRadius: 10, padding: "10px 12px", textAlign: "center" }}>
+                <div style={{ fontSize: 9, color: "#636366" }}>Allure</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#30D158" }}>{Math.floor(60/speed)}:{String(Math.round((60/speed%1)*60)).padStart(2,"0")}</div>
+                <div style={{ fontSize: 9, color: "#8E8E93" }}>/km</div>
+              </div>
+            </div>
+
+            <div style={{ background: "#1C1C1E", borderRadius: 10, padding: 10 }}>
+              <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>CONSEILS</div>
+              {TIPS.map((t, i) => <div key={i} style={{ fontSize: 10, color: "#8E8E93", marginBottom: 3 }}>• {t}</div>)}
+            </div>
           </div>
         );
       })()}
