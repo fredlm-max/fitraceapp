@@ -6389,6 +6389,82 @@ JSON:
               );
             })()}
 
+            {/* ── SESSION JOURNAL ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              const notesKey = `fitrace_notes_${profile.name}`;
+              const [notes, setNotes] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(notesKey) || "{}"); } catch { return {}; }
+              });
+              const [editingId, setEditingId] = React.useState(null);
+              const [draft, setDraft] = React.useState("");
+              const [showCount, setShowCount] = React.useState(5);
+
+              const saveNote = (id, text) => {
+                const updated = { ...notes, [id]: text };
+                setNotes(updated);
+                localStorage.setItem(notesKey, JSON.stringify(updated));
+                setEditingId(null);
+              };
+
+              const TYPE_LABELS = {
+                running_zone2: "Course Z2 🏃",
+                running_qualite: "Course Qualité ⚡",
+                force_stations: "Force / Stations 💪",
+                hybride_compromis: "Hybride 🔄",
+                mobilite: "Mobilité 🧘",
+                coach: "Séance Coach 🎯",
+              };
+
+              const recent = [...sessions].reverse().slice(0, showCount);
+
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>📓 JOURNAL DE SÉANCES</div>
+                  {recent.map(s => {
+                    const sid = `${s.date}_${s.type}`;
+                    const note = notes[sid] || "";
+                    const isEditing = editingId === sid;
+                    return (
+                      <div key={sid} style={{ background: "var(--bg2)", borderRadius: 12, padding: 12, marginBottom: 8, border: "1px solid #2C2C2E" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: note || isEditing ? 8 : 0 }}>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{TYPE_LABELS[s.type] || s.type}</div>
+                            <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>
+                              {s.date} · {s.duree || "—"} min · RPE {s.difficulte || "—"}/10
+                            </div>
+                          </div>
+                          <button onClick={() => { if (isEditing) { setEditingId(null); } else { setEditingId(sid); setDraft(note); } }} style={{ background: "none", border: "1px solid #3A3A3C", borderRadius: 6, padding: "3px 8px", color: "#8E8E93", fontSize: 10, cursor: "pointer" }}>
+                            {isEditing ? "Annuler" : note ? "Modifier" : "+ Note"}
+                          </button>
+                        </div>
+                        {isEditing ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <textarea
+                              autoFocus
+                              value={draft}
+                              onChange={e => setDraft(e.target.value)}
+                              placeholder="Comment était cette séance ? Sensations, PR, douleurs..."
+                              rows={2}
+                              style={{ flex: 1, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "7px 9px", color: "var(--white)", fontSize: 12, resize: "none" }}
+                            />
+                            <button onClick={() => saveNote(sid, draft)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>✓</button>
+                          </div>
+                        ) : note ? (
+                          <div style={{ fontSize: 12, color: "#AEAEB2", fontStyle: "italic", background: "var(--bg3)", borderRadius: 8, padding: "6px 9px" }}>"{note}"</div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                  {sessions.length > showCount && (
+                    <button onClick={() => setShowCount(n => n + 5)} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 10, padding: 8, color: "#8E8E93", fontSize: 12, cursor: "pointer" }}>
+                      Voir plus ({sessions.length - showCount} séances)
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY SUMMARY ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
