@@ -9154,6 +9154,111 @@ JSON:
               );
             })()}
 
+            {/* ── STRENGTH STANDARDS ── */}
+            {(() => {
+              let prs = {};
+              try { prs = JSON.parse(localStorage.getItem(`fitrace_prs_${profile.name}`) || "{}"); } catch {}
+              const poids = parseFloat(profile.poids) || 75;
+              const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
+
+              // HYROX-relevant strength standards (1RM in kg, by body weight ratio)
+              const STANDARDS = [
+                {
+                  name: "Deadlift",
+                  key: "deadlift",
+                  icon: "🏋️",
+                  color: "#C9A840",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 1.0 }, { l: "Intermédiaire", r: 1.5 }, { l: "Avancé", r: 2.0 }, { l: "Elite", r: 2.5 }]
+                    : [{ l: "Débutant", r: 0.7 }, { l: "Intermédiaire", r: 1.0 }, { l: "Avancé", r: 1.4 }, { l: "Elite", r: 1.8 }],
+                },
+                {
+                  name: "Squat",
+                  key: "squat",
+                  icon: "🦵",
+                  color: "#FF9F0A",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 0.8 }, { l: "Intermédiaire", r: 1.2 }, { l: "Avancé", r: 1.6 }, { l: "Elite", r: 2.0 }]
+                    : [{ l: "Débutant", r: 0.6 }, { l: "Intermédiaire", r: 0.9 }, { l: "Avancé", r: 1.2 }, { l: "Elite", r: 1.6 }],
+                },
+                {
+                  name: "Développé couché",
+                  key: "bench",
+                  icon: "💪",
+                  color: "#38bdf8",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 0.7 }, { l: "Intermédiaire", r: 1.0 }, { l: "Avancé", r: 1.3 }, { l: "Elite", r: 1.6 }]
+                    : [{ l: "Débutant", r: 0.45 }, { l: "Intermédiaire", r: 0.65 }, { l: "Avancé", r: 0.85 }, { l: "Elite", r: 1.1 }],
+                },
+                {
+                  name: "Kettlebell Swing",
+                  key: "kb_swing",
+                  icon: "🔔",
+                  color: "#BF5AF2",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 0.2 }, { l: "Intermédiaire", r: 0.3 }, { l: "Avancé", r: 0.4 }, { l: "Elite", r: 0.5 }]
+                    : [{ l: "Débutant", r: 0.15 }, { l: "Intermédiaire", r: 0.22 }, { l: "Avancé", r: 0.30 }, { l: "Elite", r: 0.38 }],
+                },
+              ];
+
+              const matched = STANDARDS.map(st => {
+                const prEntry = Object.entries(prs).find(([k]) => k.includes(st.key));
+                const pr1rm = prEntry ? prEntry[1].value : null;
+                const ratio = pr1rm ? pr1rm / poids : null;
+                let levelIdx = -1;
+                if (ratio) {
+                  st.levels.forEach((l, i) => { if (ratio >= l.r) levelIdx = i; });
+                }
+                return { ...st, pr1rm, ratio, levelIdx };
+              }).filter(st => st.pr1rm);
+
+              if (matched.length === 0) return null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>⚡ STANDARDS DE FORCE</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {matched.map((st, i) => {
+                      const levelLabel = st.levelIdx >= 0 ? st.levels[st.levelIdx].l : "En-dessous débutant";
+                      const levelColor = st.levelIdx >= 3 ? "#BF5AF2" : st.levelIdx >= 2 ? "#30D158" : st.levelIdx >= 1 ? "#C9A840" : "#FF9F0A";
+                      const nextLevel = st.levels[st.levelIdx + 1];
+                      const progressPct = nextLevel
+                        ? Math.min(100, Math.round(((st.ratio - st.levels[Math.max(0, st.levelIdx)].r) / (nextLevel.r - st.levels[Math.max(0, st.levelIdx)].r)) * 100))
+                        : 100;
+                      return (
+                        <div key={i}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span>{st.icon}</span>
+                              <div>
+                                <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{st.name}</div>
+                                <div style={{ fontSize: 10, color: "#8E8E93" }}>{st.pr1rm}kg · {st.ratio?.toFixed(2)}× PDC</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: 11, color: levelColor, fontWeight: 700 }}>{levelLabel}</div>
+                              {nextLevel && <div style={{ fontSize: 9, color: "#636366" }}>→ {nextLevel.l} : {Math.round(nextLevel.r * poids)}kg</div>}
+                            </div>
+                          </div>
+                          <div style={{ position: "relative", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                            {st.levels.map((l, j) => (
+                              <div key={j} style={{ position: "absolute", left: `${Math.round((j / st.levels.length) * 100)}%`, top: -3, width: 2, height: 12, background: "rgba(255,255,255,0.1)" }} />
+                            ))}
+                            <div style={{ width: `${Math.min(100, Math.round((st.ratio / st.levels[st.levels.length - 1].r) * 100))}%`, height: "100%", background: levelColor, borderRadius: 99 }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                            {st.levels.map((l, j) => (
+                              <div key={j} style={{ fontSize: 8, color: "#636366" }}>{l.l}</div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS ── */}
             {(() => {
               let prs = {};
