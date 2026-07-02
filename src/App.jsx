@@ -12093,6 +12093,67 @@ JSON:
               );
             })()}
 
+            {/* ── MONTHLY STATS SUMMARY ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 2) return null;
+
+              const now = new Date();
+              const thisMonth = now.toISOString().slice(0, 7);
+              const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+              const lastMonth = lastMonthDate.toISOString().slice(0, 7);
+
+              const monthSessions = (ym) => sessions.filter(s => s.date.slice(0, 7) === ym);
+              const stats = (slist) => ({
+                count: slist.length,
+                km: Math.round(slist.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0) * 10) / 10,
+                time: Math.round(slist.reduce((s, x) => s + (x.duree || 0), 0)),
+                trimp: slist.reduce((s, x) => s + Math.round((x.duree || 0) * (x.rpe || 5) / 10), 0),
+                avgRPE: slist.length ? (slist.reduce((s, x) => s + (parseFloat(x.rpe) || 5), 0) / slist.length).toFixed(1) : 0,
+              });
+
+              const cur = stats(monthSessions(thisMonth));
+              const prev = stats(monthSessions(lastMonth));
+
+              const pct = (a, b) => b === 0 ? null : Math.round((a - b) / b * 100);
+              const arrow = (v) => v === null ? "" : v > 0 ? `+${v}%` : `${v}%`;
+              const arrowColor = (v) => v === null ? "#636366" : v > 0 ? "#30D158" : "#FF453A";
+
+              const METRICS = [
+                { label: "Sessions", cur: cur.count, prev: prev.count, unit: "" },
+                { label: "Distance", cur: cur.km, prev: prev.km, unit: "km" },
+                { label: "Temps", cur: `${Math.floor(cur.time/60)}h${String(cur.time%60).padStart(2,"0")}`, prev: prev.time, prevFmt: `${Math.floor(prev.time/60)}h`, unit: "" },
+                { label: "TRIMP", cur: cur.trimp, prev: prev.trimp, unit: "" },
+                { label: "RPE moyen", cur: cur.avgRPE, prev: prev.avgRPE, unit: "" },
+              ];
+
+              const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Stats du Mois</div>
+                  <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 12, textTransform: "capitalize" }}>{monthLabel}</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                    {METRICS.map(m => {
+                      const chg = typeof m.cur === "number" && typeof m.prev === "number" ? pct(m.cur, m.prev) : null;
+                      return (
+                        <div key={m.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #2C2C2E" }}>
+                          <span style={{ fontSize: 10, color: "#8E8E93" }}>{m.label}</span>
+                          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            {chg !== null && <span style={{ fontSize: 9, color: arrowColor(chg) }}>{arrow(chg)}</span>}
+                            <span style={{ fontSize: 12, fontWeight: 800, color: "var(--fg)" }}>{m.cur}{m.unit}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {prev.count === 0 && <div style={{ marginTop: 6, fontSize: 9, color: "#636366", textAlign: "center" }}>Pas de données le mois dernier pour comparer</div>}
+                </div>
+              );
+            })()}
+
             {/* ── MONTHLY TRAINING CALENDAR ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -25439,6 +25500,73 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 </div>
               </>
             )}
+          </div>
+        );
+      })()}
+
+      {/* ── MULTI-DISTANCE RACE PREDICTOR ── */}
+      {(() => {
+        const vma = parseFloat(profile.vma) || 14;
+        const [refDist, setRefDist] = React.useState(10);
+        const [refTime, setRefTime] = React.useState(50);
+
+        // Riegel formula: T2 = T1 × (D2/D1)^1.06
+        const refPace = refTime / refDist; // min/km
+        const predict = (dist) => {
+          const pred = refTime * Math.pow(dist / refDist, 1.06);
+          const h = Math.floor(pred / 60), m = Math.floor(pred % 60), s = Math.round((pred % 1) * 60);
+          return { time: pred, str: h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`, pace: pred / dist };
+        };
+
+        const DISTANCES = [
+          { name: "5K", dist: 5, icon: "⚡" },
+          { name: "10K", dist: 10, icon: "🏃" },
+          { name: "Semi", dist: 21.1, icon: "🌟" },
+          { name: "HYROX", dist: 8, icon: "🏆", factor: 1.15 },
+          { name: "Marathon", dist: 42.2, icon: "👑" },
+        ];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Prédicteur Multi-Distances</div>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>Distance référence</div>
+                <select value={refDist} onChange={e => setRefDist(Number(e.target.value))} style={{ background: "#1C1C1E", color: "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", fontSize: 11, width: "100%" }}>
+                  {[5, 10, 21.1, 42.2].map(d => <option key={d} value={d}>{d}km</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>Temps (min)</div>
+                <input type="number" value={refTime} onChange={e => setRefTime(Number(e.target.value))} min={10} max={300} style={{ background: "#1C1C1E", color: "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", fontSize: 11, width: "100%", boxSizing: "border-box" }} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {DISTANCES.filter(d => d.dist !== refDist).map(d => {
+                const p = predict(d.dist);
+                const adjTime = d.factor ? p.time * d.factor : p.time;
+                const adjH = Math.floor(adjTime / 60), adjM = Math.floor(adjTime % 60), adjS = Math.round((adjTime % 1) * 60);
+                const adjStr = d.factor ? (adjH > 0 ? `${adjH}h${String(adjM).padStart(2,"0")}` : `${adjM}:${String(adjS).padStart(2,"0")}`) : p.str;
+                return (
+                  <div key={d.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: "#1C1C1E", borderRadius: 10 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 14 }}>{d.icon}</span>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg)" }}>{d.name}{d.factor ? " (avec stations)" : ""}</div>
+                        <div style={{ fontSize: 8, color: "#636366" }}>{d.dist}km{d.factor ? " +stations HYROX" : ""}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--yellow)" }}>{adjStr}</div>
+                      <div style={{ fontSize: 8, color: "#636366" }}>{Math.floor((d.factor ? adjTime : p.time) / d.dist)}:{String(Math.round(((d.factor ? adjTime : p.time) / d.dist % 1) * 60)).padStart(2,"0")}/km</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 9, color: "#636366" }}>Formule Riegel · HYROX inclut ~20min de stations</div>
           </div>
         );
       })()}
