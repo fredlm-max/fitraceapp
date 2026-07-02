@@ -12764,6 +12764,78 @@ JSON:
                 );
               })()}
 
+              {/* ── MUSCLE FATIGUE MAP ── */}
+              {(profile.sessions||[]).length >= 1 && (() => {
+                const sessions = profile.sessions || [];
+                const now = Date.now();
+
+                // Map session types to muscle groups they stress
+                const MUSCLE_LOAD = {
+                  running_zone2:     { mollets: 0.6, quadri: 0.5, ischio: 0.4, cardio: 0.7 },
+                  running_qualite:   { mollets: 0.9, quadri: 0.8, ischio: 0.7, cardio: 1.0 },
+                  force_stations:    { epaules: 0.9, dos: 0.8, quadri: 0.9, fessiers: 0.8, bras: 0.7 },
+                  hybride_compromis: { mollets: 0.7, quadri: 0.8, dos: 0.7, epaules: 0.6, cardio: 0.8 },
+                  mobilite:          { mollets: 0.1, quadri: 0.1, ischio: 0.1 },
+                  coach:             { epaules: 0.7, dos: 0.7, quadri: 0.7, mollets: 0.6, cardio: 0.7 },
+                };
+
+                // Decay function: fatigue halves every 48h
+                const MUSCLES = ["quadri", "ischio", "fessiers", "mollets", "dos", "epaules", "bras", "cardio"];
+                const fatigue = {};
+                MUSCLES.forEach(m => { fatigue[m] = 0; });
+
+                sessions.filter(s => s.date && (now - new Date(s.date)) < 7 * 86400000).forEach(s => {
+                  const hoursAgo = (now - new Date(s.date)) / 3600000;
+                  const decay = Math.exp(-0.0144 * hoursAgo); // half-life ~48h
+                  const rpeMultiplier = (s.difficulte || 5) / 5;
+                  const loads = MUSCLE_LOAD[s.type] || {};
+                  MUSCLES.forEach(m => {
+                    fatigue[m] = Math.min(1, fatigue[m] + (loads[m] || 0) * decay * rpeMultiplier * 0.5);
+                  });
+                });
+
+                const getFatColor = v => v > 0.7 ? "#FF453A" : v > 0.4 ? "#FF9F0A" : v > 0.15 ? "#C9A840" : "rgba(255,255,255,0.1)";
+                const getFatLabel = v => v > 0.7 ? "Fatigué" : v > 0.4 ? "Sollicité" : v > 0.15 ? "Actif" : "Reposé";
+
+                const MUSCLE_DISPLAY = [
+                  { id: "quadri",   label: "Quadriceps",  icon: "🦵" },
+                  { id: "ischio",   label: "Ischio-jambiers", icon: "🦵" },
+                  { id: "fessiers", label: "Fessiers",    icon: "🍑" },
+                  { id: "mollets",  label: "Mollets",     icon: "🦶" },
+                  { id: "dos",      label: "Dos / Trapèzes", icon: "💪" },
+                  { id: "epaules",  label: "Épaules",     icon: "💪" },
+                  { id: "bras",     label: "Bras / Avant-bras", icon: "💪" },
+                  { id: "cardio",   label: "Cardio-vasculaire", icon: "❤️" },
+                ];
+
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>🗺️ CARTE FATIGUE MUSCULAIRE</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {MUSCLE_DISPLAY.map(m => {
+                        const v = fatigue[m.id];
+                        const c = getFatColor(v);
+                        const pct = Math.round(v * 100);
+                        return (
+                          <div key={m.id} style={{ flex: "1 1 calc(50% - 4px)", background: c + "20", border: `1px solid ${c}`, borderRadius: 10, padding: "8px 10px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                              <div style={{ fontSize: 11, color: "var(--white)", fontWeight: 600 }}>{m.icon} {m.label}</div>
+                              <div style={{ fontSize: 10, color: c, fontWeight: 700 }}>{getFatLabel(v)}</div>
+                            </div>
+                            <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                              <div style={{ width: `${pct}%`, height: "100%", background: c, borderRadius: 99 }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: 10, color: "#636366" }}>
+                      Basé sur tes séances des 7 derniers jours · La fatigue décroît naturellement (demi-vie 48h)
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── MOBILITY TRACKER ── */}
               {(() => {
                 const mobKey = `fitrace_mobility_${profile.name}`;
