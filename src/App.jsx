@@ -28307,6 +28307,113 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── HYROX PACING CALCULATOR ── */}
+      {(() => {
+        // Station durations in seconds (average for recreational athlete)
+        const STATIONS = [
+          { name:"SkiErg",    defSec:180 },
+          { name:"Sled Push", defSec:120 },
+          { name:"Sled Pull", defSec:150 },
+          { name:"Burpee BJ", defSec:210 },
+          { name:"Row",       defSec:180 },
+          { name:"Farmers",   defSec:90  },
+          { name:"Sandbag",   defSec:120 },
+          { name:"Wall Ball", defSec:180 },
+        ];
+
+        const [goalH, setGoalH] = React.useState(1);
+        const [goalM, setGoalM] = React.useState(15);
+        const [goalS, setGoalS] = React.useState(0);
+        const [stationPcts, setStationPcts] = React.useState(STATIONS.map(s => s.defSec));
+
+        const goalTotalSec = goalH * 3600 + goalM * 60 + goalS;
+        const totalStationSec = stationPcts.reduce((a,b)=>a+b,0);
+        const runTotalSec = Math.max(0, goalTotalSec - totalStationSec);
+        const perRunSec = Math.round(runTotalSec / 8);
+        const pace1km = perRunSec; // 1km per run leg
+
+        const fmtSec = s => {
+          const m = Math.floor(Math.abs(s)/60);
+          const sec = Math.abs(s)%60;
+          return `${m}:${String(sec).padStart(2,"0")}`;
+        };
+
+        const runPaceFmt = perRunSec > 0 ? fmtSec(pace1km) + "/km" : "–";
+
+        // Build segment list
+        const segments = [];
+        for (let i = 0; i < 8; i++) {
+          segments.push({ type:"run", name:`Run ${i+1}`, sec:perRunSec, color:"#30D158" });
+          segments.push({ type:"station", name:STATIONS[i].name, sec:stationPcts[i], color:"#FF9F0A" });
+        }
+
+        // Cumulative time
+        let cum = 0;
+        const withCum = segments.map(s => { cum += s.sec; return { ...s, cumSec: cum }; });
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Calculateur de Pacing HYROX</div>
+
+            {/* Goal time input */}
+            <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:14 }}>
+              <div style={{ fontSize:11,color:"#8E8E93" }}>Objectif:</div>
+              {[{ val:goalH, set:setGoalH, max:3, label:"h" }, { val:goalM, set:setGoalM, max:59, label:"min" }, { val:goalS, set:setGoalS, max:59, label:"s" }].map((f,i)=>(
+                <div key={i} style={{ display:"flex",alignItems:"center",gap:3 }}>
+                  <button onClick={()=>f.set(v=>Math.max(0,v-1))} style={{ background:"var(--bg3)",color:"#8E8E93",border:"none",borderRadius:4,width:20,height:20,fontSize:12,cursor:"pointer" }}>−</button>
+                  <span style={{ fontSize:15,fontWeight:800,color:"var(--yellow)",minWidth:22,textAlign:"center" }}>{String(f.val).padStart(2,"0")}</span>
+                  <button onClick={()=>f.set(v=>Math.min(f.max,v+1))} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:4,width:20,height:20,fontSize:12,cursor:"pointer" }}>+</button>
+                  <span style={{ fontSize:10,color:"#636366" }}>{f.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Summary cards */}
+            <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+              <div style={{ flex:1,background:"#1C3A24",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                <div style={{ fontSize:10,color:"#30D158",fontWeight:800 }}>{runPaceFmt}</div>
+                <div style={{ fontSize:8,color:"#636366" }}>Allure run</div>
+              </div>
+              <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                <div style={{ fontSize:10,color:"#FF9F0A",fontWeight:800 }}>{fmtSec(totalStationSec)}</div>
+                <div style={{ fontSize:8,color:"#636366" }}>Stations total</div>
+              </div>
+              <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                <div style={{ fontSize:10,color:"#30D158",fontWeight:800 }}>{fmtSec(runTotalSec)}</div>
+                <div style={{ fontSize:8,color:"#636366" }}>Running total</div>
+              </div>
+            </div>
+
+            {/* Station time sliders */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:9,color:"#636366",marginBottom:6 }}>Ajuster temps par station:</div>
+              {STATIONS.map((st,i)=>(
+                <div key={i} style={{ display:"flex",alignItems:"center",gap:6,marginBottom:4 }}>
+                  <div style={{ fontSize:9,color:"#8E8E93",width:60,flexShrink:0 }}>{st.name}</div>
+                  <button onClick={()=>setStationPcts(p=>{const n=[...p];n[i]=Math.max(30,n[i]-15);return n;})}
+                    style={{ background:"var(--bg3)",color:"#8E8E93",border:"none",borderRadius:4,width:18,height:18,fontSize:11,cursor:"pointer" }}>−</button>
+                  <span style={{ fontSize:10,color:"#FF9F0A",fontWeight:700,minWidth:32,textAlign:"center" }}>{fmtSec(stationPcts[i])}</span>
+                  <button onClick={()=>setStationPcts(p=>{const n=[...p];n[i]=n[i]+15;return n;})}
+                    style={{ background:"var(--bg3)",color:"#FF9F0A",border:"none",borderRadius:4,width:18,height:18,fontSize:11,cursor:"pointer" }}>+</button>
+                </div>
+              ))}
+            </div>
+
+            {/* Segment timeline */}
+            <div style={{ fontSize:9,color:"#636366",marginBottom:6 }}>Timeline de course:</div>
+            <div style={{ display:"flex",height:16,borderRadius:8,overflow:"hidden",marginBottom:6 }}>
+              {withCum.map((s,i)=>(
+                <div key={i} style={{ flex:s.sec,background:s.color,opacity:s.type==="run"?0.7:0.9,minWidth:1 }}/>
+              ))}
+            </div>
+            <div style={{ display:"flex",justifyContent:"space-between" }}>
+              <span style={{ fontSize:8,color:"#636366" }}>0:00</span>
+              <span style={{ fontSize:8,color:"var(--yellow)",fontWeight:700 }}>Fin: {fmtSec(goalTotalSec)}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── HYROX LEADERBOARD COMPARISON ── */}
       {(() => {
         const sex = profile.sexe === "F" ? "F" : "H";
