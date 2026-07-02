@@ -9974,6 +9974,97 @@ JSON:
               );
             })()}
 
+            {/* ── RUNNING ECONOMY CALCULATOR ── */}
+            {(() => {
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const age = parseInt(profile.age) || 30;
+              const poids = parseFloat(profile.poids) || 70;
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const fcMax = profile.fcMax || Math.round(208 - 0.7 * age);
+              const sessions = profile.sessions || [];
+              const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+
+              if (!vma && runs.length === 0) return null;
+
+              // Best run pace (min/km)
+              const bestPaceMinKm = runs.length > 0
+                ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+                : vma ? 60 / vma : null;
+
+              // Cadence target by pace
+              const cadence = bestPaceMinKm ? Math.round(Math.max(160, Math.min(185, 180 - (bestPaceMinKm - 5) * 5))) : 175;
+
+              // Stride length (m) = speed(m/s) / (cadence/2/60)
+              const speedMs = bestPaceMinKm ? (1000 / bestPaceMinKm) / 60 : null;
+              const strideLen = speedMs ? Math.round((speedMs / (cadence / 2 / 60)) * 100) / 100 : null;
+
+              // Running Economy score (VO2 at submaximal pace)
+              // RE = VO2 at 10 km/h (lower = better for endurance)
+              const reScore = vma ? Math.round(210 / vma * 10) / 10 : null; // simplified
+
+              // Training effect on economy
+              const longRuns = runs.filter(s => parseFloat(s.distance) >= 8).length;
+              const tempoRuns = runs.filter(s => (s.rpe || 0) >= 7 && parseFloat(s.distance) >= 4).length;
+
+              const METRICS = [
+                bestPaceMinKm && { label: "Meilleure allure", value: `${Math.floor(bestPaceMinKm)}:${String(Math.round((bestPaceMinKm % 1) * 60)).padStart(2, "0")}`, unit: "/km", color: "#FF9F0A", icon: "⚡" },
+                { label: "Cadence cible", value: cadence, unit: "pas/min", color: "#007AFF", icon: "👟" },
+                strideLen && { label: "Foulée", value: strideLen, unit: "m", color: "#30D158", icon: "📏" },
+                vma && { label: "VMA", value: `${vma.toFixed(1)}`, unit: "km/h", color: "#BF5AF2", icon: "🏃" },
+              ].filter(Boolean);
+
+              const getEcoLevel = (pace) => {
+                if (!pace) return null;
+                if (sex === "H") {
+                  if (pace < 4) return { label: "Élite", color: "#30D158" };
+                  if (pace < 5) return { label: "Avancé", color: "#34C759" };
+                  if (pace < 6) return { label: "Intermédiaire", color: "#FF9F0A" };
+                  return { label: "Débutant", color: "#FF453A" };
+                } else {
+                  if (pace < 4.5) return { label: "Élite", color: "#30D158" };
+                  if (pace < 5.5) return { label: "Avancé", color: "#34C759" };
+                  if (pace < 6.5) return { label: "Intermédiaire", color: "#FF9F0A" };
+                  return { label: "Débutant", color: "#FF453A" };
+                }
+              };
+              const ecoLevel = getEcoLevel(bestPaceMinKm);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Économie de Course</div>
+                    {ecoLevel && <div style={{ fontSize: 10, color: ecoLevel.color, fontWeight: 700 }}>{ecoLevel.label}</div>}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6, marginBottom: 12 }}>
+                    {METRICS.map(m => (
+                      <div key={m.label} style={{ background: `${m.color}10`, border: `1px solid ${m.color}25`, borderRadius: 10, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 12 }}>{m.icon}</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: m.color }}>{m.value}</div>
+                        <div style={{ fontSize: 8, color: "#636366" }}>{m.unit}</div>
+                        <div style={{ fontSize: 8, color: "#3A3A3C", fontWeight: 700, textTransform: "uppercase" }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tips */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Améliorez votre économie</div>
+                    {[
+                      { check: longRuns < 4, tip: `Sorties longues : ${longRuns}/4 · Visez 1 sortie ≥8km/semaine`, color: longRuns >= 4 ? "#30D158" : "#FF9F0A" },
+                      { check: tempoRuns < 2, tip: `Tempos : ${tempoRuns} · Ajoutez des séances RPE 7-8 sur 4+ km`, color: tempoRuns >= 2 ? "#30D158" : "#FF9F0A" },
+                      { check: cadence < 175, tip: `Cadence ${cadence} spm → Ciblez 175-180 spm pour plus d'efficacité`, color: cadence >= 175 ? "#30D158" : "#007AFF" },
+                    ].map((t, i) => (
+                      <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 4 }}>
+                        <span style={{ color: t.color, fontSize: 10 }}>{t.check ? "⚠" : "✓"}</span>
+                        <span style={{ fontSize: 10, color: t.check ? "var(--fg)" : "#636366" }}>{t.tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING LOAD DISTRIBUTION ── */}
             {(profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
