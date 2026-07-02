@@ -17362,6 +17362,129 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── INTERVAL TRAINING TIMER ── */}
+      {(() => {
+        const [workSec, setWorkSec] = React.useState(40);
+        const [restSec, setRestSec] = React.useState(20);
+        const [rounds, setRounds] = React.useState(8);
+        const [phase, setPhase] = React.useState("idle"); // idle | work | rest | done
+        const [currentRound, setCurrentRound] = React.useState(1);
+        const [timeLeft, setTimeLeft] = React.useState(workSec);
+        const [isRunning, setIsRunning] = React.useState(false);
+        const timerRef = React.useRef(null);
+
+        const beep = (freq = 880, dur = 0.1) => {
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = freq; gain.gain.value = 0.3;
+            osc.start(); osc.stop(ctx.currentTime + dur);
+          } catch {}
+        };
+
+        React.useEffect(() => {
+          if (!isRunning) return;
+          timerRef.current = setTimeout(() => {
+            if (timeLeft <= 1) {
+              if (phase === "work") {
+                if (currentRound >= rounds) { setPhase("done"); setIsRunning(false); beep(1200, 0.3); return; }
+                beep(440, 0.2);
+                setPhase("rest"); setTimeLeft(restSec);
+              } else {
+                beep(880, 0.1);
+                setPhase("work"); setCurrentRound(r => r + 1); setTimeLeft(workSec);
+              }
+            } else {
+              if (timeLeft <= 3) beep(660, 0.05);
+              setTimeLeft(t => t - 1);
+            }
+          }, 1000);
+          return () => clearTimeout(timerRef.current);
+        }, [isRunning, timeLeft, phase, currentRound, rounds, workSec, restSec]);
+
+        const start = () => {
+          setPhase("work"); setCurrentRound(1); setTimeLeft(workSec); setIsRunning(true);
+          beep(880, 0.1);
+        };
+        const stop = () => { setIsRunning(false); setPhase("idle"); clearTimeout(timerRef.current); };
+
+        const total = (workSec + restSec) * rounds;
+        const totalMin = Math.floor(total / 60);
+        const phaseBg = phase === "work" ? "#FF453A" : phase === "rest" ? "#30D158" : phase === "done" ? "#C9A840" : "#2C2C2E";
+        const phaseLabel = phase === "work" ? "EFFORT" : phase === "rest" ? "REPOS" : phase === "done" ? "TERMINÉ !" : "PRÊT";
+        const progress = phase === "work" ? (workSec - timeLeft) / workSec : phase === "rest" ? (restSec - timeLeft) / restSec : 0;
+        const R = 44, circum = 2 * Math.PI * R;
+
+        const PRESETS = [
+          { name: "Tabata", w: 20, r: 10, n: 8 },
+          { name: "EMOM 40/20", w: 40, r: 20, n: 10 },
+          { name: "30/30", w: 30, r: 30, n: 6 },
+          { name: "HYROX Sim", w: 60, r: 30, n: 8 },
+        ];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Minuteur Intervalles HIIT</div>
+
+            {/* Presets */}
+            {phase === "idle" && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {PRESETS.map(p => (
+                  <button key={p.name} onClick={() => { setWorkSec(p.w); setRestSec(p.r); setRounds(p.n); }}
+                    style={{ flex: 1, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "5px 2px", color: "var(--fg)", fontSize: 9, cursor: "pointer", fontWeight: 600 }}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Config */}
+            {phase === "idle" && (
+              <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center" }}>
+                {[["Effort (s)", workSec, setWorkSec, 10, 120, "#FF453A"], ["Repos (s)", restSec, setRestSec, 5, 60, "#30D158"], ["Rounds", rounds, setRounds, 2, 20, "#FF9F0A"]].map(([label, val, setter, min, max, col]) => (
+                  <div key={label} style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 4 }}>{label}</div>
+                    <input type="number" value={val} min={min} max={max} onChange={e => setter(parseInt(e.target.value) || min)}
+                      style={{ width: "100%", background: "var(--bg3)", border: `1px solid ${col}50`, borderRadius: 8, padding: "6px 4px", color: col, fontSize: 16, fontWeight: 800, textAlign: "center" }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ring timer */}
+            {phase !== "idle" && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r={R} fill="none" stroke="#2C2C2E" strokeWidth="8" />
+                  <circle cx="60" cy="60" r={R} fill="none" stroke={phaseBg} strokeWidth="8"
+                    strokeDasharray={circum} strokeDashoffset={circum * (1 - progress)}
+                    strokeLinecap="round" transform="rotate(-90 60 60)" style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+                  <text x="60" y="55" textAnchor="middle" fill="var(--fg)" fontSize="28" fontWeight="900">{timeLeft}</text>
+                  <text x="60" y="72" textAnchor="middle" fill={phaseBg} fontSize="10" fontWeight="700">{phaseLabel}</text>
+                </svg>
+                {phase !== "done" && <div style={{ fontSize: 12, color: "#8E8E93", marginTop: 6 }}>Round {currentRound} / {rounds}</div>}
+              </div>
+            )}
+
+            {/* Controls */}
+            <div style={{ display: "flex", gap: 8 }}>
+              {phase === "idle" && <button onClick={start} style={{ flex: 1, background: "#FF453A", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>▶ START</button>}
+              {phase !== "idle" && phase !== "done" && (
+                <>
+                  <button onClick={() => setIsRunning(v => !v)} style={{ flex: 1, background: isRunning ? "#FF9F0A" : "#30D158", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>{isRunning ? "⏸ PAUSE" : "▶ REPRISE"}</button>
+                  <button onClick={stop} style={{ background: "#2C2C2E", color: "#FF453A", border: "none", borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>■</button>
+                </>
+              )}
+              {phase === "done" && <button onClick={stop} style={{ flex: 1, background: "var(--yellow)", color: "#000", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>🏆 Recommencer</button>}
+            </div>
+
+            {phase === "idle" && <div style={{ marginTop: 8, fontSize: 10, color: "#636366", textAlign: "center" }}>Durée totale : {totalMin}:{String(total % 60).padStart(2, "0")} · {rounds} rounds</div>}
+          </div>
+        );
+      })()}
+
       {/* ── MUSIC BPM GUIDE ── */}
       {(() => {
         const STATION_BPM = [
