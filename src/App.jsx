@@ -13173,9 +13173,98 @@ JSON:
               );
             })()}
 
+            {/* ── PERSONAL RECORDS BOARD ── */}
+            {(() => {
+              const PR_DEFS = [
+                { key:"run_1km",    label:"Run 1km",        unit:"min:sec", icon:"🏃", lowerIsBetter:true  },
+                { key:"skierg",     label:"SkiErg 1000m",   unit:"min:sec", icon:"⛷️", lowerIsBetter:true  },
+                { key:"row",        label:"Rowing 500m",    unit:"min:sec", icon:"🚣", lowerIsBetter:true  },
+                { key:"wall_ball",  label:"Wall Ball (rep)", unit:"reps",   icon:"🏀", lowerIsBetter:false },
+                { key:"burpee",     label:"Burpee BJ (rep)", unit:"reps",  icon:"💥", lowerIsBetter:false },
+                { key:"sled_push",  label:"Sled Push (kg)", unit:"kg",     icon:"🛷", lowerIsBetter:false },
+                { key:"sandbag",    label:"Sandbag Carry",  unit:"kg",     icon:"💼", lowerIsBetter:false },
+                { key:"farmers",    label:"Farmer Carry",   unit:"kg/main",icon:"🏋️", lowerIsBetter:false },
+              ];
+
+              const KEY = `fitrace_prs_${profile.name}`;
+              const [prs, setPrs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+              const [editKey, setEditKey] = React.useState(null);
+              const [editVal, setEditVal] = React.useState("");
+
+              const savePR = (prKey) => {
+                const val = parseFloat(editVal);
+                if (isNaN(val) || val <= 0) return;
+                const def = PR_DEFS.find(d=>d.key===prKey);
+                const existing = prs[prKey];
+                const isBetter = !existing || (def.lowerIsBetter ? val < existing.val : val > existing.val);
+                const next = { ...prs, [prKey]: isBetter ? { val, date: new Date().toISOString().slice(0,10) } : existing };
+                if (!isBetter && existing) {
+                  // Still log attempt even if not PR
+                }
+                setPrs(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setEditKey(null);
+                setEditVal("");
+              };
+
+              const fmtVal = (def, val) => {
+                if (!val) return "–";
+                if (def.unit === "min:sec") {
+                  const m = Math.floor(val); const s = Math.round((val - m) * 60);
+                  return `${m}:${String(s).padStart(2,"0")}`;
+                }
+                return `${val} ${def.unit}`;
+              };
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>🏆 Records Personnels</div>
+
+                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    {PR_DEFS.map(def => {
+                      const pr = prs[def.key];
+                      const isEditing = editKey === def.key;
+                      return (
+                        <div key={def.key} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:10,padding:"8px 10px" }}>
+                          <span style={{ fontSize:16 }}>{def.icon}</span>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:11,color:"#8E8E93",fontWeight:600 }}>{def.label}</div>
+                            {pr && <div style={{ fontSize:8,color:"#636366" }}>{pr.date}</div>}
+                          </div>
+                          {isEditing ? (
+                            <div style={{ display:"flex",gap:4,alignItems:"center" }}>
+                              <input type="number" step="0.1" value={editVal} onChange={e=>setEditVal(e.target.value)}
+                                autoFocus
+                                style={{ width:64,background:"#2C2C2E",border:"none",borderRadius:6,padding:"4px 6px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                              <button onClick={()=>savePR(def.key)}
+                                style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,fontWeight:800,cursor:"pointer" }}>✓</button>
+                              <button onClick={()=>setEditKey(null)}
+                                style={{ background:"#3A3A3C",color:"#8E8E93",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,cursor:"pointer" }}>✕</button>
+                            </div>
+                          ) : (
+                            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                              <div style={{ textAlign:"right" }}>
+                                <div style={{ fontSize:13,fontWeight:900,color:pr?"var(--yellow)":"#3A3A3C" }}>{pr ? fmtVal(def, pr.val) : "–"}</div>
+                              </div>
+                              <button onClick={()=>{ setEditKey(def.key); setEditVal(pr?String(pr.val):""); }}
+                                style={{ background:"#3A3A3C",color:"#8E8E93",border:"none",borderRadius:6,padding:"4px 8px",fontSize:10,cursor:"pointer" }}>✏️</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ fontSize:9,color:"#636366",textAlign:"center",marginTop:8 }}>
+                    {Object.keys(prs).length}/{PR_DEFS.length} records enregistrés
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MONTHLY STATS SUMMARY ── */}
             {(() => {
-              const sessions = profile.sessions || [];
+const sessions = profile.sessions || [];
               if (sessions.length < 2) return null;
 
               const now = new Date();
