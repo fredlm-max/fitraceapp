@@ -10859,6 +10859,110 @@ JSON:
               );
             })()}
 
+            {/* ── MONTHLY TRAINING CALENDAR ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const now = new Date();
+              const [viewYear, setViewYear] = React.useState(now.getFullYear());
+              const [viewMonth, setViewMonth] = React.useState(now.getMonth());
+
+              const monthStart = new Date(viewYear, viewMonth, 1);
+              const monthEnd = new Date(viewYear, viewMonth + 1, 0);
+              const firstDow = (monthStart.getDay() + 6) % 7; // Mon=0
+              const daysInMonth = monthEnd.getDate();
+
+              // Build session map for current month
+              const sessionMap = {};
+              sessions.forEach(s => {
+                const d = new Date(s.date);
+                if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
+                  const day = d.getDate();
+                  if (!sessionMap[day]) sessionMap[day] = [];
+                  sessionMap[day].push(s);
+                }
+              });
+
+              const TYPE_COLORS = {
+                "Course": "#FF9F0A", "HYROX Complet": "#C9A840", "Force": "#FF453A",
+                "Vélo": "#007AFF", "Natation": "#5AC8FA", "Mobilité": "#30D158",
+                "Récupération": "#636366",
+              };
+              const getColor = (sessions) => {
+                if (!sessions || sessions.length === 0) return null;
+                return TYPE_COLORS[sessions[0].type] || "#C9A840";
+              };
+              const getIntensity = (sessions) => {
+                if (!sessions) return 0;
+                const maxRpe = Math.max(...sessions.map(s => s.rpe || 5));
+                return maxRpe / 10;
+              };
+
+              const DAYS_LABELS = ["L", "M", "M", "J", "V", "S", "D"];
+              const MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+              const totalSessions = Object.values(sessionMap).reduce((s, arr) => s + arr.length, 0);
+              const activeDays = Object.keys(sessionMap).length;
+
+              const cells = [];
+              for (let i = 0; i < firstDow; i++) cells.push(null);
+              for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }}
+                      style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "4px 10px", color: "var(--fg)", cursor: "pointer", fontSize: 16 }}>‹</button>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--fg)" }}>{MONTHS[viewMonth]} {viewYear}</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>{totalSessions} séance{totalSessions > 1 ? "s" : ""} · {activeDays} jour{activeDays > 1 ? "s" : ""} actif{activeDays > 1 ? "s" : ""}</div>
+                    </div>
+                    <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }}
+                      style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "4px 10px", color: "var(--fg)", cursor: "pointer", fontSize: 16 }}>›</button>
+                  </div>
+
+                  {/* Day labels */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 3 }}>
+                    {DAYS_LABELS.map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 9, color: "#636366", fontWeight: 700 }}>{d}</div>)}
+                  </div>
+
+                  {/* Calendar grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+                    {cells.map((day, i) => {
+                      if (!day) return <div key={`e-${i}`} />;
+                      const daySessions = sessionMap[day];
+                      const color = getColor(daySessions);
+                      const intensity = getIntensity(daySessions);
+                      const isToday = viewYear === now.getFullYear() && viewMonth === now.getMonth() && day === now.getDate();
+                      return (
+                        <div key={day} style={{
+                          aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
+                          background: color ? `${color}${Math.round(20 + intensity * 35).toString(16).padStart(2, "0")}` : "var(--bg3)",
+                          border: isToday ? "1px solid var(--yellow)" : "none",
+                          position: "relative",
+                        }}>
+                          <span style={{ fontSize: 10, fontWeight: isToday ? 800 : 400, color: color || "#8E8E93" }}>{day}</span>
+                          {daySessions && daySessions.length > 1 && (
+                            <div style={{ position: "absolute", top: 2, right: 3, fontSize: 7, color: color, fontWeight: 800 }}>{daySessions.length}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    {Object.entries(TYPE_COLORS).map(([type, color]) => (
+                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                        <span style={{ fontSize: 8, color: "#636366" }}>{type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── BODY COMPOSITION TRACKER ── */}
             {(() => {
               const bcKey = `fitrace_body_${profile.name}`;
