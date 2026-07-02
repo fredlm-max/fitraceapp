@@ -12800,6 +12800,79 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         );
       })()}
 
+      {/* ── BODY COMPOSITION ── */}
+      {(() => {
+        const poids = parseFloat(profile.poids);
+        const taille = parseFloat(profile.taille);
+        const age = parseInt(profile.age) || 30;
+        const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
+        if (!poids || !taille) return null;
+
+        const bmi = poids / Math.pow(taille / 100, 2);
+        const bmiLabel = bmi < 18.5 ? { l: "Insuffisance", c: "#38bdf8" }
+          : bmi < 25 ? { l: "Normal", c: "#30D158" }
+          : bmi < 30 ? { l: "Surpoids", c: "#FF9F0A" }
+          : { l: "Obésité", c: "#FF453A" };
+
+        // US Navy body fat estimate (needs waist — use BMI-based approximation if unavailable)
+        // Deurenberg formula: %BF = 1.20*BMI + 0.23*age - 10.8*sex - 5.4 (sex: male=1)
+        const bfPct = Math.max(3, Math.round(1.20 * bmi + 0.23 * age - (isMale ? 10.8 : 0) - 5.4));
+        const leanMass = Math.round(poids * (1 - bfPct / 100) * 10) / 10;
+        const fatMass = Math.round(poids * bfPct / 100 * 10) / 10;
+        const bfOptLow = isMale ? 10 : 18;
+        const bfOptHigh = isMale ? 20 : 28;
+        const bfColor = bfPct <= bfOptHigh ? "#30D158" : bfPct <= bfOptHigh + 5 ? "#FF9F0A" : "#FF453A";
+
+        // Ideal race weight (BMI 22 midpoint)
+        const idealW = Math.round(22 * Math.pow(taille / 100, 2));
+        const deltaW = Math.round((poids - idealW) * 10) / 10;
+
+        const bmiPct = Math.min(100, Math.max(0, ((bmi - 15) / (40 - 15)) * 100));
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+            <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1, marginBottom: 14 }}>⚖️ COMPOSITION CORPORELLE</div>
+            {/* BMI bar */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: "#8E8E93" }}>IMC</div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                  <span className="bebas" style={{ fontSize: 22, color: bmiLabel.c, lineHeight: 1 }}>{bmi.toFixed(1)}</span>
+                  <span style={{ fontSize: 11, color: bmiLabel.c }}>{bmiLabel.l}</span>
+                </div>
+              </div>
+              <div style={{ position: "relative", height: 8, borderRadius: 99, overflow: "hidden", background: "linear-gradient(90deg, #38bdf8 0%, #30D158 25%, #FF9F0A 60%, #FF453A 100%)" }}>
+                <div style={{ position: "absolute", top: -2, left: `${bmiPct}%`, width: 12, height: 12, borderRadius: "50%", background: "#fff", border: `2px solid ${bmiLabel.c}`, transform: "translateX(-50%)", boxShadow: `0 0 6px ${bmiLabel.c}` }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                {["<18.5", "18.5", "25", "30", "40+"].map(l => <div key={l} style={{ fontSize: 9, color: "#636366" }}>{l}</div>)}
+              </div>
+            </div>
+            {/* Stats grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+              {[
+                { label: "Masse grasse", value: `${bfPct}%`, sub: `${fatMass} kg`, color: bfColor },
+                { label: "Masse maigre", value: `${leanMass} kg`, sub: "muscles + os", color: "#38bdf8" },
+                { label: "Poids course", value: `${idealW} kg`, sub: deltaW === 0 ? "✅ idéal" : deltaW > 0 ? `−${deltaW} kg` : `+${Math.abs(deltaW)} kg`, color: deltaW === 0 ? "#30D158" : "var(--yellow)" },
+              ].map(s => (
+                <div key={s.label} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 4 }}>{s.label}</div>
+                  <div className="bebas" style={{ fontSize: 18, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+            {/* Body fat range indicator */}
+            <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>% Masse grasse · Plage optimale athlète: {bfOptLow}–{bfOptHigh}%</div>
+            <div style={{ position: "relative", height: 6, borderRadius: 99, background: "rgba(255,255,255,0.06)" }}>
+              <div style={{ position: "absolute", left: `${bfOptLow}%`, width: `${bfOptHigh - bfOptLow}%`, height: "100%", borderRadius: 99, background: "rgba(48,209,88,0.3)", border: "1px solid rgba(48,209,88,0.5)" }} />
+              <div style={{ position: "absolute", top: -3, left: `${Math.min(95, bfPct)}%`, width: 12, height: 12, borderRadius: "50%", background: bfColor, transform: "translateX(-50%)", boxShadow: `0 0 6px ${bfColor}` }} />
+            </div>
+            <div style={{ fontSize: 10, color: "#636366", marginTop: 4 }}>Estimation Deurenberg — pour précision exacte, utilise une impédancemètre</div>
+          </div>
+        );
+      })()}
+
       {/* ── SMART GOAL TRACKER ── */}
       {(() => {
         const goalsKey = `fitrace_goals_${profile.name}`;
