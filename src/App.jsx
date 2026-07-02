@@ -17605,6 +17605,103 @@ JSON: {
             );
           })()}
 
+          {/* ── PHASE NUTRITION TIPS ── */}
+          {(() => {
+            // Detect training phase from profile and weeks to race
+            const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+            const daysLeft = raceDate ? Math.ceil((raceDate - new Date()) / 86400000) : null;
+            const sessions = profile.sessions || [];
+            const recentSessions = sessions.filter(s => s.date && (Date.now() - new Date(s.date)) < 7 * 86400000);
+            const avgRpe = recentSessions.length ? recentSessions.reduce((a, s) => a + (s.difficulte || 5), 0) / recentSessions.length : 5;
+
+            let phase = "base";
+            if (daysLeft !== null) {
+              if (daysLeft <= 7) phase = "race";
+              else if (daysLeft <= 21) phase = "taper";
+              else if (avgRpe >= 7 || recentSessions.length >= 4) phase = "build";
+            } else {
+              if (avgRpe >= 7 || recentSessions.length >= 4) phase = "build";
+            }
+
+            const poids = parseFloat(profile.poids) || 75;
+            const PHASES = {
+              base: {
+                label: "Phase de Base",
+                icon: "🌱",
+                color: "#30D158",
+                desc: "Volume modéré, construction de la base aérobie. Priorité à la qualité des nutriments.",
+                tips: [
+                  { t: "Protéines", v: `${Math.round(poids * 1.6)}–${Math.round(poids * 1.8)}g/j`, desc: "Maintenance musculaire — pas besoin d'augmenter encore" },
+                  { t: "Glucides", v: `${Math.round(poids * 4)}–${Math.round(poids * 5)}g/j`, desc: "Énergie stable pour les séances d'endurance" },
+                  { t: "Graisses", v: `${Math.round(poids * 1.0)}–${Math.round(poids * 1.2)}g/j`, desc: "Oméga-3 prioritaires — anti-inflammatoire et récupération" },
+                  { t: "Focus", v: "Micronutriments", desc: "Légumes variés, fer (viande rouge 2×/sem), vitamine D" },
+                ],
+              },
+              build: {
+                label: "Phase de Construction",
+                icon: "🔨",
+                color: "#FF9F0A",
+                desc: "Volume et intensité élevés. Besoins caloriques augmentés pour supporter la charge.",
+                tips: [
+                  { t: "Protéines", v: `${Math.round(poids * 2.0)}–${Math.round(poids * 2.2)}g/j`, desc: "Synthèse musculaire maximale — répartis sur 4–5 repas" },
+                  { t: "Glucides", v: `${Math.round(poids * 6)}–${Math.round(poids * 7)}g/j`, desc: "Réserves glycogène complètes — riz, pâtes, pain complet" },
+                  { t: "Graisses", v: `${Math.round(poids * 1.2)}g/j`, desc: "Maintiens les graisses malgré le volume élevé" },
+                  { t: "Focus", v: "Timing nutritionnel", desc: "Repas pré/post séance dans les 30–90 min autour de l'effort" },
+                ],
+              },
+              taper: {
+                label: "Affûtage (J-21 à J-7)",
+                icon: "📉",
+                color: "#38bdf8",
+                desc: "Volume réduit mais qualité maintenue. Optimise les réserves pour la course.",
+                tips: [
+                  { t: "Protéines", v: `${Math.round(poids * 2.0)}g/j`, desc: "Maintien musculaire malgré la baisse de volume" },
+                  { t: "Glucides", v: `${Math.round(poids * 5)}–${Math.round(poids * 6)}g/j`, desc: "Légère augmentation pour saturer le glycogène" },
+                  { t: "Sodium", v: "Normal → légèrement augmenté", desc: "Prépare la rétention hydrique pour la course" },
+                  { t: "Focus", v: "Familiarisation", desc: "Mange exactement ce que tu mangeras le jour J — zéro nouveau aliment" },
+                ],
+              },
+              race: {
+                label: "Semaine de course (J-7 à J-0)",
+                icon: "🏁",
+                color: "#C9A840",
+                desc: "Optimisation finale. Chaque repas compte pour ta performance.",
+                tips: [
+                  { t: "J-3 à J-1", v: "Charge glucidique", desc: `${Math.round(poids * 8)}–${Math.round(poids * 10)}g glucides/j — pâtes, riz blanc, pain, jus` },
+                  { t: "J-1 soir", v: "Repas test connu", desc: "Pâtes + sauce simple + pain blanc. Rien de nouveau, rien de gras" },
+                  { t: "Matin course", v: `${Math.round(poids * 0.8)}g glucides`, desc: "3–4h avant : riz/flocons + banane + café. Hydratation 500ml" },
+                  { t: "Focus", v: "Zéro expérimentation", desc: "Aucun gel, boisson ou aliment nouveau le jour J" },
+                ],
+              },
+            };
+            const ph = PHASES[phase];
+            return (
+              <div style={{ background: ph.color + "10", border: `1px solid ${ph.color}30`, borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🥗 NUTRITION PAR PHASE</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      <span>{ph.icon}</span>
+                      <div style={{ fontSize: 12, color: ph.color, fontWeight: 700 }}>{ph.label}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "#aaa", marginBottom: 12, lineHeight: 1.5 }}>{ph.desc}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {ph.tips.map((tip, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, padding: "9px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 10, borderLeft: `3px solid ${ph.color}` }}>
+                      <div style={{ minWidth: 90 }}>
+                        <div style={{ fontSize: 10, color: "#8E8E93" }}>{tip.t}</div>
+                        <div style={{ fontSize: 12, color: ph.color, fontWeight: 700 }}>{tip.v}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", flex: 1, lineHeight: 1.5 }}>{tip.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── MEAL PLAN TEMPLATES ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 75;
