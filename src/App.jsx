@@ -18995,6 +18995,102 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RACE STRATEGY CARDS ── */}
+      {(() => {
+        const [selStrat, setSelStrat] = React.useState("balanced");
+        const STRATEGIES = {
+          conservative: {
+            label: "Conservateur",
+            icon: "🛡️",
+            color: "#38bdf8",
+            subtitle: "Négatif split — finir fort",
+            desc: "Démarre 10% sous ton rythme cible. Économise de l'énergie sur les stations 1–4. Tu accélères sur la 2e moitié quand les autres ralentissent.",
+            impact: "+3 à +5 min vs cible (1re moitié) / −5 à −8 min (2e moitié)",
+            ideal: "Première HYROX ou distance > 90 min objectif",
+            stations: [
+              { s: "SkiErg",     tip: "60–70% — résiste à l'adrénaline du départ" },
+              { s: "Sled Push",  tip: "Tempo confortable — tu en veux encore" },
+              { s: "Sled Pull",  tip: "Même allure que le push" },
+              { s: "Burpee BJ",  tip: "Régulier, pas d'accélération" },
+              { s: "Rowing",     tip: "Cible SPM ≤ 26 — rythme maîtrisé" },
+              { s: "Farmers",    tip: "Marche rapide sans s'arrêter" },
+              { s: "Sandbag",    tip: "Foulées larges, rythme stable" },
+              { s: "Wall Balls", tip: "Séries de 15–20 sans s'arrêter" },
+            ],
+          },
+          balanced: {
+            label: "Équilibré",
+            icon: "⚖️",
+            color: "#C9A840",
+            subtitle: "Even split — régularité",
+            desc: "Même effort du début à la fin. La stratégie la plus efficace selon la recherche en performance. Nécessite une excellente connaissance de ton niveau.",
+            impact: "Temps réel ≈ temps cible ± 3%",
+            ideal: "Athlète expérimenté avec plusieurs HYROX au compteur",
+            stations: [
+              { s: "SkiErg",     tip: "80% — régulier et contrôlé" },
+              { s: "Sled Push",  tip: "Intensité cible, maintiens la forme" },
+              { s: "Sled Pull",  tip: "Même effort, respirations profondes" },
+              { s: "Burpee BJ",  tip: "Cadence constante du 1er au dernier" },
+              { s: "Rowing",     tip: "SPM 28–30, maintiens la puissance" },
+              { s: "Farmers",    tip: "Grip fort, pas de pause non planifiée" },
+              { s: "Sandbag",    tip: "Foulées régulières sur tout le parcours" },
+              { s: "Wall Balls", tip: "Séries de 10–15, pauses courtes prévues" },
+            ],
+          },
+          aggressive: {
+            label: "Agressif",
+            icon: "🔥",
+            color: "#FF453A",
+            subtitle: "Positif split — tout donner",
+            desc: "Départ fort pour un temps aux stations optimal. Risque de mur sur la 2e moitié. À réserver aux athlètes très bien entraînés qui cherchent un PR.",
+            impact: "−5 à −8 min (1re moitié) / risque +10 min (2e moitié si mal géré)",
+            ideal: "PR attempt — tu connais parfaitement tes limites",
+            stations: [
+              { s: "SkiErg",     tip: "90%+ — donne tout dès le départ" },
+              { s: "Sled Push",  tip: "Sprints courts et explosifs" },
+              { s: "Sled Pull",  tip: "Puissance maximale" },
+              { s: "Burpee BJ",  tip: "Rythme de compétition — pas de retenue" },
+              { s: "Rowing",     tip: "SPM 30–33, coups puissants" },
+              { s: "Farmers",    tip: "Course rapide, grip de fer" },
+              { s: "Sandbag",    tip: "Attaque chaque foulée" },
+              { s: "Wall Balls", tip: "Séries de 20–25, peu de pauses" },
+            ],
+          },
+        };
+        const s = STRATEGIES[selStrat];
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+            <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>🎯 STRATÉGIE DE COURSE</div>
+            {/* Selector */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {Object.entries(STRATEGIES).map(([k, v]) => (
+                <button key={k} onClick={() => setSelStrat(k)}
+                  style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: selStrat === k ? v.color + "22" : "rgba(255,255,255,0.05)", border: selStrat === k ? `1.5px solid ${v.color}` : "1px solid transparent", color: selStrat === k ? v.color : "#8E8E93", cursor: "pointer", textAlign: "center" }}>
+                  <div style={{ fontSize: 18 }}>{v.icon}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, marginTop: 3 }}>{v.label}</div>
+                </button>
+              ))}
+            </div>
+            {/* Description */}
+            <div style={{ padding: "12px 14px", background: s.color + "12", borderRadius: 12, marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: s.color, fontWeight: 700, marginBottom: 6 }}>{s.subtitle}</div>
+              <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6, marginBottom: 8 }}>{s.desc}</div>
+              <div style={{ fontSize: 11, color: "#8E8E93" }}>📊 Impact : <span style={{ color: "var(--white)" }}>{s.impact}</span></div>
+              <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 4 }}>✅ Idéal si : <span style={{ color: "var(--white)" }}>{s.ideal}</span></div>
+            </div>
+            {/* Station tips */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {s.stations.map((st, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, padding: "7px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, color: s.color, fontWeight: 700, minWidth: 80 }}>{st.s}</div>
+                  <div style={{ fontSize: 11, color: "#8E8E93" }}>→ {st.tip}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── PERFORMANCE BENCHMARK ── */}
       {(() => {
         const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
