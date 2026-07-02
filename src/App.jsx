@@ -8667,6 +8667,101 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING LOAD DISTRIBUTION ── */}
+            {(profile.sessions||[]).length >= 4 && (() => {
+              const sessions = profile.sessions || [];
+              const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
+              const recent = sessions.filter(s => s.date && new Date(s.date) >= cutoff);
+              if (recent.length < 4) return null;
+
+              const TYPE_CONF = {
+                running_zone2:     { label: "Zone 2",   color: "#30D158", icon: "🏃" },
+                running_qualite:   { label: "Qualité",  color: "#FF9F0A", icon: "⚡" },
+                force_stations:    { label: "Force",    color: "#C9A840", icon: "🏋️" },
+                hybride_compromis: { label: "Hybride",  color: "#BF5AF2", icon: "🔀" },
+                mobilite:          { label: "Mobilité", color: "#38bdf8", icon: "🧘" },
+                perso:             { label: "Perso",    color: "#8E8E93", icon: "✏️" },
+                coach:             { label: "Coach",    color: "#C9A840", icon: "📋" },
+              };
+              const counts = {};
+              recent.forEach(s => {
+                const k = s.type || "perso";
+                counts[k] = (counts[k] || 0) + 1;
+              });
+              const total = recent.length;
+              const slices = Object.entries(counts)
+                .map(([k, v]) => ({ ...TYPE_CONF[k] || { label: k, color: "#444", icon: "•" }, count: v, pct: v / total }))
+                .sort((a, b) => b.count - a.count);
+
+              // SVG donut
+              const R = 48, CX = 60, CY = 60, strokeW = 18;
+              const circ = 2 * Math.PI * R;
+              let cumPct = 0;
+              const donutSlices = slices.map(s => {
+                const offset = circ * (1 - cumPct);
+                const dashLen = circ * s.pct;
+                cumPct += s.pct;
+                return { ...s, offset, dashLen };
+              });
+
+              // 80/20 check
+              const aerobicPct = Math.round(((counts.running_zone2 || 0) / total) * 100);
+              const ratio8020ok = aerobicPct >= 65;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🥧 RÉPARTITION CHARGE</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>28 derniers jours · {total} séances</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: ratio8020ok ? "#30D158" : "#FF9F0A" }}>{ratio8020ok ? "✅" : "⚠️"} Règle 80/20</div>
+                      <div style={{ fontSize: 9, color: "#636366" }}>Zone2: {aerobicPct}% / cible: 70%+</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    {/* Donut */}
+                    <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+                      <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={strokeW} />
+                      {donutSlices.map((s, i) => (
+                        <circle key={i} cx={CX} cy={CY} r={R} fill="none"
+                          stroke={s.color} strokeWidth={strokeW}
+                          strokeDasharray={`${s.dashLen} ${circ - s.dashLen}`}
+                          strokeDashoffset={s.offset}
+                          transform={`rotate(-90 ${CX} ${CY})`}
+                        />
+                      ))}
+                      <text x={CX} y={CY - 6} textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="18" fill="var(--white)">{total}</text>
+                      <text x={CX} y={CY + 10} textAnchor="middle" fontSize="9" fill="#8E8E93">séances</text>
+                    </svg>
+                    {/* Legend */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
+                      {slices.map((s, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                              <div style={{ fontSize: 11, color: "var(--white)" }}>{s.icon} {s.label}</div>
+                              <div style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.count} <span style={{ color: "#636366", fontWeight: 400 }}>({Math.round(s.pct*100)}%)</span></div>
+                            </div>
+                            <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 3 }}>
+                              <div style={{ width: `${Math.round(s.pct*100)}%`, height: "100%", background: s.color, borderRadius: 99 }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {!ratio8020ok && (
+                    <div style={{ marginTop: 12, padding: "8px 10px", background: "rgba(255,159,10,0.1)", borderRadius: 8, fontSize: 11, color: "#FF9F0A" }}>
+                      💡 Augmente le volume en Zone 2 — la recherche recommande 70–80% des séances en endurance fondamentale pour progresser en HYROX
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── MONTHLY STATS SUMMARY ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
