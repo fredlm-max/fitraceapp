@@ -10290,6 +10290,67 @@ JSON:
               );
             })()}
 
+            {/* ── WELLNESS HISTORY CHART ── */}
+            {(() => {
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const wellLog = (() => { try { return JSON.parse(localStorage.getItem(wellKey) || "[]"); } catch { return []; } })();
+              if (wellLog.length < 3) return null;
+
+              const last14 = [];
+              for (let i = 13; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().slice(0, 10);
+                const entry = wellLog.find(e => e.date === dateStr);
+                last14.push({ dateStr, entry, dayLabel: d.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 2) });
+              }
+
+              const maxScore = 5;
+              const getScore = (e) => e ? Math.round(((e.mood || 3) + (6 - (e.stress || 3)) + (e.energy || 3)) / 3 * 10) / 10 : null;
+
+              const scores = last14.map(d => getScore(d.entry));
+              const validScores = scores.filter(s => s !== null);
+              const avg = validScores.length > 0 ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1) : null;
+
+              const W = 280, H = 60;
+              const points = last14.map((d, i) => {
+                const s = getScore(d.entry);
+                const x = 10 + (i / 13) * (W - 20);
+                const y = s !== null ? H - 5 - ((s - 1) / 4) * (H - 15) : null;
+                return { x, y, s };
+              });
+
+              const pathD = points.reduce((d, p, i) => {
+                if (p.y === null) return d;
+                const prev = points.slice(0, i).reverse().find(pp => pp.y !== null);
+                if (!prev) return `M${p.x},${p.y}`;
+                return d + ` L${p.x},${p.y}`;
+              }, "");
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Historique Bien-être (14j)</div>
+                    {avg && <div style={{ fontSize: 12, fontWeight: 800, color: parseFloat(avg) >= 3.5 ? "#30D158" : "#FF9F0A" }}>Moy: {avg}/5</div>}
+                  </div>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H, overflow: "visible" }}>
+                    {[1, 2, 3, 4, 5].map(v => {
+                      const y = H - 5 - ((v - 1) / 4) * (H - 15);
+                      return <line key={v} x1={0} y1={y} x2={W} y2={y} stroke="#2C2C2E" strokeWidth={0.5} />;
+                    })}
+                    {pathD && <path d={pathD} fill="none" stroke="#C9A840" strokeWidth={1.5} strokeLinejoin="round" />}
+                    {points.map((p, i) => p.y !== null && (
+                      <circle key={i} cx={p.x} cy={p.y} r={3} fill={p.s >= 3.5 ? "#30D158" : p.s >= 2.5 ? "#FF9F0A" : "#FF453A"} />
+                    ))}
+                  </svg>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                    {last14.filter((_, i) => i % 2 === 0).map(d => (
+                      <span key={d.dateStr} style={{ fontSize: 8, color: "#636366" }}>{d.dayLabel}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── BENCHMARK TEST TRACKER ── */}
             {(() => {
               const benchKey = `fitrace_benchmarks_${profile.name}`;
@@ -22745,6 +22806,53 @@ JSON: {
                     )}
                   </div>
                 ))}
+              </div>
+            );
+          })()}
+
+          {/* ── PROTEIN PER MEAL TRACKER ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 70;
+            const dailyProtein = Math.round(poids * 1.8);
+            const meals = ["Petit-déjeuner", "Collation matin", "Déjeuner", "Collation après-midi", "Dîner", "Post-entraînement"];
+            const proteinKey = `fitrace_protein_${profile.name}_${new Date().toISOString().slice(0, 10)}`;
+            const [mealProteins, setMealProteins] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(proteinKey) || "{}"); } catch { return {}; }
+            });
+
+            const update = (meal, val) => {
+              const updated = { ...mealProteins, [meal]: Math.max(0, parseInt(val) || 0) };
+              setMealProteins(updated);
+              localStorage.setItem(proteinKey, JSON.stringify(updated));
+            };
+
+            const total = meals.reduce((s, m) => s + (mealProteins[m] || 0), 0);
+            const pct = Math.min(100, Math.round(total / dailyProtein * 100));
+            const barColor = pct >= 90 ? "#30D158" : pct >= 60 ? "#FF9F0A" : "#FF453A";
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Protéines par Repas</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93" }}>Objectif: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{dailyProtein}g</span> ({poids}kg × 1.8)</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: barColor }}>{total}g</div>
+                </div>
+                <div style={{ height: 6, background: "#2C2C2E", borderRadius: 3, marginBottom: 12 }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 3, transition: "width 0.3s" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {meals.map(meal => (
+                    <div key={meal} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2C2C2E" }}>
+                      <div style={{ fontSize: 11, color: "var(--fg)" }}>{meal}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button onClick={() => update(meal, (mealProteins[meal] || 0) - 5)} style={{ background: "#3A3A3C", border: "none", color: "var(--fg)", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 14 }}>−</button>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--yellow)", minWidth: 30, textAlign: "center" }}>{mealProteins[meal] || 0}g</span>
+                        <button onClick={() => update(meal, (mealProteins[meal] || 0) + 5)} style={{ background: "#3A3A3C", border: "none", color: "var(--fg)", borderRadius: 6, width: 24, height: 24, cursor: "pointer", fontSize: 14 }}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {pct >= 100 && <div style={{ marginTop: 8, fontSize: 10, color: "#30D158", textAlign: "center", fontWeight: 700 }}>✓ Objectif protéines atteint !</div>}
               </div>
             );
           })()}
