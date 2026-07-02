@@ -5433,6 +5433,78 @@ JSON:
               );
             })()}
 
+            {/* ── FATIGUE STATUS BANNER ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              // ATL (7j) / CTL (42j) / TSB
+              const kATL = 1 - Math.exp(-1/7), kCTL = 1 - Math.exp(-1/42);
+              let atl = 0, ctl = 0;
+              const sorted = [...sessions].sort((a,b) => new Date(a.date)-new Date(b.date));
+              sorted.forEach(s => {
+                const trimp = (s.duree||0) * (s.rpe||5) / 10;
+                atl = atl + kATL * (trimp - atl);
+                ctl = ctl + kCTL * (trimp - ctl);
+              });
+              const tsb = Math.round(ctl - atl);
+              const acr = ctl > 0 ? Math.round((atl/ctl)*100)/100 : 0;
+
+              // Wellness today
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const wellLog = (() => { try { return JSON.parse(localStorage.getItem(wellKey)||"[]"); } catch { return []; } })();
+              const todayWell = wellLog.find(e => e.date === new Date().toISOString().slice(0,10));
+              const wellScore = todayWell ? ((todayWell.mood||3) + (6-(todayWell.stress||3)) + (todayWell.energy||3))/3 : null;
+
+              // Load last 48h
+              const now = Date.now();
+              const load48 = sessions.filter(s=>(now-new Date(s.date).getTime())<48*3600000).reduce((s,x)=>s+(x.duree||0)*(x.rpe||5)/10,0);
+
+              // Status
+              let status, color, icon, advice;
+              if (tsb > 10 && (wellScore === null || wellScore >= 3)) {
+                status = "EN FORME"; color = "#30D158"; icon = "🟢";
+                advice = "Forme optimale — séance intense aujourd'hui";
+              } else if (tsb < -20 || load48 > 120) {
+                status = "SURCHARGE"; color = "#FF453A"; icon = "🔴";
+                advice = "Charge trop élevée — repos ou mobilité obligatoire";
+              } else if (tsb < -5 || (wellScore !== null && wellScore < 2.5)) {
+                status = "FATIGUÉ"; color = "#FF9F0A"; icon = "🟡";
+                advice = "Fatigue détectée — séance modérée ou récup active";
+              } else {
+                status = "STABLE"; color = "#FF9F0A"; icon = "🟡";
+                advice = "Charge équilibrée — séance qualité possible";
+              }
+
+              if (sessions.length < 3) return null;
+
+              return (
+                <div style={{ background: `${color}12`, border: `2px solid ${color}40`, borderRadius: 16, padding: "12px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 28 }}>{icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ fontSize: 14, fontWeight: 900, color, letterSpacing: 0.5 }}>{status}</div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 8, color: "#636366" }}>TSB</div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: tsb > 5 ? "#30D158" : tsb < -10 ? "#FF453A" : "#FF9F0A" }}>{tsb > 0 ? "+" : ""}{tsb}</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 8, color: "#636366" }}>ACR</div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: acr >= 0.8 && acr <= 1.3 ? "#30D158" : "#FF453A" }}>{acr}</div>
+                        </div>
+                        {wellScore && (
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: 8, color: "#636366" }}>Bien-être</div>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: wellScore >= 3.5 ? "#30D158" : "#FF9F0A" }}>{wellScore.toFixed(1)}/5</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 3 }}>{advice}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ATHLETE STATS CARD ── */}
             {(() => {
               const vma = parseFloat(profile.vmaKmh) || null;
@@ -10555,6 +10627,204 @@ JSON:
               );
             })()}
 
+            {/* ── HYROX STATION SPLIT TRACKER ── */}
+            {(() => {
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const splitsKey = `fitrace_station_splits_${profile.name}`;
+              const [splits, setSplits] = React.useState(() => { try { return JSON.parse(localStorage.getItem(splitsKey) || "[]"); } catch { return []; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [formDate, setFormDate] = React.useState(new Date().toISOString().slice(0,10));
+              const [formVals, setFormVals] = React.useState({});
+
+              const STATIONS = [
+                { id: "run1", label: "Run 1", unit: "sec", ref: { H: 270, F: 300 }, icon: "🏃" },
+                { id: "skierg", label: "SkiErg 1000m", unit: "sec", ref: { H: 240, F: 280 }, icon: "⛷️" },
+                { id: "run2", label: "Run 2", unit: "sec", ref: { H: 275, F: 305 }, icon: "🏃" },
+                { id: "sled_push", label: "Sled Push 50m", unit: "sec", ref: { H: 150, F: 170 }, icon: "🛷" },
+                { id: "run3", label: "Run 3", unit: "sec", ref: { H: 280, F: 310 }, icon: "🏃" },
+                { id: "sled_pull", label: "Sled Pull 50m", unit: "sec", ref: { H: 160, F: 180 }, icon: "🛷" },
+                { id: "run4", label: "Run 4", unit: "sec", ref: { H: 285, F: 315 }, icon: "🏃" },
+                { id: "burpee", label: "Burpee BJ 80m", unit: "sec", ref: { H: 300, F: 330 }, icon: "💪" },
+                { id: "run5", label: "Run 5", unit: "sec", ref: { H: 290, F: 320 }, icon: "🏃" },
+                { id: "rowing", label: "Rowing 1000m", unit: "sec", ref: { H: 225, F: 255 }, icon: "🚣" },
+                { id: "run6", label: "Run 6", unit: "sec", ref: { H: 295, F: 325 }, icon: "🏃" },
+                { id: "farmers", label: "Farmer's Carry 200m", unit: "sec", ref: { H: 120, F: 140 }, icon: "🏋️" },
+                { id: "run7", label: "Run 7", unit: "sec", ref: { H: 300, F: 330 }, icon: "🏃" },
+                { id: "sandbag", label: "Sandbag Lunges 100m", unit: "sec", ref: { H: 240, F: 270 }, icon: "🎒" },
+                { id: "run8", label: "Run 8", unit: "sec", ref: { H: 305, F: 335 }, icon: "🏃" },
+                { id: "wallballs", label: "Wall Balls 100 reps", unit: "sec", ref: { H: 360, F: 420 }, icon: "🏀" },
+              ];
+
+              const fmt = (s) => s ? `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` : "--";
+              const parseMmSs = (str) => {
+                if (!str) return null;
+                const parts = str.split(":");
+                if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                return parseInt(str) || null;
+              };
+
+              const saveSession = () => {
+                const entry = { date: formDate, splits: {} };
+                STATIONS.forEach(s => { const v = parseMmSs(formVals[s.id]); if (v) entry.splits[s.id] = v; });
+                entry.total = Object.values(entry.splits).reduce((a,b) => a+b, 0);
+                const updated = [entry, ...splits].slice(0, 20);
+                setSplits(updated);
+                localStorage.setItem(splitsKey, JSON.stringify(updated));
+                setShowForm(false); setFormVals({});
+              };
+
+              const lastSession = splits[0];
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Splits par Station HYROX</div>
+                    <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>{showForm ? "Annuler" : "+ Saisir splits"}</button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ marginBottom: 12 }}>
+                      <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} style={{ background: "#1C1C1E", color: "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 10px", fontSize: 11, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+                      <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>Format mm:ss (ex: 4:30) ou secondes (ex: 270)</div>
+                      {STATIONS.map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 12 }}>{s.icon}</span>
+                          <span style={{ fontSize: 10, color: "#8E8E93", flex: 1 }}>{s.label}</span>
+                          <span style={{ fontSize: 9, color: "#636366", width: 40 }}>Réf: {fmt(s.ref[sex])}</span>
+                          <input
+                            type="text" placeholder="--:--" value={formVals[s.id] || ""}
+                            onChange={e => setFormVals(v => ({ ...v, [s.id]: e.target.value }))}
+                            style={{ width: 55, background: "#1C1C1E", color: "var(--yellow)", border: "1px solid #3A3A3C", borderRadius: 6, padding: "4px 6px", fontSize: 12, textAlign: "center" }}
+                          />
+                        </div>
+                      ))}
+                      <button onClick={saveSession} style={{ width: "100%", background: "#30D158", color: "#000", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 800, cursor: "pointer", marginTop: 8 }}>Sauvegarder ✓</button>
+                    </div>
+                  )}
+
+                  {lastSession && !showForm && (
+                    <div>
+                      <div style={{ fontSize: 10, color: "#636366", marginBottom: 8 }}>Dernière session : {lastSession.date} · Total {fmt(lastSession.total)}</div>
+                      {STATIONS.map(s => {
+                        const v = lastSession.splits[s.id];
+                        if (!v) return null;
+                        const ref = s.ref[sex];
+                        const diff = v - ref;
+                        const pct = Math.round((v / ref) * 100);
+                        const col = pct <= 100 ? "#30D158" : pct <= 115 ? "#FF9F0A" : "#FF453A";
+                        return (
+                          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                            <span style={{ fontSize: 11 }}>{s.icon}</span>
+                            <span style={{ fontSize: 10, flex: 1, color: "#8E8E93" }}>{s.label}</span>
+                            <span style={{ fontSize: 9, color: "#636366" }}>Réf {fmt(ref)}</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: col }}>{fmt(v)}</span>
+                            <span style={{ fontSize: 9, color: col, width: 36, textAlign: "right" }}>{diff > 0 ? `+${diff}s` : `${diff}s`}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {splits.length === 0 && !showForm && (
+                    <div style={{ textAlign: "center", fontSize: 11, color: "#636366", padding: 12 }}>Saisir tes splits pour identifier tes stations faibles</div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── STATION WEAKNESS RADAR ── */}
+            {(() => {
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const splitsKey = `fitrace_station_splits_${profile.name}`;
+              const splits = (() => { try { return JSON.parse(localStorage.getItem(splitsKey) || "[]"); } catch { return []; } })();
+              if (splits.length === 0) return null;
+
+              const lastSession = splits[0];
+              const STATIONS_RADAR = [
+                { id: "skierg", label: "SkiErg", ref: { H: 240, F: 280 } },
+                { id: "sled_push", label: "Sled Push", ref: { H: 150, F: 170 } },
+                { id: "sled_pull", label: "Sled Pull", ref: { H: 160, F: 180 } },
+                { id: "burpee", label: "Burpee BJ", ref: { H: 300, F: 330 } },
+                { id: "rowing", label: "Rowing", ref: { H: 225, F: 255 } },
+                { id: "farmers", label: "Farmer's", ref: { H: 120, F: 140 } },
+                { id: "sandbag", label: "Sandbag", ref: { H: 240, F: 270 } },
+                { id: "wallballs", label: "Wall Balls", ref: { H: 360, F: 420 } },
+              ];
+
+              // Score per station: 100 = reference, >100 = faster, <100 = slower
+              const scores = STATIONS_RADAR.map(s => {
+                const v = lastSession.splits[s.id];
+                if (!v) return { ...s, score: 50, v: null };
+                const score = Math.min(130, Math.round((s.ref[sex] / v) * 100));
+                return { ...s, score, v };
+              });
+
+              const N = scores.length;
+              const cx = 110, cy = 110, maxR = 85;
+              const angleStep = (2 * Math.PI) / N;
+              const getXY = (i, r) => ({
+                x: cx + r * Math.sin(i * angleStep),
+                y: cy - r * Math.cos(i * angleStep),
+              });
+
+              const radarPath = scores.map((s, i) => {
+                const r = (s.score / 130) * maxR;
+                const p = getXY(i, r);
+                return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+              }).join(" ") + " Z";
+
+              const refPath = scores.map((_, i) => {
+                const p = getXY(i, (100/130) * maxR);
+                return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+              }).join(" ") + " Z";
+
+              const weakest = scores.filter(s => s.v).sort((a,b) => a.score - b.score).slice(0, 3);
+              const fmt = (s) => s ? `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` : "--";
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Radar Faiblesses Stations</div>
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <svg width="220" height="220" viewBox="0 0 220 220">
+                      {[25, 50, 75, 100].map(pct => {
+                        const r = (pct / 130) * maxR;
+                        const pts = scores.map((_, i) => { const p = getXY(i, r); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; }).join(" ");
+                        return <polygon key={pct} points={pts} fill="none" stroke="#2C2C2E" strokeWidth="1" />;
+                      })}
+                      {scores.map((_, i) => {
+                        const outer = getXY(i, maxR);
+                        return <line key={i} x1={cx} y1={cy} x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)} stroke="#2C2C2E" strokeWidth="1" />;
+                      })}
+                      <path d={refPath} fill="#C9A84015" stroke="#C9A840" strokeWidth="1" strokeDasharray="4,3" />
+                      <path d={radarPath} fill="#007AFF25" stroke="#007AFF" strokeWidth="2" />
+                      {scores.map((s, i) => {
+                        const lp = getXY(i, maxR + 14);
+                        const col = s.score >= 100 ? "#30D158" : s.score >= 85 ? "#FF9F0A" : "#FF453A";
+                        return (
+                          <g key={i}>
+                            <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" fill={col} fontSize="8" fontWeight="700">{s.label}</text>
+                          </g>
+                        );
+                      })}
+                      <circle cx={cx} cy={cy} r={3} fill="#007AFF" />
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 9, color: "#636366", textAlign: "center", marginBottom: 10 }}>--- Référence niveau · bleu = toi</div>
+                  <div style={{ fontSize: 10, color: "#FF453A", fontWeight: 700, marginBottom: 6 }}>🎯 Stations à travailler en priorité :</div>
+                  {weakest.map(s => {
+                    const ref = s.ref[sex];
+                    const lost = s.v - ref;
+                    return (
+                      <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", background: "#FF453A12", borderRadius: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, color: "var(--fg)" }}>{s.label}</span>
+                        <span style={{ fontSize: 10, color: "#FF453A", fontWeight: 700 }}>+{lost}s vs référence</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── BENCHMARK TEST TRACKER ── */}
             {(() => {
               const benchKey = `fitrace_benchmarks_${profile.name}`;
@@ -11162,6 +11432,124 @@ JSON:
                   </div>
 
                   <div style={{ marginTop: 6, fontSize: 9, color: "#636366", textAlign: "center" }}>Estimation basée sur allure et poids · Stryd pour mesure précise</div>
+                </div>
+              );
+            })()}
+
+            {/* ── VMA PROGRESSION CHART ── */}
+            {(() => {
+              const vmaKey = `fitrace_vma_history_${profile.name}`;
+              const [history, setHistory] = React.useState(() => { try { return JSON.parse(localStorage.getItem(vmaKey) || "[]"); } catch { return []; } });
+              const [showAdd, setShowAdd] = React.useState(false);
+              const [newDate, setNewDate] = React.useState(new Date().toISOString().slice(0,10));
+              const [newVma, setNewVma] = React.useState("");
+              const [newMethod, setNewMethod] = React.useState("Test terrain");
+
+              // Auto-add current profile VMA if no history
+              const currentVma = parseFloat(profile.vma) || null;
+
+              const allPoints = history.length > 0 ? history : (currentVma ? [{ date: new Date().toISOString().slice(0,10), vma: currentVma, method: "Profil" }] : []);
+              const sorted = [...allPoints].sort((a,b) => new Date(a.date)-new Date(b.date));
+
+              const addEntry = () => {
+                const v = parseFloat(newVma);
+                if (!v || v < 8 || v > 30) return;
+                const updated = [...history, { date: newDate, vma: v, method: newMethod }].sort((a,b)=>new Date(a.date)-new Date(b.date));
+                setHistory(updated);
+                localStorage.setItem(vmaKey, JSON.stringify(updated));
+                setShowAdd(false); setNewVma("");
+              };
+
+              const W = 280, H = 80;
+              const minV = sorted.length ? Math.floor(Math.min(...sorted.map(p=>p.vma)) - 1) : 10;
+              const maxV = sorted.length ? Math.ceil(Math.max(...sorted.map(p=>p.vma)) + 1) : 20;
+              const pts = sorted.map((p,i) => ({
+                x: sorted.length > 1 ? 10 + (i/(sorted.length-1))*(W-20) : W/2,
+                y: H - 10 - ((p.vma - minV)/(maxV - minV)) * (H-20),
+                vma: p.vma, date: p.date, method: p.method
+              }));
+              const pathD = pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+              const first = sorted[0], last = sorted[sorted.length-1];
+              const gain = sorted.length > 1 ? Math.round((last.vma - first.vma)*10)/10 : null;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Progression VMA</div>
+                    <button onClick={()=>setShowAdd(v=>!v)} style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,cursor:"pointer" }}>{showAdd?"Annuler":"+ Test"}</button>
+                  </div>
+
+                  {showAdd && (
+                    <div style={{ marginBottom:10,display:"flex",flexDirection:"column",gap:6 }}>
+                      <input type="date" value={newDate} onChange={e=>setNewDate(e.target.value)} style={{ background:"#1C1C1E",color:"var(--fg)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 10px",fontSize:11,width:"100%",boxSizing:"border-box" }} />
+                      <div style={{ display:"flex",gap:8 }}>
+                        <input type="number" placeholder="VMA (km/h)" value={newVma} onChange={e=>setNewVma(e.target.value)} min={8} max={30} step={0.1} style={{ flex:1,background:"#1C1C1E",color:"var(--yellow)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 10px",fontSize:14,fontWeight:800 }} />
+                        <select value={newMethod} onChange={e=>setNewMethod(e.target.value)} style={{ flex:1,background:"#1C1C1E",color:"var(--fg)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 8px",fontSize:11 }}>
+                          {["Test terrain","Test Cooper","Test Léger","Demi-Cooper","Test Vameval","Course compétition"].map(m=><option key={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <button onClick={addEntry} style={{ background:"#30D158",color:"#000",border:"none",borderRadius:10,padding:"9px 0",fontSize:13,fontWeight:800,cursor:"pointer" }}>Enregistrer ✓</button>
+                    </div>
+                  )}
+
+                  {sorted.length > 0 && (
+                    <>
+                      {/* Stats */}
+                      <div style={{ display:"flex",gap:8,marginBottom:10 }}>
+                        <div style={{ flex:1,background:"#1C1C1E",borderRadius:10,padding:"8px",textAlign:"center" }}>
+                          <div style={{ fontSize:8,color:"#636366" }}>Actuelle</div>
+                          <div style={{ fontSize:20,fontWeight:900,color:"var(--yellow)" }}>{last.vma}<span style={{ fontSize:10,color:"#8E8E93" }}>km/h</span></div>
+                          <div style={{ fontSize:8,color:"#636366" }}>VO₂max ≈ {Math.round(last.vma*3.5)}ml/kg/min</div>
+                        </div>
+                        {gain !== null && (
+                          <div style={{ flex:1,background:"#1C1C1E",borderRadius:10,padding:"8px",textAlign:"center" }}>
+                            <div style={{ fontSize:8,color:"#636366" }}>Progression</div>
+                            <div style={{ fontSize:20,fontWeight:900,color:gain>=0?"#30D158":"#FF453A" }}>{gain>=0?"+":""}{gain}<span style={{ fontSize:10 }}> km/h</span></div>
+                            <div style={{ fontSize:8,color:"#636366" }}>depuis {first.date}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Chart */}
+                      {sorted.length > 1 && (
+                        <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%",height:H,overflow:"visible" }}>
+                          <defs>
+                            <linearGradient id="vmaGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#C9A840" stopOpacity="0.3"/>
+                              <stop offset="100%" stopColor="#C9A840" stopOpacity="0"/>
+                            </linearGradient>
+                          </defs>
+                          {[minV, Math.round((minV+maxV)/2), maxV].map(v => {
+                            const y = H - 10 - ((v-minV)/(maxV-minV))*(H-20);
+                            return <g key={v}><line x1={0} y1={y} x2={W} y2={y} stroke="#2C2C2E" strokeWidth={0.5}/><text x={2} y={y-2} fontSize={7} fill="#636366">{v}</text></g>;
+                          })}
+                          <path d={`${pathD} L${pts[pts.length-1].x},${H} L${pts[0].x},${H} Z`} fill="url(#vmaGrad)"/>
+                          <path d={pathD} fill="none" stroke="#C9A840" strokeWidth={2} strokeLinejoin="round"/>
+                          {pts.map((p,i) => (
+                            <g key={i}>
+                              <circle cx={p.x} cy={p.y} r={4} fill="#C9A840"/>
+                              <text x={p.x} y={p.y-7} textAnchor="middle" fontSize={8} fill="#C9A840" fontWeight="700">{p.vma}</text>
+                            </g>
+                          ))}
+                        </svg>
+                      )}
+
+                      {/* History list */}
+                      <div style={{ display:"flex",flexDirection:"column",gap:3,marginTop:8 }}>
+                        {[...sorted].reverse().map((p,i) => (
+                          <div key={i} style={{ display:"flex",justifyContent:"space-between",fontSize:10,padding:"4px 8px",background:"#1C1C1E",borderRadius:8 }}>
+                            <span style={{ color:"#8E8E93" }}>{p.date}</span>
+                            <span style={{ color:"#636366",fontSize:9 }}>{p.method}</span>
+                            <span style={{ fontWeight:800,color:"var(--yellow)" }}>{p.vma} km/h</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {sorted.length === 0 && !showAdd && (
+                    <div style={{ textAlign:"center",fontSize:11,color:"#636366",padding:12 }}>Enregistre tes tests VMA pour suivre ta progression</div>
+                  )}
                 </div>
               );
             })()}
@@ -19350,6 +19738,159 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── HYROX RACE TIMER ── */}
+      {(() => {
+        const SEQUENCE = [
+          { id: "run1", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "skierg", label: "SkiErg 1000m", type: "station", icon: "⛷️" },
+          { id: "run2", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "sled_push", label: "Sled Push 50m", type: "station", icon: "🛷" },
+          { id: "run3", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "sled_pull", label: "Sled Pull 50m", type: "station", icon: "🛷" },
+          { id: "run4", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "burpee", label: "Burpee BJ 80m", type: "station", icon: "💪" },
+          { id: "run5", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "rowing", label: "Rowing 1000m", type: "station", icon: "🚣" },
+          { id: "run6", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "farmers", label: "Farmer's Carry 200m", type: "station", icon: "🏋️" },
+          { id: "run7", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "sandbag", label: "Sandbag Lunges 100m", type: "station", icon: "🎒" },
+          { id: "run8", label: "Run 1km", type: "run", icon: "🏃" },
+          { id: "wallballs", label: "Wall Balls 100 reps", type: "station", icon: "🏀" },
+        ];
+
+        const [phase, setPhase] = React.useState("idle"); // idle | running | done
+        const [currentIdx, setCurrentIdx] = React.useState(0);
+        const [elapsed, setElapsed] = React.useState(0);
+        const [totalStart, setTotalStart] = React.useState(null);
+        const [segStart, setSegStart] = React.useState(null);
+        const [splits, setSplits] = React.useState([]);
+        const timerRef = React.useRef(null);
+
+        React.useEffect(() => {
+          if (phase !== "running") return;
+          timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - totalStart) / 1000)), 500);
+          return () => clearInterval(timerRef.current);
+        }, [phase, totalStart]);
+
+        const fmt = (s) => { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return h>0?`${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`; };
+
+        const beep = (freq=880,dur=0.15) => { try { const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=freq;g.gain.value=0.3;o.start();o.stop(ctx.currentTime+dur); } catch {} };
+
+        const startRace = () => {
+          const now = Date.now();
+          setPhase("running"); setCurrentIdx(0); setSplits([]); setTotalStart(now); setSegStart(now); setElapsed(0);
+          beep(880,0.2);
+        };
+
+        const nextSegment = () => {
+          const segTime = Math.round((Date.now() - segStart) / 1000);
+          const newSplits = [...splits, { ...SEQUENCE[currentIdx], time: segTime }];
+          setSplits(newSplits);
+          beep(660,0.1);
+          if (currentIdx >= SEQUENCE.length - 1) {
+            setPhase("done"); clearInterval(timerRef.current); beep(1200,0.4);
+          } else {
+            setCurrentIdx(i => i+1);
+            setSegStart(Date.now());
+          }
+        };
+
+        const reset = () => { setPhase("idle"); setCurrentIdx(0); setSplits([]); setElapsed(0); clearInterval(timerRef.current); };
+
+        const cur = SEQUENCE[currentIdx];
+        const segElapsed = segStart ? Math.floor((Date.now() - segStart) / 1000) : 0;
+        const typeColor = cur?.type === "run" ? "#30D158" : "#C9A840";
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Chrono Course HYROX</div>
+
+            {phase === "idle" && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 6 }}>Chronomètre complet — tape à chaque transition pour capturer tes 16 splits</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 14, maxHeight: 120, overflowY: "auto" }}>
+                  {SEQUENCE.map((s,i) => (
+                    <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 9, color: "#636366" }}>
+                      <span>{s.icon}</span><span style={{ color: s.type==="run"?"#30D158":"#C9A840" }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={startRace} style={{ width:"100%",background:"#C9A840",color:"#000",border:"none",borderRadius:14,padding:"16px 0",fontSize:17,fontWeight:900,cursor:"pointer",letterSpacing:1 }}>🏁 DÉMARRER LA COURSE</button>
+              </div>
+            )}
+
+            {phase === "running" && (
+              <div style={{ textAlign: "center" }}>
+                {/* Total chrono */}
+                <div style={{ fontSize: 11, color: "#636366", marginBottom: 2 }}>Temps total</div>
+                <div style={{ fontSize: 42, fontWeight: 900, color: "var(--fg)", fontVariantNumeric: "tabular-nums", marginBottom: 8 }}>{fmt(elapsed)}</div>
+
+                {/* Current segment */}
+                <div style={{ background: `${typeColor}15`, border: `1px solid ${typeColor}40`, borderRadius: 14, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontSize: 28, marginBottom: 4 }}>{cur.icon}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: typeColor }}>{cur.label}</div>
+                  <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>Segment {currentIdx+1}/16</div>
+                  <div style={{ fontSize: 32, fontWeight: 900, color: typeColor, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>{fmt(segElapsed)}</div>
+                </div>
+
+                {/* Next up */}
+                {currentIdx < SEQUENCE.length - 1 && (
+                  <div style={{ fontSize: 10, color: "#636366", marginBottom: 10 }}>
+                    Suivant : {SEQUENCE[currentIdx+1].icon} {SEQUENCE[currentIdx+1].label}
+                  </div>
+                )}
+
+                <button onClick={nextSegment} style={{ width:"100%",background:typeColor,color:"#000",border:"none",borderRadius:14,padding:"16px 0",fontSize:15,fontWeight:900,cursor:"pointer",marginBottom:8 }}>
+                  {currentIdx >= SEQUENCE.length-1 ? "🏁 FINISH !" : `⏭ ${SEQUENCE[currentIdx+1].label}`}
+                </button>
+
+                {/* Mini split list */}
+                {splits.length > 0 && (
+                  <div style={{ display:"flex",flexDirection:"column",gap:2,maxHeight:80,overflowY:"auto" }}>
+                    {splits.map((s,i) => (
+                      <div key={i} style={{ display:"flex",justifyContent:"space-between",fontSize:9,padding:"2px 6px",background:"#1C1C1E",borderRadius:4 }}>
+                        <span style={{ color:s.type==="run"?"#30D158":"#C9A840" }}>{s.icon} {s.label}</span>
+                        <span style={{ fontWeight:700,color:"var(--fg)" }}>{fmt(s.time)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {phase === "done" && (
+              <div>
+                <div style={{ textAlign:"center",marginBottom:12 }}>
+                  <div style={{ fontSize:36 }}>🏆</div>
+                  <div style={{ fontSize:22,fontWeight:900,color:"#C9A840" }}>{fmt(elapsed)}</div>
+                  <div style={{ fontSize:11,color:"#8E8E93",marginTop:2 }}>Temps final · {splits.length} splits capturés</div>
+                </div>
+                <div style={{ display:"flex",flexDirection:"column",gap:3,marginBottom:12 }}>
+                  {splits.map((s,i) => (
+                    <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",background:"#1C1C1E",borderRadius:8 }}>
+                      <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+                        <span style={{ fontSize:11 }}>{s.icon}</span>
+                        <span style={{ fontSize:9,color:"#8E8E93" }}>{s.label}</span>
+                      </div>
+                      <span style={{ fontSize:11,fontWeight:800,color:s.type==="run"?"#30D158":"#C9A840" }}>{fmt(s.time)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:"flex",gap:2 }}>
+                  {splits.map((s,i) => {
+                    const maxT = Math.max(...splits.map(x=>x.time));
+                    return <div key={i} style={{ flex:1,height:20,background:s.type==="run"?"#30D158":"#C9A840",opacity:0.3+0.7*(s.time/maxT),borderRadius:2 }}/>;
+                  })}
+                </div>
+                <button onClick={reset} style={{ width:"100%",background:"#3A3A3C",color:"var(--fg)",border:"none",borderRadius:12,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer",marginTop:12 }}>Recommencer</button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── TRANSITION DRILL TIMER ── */}
       {(() => {
         const STATIONS = ["SkiErg", "Sled Push", "Sled Pull", "Burpee BJ", "Rowing", "Farmer's Carry", "Sandbag Lunges", "Wall Balls"];
@@ -21951,6 +22492,100 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── HYROX WEEKLY TRAINING PLAN ── */}
+      {(() => {
+        const vma = parseFloat(profile.vma) || 14;
+        const sessions = profile.sessions || [];
+        const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+        const daysLeft = raceDate ? Math.ceil((raceDate - Date.now()) / 86400000) : null;
+        const weeksLeft = daysLeft ? Math.floor(daysLeft / 7) : 8;
+
+        // Phase detection
+        const phase = weeksLeft <= 1 ? "race" : weeksLeft <= 2 ? "taper" : weeksLeft <= 5 ? "specific" : "build";
+        const phaseLabels = { build: "Construction", specific: "Spécifique", taper: "Affûtage", race: "Race Week" };
+        const phaseColors = { build: "#007AFF", specific: "#FF9F0A", taper: "#30D158", race: "#C9A840" };
+
+        const WEEKLY_PLANS = {
+          build: [
+            { day: "Lundi", icon: "😴", label: "Repos actif", type: "Récupération", detail: "Marche 30min + étirements", intensity: 1 },
+            { day: "Mardi", icon: "⛷️", label: "SkiErg + Core", type: "Force", detail: `4×500m SkiErg · Récup 90s · Core 15min`, intensity: 6 },
+            { day: "Mercredi", icon: "🏃", label: "Course seuil", type: "Course", detail: `3×10min @ ${Math.round(vma*0.85*10)/10}km/h · Récup 2min`, intensity: 7 },
+            { day: "Jeudi", icon: "🏋️", label: "Force fonctionnelle", type: "Force", detail: "Wall Balls 5×15 · Rowing 4×500m · Farmer's Carry 4×40m", intensity: 6 },
+            { day: "Vendredi", icon: "😴", label: "Repos / Mobilité", type: "Mobilité", detail: "Mobilité 30min + foam roller", intensity: 2 },
+            { day: "Samedi", icon: "🏆", label: "HYROX partiel", type: "HYROX Complet", detail: "4 stations + runs · ~45min", intensity: 8 },
+            { day: "Dimanche", icon: "🏃", label: "Long run", type: "Course", detail: `60-90min @ ${Math.round(vma*0.7*10)/10}km/h · Fréquence cardiaque basse`, intensity: 5 },
+          ],
+          specific: [
+            { day: "Lundi", icon: "😴", label: "Repos actif", type: "Récupération", detail: "Récupération complète", intensity: 1 },
+            { day: "Mardi", icon: "⚡", label: "Intervalles VMA", type: "Course", detail: `6×3min @ ${Math.round(vma*0.95*10)/10}km/h · Récup 3min`, intensity: 9 },
+            { day: "Mercredi", icon: "🛷", label: "Sled + Burpees", type: "Force", detail: "Sled Push 5×50m · Burpee BJ 3×20m · Repos complet entre séries", intensity: 8 },
+            { day: "Jeudi", icon: "🏃", label: "Run tempo", type: "Course", detail: `40min @ ${Math.round(vma*0.82*10)/10}km/h allure HYROX`, intensity: 7 },
+            { day: "Vendredi", icon: "😴", label: "Repos / Mobilité", type: "Mobilité", detail: "Mobilité complète + sommeil+", intensity: 2 },
+            { day: "Samedi", icon: "🏆", label: "HYROX simulation", type: "HYROX Complet", detail: "Simulation complète 8 stations · Chrono complet", intensity: 10 },
+            { day: "Dimanche", icon: "🚶", label: "Récupération", type: "Récupération", detail: "Marche 20min · Étirements · Nutrition récup", intensity: 2 },
+          ],
+          taper: [
+            { day: "Lundi", icon: "😴", label: "Repos", type: "Récupération", detail: "Repos complet", intensity: 1 },
+            { day: "Mardi", icon: "⚡", label: "Activation courte", type: "Course", detail: `20min easy + 4×30s @ ${Math.round(vma*10)/10}km/h`, intensity: 6 },
+            { day: "Mercredi", icon: "🏋️", label: "Station reminder", type: "Force", detail: "1-2 séries légères de chaque station · Pas d'épuisement", intensity: 5 },
+            { day: "Jeudi", icon: "🏃", label: "Footing léger", type: "Course", detail: `30min @ ${Math.round(vma*0.65*10)/10}km/h · Très facile`, intensity: 4 },
+            { day: "Vendredi", icon: "😴", label: "Repos complet", type: "Récupération", detail: "Repos · Préparation mentale · Matériel", intensity: 1 },
+            { day: "Samedi", icon: "⚡", label: "Réveil musculaire", type: "Course", detail: "15min footing + quelques accélérations · 5-10min max", intensity: 4 },
+            { day: "Dimanche", icon: "🏆", label: "RACE DAY", type: "HYROX Complet", detail: "🔥 Jour J — Tu es prêt !", intensity: 10 },
+          ],
+          race: [
+            { day: "Lundi", icon: "😴", label: "Repos absolu", type: "Récupération", detail: "Repos complet · Hydratation + nutrition", intensity: 1 },
+            { day: "Mardi", icon: "🚶", label: "Marche", type: "Récupération", detail: "Marche légère 20min max", intensity: 1 },
+            { day: "Mercredi", icon: "😴", label: "Repos", type: "Récupération", detail: "Repos + sommeil", intensity: 1 },
+            { day: "Jeudi", icon: "⚡", label: "Activation", type: "Course", detail: "15min très léger + quelques accélérations 30s", intensity: 4 },
+            { day: "Vendredi", icon: "😴", label: "Repos complet", type: "Récupération", detail: "Préparation matériel · Visualisation · Dormir tôt", intensity: 1 },
+            { day: "Samedi", icon: "⚡", label: "Réveil musculaire", type: "Course", detail: "10min footing + 5 accélérations · Fin", intensity: 3 },
+            { day: "Dimanche", icon: "🏆", label: "RACE DAY 🔥", type: "HYROX Complet", detail: "EVERYTHING YOU'VE GOT", intensity: 10 },
+          ],
+        };
+
+        const plan = WEEKLY_PLANS[phase];
+        const today = new Date().getDay();
+        const dayMap = { "Lundi": 1, "Mardi": 2, "Mercredi": 3, "Jeudi": 4, "Vendredi": 5, "Samedi": 6, "Dimanche": 0 };
+        const intensityColors = [,"#636366","#636366","#30D158","#30D158","#30D158","#FF9F0A","#FF9F0A","#FF9F0A","#FF453A","#FF453A","#FF453A"];
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Plan Hebdo HYROX</div>
+              <div style={{ background: `${phaseColors[phase]}20`, borderRadius: 8, padding: "3px 8px" }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: phaseColors[phase] }}>{phaseLabels[phase]}</span>
+                {daysLeft && <span style={{ fontSize: 9, color: "#636366" }}> · J-{daysLeft}</span>}
+              </div>
+            </div>
+            <div style={{ fontSize: 9, color: "#636366", marginBottom: 12 }}>Basé sur {weeksLeft} semaines avant ta course · VMA {vma}km/h</div>
+
+            {plan.map(d => {
+              const isToday = dayMap[d.day] === today;
+              return (
+                <div key={d.day} style={{ display: "flex", gap: 10, padding: "8px 10px", borderRadius: 10, marginBottom: 5, background: isToday ? `${phaseColors[phase]}15` : "#1C1C1E", border: isToday ? `1px solid ${phaseColors[phase]}50` : "1px solid transparent" }}>
+                  <div style={{ width: 26, textAlign: "center" }}>
+                    <div style={{ fontSize: 14 }}>{d.icon}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: isToday ? phaseColors[phase] : "var(--fg)" }}>{d.day}{isToday ? " ← Aujourd'hui" : ""}</span>
+                      <div style={{ display: "flex", gap: 3 }}>
+                        {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                          <div key={n} style={{ width: 3, height: 8, borderRadius: 2, background: n <= d.intensity ? intensityColors[d.intensity] : "#2C2C2E" }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "#8E8E93", marginTop: 1 }}>{d.label}</div>
+                    <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>{d.detail}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
@@ -23470,6 +24105,139 @@ JSON: {
                   </div>
                 ))}
                 <div style={{ marginTop: 4, fontSize: 9, color: "#636366", textAlign: "center" }}>⭐⭐⭐ = preuves solides · Consultez votre médecin avant supplémentation</div>
+              </div>
+            );
+          })()}
+
+          {/* ── RACE DAY NUTRITION PLANNER ── */}
+          {(() => {
+            const poids = parseFloat(profile.poids) || 70;
+            const [raceTime, setRaceTime] = React.useState("10:00");
+            const [raceDuration, setRaceDuration] = React.useState(80);
+
+            const raceHour = parseInt(raceTime.split(":")[0]);
+            const raceMin = parseInt(raceTime.split(":")[1] || 0);
+            const raceMinutes = raceHour * 60 + raceMin;
+
+            const fmt = (totalMin) => {
+              const h = Math.floor(totalMin / 60), m = totalMin % 60;
+              return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+            };
+
+            // Carb needs
+            const carbsPerKg = 7; // race day loading
+            const totalCarbs = Math.round(poids * carbsPerKg);
+            const gelsNeeded = Math.ceil(raceDuration / 30); // 1 gel toutes les 30min
+
+            const PLAN = [
+              {
+                time: fmt(raceMinutes - 3 * 60 - 30), // J-3h30
+                label: "Dîner J-1 soir",
+                icon: "🌙",
+                color: "#007AFF",
+                items: [
+                  `${Math.round(poids * 3)}g de glucides (pâtes, riz)`,
+                  `${Math.round(poids * 0.3)}g protéines légères`,
+                  "Éviter fibres, graisses, épices",
+                  "Dormir tôt — minimum 7-8h",
+                ]
+              },
+              {
+                time: fmt(raceMinutes - 2 * 60 - 30), // J-2h30
+                label: "Petit-déjeuner",
+                icon: "🌅",
+                color: "#FF9F0A",
+                items: [
+                  `${Math.round(poids * 1.5)}g glucides (${Math.round(poids*6)}g riz ou ${Math.round(poids*8)}g flocons d'avoine)`,
+                  `${Math.round(poids * 0.2)}g protéines (2 oeufs)`,
+                  "Café si habitué — 3mg/kg caféine",
+                  "500ml eau + électrolytes",
+                  "TESTÉ À L'ENTRAÎNEMENT, jamais nouveau",
+                ]
+              },
+              {
+                time: fmt(raceMinutes - 60), // J-1h
+                label: "J-1h — Activation",
+                icon: "⚡",
+                color: "#FF9F0A",
+                items: [
+                  `1 banane ou ${Math.round(poids*0.5)}g glucides rapides`,
+                  "200-300ml eau",
+                  "Éviter solides — risque gastro",
+                ]
+              },
+              {
+                time: fmt(raceMinutes - 15), // J-15min
+                label: "J-15min — Charge finale",
+                icon: "🚀",
+                color: "#C9A840",
+                items: [
+                  "1 gel énergétique (25g glucides)",
+                  "200ml eau",
+                  "Dernier échauffement",
+                ]
+              },
+              {
+                time: "Pendant",
+                label: `Pendant la course (${raceDuration}min)`,
+                icon: "🏃",
+                color: "#FF453A",
+                items: [
+                  `${gelsNeeded} gel${gelsNeeded>1?"s":""} énergétique${gelsNeeded>1?"s":""} — 1 gel toutes les 30min`,
+                  "Gel aux stations (moins risque gastro que pendant les runs)",
+                  `${Math.round(raceDuration / 20 * 150)}ml eau total — viser les points de ravitaillement`,
+                  "Sodium si course > 75min",
+                ]
+              },
+              {
+                time: fmt(raceMinutes + raceDuration + 30), // +30min
+                label: "J+30min — Fenêtre anabolique",
+                icon: "💪",
+                color: "#30D158",
+                items: [
+                  `${Math.round(poids * 0.4)}g protéines (whey ou repas solide)`,
+                  `${Math.round(poids * 1.2)}g glucides rapides`,
+                  "1L eau + électrolytes",
+                  "Éviter alcool 24h",
+                ]
+              },
+            ];
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Nutrition Race Day Précise</div>
+
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 3 }}>Heure de départ</div>
+                    <input type="time" value={raceTime} onChange={e=>setRaceTime(e.target.value)} style={{ background:"#1C1C1E",color:"var(--yellow)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 10px",fontSize:14,fontWeight:800,width:"100%",boxSizing:"border-box" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: "#636366", marginBottom: 3 }}>Durée estimée (min)</div>
+                    <input type="number" value={raceDuration} onChange={e=>setRaceDuration(parseInt(e.target.value)||80)} min={50} max={150} style={{ background:"#1C1C1E",color:"var(--yellow)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 10px",fontSize:14,fontWeight:800,width:"100%",boxSizing:"border-box" }} />
+                  </div>
+                </div>
+
+                <div style={{ background:"#1C1C1E",borderRadius:10,padding:8,marginBottom:12,display:"flex",justifyContent:"space-around",textAlign:"center" }}>
+                  <div><div style={{ fontSize:8,color:"#636366" }}>Glucides totaux J-1</div><div style={{ fontSize:14,fontWeight:900,color:"#FF9F0A" }}>{totalCarbs}g</div></div>
+                  <div><div style={{ fontSize:8,color:"#636366" }}>Gels course</div><div style={{ fontSize:14,fontWeight:900,color:"#FF453A" }}>{gelsNeeded}</div></div>
+                  <div><div style={{ fontSize:8,color:"#636366" }}>Caféine J-jour</div><div style={{ fontSize:14,fontWeight:900,color:"#C9A840" }}>{Math.round(poids*3)}mg</div></div>
+                </div>
+
+                {PLAN.map(p => (
+                  <div key={p.label} style={{ marginBottom: 10, borderLeft: `3px solid ${p.color}`, paddingLeft: 10 }}>
+                    <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom:4 }}>
+                      <span style={{ fontSize:14 }}>{p.icon}</span>
+                      <div>
+                        <span style={{ fontSize:11,fontWeight:800,color:p.color }}>{p.label}</span>
+                        {p.time !== "Pendant" && <span style={{ fontSize:9,color:"#636366",marginLeft:6 }}>{p.time}</span>}
+                      </div>
+                    </div>
+                    {p.items.map((item,i) => (
+                      <div key={i} style={{ fontSize:10,color:"var(--fg)",marginBottom:2 }}>• {item}</div>
+                    ))}
+                  </div>
+                ))}
               </div>
             );
           })()}
@@ -26756,6 +27524,160 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 </button>
               ))}
             </div>
+          </div>
+        );
+      })()}
+
+      {/* ── HYROX RACE ANALYSIS ── */}
+      {(() => {
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const analysisKey = `fitrace_race_analysis_${profile.name}`;
+        const [analyses, setAnalyses] = React.useState(() => { try { return JSON.parse(localStorage.getItem(analysisKey) || "[]"); } catch { return []; } });
+        const [showForm, setShowForm] = React.useState(false);
+        const [raceName, setRaceName] = React.useState("");
+        const [raceDate2, setRaceDate2] = React.useState(new Date().toISOString().slice(0,10));
+        const [formVals, setFormVals] = React.useState({});
+        const [viewIdx, setViewIdx] = React.useState(0);
+
+        const SEGMENTS = [
+          { id: "run1", label: "Run 1km", type: "run", ref: { H: 270, F: 300 } },
+          { id: "skierg", label: "SkiErg 1000m", type: "station", ref: { H: 240, F: 280 } },
+          { id: "run2", label: "Run 1km", type: "run", ref: { H: 275, F: 305 } },
+          { id: "sled_push", label: "Sled Push 50m", type: "station", ref: { H: 150, F: 170 } },
+          { id: "run3", label: "Run 1km", type: "run", ref: { H: 280, F: 310 } },
+          { id: "sled_pull", label: "Sled Pull 50m", type: "station", ref: { H: 160, F: 180 } },
+          { id: "run4", label: "Run 1km", type: "run", ref: { H: 285, F: 315 } },
+          { id: "burpee", label: "Burpee BJ 80m", type: "station", ref: { H: 300, F: 330 } },
+          { id: "run5", label: "Run 1km", type: "run", ref: { H: 290, F: 320 } },
+          { id: "rowing", label: "Rowing 1000m", type: "station", ref: { H: 225, F: 255 } },
+          { id: "run6", label: "Run 1km", type: "run", ref: { H: 295, F: 325 } },
+          { id: "farmers", label: "Farmer's Carry 200m", type: "station", ref: { H: 120, F: 140 } },
+          { id: "run7", label: "Run 1km", type: "run", ref: { H: 300, F: 330 } },
+          { id: "sandbag", label: "Sandbag Lunges 100m", type: "station", ref: { H: 240, F: 270 } },
+          { id: "run8", label: "Run 1km", type: "run", ref: { H: 305, F: 335 } },
+          { id: "wallballs", label: "Wall Balls 100 reps", type: "station", ref: { H: 360, F: 420 } },
+        ];
+
+        const fmt = (s) => s ? `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` : "--";
+        const parseMmSs = (str) => { if (!str) return null; const p = str.split(":"); return p.length === 2 ? parseInt(p[0])*60+parseInt(p[1]) : parseInt(str)||null; };
+
+        const saveAnalysis = () => {
+          const entry = { name: raceName || `Course ${raceDate2}`, date: raceDate2, splits: {} };
+          SEGMENTS.forEach(s => { const v = parseMmSs(formVals[s.id]); if (v) entry.splits[s.id] = v; });
+          entry.total = Object.values(entry.splits).reduce((a,b)=>a+b,0);
+          const updated = [entry, ...analyses];
+          setAnalyses(updated);
+          localStorage.setItem(analysisKey, JSON.stringify(updated));
+          setShowForm(false); setFormVals({}); setRaceName("");
+        };
+
+        const cur = analyses[viewIdx];
+        const totalRef = SEGMENTS.reduce((s, seg) => s + seg.ref[sex], 0);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Analyse de Course</div>
+              <button onClick={() => setShowForm(v=>!v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>{showForm ? "Annuler" : "+ Analyser"}</button>
+            </div>
+
+            {showForm && (
+              <div style={{ marginBottom: 12 }}>
+                <input placeholder="Nom de la course" value={raceName} onChange={e=>setRaceName(e.target.value)} style={{ background:"#1C1C1E",color:"var(--fg)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 10px",fontSize:11,width:"100%",boxSizing:"border-box",marginBottom:6 }} />
+                <input type="date" value={raceDate2} onChange={e=>setRaceDate2(e.target.value)} style={{ background:"#1C1C1E",color:"var(--fg)",border:"1px solid #3A3A3C",borderRadius:8,padding:"6px 10px",fontSize:11,width:"100%",boxSizing:"border-box",marginBottom:10 }} />
+                <div style={{ fontSize:9,color:"#636366",marginBottom:6 }}>Entrez chaque split en mm:ss</div>
+                {SEGMENTS.map(s => (
+                  <div key={s.id} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:5 }}>
+                    <div style={{ width:6,height:6,borderRadius:"50%",background:s.type==="run"?"#30D158":"#C9A840",flexShrink:0 }}/>
+                    <span style={{ fontSize:10,color:"#8E8E93",flex:1 }}>{s.label}</span>
+                    <span style={{ fontSize:9,color:"#636366",width:38 }}>réf {fmt(s.ref[sex])}</span>
+                    <input type="text" placeholder="--:--" value={formVals[s.id]||""} onChange={e=>setFormVals(v=>({...v,[s.id]:e.target.value}))} style={{ width:55,background:"#1C1C1E",color:"var(--yellow)",border:"1px solid #3A3A3C",borderRadius:6,padding:"4px 6px",fontSize:12,textAlign:"center" }} />
+                  </div>
+                ))}
+                <button onClick={saveAnalysis} style={{ width:"100%",background:"#30D158",color:"#000",border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:800,cursor:"pointer",marginTop:8 }}>Analyser ✓</button>
+              </div>
+            )}
+
+            {!showForm && analyses.length > 0 && (
+              <div>
+                {analyses.length > 1 && (
+                  <div style={{ display:"flex",gap:4,marginBottom:10,overflowX:"auto" }}>
+                    {analyses.map((a,i) => (
+                      <button key={i} onClick={()=>setViewIdx(i)} style={{ flexShrink:0,background:viewIdx===i?"var(--yellow)":"#2C2C2E",color:viewIdx===i?"#000":"var(--fg)",border:"none",borderRadius:8,padding:"4px 10px",fontSize:9,fontWeight:600,cursor:"pointer" }}>{a.name}</button>
+                    ))}
+                  </div>
+                )}
+
+                {cur && (() => {
+                  const segments = SEGMENTS.map(s => ({ ...s, v: cur.splits[s.id] || null }));
+                  const runTotal = segments.filter(s=>s.type==="run").reduce((t,s)=>t+(s.v||0),0);
+                  const stationTotal = segments.filter(s=>s.type==="station").reduce((t,s)=>t+(s.v||0),0);
+                  const runRef = segments.filter(s=>s.type==="run").reduce((t,s)=>t+s.ref[sex],0);
+                  const stationRef = segments.filter(s=>s.type==="station").reduce((t,s)=>t+s.ref[sex],0);
+
+                  // Top losses
+                  const losses = segments.filter(s=>s.v).map(s=>({ ...s, lost: s.v - s.ref[sex] })).sort((a,b)=>b.lost-a.lost);
+                  const topLoss = losses[0];
+
+                  return (
+                    <div>
+                      <div style={{ fontSize:11,color:"#8E8E93",marginBottom:10 }}>{cur.name} · {cur.date}</div>
+
+                      {/* Summary boxes */}
+                      <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                        {[
+                          { label:"Total", val:fmt(cur.total), ref:fmt(totalRef), col:cur.total<=totalRef?"#30D158":"#FF9F0A" },
+                          { label:"Runs (8km)", val:fmt(runTotal), ref:fmt(runRef), col:runTotal<=runRef?"#30D158":"#FF9F0A" },
+                          { label:"Stations", val:fmt(stationTotal), ref:fmt(stationRef), col:stationTotal<=stationRef?"#30D158":"#FF9F0A" },
+                        ].map(m => (
+                          <div key={m.label} style={{ flex:1,background:"#1C1C1E",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                            <div style={{ fontSize:8,color:"#636366" }}>{m.label}</div>
+                            <div style={{ fontSize:14,fontWeight:900,color:m.col }}>{m.val}</div>
+                            <div style={{ fontSize:8,color:"#636366" }}>réf {m.ref}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Biggest opportunity */}
+                      {topLoss && topLoss.lost > 0 && (
+                        <div style={{ background:"#C9A84015",border:"1px solid #C9A84040",borderRadius:10,padding:10,marginBottom:10 }}>
+                          <div style={{ fontSize:9,color:"#C9A840",fontWeight:700,marginBottom:3 }}>💡 Plus grande opportunité</div>
+                          <div style={{ fontSize:11,color:"var(--fg)" }}>
+                            <b>{topLoss.label}</b> : tu as perdu <b style={{color:"#FF453A"}}>{topLoss.lost}s</b> vs référence.
+                            Gagner 30s ici = <b style={{color:"#30D158"}}>{fmt(cur.total - 30)}</b> au lieu de <b>{fmt(cur.total)}</b>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Split detail */}
+                      <div style={{ display:"flex",flexDirection:"column",gap:3 }}>
+                        {segments.map(s => {
+                          if (!s.v) return null;
+                          const diff = s.v - s.ref[sex];
+                          const col = diff <= 0 ? "#30D158" : diff <= 20 ? "#FF9F0A" : "#FF453A";
+                          const barW = Math.min(100, Math.round((s.ref[sex]/s.v)*100));
+                          return (
+                            <div key={s.id} style={{ display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:"1px solid #1C1C1E" }}>
+                              <div style={{ width:6,height:6,borderRadius:"50%",background:s.type==="run"?"#30D158":"#C9A840",flexShrink:0 }}/>
+                              <span style={{ fontSize:9,color:"#8E8E93",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{s.label}</span>
+                              <div style={{ width:50,height:3,background:"#2C2C2E",borderRadius:2,flexShrink:0 }}>
+                                <div style={{ height:"100%",width:`${barW}%`,background:col,borderRadius:2 }}/>
+                              </div>
+                              <span style={{ fontSize:10,fontWeight:700,color:"var(--fg)",width:32,textAlign:"right" }}>{fmt(s.v)}</span>
+                              <span style={{ fontSize:9,color:col,width:32,textAlign:"right" }}>{diff>0?`+${diff}s`:`${diff}s`}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {!showForm && analyses.length === 0 && (
+              <div style={{ textAlign:"center",fontSize:11,color:"#636366",padding:16 }}>Analyse ta prochaine simulation ou course réelle segment par segment</div>
+            )}
           </div>
         );
       })()}
