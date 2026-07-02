@@ -17500,6 +17500,165 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── WORKOUT TEMPLATE BUILDER ── */}
+      {(() => {
+        const tmplKey = `fitrace_templates_${profile.name}`;
+        const [templates, setTemplates] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(tmplKey) || "[]"); } catch { return []; }
+        });
+        const [mode, setMode] = React.useState("list"); // list | create | view
+        const [editing, setEditing] = React.useState(null);
+        const [form, setForm] = React.useState({ name: "", type: "force_stations", notes: "", exercises: [] });
+        const [newEx, setNewEx] = React.useState({ nom: "", sets: "3", reps: "10", charge: "", rest: "90" });
+
+        const saveTemplates = t => { setTemplates(t); localStorage.setItem(tmplKey, JSON.stringify(t)); };
+
+        const TYPE_OPTS = [
+          { id: "force_stations", label: "Force / Stations", icon: "💪" },
+          { id: "running_zone2", label: "Course Z2", icon: "🏃" },
+          { id: "running_qualite", label: "Course Qualité", icon: "⚡" },
+          { id: "hybride_compromis", label: "Hybride", icon: "🔄" },
+          { id: "mobilite", label: "Mobilité", icon: "🧘" },
+        ];
+
+        const STARTER_TEMPLATES = [
+          { id: "st1", name: "Force HYROX Classique", type: "force_stations", notes: "Séance de base HYROX — 8 stations en circuit", exercises: [
+            { nom: "SkiErg", sets: "3", reps: "1", charge: "500m", rest: "120" },
+            { nom: "Sled Push", sets: "3", reps: "1", charge: "50m", rest: "120" },
+            { nom: "Burpee Broad Jump", sets: "3", reps: "1", charge: "20m", rest: "90" },
+            { nom: "Rowing", sets: "3", reps: "1", charge: "500m", rest: "120" },
+            { nom: "Farmer's Carry", sets: "3", reps: "1", charge: "50m", rest: "90" },
+            { nom: "Wall Balls", sets: "3", reps: "25", charge: "9kg", rest: "90" },
+          ]},
+          { id: "st2", name: "Fartlek HYROX", type: "running_qualite", notes: "Alternance allures — simulation segments de course", exercises: [
+            { nom: "Échauffement", sets: "1", reps: "1", charge: "10min Z2", rest: "0" },
+            { nom: "Allure HYROX (3:45/km)", sets: "6", reps: "1", charge: "400m", rest: "90" },
+            { nom: "Récup trot (5:30/km)", sets: "6", reps: "1", charge: "200m", rest: "0" },
+            { nom: "Retour calme", sets: "1", reps: "1", charge: "5min", rest: "0" },
+          ]},
+          { id: "st3", name: "Mobilité Récup Active", type: "mobilite", notes: "Après séance intense — 30-40 min", exercises: [
+            { nom: "Rouleau mousse global", sets: "1", reps: "1", charge: "10min", rest: "0" },
+            { nom: "Pigeon au sol", sets: "2", reps: "1", charge: "60s/côté", rest: "30" },
+            { nom: "Ischio assis", sets: "2", reps: "1", charge: "60s", rest: "30" },
+            { nom: "Respiration 4-7-8", sets: "5", reps: "1", charge: "1 cycle", rest: "0" },
+          ]},
+        ];
+
+        const addExercise = () => {
+          if (!newEx.nom) return;
+          setForm(f => ({ ...f, exercises: [...f.exercises, { ...newEx, id: Date.now() }] }));
+          setNewEx({ nom: "", sets: "3", reps: "10", charge: "", rest: "90" });
+        };
+
+        const removeEx = id => setForm(f => ({ ...f, exercises: f.exercises.filter(e => e.id !== id) }));
+
+        const saveTemplate = () => {
+          if (!form.name) return;
+          const t = { ...form, id: editing || Date.now(), createdAt: new Date().toISOString() };
+          const updated = editing ? templates.map(x => x.id === editing ? t : x) : [...templates, t];
+          saveTemplates(updated);
+          setMode("list");
+          setEditing(null);
+          setForm({ name: "", type: "force_stations", notes: "", exercises: [] });
+        };
+
+        const deleteTemplate = id => saveTemplates(templates.filter(t => t.id !== id));
+
+        const loadStarter = s => {
+          setForm({ name: s.name, type: s.type, notes: s.notes, exercises: s.exercises.map(e => ({ ...e, id: Date.now() + Math.random() })) });
+          setMode("create");
+        };
+
+        const allTemplates = [...STARTER_TEMPLATES.filter(s => !templates.find(t => t.name === s.name)), ...templates];
+
+        if (mode === "create") return (
+          <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📝 {editing ? "MODIFIER" : "NOUVEAU"} TEMPLATE</div>
+              <button onClick={() => { setMode("list"); setEditing(null); setForm({ name: "", type: "force_stations", notes: "", exercises: [] }); }} style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "5px 12px", color: "#8E8E93", fontSize: 12, cursor: "pointer" }}>Annuler</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              <input placeholder="Nom du template *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "9px 11px", color: "var(--white)", fontSize: 13 }} />
+              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{ background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "9px 11px", color: "var(--white)", fontSize: 13 }}>
+                {TYPE_OPTS.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+              </select>
+              <textarea placeholder="Notes / objectif de la séance" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "9px 11px", color: "var(--white)", fontSize: 12, resize: "none" }} />
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#8E8E93", marginBottom: 8 }}>EXERCICES ({form.exercises.length})</div>
+            {form.exercises.map(e => (
+              <div key={e.id} style={{ background: "var(--bg3)", borderRadius: 8, padding: "7px 10px", marginBottom: 5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span style={{ color: "var(--white)", fontWeight: 700, fontSize: 12 }}>{e.nom}</span>
+                  <span style={{ color: "#8E8E93", fontSize: 11 }}> · {e.sets}×{e.reps}{e.charge ? ` · ${e.charge}` : ""}{e.rest !== "0" ? ` · R:${e.rest}s` : ""}</span>
+                </div>
+                <button onClick={() => removeEx(e.id)} style={{ background: "none", border: "none", color: "#636366", fontSize: 14, cursor: "pointer" }}>✕</button>
+              </div>
+            ))}
+
+            <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10, marginTop: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                <input placeholder="Exercice *" value={newEx.nom} onChange={e => setNewEx(n => ({ ...n, nom: e.target.value }))} style={{ gridColumn: "1 / -1", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+                <input placeholder="Séries" type="number" value={newEx.sets} onChange={e => setNewEx(n => ({ ...n, sets: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--yellow)", fontSize: 12, textAlign: "center" }} />
+                <input placeholder="Reps/durée" value={newEx.reps} onChange={e => setNewEx(n => ({ ...n, reps: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--yellow)", fontSize: 12, textAlign: "center" }} />
+                <input placeholder="Charge (kg, m…)" value={newEx.charge} onChange={e => setNewEx(n => ({ ...n, charge: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+                <input placeholder="Repos (s)" type="number" value={newEx.rest} onChange={e => setNewEx(n => ({ ...n, rest: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+              </div>
+              <button onClick={addExercise} disabled={!newEx.nom} style={{ width: "100%", background: newEx.nom ? "#3A3A3C" : "#2C2C2E", border: "none", borderRadius: 8, padding: 8, color: newEx.nom ? "var(--white)" : "#636366", fontSize: 12, cursor: newEx.nom ? "pointer" : "default" }}>+ Ajouter exercice</button>
+            </div>
+
+            <button onClick={saveTemplate} disabled={!form.name} style={{ width: "100%", marginTop: 12, background: form.name ? "var(--yellow)" : "#3A3A3C", color: form.name ? "#000" : "#636366", border: "none", borderRadius: 10, padding: 12, fontWeight: 800, fontSize: 14, cursor: form.name ? "pointer" : "default" }}>
+              💾 Sauvegarder le template
+            </button>
+          </div>
+        );
+
+        return (
+          <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📚 BIBLIOTHÈQUE SÉANCES</div>
+              <button onClick={() => { setForm({ name: "", type: "force_stations", notes: "", exercises: [] }); setMode("create"); }} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Créer</button>
+            </div>
+
+            {allTemplates.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "#636366", fontSize: 12 }}>Crée ton premier template de séance</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {allTemplates.map(t => {
+                  const typeOpt = TYPE_OPTS.find(o => o.id === t.type) || TYPE_OPTS[0];
+                  const isStarter = !!STARTER_TEMPLATES.find(s => s.id === t.id);
+                  return (
+                    <div key={t.id} style={{ background: "var(--bg3)", borderRadius: 10, padding: "10px 12px", border: "1px solid #3A3A3C" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+                            <span style={{ fontSize: 14 }}>{typeOpt.icon}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--white)" }}>{t.name}</span>
+                            {isStarter && <span style={{ fontSize: 9, background: "#3A3A3C", color: "#8E8E93", borderRadius: 4, padding: "1px 5px" }}>MODÈLE</span>}
+                          </div>
+                          <div style={{ fontSize: 10, color: "#8E8E93" }}>{t.exercises.length} exercices · {typeOpt.label}</div>
+                          {t.notes && <div style={{ fontSize: 11, color: "#636366", marginTop: 3, fontStyle: "italic" }}>{t.notes.slice(0, 60)}{t.notes.length > 60 ? "…" : ""}</div>}
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          {isStarter ? (
+                            <button onClick={() => loadStarter(t)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 7, padding: "5px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Copier</button>
+                          ) : (
+                            <>
+                              <button onClick={() => { setEditing(t.id); setForm({ name: t.name, type: t.type, notes: t.notes || "", exercises: t.exercises }); setMode("create"); }} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "5px 9px", fontSize: 10, color: "#8E8E93", cursor: "pointer" }}>Modifier</button>
+                              <button onClick={() => deleteTemplate(t.id)} style={{ background: "none", border: "none", color: "#636366", fontSize: 14, cursor: "pointer" }}>✕</button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX EVENT CALENDAR ── */}
       {(() => {
         // Known 2025-2026 HYROX events (static data, major cities)
