@@ -25013,6 +25013,75 @@ JSON: {
             );
           })()}
 
+          {/* ── HYROX SUPPLEMENT STACK ── */}
+          {(() => {
+            const todayStr2 = new Date().toISOString().slice(0,10);
+            const SKEY = `fitrace_supps_stack_${profile.name}_${todayStr2}`;
+            const [suppChecked, setSuppChecked] = React.useState(() => { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch { return {}; } });
+
+            const STACK = [
+              { id:"creatine",  name:"Créatine",       dose:"5g",    timing:"Matin / Post",    phase:"daily", icon:"💊", note:"Puissance & charge musculaire", color:"#30D158" },
+              { id:"caffeine",  name:"Caféine",         dose:"200mg", timing:"60min avant",     phase:"pre",   icon:"☕", note:"Focus & endurance",             color:"#FF9F0A" },
+              { id:"betaala",   name:"Beta-Alanine",    dose:"3.2g",  timing:"30min avant",     phase:"pre",   icon:"⚡", note:"Tampon lactate",                color:"#FF9F0A" },
+              { id:"carbs",     name:"Glucides rapides",dose:"30-60g",timing:"Pendant (>60min)",phase:"intra", icon:"🍌", note:"Maintien glycémie",             color:"#FF453A" },
+              { id:"electro",   name:"Électrolytes",    dose:"500ml", timing:"Pendant & après", phase:"intra", icon:"💧", note:"Hydratation & crampes",         color:"#007AFF" },
+              { id:"protein",   name:"Protéines",       dose:"30-40g",timing:"<30min après",    phase:"post",  icon:"🥩", note:"Récupération musculaire",       color:"#BF5AF2" },
+              { id:"omega3",    name:"Oméga-3",         dose:"2-3g",  timing:"Avec repas",      phase:"daily", icon:"🐟", note:"Anti-inflammatoire",            color:"#30D158" },
+              { id:"magnesium", name:"Magnésium",       dose:"300mg", timing:"Soir",            phase:"daily", icon:"🌙", note:"Sommeil & crampes",             color:"#8E8E93" },
+            ];
+
+            const toggleSupp = (id) => {
+              const next = { ...suppChecked, [id]: !suppChecked[id] };
+              setSuppChecked(next);
+              localStorage.setItem(SKEY, JSON.stringify(next));
+            };
+
+            const PHASES = [
+              { key:"pre",   label:"PRÉ-WORKOUT",  color:"#FF9F0A" },
+              { key:"intra", label:"PENDANT",       color:"#FF453A" },
+              { key:"post",  label:"POST-WORKOUT",  color:"#BF5AF2" },
+              { key:"daily", label:"QUOTIDIEN",     color:"#30D158" },
+            ];
+
+            const doneCount = STACK.filter(s=>suppChecked[s.id]).length;
+
+            return (
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Stack Suppléments HYROX</div>
+                  <div style={{ fontSize:10,color:"var(--yellow)",fontWeight:700 }}>{doneCount}/{STACK.length} pris</div>
+                </div>
+                <div style={{ height:4,background:"#2C2C2E",borderRadius:2,marginBottom:14,overflow:"hidden" }}>
+                  <div style={{ height:"100%",width:`${(doneCount/STACK.length)*100}%`,background:"linear-gradient(90deg,#30D158,var(--yellow))",borderRadius:2,transition:"width 0.3s" }}/>
+                </div>
+                {PHASES.map(phase => {
+                  const items = STACK.filter(s=>s.phase===phase.key);
+                  return (
+                    <div key={phase.key} style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:8,color:phase.color,fontWeight:800,letterSpacing:1,marginBottom:5 }}>{phase.label}</div>
+                      {items.map(supp => (
+                        <button key={supp.id} onClick={()=>toggleSupp(supp.id)}
+                          style={{ width:"100%",display:"flex",alignItems:"center",gap:10,background:suppChecked[supp.id]?"#1C3A24":"var(--bg3)",border:`1px solid ${suppChecked[supp.id]?supp.color+"40":"transparent"}`,borderRadius:10,padding:"7px 10px",marginBottom:3,cursor:"pointer",textAlign:"left" }}>
+                          <span style={{ fontSize:16 }}>{supp.icon}</span>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex",justifyContent:"space-between" }}>
+                              <span style={{ fontSize:11,fontWeight:700,color:suppChecked[supp.id]?supp.color:"var(--white)" }}>{supp.name}</span>
+                              <span style={{ fontSize:10,fontWeight:800,color:supp.color }}>{supp.dose}</span>
+                            </div>
+                            <div style={{ fontSize:9,color:"#8E8E93" }}>{supp.timing} · <span style={{ color:"#636366" }}>{supp.note}</span></div>
+                          </div>
+                          <div style={{ width:18,height:18,borderRadius:"50%",border:`2px solid ${suppChecked[supp.id]?supp.color:"#3A3A3C"}`,background:suppChecked[supp.id]?supp.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                            {suppChecked[supp.id] && <span style={{ color:"#000",fontSize:11,fontWeight:900,lineHeight:1 }}>✓</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* ── SUPPLEMENT TRACKER ── */}
           {(() => {
             const todayStr = new Date().toISOString().slice(0, 10);
