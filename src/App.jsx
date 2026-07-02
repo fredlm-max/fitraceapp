@@ -18625,6 +18625,119 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── BREATHING & RECOVERY TIMER ── */}
+      {(() => {
+        const TECHNIQUES = [
+          { id: "box", name: "Box Breathing", icon: "⬜", color: "#007AFF", desc: "Cohérence, focus pré-course", phases: [{ label: "Inspirez", sec: 4 }, { label: "Retenez", sec: 4 }, { label: "Expirez", sec: 4 }, { label: "Retenez", sec: 4 }], cycles: 6 },
+          { id: "478", name: "4-7-8 · Sommeil", icon: "😴", color: "#BF5AF2", desc: "Endormissement, récupération", phases: [{ label: "Inspirez", sec: 4 }, { label: "Retenez", sec: 7 }, { label: "Expirez", sec: 8 }], cycles: 4 },
+          { id: "coher", name: "Cohérence Cardiaque", icon: "❤️", color: "#FF453A", desc: "HRV, réduction stress", phases: [{ label: "Inspirez", sec: 5 }, { label: "Expirez", sec: 5 }], cycles: 18 },
+          { id: "wim", name: "Wim Hof (simplifié)", icon: "🔥", color: "#FF9F0A", desc: "Énergie, activation système", phases: [{ label: "Inspiration profonde", sec: 2 }, { label: "Expiration relâchée", sec: 2 }], cycles: 30 },
+        ];
+
+        const [selTech, setSelTech] = React.useState("box");
+        const [running, setRunning] = React.useState(false);
+        const [phaseIdx, setPhaseIdx] = React.useState(0);
+        const [cycle, setCycle] = React.useState(0);
+        const [timeLeft, setTimeLeft] = React.useState(null);
+        const [done, setDone] = React.useState(false);
+        const timerRef = React.useRef(null);
+
+        const tech = TECHNIQUES.find(t => t.id === selTech);
+
+        const beep = (freq, dur) => {
+          try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = freq; g.gain.value = 0.15; o.start(); o.stop(ctx.currentTime + dur); } catch {}
+        };
+
+        const stop = () => { setRunning(false); setDone(false); setPhaseIdx(0); setCycle(0); setTimeLeft(null); clearTimeout(timerRef.current); };
+
+        React.useEffect(() => {
+          if (!running) return;
+          const currentPhase = tech.phases[phaseIdx];
+          if (timeLeft === null) { setTimeLeft(currentPhase.sec); return; }
+          if (timeLeft <= 0) {
+            beep(phaseIdx % 2 === 0 ? 440 : 660, 0.1);
+            const nextPhase = (phaseIdx + 1) % tech.phases.length;
+            const nextCycle = nextPhase === 0 ? cycle + 1 : cycle;
+            if (nextCycle >= tech.cycles) { setRunning(false); setDone(true); beep(880, 0.3); return; }
+            setPhaseIdx(nextPhase); setCycle(nextCycle);
+            setTimeLeft(tech.phases[nextPhase].sec); return;
+          }
+          timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+          return () => clearTimeout(timerRef.current);
+        }, [running, timeLeft, phaseIdx, cycle]);
+
+        const start = () => { stop(); setTimeout(() => { setRunning(true); setPhaseIdx(0); setCycle(0); setTimeLeft(tech.phases[0].sec); setDone(false); }, 50); };
+
+        const currentPhase = tech.phases[phaseIdx];
+        const progress = timeLeft !== null && currentPhase ? 1 - timeLeft / currentPhase.sec : 0;
+        const R = 50; const circum = 2 * Math.PI * R;
+        const totalCycleTime = tech.phases.reduce((s, p) => s + p.sec, 0) * tech.cycles;
+        const totalMin = Math.floor(totalCycleTime / 60);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Respiration & Récupération</div>
+
+            {/* Technique selector */}
+            {!running && !done && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 14 }}>
+                {TECHNIQUES.map(t => (
+                  <button key={t.id} onClick={() => { setSelTech(t.id); stop(); }}
+                    style={{ background: selTech === t.id ? `${t.color}20` : "var(--bg3)", border: `1px solid ${selTech === t.id ? t.color : "#2C2C2E"}`, borderRadius: 10, padding: "10px 8px", cursor: "pointer", textAlign: "left" }}>
+                    <div style={{ fontSize: 16, marginBottom: 3 }}>{t.icon}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: selTech === t.id ? t.color : "var(--fg)" }}>{t.name}</div>
+                    <div style={{ fontSize: 9, color: "#636366" }}>{t.desc}</div>
+                    <div style={{ fontSize: 8, color: "#3A3A3C", marginTop: 2 }}>{t.cycles} cycles · {totalMin}min</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Active timer */}
+            {(running || done) && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
+                <svg width="130" height="130" viewBox="0 0 130 130">
+                  <circle cx="65" cy="65" r={R} fill="none" stroke="#2C2C2E" strokeWidth="8" />
+                  <circle cx="65" cy="65" r={R} fill="none" stroke={tech.color} strokeWidth="8"
+                    strokeDasharray={circum} strokeDashoffset={circum * (1 - progress)}
+                    strokeLinecap="round" transform="rotate(-90 65 65)" style={{ transition: "stroke-dashoffset 0.9s linear" }} />
+                  {done ? (
+                    <text x="65" y="70" textAnchor="middle" fill="#30D158" fontSize="30">✓</text>
+                  ) : (
+                    <>
+                      <text x="65" y="58" textAnchor="middle" fill={tech.color} fontSize="12" fontWeight="700">{currentPhase?.label}</text>
+                      <text x="65" y="80" textAnchor="middle" fill="var(--fg)" fontSize="28" fontWeight="900">{timeLeft}</text>
+                    </>
+                  )}
+                </svg>
+                {!done && <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 4 }}>Cycle {cycle + 1} / {tech.cycles}</div>}
+                {done && <div style={{ fontSize: 14, color: "#30D158", fontWeight: 700, marginTop: 6 }}>Session terminée ✨</div>}
+              </div>
+            )}
+
+            {/* Phase guide (idle) */}
+            {!running && !done && (
+              <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+                {tech.phases.map((p, i) => (
+                  <div key={i} style={{ flex: p.sec, background: i % 2 === 0 ? `${tech.color}20` : `${tech.color}10`, borderRadius: 6, padding: "5px 4px", textAlign: "center" }}>
+                    <div style={{ fontSize: 9, color: tech.color, fontWeight: 700 }}>{p.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--fg)", fontWeight: 800 }}>{p.sec}s</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Controls */}
+            <div style={{ display: "flex", gap: 8 }}>
+              {!running && !done && <button onClick={start} style={{ flex: 1, background: tech.color, color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>▶ Commencer</button>}
+              {running && <button onClick={() => setRunning(false)} style={{ flex: 1, background: "#FF9F0A", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>⏸ Pause</button>}
+              {!running && (running || done || cycle > 0) && <button onClick={() => { setRunning(true); }} style={{ flex: 1, background: "#30D158", color: "#fff", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>▶ Reprendre</button>}
+              {(running || done || cycle > 0) && <button onClick={stop} style={{ background: "#2C2C2E", color: "#FF453A", border: "none", borderRadius: 10, padding: "12px 14px", fontSize: 14, cursor: "pointer" }}>■</button>}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── INTERVAL TRAINING TIMER ── */}
       {(() => {
         const [workSec, setWorkSec] = React.useState(40);
