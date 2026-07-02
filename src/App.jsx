@@ -23211,6 +23211,151 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RACE RESULT PREDICTOR ── */}
+      {(() => {
+        const vma = parseFloat(profile.vmaKmh) || null;
+        const sex = profile.sexe === "F" ? "F" : "H";
+        const sessions = profile.sessions || [];
+        const age = parseInt(profile.age) || 30;
+
+        // Best 1km run pace from sessions
+        const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+        const bestPaceMinKm = runs.length > 0
+          ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+          : vma ? 60 / vma : null;
+
+        // Running time for 8km
+        const runTimeSec = bestPaceMinKm ? Math.round(bestPaceMinKm * 60 * 8 * 1.08) : null; // +8% fatigue factor
+
+        // Station time estimation from training data
+        const hyroxSessions = sessions.filter(s => s.type === "HYROX Complet");
+        const avgRpe = sessions.length > 0 ? sessions.slice(0, 10).reduce((s, x) => s + (x.rpe || 6), 0) / Math.min(sessions.length, 10) : 6;
+        const fitnessLevel = vma
+          ? (sex === "H" ? (vma >= 18 ? 1 : vma >= 15 ? 0.85 : vma >= 13 ? 0.70 : 0.55)
+                         : (vma >= 16 ? 1 : vma >= 13 ? 0.85 : vma >= 11 ? 0.70 : 0.55))
+          : 0.70;
+
+        // Reference station times (Elite H) in seconds
+        const STATION_REF_H = { skierg: 210, sled_push: 120, sled_pull: 150, burpee: 270, rowing: 230, farmer: 100, lunges: 210, wallballs: 360 };
+        const STATION_REF_F = { skierg: 250, sled_push: 150, sled_pull: 180, burpee: 310, rowing: 270, farmer: 120, lunges: 240, wallballs: 390 };
+        const refTimes = sex === "H" ? STATION_REF_H : STATION_REF_F;
+        const stationTimeSec = Math.round(Object.values(refTimes).reduce((s, t) => s + t, 0) / fitnessLevel);
+
+        // Transition penalty (8 transitions ~30s each)
+        const transitionSec = 8 * 35;
+
+        const totalSec = runTimeSec ? runTimeSec + stationTimeSec + transitionSec : null;
+
+        if (!totalSec && !vma) return null;
+
+        const fmt = (s) => {
+          const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+          return h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+        };
+
+        // Category prediction
+        const getCategory = (sec) => {
+          if (sex === "H") {
+            if (sec < 3900) return { cat: "Elite / Pro", color: "#FFD60A" };
+            if (sec < 4800) return { cat: "Competitive", color: "#30D158" };
+            if (sec < 6000) return { cat: "Finisher", color: "#007AFF" };
+            return { cat: "First Timer", color: "#636366" };
+          } else {
+            if (sec < 4200) return { cat: "Elite / Pro", color: "#FFD60A" };
+            if (sec < 5400) return { cat: "Competitive", color: "#30D158" };
+            if (sec < 6600) return { cat: "Finisher", color: "#007AFF" };
+            return { cat: "First Timer", color: "#636366" };
+          }
+        };
+
+        const cat = totalSec ? getCategory(totalSec) : null;
+
+        // Improvement levers
+        const runPct = totalSec ? Math.round((runTimeSec / totalSec) * 100) : null;
+        const stationPct = totalSec ? Math.round((stationTimeSec / totalSec) * 100) : null;
+
+        // Best/worst case
+        const bestSec = totalSec ? Math.round(totalSec * 0.93) : null;
+        const worstSec = totalSec ? Math.round(totalSec * 1.08) : null;
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Prédicteur de Performance HYROX</div>
+
+            {totalSec && (
+              <>
+                {/* Main prediction */}
+                <div style={{ background: `${cat.color}12`, border: `1px solid ${cat.color}30`, borderRadius: 14, padding: 16, textAlign: "center", marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 4 }}>Temps estimé</div>
+                  <div style={{ fontSize: 44, fontWeight: 900, color: cat.color, letterSpacing: -1 }}>{fmt(totalSec)}</div>
+                  <div style={{ fontSize: 13, color: cat.color, fontWeight: 700, marginTop: 4 }}>{cat.cat}</div>
+                  <div style={{ fontSize: 9, color: "#636366", marginTop: 4 }}>Fourchette : {fmt(bestSec)} – {fmt(worstSec)}</div>
+                </div>
+
+                {/* Breakdown */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {[
+                    { label: "Course 8km", val: fmt(runTimeSec), pct: runPct, color: "#FF9F0A" },
+                    { label: "Stations", val: fmt(stationTimeSec), pct: stationPct, color: "#007AFF" },
+                    { label: "Transitions", val: fmt(transitionSec), pct: 100 - runPct - stationPct, color: "#636366" },
+                  ].map(b => (
+                    <div key={b.label} style={{ flex: 1, background: `${b.color}12`, borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: b.color }}>{b.val}</div>
+                      <div style={{ fontSize: 8, color: "#636366" }}>{b.pct}%</div>
+                      <div style={{ fontSize: 7, color: "#3A3A3C", textTransform: "uppercase" }}>{b.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Station breakdown */}
+                <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase" }}>Détail stations estimé</div>
+                  {Object.entries(refTimes).map(([key, refSec]) => {
+                    const estimated = Math.round(refSec / fitnessLevel);
+                    const labels = { skierg: "SkiErg", sled_push: "Sled Push", sled_pull: "Sled Pull", burpee: "Burpee BJ", rowing: "Rowing", farmer: "Farmer Carry", lunges: "Sandbag Lunges", wallballs: "Wall Balls" };
+                    return (
+                      <div key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8E8E93", padding: "3px 0", borderBottom: "1px solid #2C2C2E" }}>
+                        <span>{labels[key]}</span>
+                        <span style={{ color: "var(--fg)", fontWeight: 600 }}>{fmt(estimated)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Improvement levers */}
+                <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6, textTransform: "uppercase" }}>Pour gagner du temps</div>
+                  {[
+                    { tip: `Allure course : ${bestPaceMinKm ? `${Math.floor(bestPaceMinKm)}:${String(Math.round((bestPaceMinKm%1)*60)).padStart(2,"0")}/km` : "--"} → −30s par 5s/km gagné`, gain: "impact élevé" },
+                    { tip: `Wall Balls : -10s si technique fluide (rythme 20 reps/min)`, gain: "facile" },
+                    { tip: `SkiErg : rythme régulier > sprint puis ralentir`, gain: "impact moyen" },
+                    { tip: `Transitions : courir entre stations, not marcher`, gain: "−2:00 potentiel" },
+                  ].map((l, i) => (
+                    <div key={i} style={{ display: "flex", gap: 6, marginBottom: 4, alignItems: "flex-start" }}>
+                      <span style={{ color: "#30D158", fontSize: 10 }}>→</span>
+                      <div>
+                        <span style={{ fontSize: 10, color: "var(--fg)" }}>{l.tip} </span>
+                        <span style={{ fontSize: 9, color: "#30D158" }}>({l.gain})</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {!totalSec && (
+              <div style={{ textAlign: "center", padding: "16px 0", color: "#636366", fontSize: 11 }}>
+                Renseignez votre VMA ou enregistrez des séances de course pour obtenir une prédiction
+              </div>
+            )}
+
+            <div style={{ marginTop: 8, fontSize: 9, color: "#636366", textAlign: "center" }}>
+              Basé sur VMA {vma ? vma + " km/h" : "non renseignée"} · Niveau fitness {Math.round(fitnessLevel * 100)}% · {sessions.length} séances
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── RACE STRATEGY PLANNER ── */}
       {(() => {
         const stratKey = `fitrace_strategy_${profile.name}`;
