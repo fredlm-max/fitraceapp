@@ -14920,6 +14920,59 @@ function TechniqueTab({ profile = {} }) {
         </div>
       )}
 
+      {/* ── MUSIC BPM GUIDE ── */}
+      {(() => {
+        const STATION_BPM = [
+          { station: "SkiErg",         icon: "⛷️",  bpm: "140–160", cadence: "Mouvements lents et puissants — rythme lent régulier",    genre: "Hip-Hop, Électro mid-tempo", color: "#a78bfa" },
+          { station: "Sled Push",       icon: "💪",  bpm: "130–145", cadence: "Poussée explosive par pas — beat syncopé",               genre: "Rock, Metal, Trap",           color: "#C9A840" },
+          { station: "Sled Pull",       icon: "🔗",  bpm: "130–145", cadence: "Traction rythmée — 1 pas / 1 temps",                     genre: "Hip-Hop, Rock mid-tempo",     color: "#FF9F0A" },
+          { station: "Burpee BJ",       icon: "🤸",  bpm: "155–175", cadence: "Explosivité max — BPM élevé pour l'adrénaline",          genre: "EDM, Hardstyle, Drum & Bass",  color: "#FF453A" },
+          { station: "Rowing",          icon: "🚣",  bpm: "145–165", cadence: "24–28 coups/min (SPM) — beat à 1.5× la cadence rame",   genre: "Électro, Techno",             color: "#30D158" },
+          { station: "Farmers Carry",   icon: "🏋️", bpm: "125–140", cadence: "Marche rapide — rythme stable, pas de à-coups",          genre: "Hip-Hop, Pop énergique",      color: "#38bdf8" },
+          { station: "Sandbag Lunges",  icon: "🧱",  bpm: "130–150", cadence: "1 foulée / 1 beat — contrôle et puissance",             genre: "Rock, Metal, Électro",        color: "#8E8E93" },
+          { station: "Wall Balls",      icon: "🏀",  bpm: "150–170", cadence: "Squat + lancer = 2 temps — beat fort sur la montée",     genre: "EDM, Dance, Pop fast",        color: "#BF5AF2" },
+          { station: "Runs HYROX",      icon: "🏃",  bpm: "170–185", cadence: "Cadence foulée 170–185 SPM — BPM = cadence cible",      genre: "Techno, Hardstyle, EDM",      color: "#C9A840" },
+        ];
+        const [open, setOpen] = React.useState(null);
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>🎵 GUIDE BPM PAR STATION</div>
+              <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>Tap pour détails</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {STATION_BPM.map((s, i) => {
+                const isOpen = open === i;
+                return (
+                  <div key={s.station} onClick={() => setOpen(isOpen ? null : i)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: isOpen ? s.color + "15" : "rgba(255,255,255,0.04)", borderRadius: 10, border: `1px solid ${isOpen ? s.color : "transparent"}`, cursor: "pointer", transition: "all 0.2s" }}>
+                    <div style={{ fontSize: 20, width: 28, textAlign: "center" }}>{s.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{s.station}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div className="bebas" style={{ fontSize: 15, color: s.color }}>{s.bpm}</div>
+                          <div style={{ fontSize: 10, color: "#8E8E93" }}>BPM</div>
+                        </div>
+                      </div>
+                      {isOpen && (
+                        <div style={{ marginTop: 8 }}>
+                          <div style={{ fontSize: 11, color: "#aaa", marginBottom: 6 }}>🥁 {s.cadence}</div>
+                          <div style={{ fontSize: 11, color: s.color }}>🎧 {s.genre}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 12, padding: "8px 10px", background: "rgba(201,168,64,0.08)", borderRadius: 8, fontSize: 11, color: "#8E8E93" }}>
+              💡 Astuce : utilise Spotify "Running" ou BeatsWod pour filtrer par BPM exact
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── STATION INTERVAL TIMER ── */}
       {(() => {
         const STATION_OPTS = [
