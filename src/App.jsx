@@ -17137,6 +17137,89 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── HYROX EVENT CALENDAR ── */}
+      {(() => {
+        // Known 2025-2026 HYROX events (static data, major cities)
+        const EVENTS = [
+          { city: "Paris", country: "🇫🇷", date: "2026-01-17", venue: "Paris Expo Porte de Versailles" },
+          { city: "Lyon", country: "🇫🇷", date: "2026-02-07", venue: "Eurexpo Lyon" },
+          { city: "Bordeaux", country: "🇫🇷", date: "2025-11-22", venue: "Bordeaux Métropole Arena" },
+          { city: "Nice", country: "🇫🇷", date: "2026-03-14", venue: "Palais des Expositions" },
+          { city: "London", country: "🇬🇧", date: "2026-01-10", venue: "ExCeL London" },
+          { city: "Berlin", country: "🇩🇪", date: "2025-11-29", venue: "Velodrom Berlin" },
+          { city: "Amsterdam", country: "🇳🇱", date: "2026-02-28", venue: "RAI Amsterdam" },
+          { city: "Barcelona", country: "🇪🇸", date: "2026-04-18", venue: "Fira Barcelona Gran Via" },
+          { city: "Dubai", country: "🇦🇪", date: "2026-01-31", venue: "Dubai Fitness Challenge" },
+          { city: "Chicago", country: "🇺🇸", date: "2026-04-04", venue: "McCormick Place" },
+          { city: "World Championships", country: "🌍", date: "2026-05-09", venue: "Hamburg" },
+        ];
+
+        const today = new Date(); today.setHours(0,0,0,0);
+        const upcoming = EVENTS
+          .map(e => ({ ...e, daysLeft: Math.ceil((new Date(e.date) - today) / 86400000) }))
+          .filter(e => e.daysLeft >= 0)
+          .sort((a, b) => a.daysLeft - b.daysLeft);
+
+        const past = EVENTS
+          .map(e => ({ ...e, daysLeft: Math.ceil((new Date(e.date) - today) / 86400000) }))
+          .filter(e => e.daysLeft < 0)
+          .sort((a, b) => b.daysLeft - a.daysLeft)
+          .slice(0, 2);
+
+        const [showAll, setShowAll] = React.useState(false);
+        const display = showAll ? upcoming : upcoming.slice(0, 5);
+
+        return (
+          <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+            <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>📅 CALENDRIER HYROX 2025-2026</div>
+
+            {display.map((e, i) => {
+              const isNext = i === 0;
+              const isChamp = e.city === "World Championships";
+              return (
+                <div key={e.city + e.date} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: i < display.length - 1 ? "1px solid #2C2C2E" : "none" }}>
+                  <div style={{ textAlign: "center", minWidth: 52 }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: isChamp ? "#C9A840" : isNext ? "var(--yellow)" : "var(--white)" }}>{e.daysLeft}</div>
+                    <div style={{ fontSize: 9, color: "#8E8E93" }}>jours</div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 14 }}>{e.country}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isChamp ? "#C9A840" : "var(--white)" }}>{e.city}</span>
+                      {isNext && <span style={{ fontSize: 9, background: "var(--yellow)", color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>PROCHAIN</span>}
+                      {isChamp && <span style={{ fontSize: 9, background: "#C9A840", color: "#000", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>WORLDS</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>{e.date} · {e.venue}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 10, color: "#636366" }}>{Math.ceil(e.daysLeft / 7)} sem.</div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {upcoming.length > 5 && (
+              <button onClick={() => setShowAll(s => !s)} style={{ width: "100%", marginTop: 10, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "7px", color: "#8E8E93", fontSize: 12, cursor: "pointer" }}>
+                {showAll ? "Voir moins" : `Voir ${upcoming.length - 5} autres événements`}
+              </button>
+            )}
+
+            {past.length > 0 && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #2C2C2E" }}>
+                <div style={{ fontSize: 10, color: "#636366", marginBottom: 6 }}>RÉCEMMENT PASSÉ</div>
+                {past.map(e => (
+                  <div key={e.city + e.date} style={{ fontSize: 11, color: "#636366", display: "flex", gap: 8, marginBottom: 3 }}>
+                    <span>{e.country}</span><span>{e.city}</span><span>{e.date}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 10, fontSize: 9, color: "#3A3A3C", textAlign: "center" }}>Dates approximatives · Vérifie hyrox.com pour les inscriptions officielles</div>
+          </div>
+        );
+      })()}
+
       {/* ── PHASE TIMELINE ── */}
       {profile.raceDate && (() => {
         const raceDate = new Date(profile.raceDate);
