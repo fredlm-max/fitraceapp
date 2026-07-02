@@ -6799,6 +6799,67 @@ JSON:
               );
             })()}
 
+            {/* ── RECENT ACTIVITY FEED ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const recent = sessions.slice(0, 5);
+              if (recent.length === 0) return null;
+
+              const TYPE_META = {
+                "Course": { icon: "🏃", color: "#FF9F0A", unit: "km" },
+                "Vélo": { icon: "🚴", color: "#007AFF", unit: "km" },
+                "Natation": { icon: "🏊", color: "#0A84FF", unit: "km" },
+                "HYROX Complet": { icon: "🏋️", color: "#C9A840", unit: "" },
+                "Force": { icon: "💪", color: "#FF453A", unit: "" },
+                "SkiErg": { icon: "⛷️", color: "#5AC8FA", unit: "m" },
+                "Wall Balls": { icon: "🎯", color: "#FF6B35", unit: "reps" },
+                "Sled Push": { icon: "🚜", color: "#BF5AF2", unit: "m" },
+                "Farmer Carry": { icon: "🏗️", color: "#30D158", unit: "m" },
+                "Rowing": { icon: "🚣", color: "#007AFF", unit: "m" },
+                "Mobilité": { icon: "🧘", color: "#30D158", unit: "" },
+                "Récupération": { icon: "😴", color: "#636366", unit: "" },
+              };
+              const TAGLINES = [
+                "Beast mode activé 🔥", "Aucune excuse 💎", "Un pas de plus 👊",
+                "Champions en devenir ⚡", "La régularité paie 📈", "Pain is temporary 🏆",
+                "Work hard, race easy 🎯", "HYROX ready 💪",
+              ];
+              const getRpeColor = (rpe) => rpe >= 8 ? "#FF453A" : rpe >= 6 ? "#FF9F0A" : "#30D158";
+
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Activités Récentes</div>
+                  {recent.map((s, i) => {
+                    const meta = TYPE_META[s.type] || { icon: "🏅", color: "#C9A840", unit: "" };
+                    const tagline = TAGLINES[(i + sessions.length) % TAGLINES.length];
+                    const dur = s.duree ? `${Math.floor(s.duree / 60)}h${String(s.duree % 60).padStart(2, "0")}` : null;
+                    const dist = s.distance ? `${s.distance} ${meta.unit}` : null;
+                    const daysAgo = Math.round((Date.now() - new Date(s.date).getTime()) / 86400000);
+                    const dateLabel = daysAgo === 0 ? "Aujourd'hui" : daysAgo === 1 ? "Hier" : `il y a ${daysAgo}j`;
+                    return (
+                      <div key={s.id || i} style={{ background: "var(--bg2)", borderRadius: 12, padding: "10px 12px", marginBottom: 6, borderLeft: `3px solid ${meta.color}` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ fontSize: 20 }}>{meta.icon}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>{s.type}</div>
+                              <div style={{ fontSize: 9, color: "#636366" }}>{dateLabel}</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 3, alignItems: "center" }}>
+                              {dur && <span style={{ fontSize: 11, color: "#8E8E93" }}>⏱ {dur}</span>}
+                              {dist && <span style={{ fontSize: 11, color: "#8E8E93" }}>📍 {dist}</span>}
+                              {s.rpe && <span style={{ fontSize: 9, background: `${getRpeColor(s.rpe)}20`, color: getRpeColor(s.rpe), borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>RPE {s.rpe}</span>}
+                            </div>
+                            <div style={{ fontSize: 9, color: meta.color, marginTop: 3, fontStyle: "italic" }}>{tagline}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY SUMMARY ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
