@@ -12197,6 +12197,48 @@ JSON:
               );
             })()}
 
+            {/* ── DISTANCE PRs BY ACTIVITY TYPE ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const types = ["Course", "HYROX Complet", "Vélo", "Natation"];
+              const typeIcons = { "Course": "🏃", "HYROX Complet": "🏆", "Vélo": "🚴", "Natation": "🏊" };
+              const typeColors = { "Course": "#30D158", "HYROX Complet": "#C9A840", "Vélo": "#FF9F0A", "Natation": "#007AFF" };
+
+              const prs = types.map(type => {
+                const typeSessions = sessions.filter(s => s.type === type && parseFloat(s.distance) > 0)
+                  .sort((a, b) => parseFloat(b.distance) - parseFloat(a.distance));
+                if (typeSessions.length === 0) return null;
+                const best = typeSessions[0];
+                const pace = best.duree && best.distance ? `${Math.floor(best.duree / best.distance)}:${String(Math.round((best.duree / best.distance % 1) * 60)).padStart(2,"0")}/km` : null;
+                return { type, dist: parseFloat(best.distance), date: best.date, duree: best.duree, pace, count: typeSessions.length };
+              }).filter(Boolean);
+
+              if (prs.length === 0) return null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Records de Distance</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {prs.map(pr => (
+                      <div key={pr.type} style={{ display: "flex", alignItems: "center", gap: 10, background: `${typeColors[pr.type]}12`, borderRadius: 10, padding: "8px 12px" }}>
+                        <span style={{ fontSize: 20 }}>{typeIcons[pr.type]}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: typeColors[pr.type] }}>{pr.type}</div>
+                          <div style={{ fontSize: 9, color: "#636366" }}>{pr.date} · {pr.count} session{pr.count > 1 ? "s" : ""}</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 16, fontWeight: 900, color: "var(--fg)" }}>{pr.dist}km</div>
+                          {pr.pace && <div style={{ fontSize: 9, color: "#8E8E93" }}>{pr.pace}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── BODY COMPOSITION TRACKER ── */}
             {(() => {
               const bcKey = `fitrace_body_${profile.name}`;
@@ -23211,6 +23253,57 @@ JSON: {
                     );
                   })}
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* ── QUICK ADD NUTRITION ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const macroKey = `fitrace_macros_${profile.name}_${todayStr}`;
+            const [added, setAdded] = React.useState(false);
+
+            const FOODS = [
+              { name: "Banane", kcal: 89, p: 1, c: 23, f: 0, icon: "🍌" },
+              { name: "Œuf", kcal: 78, p: 6, c: 1, f: 5, icon: "🥚" },
+              { name: "Blanc de poulet 150g", kcal: 165, p: 31, c: 0, f: 4, icon: "🍗" },
+              { name: "Riz cuit 200g", kcal: 260, p: 5, c: 57, f: 1, icon: "🍚" },
+              { name: "Yaourt grec 150g", kcal: 130, p: 15, c: 9, f: 3, icon: "🥛" },
+              { name: "Amandes 30g", kcal: 174, p: 6, c: 6, f: 15, icon: "🌰" },
+              { name: "Whey 30g", kcal: 120, p: 24, c: 3, f: 2, icon: "💪" },
+              { name: "Avocat 100g", kcal: 160, p: 2, c: 9, f: 15, icon: "🥑" },
+              { name: "Pain complet tranche", kcal: 75, p: 3, c: 14, f: 1, icon: "🍞" },
+              { name: "Saumon 150g", kcal: 280, p: 30, c: 0, f: 18, icon: "🐟" },
+              { name: "Flocons avoine 60g", kcal: 230, p: 8, c: 40, f: 5, icon: "🌾" },
+              { name: "Gel énergétique", kcal: 100, p: 0, c: 25, f: 0, icon: "⚡" },
+            ];
+
+            const addFood = (food) => {
+              const current = (() => { try { return JSON.parse(localStorage.getItem(macroKey) || "[]"); } catch { return []; } })();
+              const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+              const updated = [...current, { ...food, heure, id: Date.now() }];
+              localStorage.setItem(macroKey, JSON.stringify(updated));
+              setAdded(true);
+              setTimeout(() => setAdded(false), 1500);
+            };
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Quick Add Nutrition</div>
+                  {added && <div style={{ fontSize: 10, color: "#30D158", fontWeight: 700 }}>✓ Ajouté !</div>}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {FOODS.map(food => (
+                    <button key={food.name} onClick={() => addFood(food)} style={{ background: "#1C1C1E", border: "1px solid #2C2C2E", borderRadius: 10, padding: "6px 8px", cursor: "pointer", textAlign: "left", minWidth: 80 }}>
+                      <div style={{ fontSize: 14 }}>{food.icon}</div>
+                      <div style={{ fontSize: 9, color: "var(--fg)", fontWeight: 600, marginTop: 2, lineHeight: 1.2 }}>{food.name}</div>
+                      <div style={{ fontSize: 8, color: "#C9A840", fontWeight: 700 }}>{food.kcal} kcal</div>
+                      <div style={{ fontSize: 7, color: "#636366" }}>{food.p}g P · {food.c}g G</div>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 9, color: "#636366" }}>Tap pour ajouter au Macro Tracker du jour</div>
               </div>
             );
           })()}
