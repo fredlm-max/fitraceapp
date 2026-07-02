@@ -19765,6 +19765,98 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RACE GEAR CHECKLIST ── */}
+      {(() => {
+        const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+        const daysLeft = raceDate ? Math.ceil((raceDate - new Date()) / 86400000) : null;
+        if (daysLeft === null || daysLeft > 7 || daysLeft < 0) return null;
+
+        const gearKey = `fitrace_gear_${profile.name}_${profile.raceDate}`;
+        const [checked, setChecked] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(gearKey) || "{}"); } catch { return {}; }
+        });
+        const toggle = id => {
+          const next = { ...checked, [id]: !checked[id] };
+          setChecked(next);
+          localStorage.setItem(gearKey, JSON.stringify(next));
+        };
+
+        const GEAR = [
+          { cat: "📋 Documents", items: [
+            { id: "dossard", label: "Dossard & épingles de sûreté" },
+            { id: "id",      label: "Pièce d'identité" },
+            { id: "confirm", label: "Email de confirmation téléchargé" },
+          ]},
+          { cat: "👟 Équipement course", items: [
+            { id: "shoes",   label: "Chaussures de run (rodées)" },
+            { id: "shorts",  label: "Short / legging testés à l'entraînement" },
+            { id: "shirt",   label: "T-shirt technique (pas de nouveau)" },
+            { id: "socks",   label: "Chaussettes anti-ampoules" },
+            { id: "gloves",  label: "Gants (Farmers / Sled Pull)" },
+            { id: "belt",    label: "Ceinture porte-gourde si >90min objectif" },
+          ]},
+          { cat: "🥤 Nutrition & hydratation", items: [
+            { id: "gels",    label: "Gels énergie (si stratégie planifiée)" },
+            { id: "water",   label: "Gourde pour avant/après course" },
+            { id: "elec",    label: "Boisson électrolytes post-course" },
+            { id: "snack",   label: "Snack post-race (banane, barre protéinée)" },
+          ]},
+          { cat: "💊 Récupération", items: [
+            { id: "tape",    label: "Strapping / kinesio tape si besoin" },
+            { id: "foam",    label: "Foam roller à l'hôtel/voiture" },
+            { id: "change",  label: "Vêtements de rechange complets" },
+            { id: "towel",   label: "Serviette" },
+          ]},
+          { cat: "📱 Tech", items: [
+            { id: "watch",   label: "Montre chargée (ou téléphone)" },
+            { id: "ecout",   label: "Écouteurs chargés (si autorisés)" },
+            { id: "powerb",  label: "Batterie externe" },
+          ]},
+        ];
+
+        const allItems = GEAR.flatMap(g => g.items);
+        const checkedCount = allItems.filter(i => checked[i.id]).length;
+        const pct = Math.round((checkedCount / allItems.length) * 100);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>🎒 CHECKLIST MATÉRIEL</div>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>J-{daysLeft} · {checkedCount}/{allItems.length} éléments</div>
+              </div>
+              <div className="bebas" style={{ fontSize: 22, color: pct === 100 ? "#30D158" : "var(--yellow)" }}>{pct}%</div>
+            </div>
+            <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginBottom: 14 }}>
+              <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#30D158" : "var(--yellow)", borderRadius: 99, transition: "width 0.4s" }} />
+            </div>
+            {GEAR.map((cat, ci) => (
+              <div key={ci} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, marginBottom: 8 }}>{cat.cat}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {cat.items.map(item => (
+                    <div key={item.id} onClick={() => toggle(item.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: checked[item.id] ? "rgba(48,209,88,0.08)" : "rgba(255,255,255,0.04)", borderRadius: 8, cursor: "pointer", transition: "all 0.15s" }}>
+                      <div style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${checked[item.id] ? "#30D158" : "rgba(255,255,255,0.2)"}`, background: checked[item.id] ? "#30D158" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0, transition: "all 0.15s" }}>
+                        {checked[item.id] ? "✓" : ""}
+                      </div>
+                      <div style={{ fontSize: 12, color: checked[item.id] ? "#8E8E93" : "var(--white)", textDecoration: checked[item.id] ? "line-through" : "none", transition: "all 0.15s" }}>
+                        {item.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {pct === 100 && (
+              <div style={{ padding: "10px 14px", background: "rgba(48,209,88,0.1)", borderRadius: 10, textAlign: "center", fontSize: 13, color: "#30D158", fontWeight: 700 }}>
+                ✅ Tu es prêt·e ! Bonne chance pour HYROX 🏁
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── RACE STRATEGY CARDS ── */}
       {(() => {
         const [selStrat, setSelStrat] = React.useState("balanced");
