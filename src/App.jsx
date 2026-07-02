@@ -7675,6 +7675,73 @@ JSON:
               );
             })()}
 
+            {/* ── SMART TODAY PLANNER ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const today = new Date().toISOString().slice(0, 10);
+              const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+              const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon...
+
+              // Check recent load
+              const last48h = sessions.filter(s => [today, yesterday].includes(s.date));
+              const last48hLoad = last48h.reduce((s, x) => s + (x.duree || 0) * (x.rpe || 5) / 10, 0);
+              const last7 = sessions.filter(s => (Date.now() - new Date(s.date).getTime()) <= 7 * 86400000);
+              const last7Load = last7.reduce((s, x) => s + (x.duree || 0) * (x.rpe || 5) / 10, 0);
+              const todayDone = sessions.some(s => s.date === today);
+
+              // Wellness from last entry
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const wellLog = (() => { try { return JSON.parse(localStorage.getItem(wellKey) || "[]"); } catch { return []; } })();
+              const todayWell = wellLog.find(e => e.date === today);
+              const wellScore = todayWell ? ((todayWell.mood || 3) + (6 - (todayWell.stress || 3)) + (todayWell.energy || 3)) / 3 : 3;
+
+              // Race date
+              const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+              const daysLeft = raceDate ? Math.ceil((raceDate - Date.now()) / 86400000) : null;
+
+              // Recommendation logic
+              let reco, color, icon;
+              if (todayDone) {
+                reco = "Séance déjà faite aujourd'hui — repos ou mobilité légère si l'envie est là !";
+                color = "#30D158"; icon = "✅";
+              } else if (wellScore < 2.5 || last48hLoad > 150) {
+                reco = "Signes de fatigue détectés — priorise la récupération active (marche, étirements, sommeil)";
+                color = "#FF9F0A"; icon = "😴";
+              } else if (daysLeft !== null && daysLeft <= 3) {
+                reco = `Race dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""} — repos complet ou footing très léger (20 min max)`;
+                color = "#C9A840"; icon = "🏁";
+              } else if (daysLeft !== null && daysLeft <= 7) {
+                reco = "Semaine de race — séance courte haute intensité (20 min) pour activer les jambes, puis repos";
+                color = "#C9A840"; icon = "⚡";
+              } else if ([0, 6].includes(dayOfWeek)) {
+                reco = last7Load > 200 ? "Weekend chargé — séance longue endurance fondamentale (60-90 min RPE 5-6)" : "Weekend idéal pour une longue sortie ou un test benchmark";
+                color = "#007AFF"; icon = "🌟";
+              } else if (last7.length < 2) {
+                reco = "Semaine peu chargée — séance de seuil ou HYROX simulation recommandée";
+                color = "#FF9F0A"; icon = "🔥";
+              } else {
+                const suggestions = [
+                  "Bonne condition — séance qualité (intervalles ou seuil) recommandée",
+                  "Charge équilibrée — idéal pour une séance force + cardio",
+                  "Continue sur ta lancée — séance rythmée à 85% VMA",
+                ];
+                reco = suggestions[Math.floor(last7.length % 3)];
+                color = "#30D158"; icon = "💪";
+              }
+
+              return (
+                <div style={{ background: `${color}12`, border: `1px solid ${color}30`, borderRadius: 16, padding: 14, marginBottom: 14 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 24 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontSize: 10, color: color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Conseil du jour</div>
+                      <div style={{ fontSize: 11, color: "var(--fg)", lineHeight: 1.5 }}>{reco}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── DELOAD WEEK DETECTOR ── */}
             {(profile.sessions||[]).length >= 5 && (() => {
               const sessions = profile.sessions || [];
@@ -19157,6 +19224,88 @@ function TechniqueTab({ profile = {} }) {
                 )}
               </div>
             ))}
+          </div>
+        );
+      })()}
+
+      {/* ── TRANSITION DRILL TIMER ── */}
+      {(() => {
+        const STATIONS = ["SkiErg", "Sled Push", "Sled Pull", "Burpee BJ", "Rowing", "Farmer's Carry", "Sandbag Lunges", "Wall Balls"];
+        const [phase, setPhase] = React.useState("idle"); // idle, run, transition, station
+        const [current, setCurrent] = React.useState(0);
+        const [elapsed, setElapsed] = React.useState(0);
+        const [phaseStart, setPhaseStart] = React.useState(null);
+        const [splits, setSplits] = React.useState([]);
+
+        React.useEffect(() => {
+          if (phase === "idle") return;
+          const id = setInterval(() => setElapsed(Math.floor((Date.now() - phaseStart) / 1000)), 500);
+          return () => clearInterval(id);
+        }, [phase, phaseStart]);
+
+        const fmt = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+        const startRun = () => { setPhase("run"); setPhaseStart(Date.now()); setElapsed(0); };
+        const endRun = () => {
+          setSplits(p => [...p, { type: "run", station: STATIONS[current], time: elapsed }]);
+          setPhase("transition"); setPhaseStart(Date.now()); setElapsed(0);
+        };
+        const startStation = () => {
+          setSplits(p => [...p, { type: "transition", station: STATIONS[current], time: elapsed }]);
+          setPhase("station"); setPhaseStart(Date.now()); setElapsed(0);
+        };
+        const endStation = () => {
+          setSplits(p => [...p, { type: "station", station: STATIONS[current], time: elapsed }]);
+          if (current < STATIONS.length - 1) { setCurrent(c => c + 1); setPhase("run"); setPhaseStart(Date.now()); setElapsed(0); }
+          else setPhase("done");
+        };
+        const reset = () => { setPhase("idle"); setCurrent(0); setElapsed(0); setSplits([]); };
+
+        const phaseColors = { run: "#30D158", transition: "#FF9F0A", station: "#007AFF", done: "#C9A840" };
+        const phaseLabels = { run: `Run → ${STATIONS[current]}`, transition: `Transition → ${STATIONS[current]}`, station: STATIONS[current] };
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Transition Drill Timer</div>
+
+            {phase === "idle" && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 12 }}>Entraîne tes transitions run → station pour optimiser le temps perdu</div>
+                <button onClick={startRun} style={{ background: "#30D158", color: "#000", border: "none", borderRadius: 14, padding: "12px 30px", fontSize: 14, fontWeight: 900, cursor: "pointer" }}>▶ DÉMARRER</button>
+              </div>
+            )}
+
+            {phase !== "idle" && phase !== "done" && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: phaseColors[phase], fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{phaseLabels[phase]}</div>
+                <div style={{ fontSize: 48, fontWeight: 900, color: phaseColors[phase], fontVariantNumeric: "tabular-nums" }}>{fmt(elapsed)}</div>
+                <div style={{ marginTop: 12 }}>
+                  {phase === "run" && <button onClick={endRun} style={{ background: "#FF9F0A", color: "#000", border: "none", borderRadius: 12, padding: "10px 24px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Arrivé à la station ⟶</button>}
+                  {phase === "transition" && <button onClick={startStation} style={{ background: "#007AFF", color: "#fff", border: "none", borderRadius: 12, padding: "10px 24px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Station démarre ▶</button>}
+                  {phase === "station" && <button onClick={endStation} style={{ background: "#C9A840", color: "#000", border: "none", borderRadius: 12, padding: "10px 24px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Station terminée ✓</button>}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 10, color: "#636366" }}>Station {current + 1}/{STATIONS.length}</div>
+              </div>
+            )}
+
+            {phase === "done" && (
+              <div>
+                <div style={{ textAlign: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 24 }}>🏆</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#C9A840" }}>Simulation terminée !</div>
+                  <div style={{ fontSize: 11, color: "#8E8E93" }}>Total: {fmt(splits.reduce((s, x) => s + x.time, 0))}</div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  {splits.map((s, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "3px 0", borderBottom: "1px solid #2C2C2E" }}>
+                      <span style={{ color: phaseColors[s.type] }}>{s.type === "run" ? "🏃 Run" : s.type === "transition" ? "⚡ Transition" : `💪 ${s.station}`}</span>
+                      <span style={{ fontWeight: 700, color: "var(--fg)" }}>{fmt(s.time)}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={reset} style={{ marginTop: 10, background: "#3A3A3C", color: "var(--fg)", border: "none", borderRadius: 10, padding: "8px 20px", fontSize: 11, cursor: "pointer", width: "100%" }}>Recommencer</button>
+              </div>
+            )}
           </div>
         );
       })()}
