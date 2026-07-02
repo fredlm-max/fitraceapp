@@ -9989,6 +9989,177 @@ JSON:
               );
             })()}
 
+            {/* ── BENCHMARK TEST TRACKER ── */}
+            {(() => {
+              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(benchKey) || "[]"); } catch { return []; }
+              });
+              const [activeTest, setActiveTest] = React.useState(null);
+              const [inputVal, setInputVal] = React.useState("");
+
+              const age = parseInt(profile.age) || 30;
+              const sex = profile.sexe === "F" ? "F" : "H";
+
+              const TESTS = [
+                {
+                  id: "cooper",
+                  name: "Cooper 12 min",
+                  icon: "🏃",
+                  unit: "m",
+                  placeholder: "Distance en mètres (ex: 2800)",
+                  color: "#FF9F0A",
+                  getLevel: (v) => {
+                    const d = parseInt(v);
+                    if (sex === "H") {
+                      if (d >= 3000) return "Excellent";
+                      if (d >= 2700) return "Très bon";
+                      if (d >= 2400) return "Bon";
+                      if (d >= 2000) return "Moyen";
+                      return "Insuffisant";
+                    } else {
+                      if (d >= 2700) return "Excellent";
+                      if (d >= 2400) return "Très bon";
+                      if (d >= 2100) return "Bon";
+                      if (d >= 1800) return "Moyen";
+                      return "Insuffisant";
+                    }
+                  },
+                  getVma: (v) => Math.round(((parseInt(v) / 1000) - 0.3) / 0.025 * 10) / 10,
+                  desc: "Courez 12min, mesurez la distance. VO2max estimé via formule Cooper.",
+                },
+                {
+                  id: "ruffier",
+                  name: "Test de Ruffier",
+                  icon: "❤️",
+                  unit: "indice",
+                  placeholder: "P0 (repos) + P1 (après 30 squats) + P2 (1min après)",
+                  color: "#FF453A",
+                  getLevel: (v) => {
+                    const idx = parseFloat(v);
+                    if (idx < 0) return "Excellent";
+                    if (idx < 5) return "Très bon";
+                    if (idx < 10) return "Bon";
+                    if (idx < 15) return "Moyen";
+                    return "Insuffisant";
+                  },
+                  desc: "R = (P0 + P1 + P2 - 200) / 10. Mesures FC en bpm.",
+                },
+                {
+                  id: "plank",
+                  name: "Gainage ventral",
+                  icon: "💪",
+                  unit: "sec",
+                  placeholder: "Durée en secondes",
+                  color: "#30D158",
+                  getLevel: (v) => {
+                    const s = parseInt(v);
+                    if (s >= 180) return "Excellent";
+                    if (s >= 120) return "Très bon";
+                    if (s >= 60) return "Bon";
+                    if (s >= 30) return "Moyen";
+                    return "Insuffisant";
+                  },
+                  desc: "Position planche sur les coudes, corps aligné. Mesurez la durée max.",
+                },
+                {
+                  id: "burpee1min",
+                  name: "Burpees 1 min",
+                  icon: "🤸",
+                  unit: "reps",
+                  placeholder: "Nombre de burpees",
+                  color: "#BF5AF2",
+                  getLevel: (v) => {
+                    const r = parseInt(v);
+                    if (sex === "H") {
+                      if (r >= 30) return "Excellent"; if (r >= 22) return "Très bon";
+                      if (r >= 15) return "Bon"; if (r >= 10) return "Moyen"; return "Insuffisant";
+                    } else {
+                      if (r >= 25) return "Excellent"; if (r >= 18) return "Très bon";
+                      if (r >= 12) return "Bon"; if (r >= 8) return "Moyen"; return "Insuffisant";
+                    }
+                  },
+                  desc: "Burpees complets (chest-to-floor + saut) pendant 1 minute.",
+                },
+              ];
+
+              const getLevelColor = (level) => ({ "Excellent": "#30D158", "Très bon": "#34C759", "Bon": "#FF9F0A", "Moyen": "#FF6B35", "Insuffisant": "#FF453A" }[level] || "#636366");
+
+              const save = (l) => { setLog(l); localStorage.setItem(benchKey, JSON.stringify(l)); };
+
+              const addResult = (testId) => {
+                if (!inputVal) return;
+                const entry = { testId, value: inputVal, date: new Date().toISOString().slice(0, 10), id: Date.now() };
+                save([entry, ...log].slice(0, 50));
+                setActiveTest(null); setInputVal("");
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Tests de Référence</div>
+
+                  {TESTS.map(t => {
+                    const testLog = log.filter(e => e.testId === t.id);
+                    const latest = testLog[0];
+                    const prev = testLog[1];
+                    const level = latest ? t.getLevel(latest.value) : null;
+                    const levelColor = level ? getLevelColor(level) : "#636366";
+                    const improved = latest && prev ? parseFloat(latest.value) > parseFloat(prev.value) : null;
+                    // Special handling: Ruffier lower = better
+                    const isInverse = t.id === "ruffier";
+                    const reallyImproved = isInverse ? !improved : improved;
+
+                    return (
+                      <div key={t.id} style={{ marginBottom: 8 }}>
+                        <button onClick={() => setActiveTest(activeTest === t.id ? null : t.id)}
+                          style={{ width: "100%", background: activeTest === t.id ? `${t.color}15` : "var(--bg3)", border: `1px solid ${activeTest === t.id ? t.color : "#2C2C2E"}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 18 }}>{t.icon}</span>
+                          <div style={{ flex: 1, textAlign: "left" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)" }}>{t.name}</div>
+                            {latest
+                              ? <div style={{ fontSize: 10, color: levelColor }}>{latest.value} {t.unit} · {level} {improved !== null ? (reallyImproved ? "↑" : "↓") : ""}</div>
+                              : <div style={{ fontSize: 10, color: "#636366" }}>Pas encore testé</div>}
+                          </div>
+                          {latest && <div style={{ fontSize: 9, color: "#636366" }}>{latest.date}</div>}
+                          <span style={{ color: "#636366", fontSize: 11 }}>{activeTest === t.id ? "▲" : "+"}</span>
+                        </button>
+
+                        {activeTest === t.id && (
+                          <div style={{ background: `${t.color}08`, borderRadius: 8, padding: 12, marginTop: 2 }}>
+                            <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>{t.desc}</div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder={t.placeholder}
+                                style={{ flex: 1, background: "var(--bg2)", border: `1px solid ${t.color}50`, borderRadius: 8, padding: "7px 8px", color: "var(--fg)", fontSize: 12 }} />
+                              <button onClick={() => addResult(t.id)} style={{ background: t.color, color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>✓</button>
+                            </div>
+                            {testLog.length > 0 && (
+                              <div style={{ marginTop: 8 }}>
+                                <div style={{ fontSize: 9, color: "#636366", marginBottom: 3 }}>Historique</div>
+                                {testLog.slice(0, 4).map(e => {
+                                  const lv = t.getLevel(e.value);
+                                  return (
+                                    <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8E8E93", padding: "2px 0" }}>
+                                      <span>{e.date}</span>
+                                      <span style={{ color: getLevelColor(lv) }}>{e.value} {t.unit} · {lv}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {t.id === "cooper" && inputVal && (
+                              <div style={{ marginTop: 6, fontSize: 10, color: "#FF9F0A" }}>
+                                VMA estimée : ~{t.getVma(inputVal)} km/h
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── HEART RATE RECOVERY TRACKER ── */}
             {(() => {
               const hrrKey = `fitrace_hrr_${profile.name}`;
