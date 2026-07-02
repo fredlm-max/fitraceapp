@@ -11952,6 +11952,82 @@ JSON:
                 );
               })()}
 
+              {/* ── ENERGY SYSTEMS GUIDE ── */}
+              {(() => {
+                const SYSTEMS = [
+                  {
+                    id: "atpcp", name: "Filière Phosphocréatine", abbr: "ATP-CP", icon: "⚡", color: "#FF453A",
+                    duration: "0–10 sec", intensity: "100% max",
+                    desc: "Énergie immédiate stockée dans le muscle. Pas d'oxygène requis. S'épuise très vite.",
+                    hyrox: ["Départ sprint sled push", "Accélération burpee jump", "Effort explosif ≤10s"],
+                    recharge: "2–5 min de récup complète",
+                    train: "Sprints courts <10s avec 3–5 min repos",
+                  },
+                  {
+                    id: "lactate", name: "Filière Glycolytique", abbr: "LACTATE", icon: "🔥", color: "#FF9F0A",
+                    duration: "10 sec – 2 min", intensity: "80–100%",
+                    desc: "Brûle le glucose rapidement. Produit du lactate → sensation de brûlure. Améliore le seuil anaérobie.",
+                    hyrox: ["SkiErg 1000m (5–6 min)", "Rowing 1000m", "Wall Balls × 100"],
+                    recharge: "1–3 min selon intensité",
+                    train: "Intervalles 30s–2min @ 85–95% FCmax",
+                  },
+                  {
+                    id: "aerobic", name: "Filière Aérobie", abbr: "AÉROBIE", icon: "🫁", color: "#30D158",
+                    duration: "2 min – plusieurs heures", intensity: "50–85%",
+                    desc: "Oxygène + graisse/glucose = énergie quasi-illimitée. Base de tout athlète HYROX. 70% de tes entraînements ici.",
+                    hyrox: ["Runs de liaison entre stations", "Rythme course complet", "Endurance au fond"],
+                    recharge: "Récup progressive — 24–48h pour séances longues",
+                    train: "Zone 2 (conversation) 30–120 min, 3–4×/semaine",
+                  },
+                ];
+                const [active, setActive] = React.useState(null);
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>⚡ FILIÈRES ÉNERGÉTIQUES</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {SYSTEMS.map(s => {
+                        const isOpen = active === s.id;
+                        return (
+                          <div key={s.id} onClick={() => setActive(isOpen ? null : s.id)}
+                            style={{ background: isOpen ? s.color + "12" : "rgba(255,255,255,0.04)", border: `1px solid ${isOpen ? s.color : "rgba(255,255,255,0.06)"}`, borderRadius: 12, overflow: "hidden", cursor: "pointer", transition: "all 0.2s" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
+                              <div style={{ width: 40, height: 40, borderRadius: 10, background: s.color + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{s.icon}</div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div className="bebas" style={{ fontSize: 14, color: s.color, letterSpacing: 1 }}>{s.abbr}</div>
+                                  <div style={{ fontSize: 10, color: s.color, background: s.color + "22", borderRadius: 6, padding: "2px 7px" }}>{s.duration}</div>
+                                </div>
+                                <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{s.name}</div>
+                                <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>{s.intensity} · {isOpen ? "▲" : "▼"}</div>
+                              </div>
+                            </div>
+                            {isOpen && (
+                              <div style={{ padding: "0 14px 14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                                <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.6, marginBottom: 10, marginTop: 10 }}>{s.desc}</div>
+                                <div style={{ background: s.color + "15", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                                  <div style={{ fontSize: 10, color: s.color, fontWeight: 700, marginBottom: 6 }}>🏆 HYROX — Quand tu l'utilises</div>
+                                  {s.hyrox.map((h, i) => <div key={i} style={{ fontSize: 12, color: "var(--white)", marginBottom: 2 }}>· {h}</div>)}
+                                </div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                                    <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>🔋 RECHARGE</div>
+                                    <div style={{ fontSize: 11, color: "var(--white)" }}>{s.recharge}</div>
+                                  </div>
+                                  <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                                    <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>🏋️ ENTRAÎNER</div>
+                                    <div style={{ fontSize: 11, color: "var(--white)" }}>{s.train}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── BREATHING PROTOCOL ── */}
               {(() => {
                 const PROTOCOLS = [
