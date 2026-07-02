@@ -21650,6 +21650,101 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── RACE STRATEGY PLANNER ── */}
+      {(() => {
+        const stratKey = `fitrace_strategy_${profile.name}`;
+        const [targetMin, setTargetMin] = React.useState(() => {
+          try { return parseInt(localStorage.getItem(stratKey) || "75"); } catch { return 75; }
+        });
+
+        React.useEffect(() => {
+          localStorage.setItem(stratKey, String(targetMin));
+        }, [targetMin]);
+
+        // HYROX Individual structure
+        const SEGMENTS = [
+          { type: "run", label: "Run 1", km: 1 },
+          { type: "station", label: "SkiErg", mins: null, share: 0.07 },
+          { type: "run", label: "Run 2", km: 1 },
+          { type: "station", label: "Sled Push", mins: null, share: 0.09 },
+          { type: "run", label: "Run 3", km: 1 },
+          { type: "station", label: "Sled Pull", mins: null, share: 0.08 },
+          { type: "run", label: "Run 4", km: 1 },
+          { type: "station", label: "Burpee BJ", mins: null, share: 0.08 },
+          { type: "run", label: "Run 5", km: 1 },
+          { type: "station", label: "Rowing", mins: null, share: 0.07 },
+          { type: "run", label: "Run 6", km: 1 },
+          { type: "station", label: "Farmer Carry", mins: null, share: 0.06 },
+          { type: "run", label: "Run 7", km: 1 },
+          { type: "station", label: "Sandbag Lunges", mins: null, share: 0.07 },
+          { type: "run", label: "Run 8", km: 1 },
+          { type: "station", label: "Wall Balls", mins: null, share: 0.08 },
+        ];
+
+        // stations total ~60% of time, running ~40%
+        const totalSec = targetMin * 60;
+        const stationTotal = totalSec * 0.60;
+        const runTotal = totalSec * 0.40;
+        const runPerKm = runTotal / 8; // 8×1km runs
+        const paceSec = Math.round(runPerKm);
+        const paceMin = Math.floor(paceSec / 60);
+        const paceSec2 = paceSec % 60;
+
+        const computed = SEGMENTS.map(seg => {
+          if (seg.type === "run") {
+            return { ...seg, timeSec: Math.round(runPerKm) };
+          } else {
+            return { ...seg, timeSec: Math.round(stationTotal * seg.share) };
+          }
+        });
+
+        const fmt = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+        const cumul = (idx) => computed.slice(0, idx + 1).reduce((s, x) => s + x.timeSec, 0);
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Race Strategy Planner</div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: "#8E8E93" }}>Objectif : <span style={{ color: "var(--yellow)", fontWeight: 800 }}>{Math.floor(targetMin)}:{String(Math.round((targetMin % 1) * 60)).padStart(2, "0")}</span></span>
+                <span style={{ fontSize: 11, color: "#8E8E93" }}>Allure course : <span style={{ color: "#FF9F0A" }}>{paceMin}:{String(paceSec2).padStart(2, "0")}/km</span></span>
+              </div>
+              <input type="range" min="55" max="130" step="1" value={targetMin}
+                onChange={e => setTargetMin(parseInt(e.target.value))}
+                style={{ width: "100%", accentColor: "var(--yellow)" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#636366" }}>
+                <span>55 min (Elite)</span><span>130 min (Débutant)</span>
+              </div>
+            </div>
+
+            {/* Split table */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {computed.map((seg, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px", background: seg.type === "run" ? "#FF9F0A0F" : "#007AFF0F", borderRadius: 8, borderLeft: `3px solid ${seg.type === "run" ? "#FF9F0A" : "#007AFF"}` }}>
+                  <div style={{ fontSize: 11, flex: 1, fontWeight: seg.type === "station" ? 700 : 400, color: seg.type === "station" ? "#007AFF" : "#FF9F0A" }}>{seg.label}</div>
+                  <div style={{ fontSize: 11, color: "#8E8E93", minWidth: 36, textAlign: "right" }}>{fmt(seg.timeSec)}</div>
+                  <div style={{ fontSize: 9, color: "#636366", minWidth: 42, textAlign: "right" }}>→ {fmt(cumul(i))}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              {[
+                { label: "Run total", val: fmt(Math.round(runTotal)), color: "#FF9F0A" },
+                { label: "Stations", val: fmt(Math.round(stationTotal)), color: "#007AFF" },
+                { label: "Allure", val: `${paceMin}:${String(paceSec2).padStart(2, "0")}/km`, color: "#30D158" },
+              ].map(s => (
+                <div key={s.label} style={{ flex: 1, background: `${s.color}15`, borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: s.color }}>{s.val}</div>
+                  <div style={{ fontSize: 8, color: "#636366" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── RACE GEAR CHECKLIST ── */}
       {(() => {
         const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
