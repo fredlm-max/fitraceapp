@@ -19623,6 +19623,114 @@ JSON: {
             );
           })()}
 
+          {/* ── MACRO TRACKER ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const macroKey = `fitrace_macros_${profile.name}_${todayStr}`;
+            const [entries, setEntries] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(macroKey) || "[]"); } catch { return []; }
+            });
+            const [showForm, setShowForm] = React.useState(false);
+            const [form, setForm] = React.useState({ name: "", p: "", c: "", f: "", kcal: "" });
+
+            const poids = parseFloat(profile.poids) || 70;
+            const goal = profile.objectif || "performance";
+            // Targets based on weight and goal
+            const TARGET = goal === "perte de poids"
+              ? { p: Math.round(poids * 2.2), c: Math.round(poids * 3), f: Math.round(poids * 0.9) }
+              : { p: Math.round(poids * 2.0), c: Math.round(poids * 5), f: Math.round(poids * 1.2) };
+            TARGET.kcal = TARGET.p * 4 + TARGET.c * 4 + TARGET.f * 9;
+
+            const save = (e) => { setEntries(e); localStorage.setItem(macroKey, JSON.stringify(e)); };
+            const addEntry = () => {
+              const e = { id: Date.now(), name: form.name || "Repas", p: parseFloat(form.p) || 0, c: parseFloat(form.c) || 0, f: parseFloat(form.f) || 0, kcal: parseFloat(form.kcal) || 0 };
+              if (!e.kcal) e.kcal = Math.round(e.p * 4 + e.c * 4 + e.f * 9);
+              save([...entries, e]);
+              setShowForm(false); setForm({ name: "", p: "", c: "", f: "", kcal: "" });
+            };
+
+            const totals = entries.reduce((s, e) => ({ p: s.p + e.p, c: s.c + e.c, f: s.f + e.f, kcal: s.kcal + e.kcal }), { p: 0, c: 0, f: 0, kcal: 0 });
+
+            // Pie chart SVG
+            const MACRO_COLORS = { p: "#FF453A", c: "#FF9F0A", f: "#30D158" };
+            const pieTotal = totals.p * 4 + totals.c * 4 + totals.f * 9 || 1;
+            const slices = [
+              { key: "p", label: "Prot", value: totals.p * 4, color: MACRO_COLORS.p },
+              { key: "c", label: "Carb", value: totals.c * 4, color: MACRO_COLORS.c },
+              { key: "f", label: "Lip", value: totals.f * 9, color: MACRO_COLORS.f },
+            ];
+            const R = 36, CX = 40, CY = 40;
+            let startAngle = -Math.PI / 2;
+            const piePaths = slices.map(sl => {
+              const sweep = (sl.value / pieTotal) * 2 * Math.PI;
+              const endAngle = startAngle + sweep;
+              const x1 = CX + R * Math.cos(startAngle), y1 = CY + R * Math.sin(startAngle);
+              const x2 = CX + R * Math.cos(endAngle), y2 = CY + R * Math.sin(endAngle);
+              const large = sweep > Math.PI ? 1 : 0;
+              const d = `M${CX},${CY} L${x1},${y1} A${R},${R},0,${large},1,${x2},${y2} Z`;
+              startAngle = endAngle;
+              return { ...sl, d };
+            });
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Macros du Jour</div>
+                    <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{Math.round(totals.kcal)} / {TARGET.kcal} kcal</div>
+                  </div>
+                  <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Repas</button>
+                </div>
+
+                {showForm && (
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                    <input placeholder="Nom du repas" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12, marginBottom: 6, boxSizing: "border-box" }} />
+                    <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                      {[["p","Protéines (g)","#FF453A"],["c","Glucides (g)","#FF9F0A"],["f","Lipides (g)","#30D158"]].map(([k, ph, col]) => (
+                        <input key={k} type="number" placeholder={ph} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} style={{ flex: 1, background: "var(--bg2)", border: `1px solid ${col}50`, borderRadius: 8, padding: "6px 4px", color: "var(--fg)", fontSize: 12 }} />
+                      ))}
+                    </div>
+                    <input type="number" placeholder="kcal (auto-calculé si vide)" value={form.kcal} onChange={e => setForm(f => ({ ...f, kcal: e.target.value }))} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12, marginBottom: 6, boxSizing: "border-box" }} />
+                    <button onClick={addEntry} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "7px 0", fontWeight: 700, cursor: "pointer" }}>Ajouter</button>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                  {/* Pie */}
+                  <svg width="80" height="80" viewBox="0 0 80 80">
+                    {totals.kcal > 0 ? piePaths.map(sl => <path key={sl.key} d={sl.d} fill={sl.color} />) : <circle cx="40" cy="40" r="36" fill="#2C2C2E" />}
+                    <text x="40" y="44" textAnchor="middle" fill="var(--fg)" fontSize="10" fontWeight="800">{Math.round(totals.kcal)}</text>
+                  </svg>
+                  {/* Bars */}
+                  <div style={{ flex: 1 }}>
+                    {[["p","Protéines",MACRO_COLORS.p],["c","Glucides",MACRO_COLORS.c],["f","Lipides",MACRO_COLORS.f]].map(([k, label, col]) => (
+                      <div key={k} style={{ marginBottom: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#8E8E93", marginBottom: 2 }}>
+                          <span>{label}</span><span style={{ color: col }}>{Math.round(totals[k])}g / {TARGET[k]}g</span>
+                        </div>
+                        <div style={{ height: 5, background: "#2C2C2E", borderRadius: 3 }}>
+                          <div style={{ height: "100%", width: `${Math.min(100, (totals[k] / TARGET[k]) * 100)}%`, background: col, borderRadius: 3, transition: "width 0.4s" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {entries.length > 0 && (
+                  <div style={{ borderTop: "1px solid #2C2C2E", paddingTop: 8 }}>
+                    {entries.map((e, i) => (
+                      <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8E8E93", padding: "3px 0" }}>
+                        <span>{e.name}</span>
+                        <span style={{ color: "#636366" }}>{e.kcal} kcal · P{e.p}g C{e.c}g L{e.f}g</span>
+                        <button onClick={() => save(entries.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#FF453A", cursor: "pointer", fontSize: 10, padding: 0 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── MEAL PLAN TEMPLATES ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 75;
