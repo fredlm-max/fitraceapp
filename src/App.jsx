@@ -6204,6 +6204,123 @@ JSON:
               );
             })()}
 
+            {/* ── HYDRATION STATION ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const hydKey = `fitrace_hydration2_${profile.name}_${todayStr}`;
+              const [intake, setIntake] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(hydKey) || "[]"); } catch { return []; }
+              });
+
+              const weight = parseFloat(profile.poids) || 70;
+              const sessions = profile.sessions || [];
+              const trainedToday = sessions.some(s => s.date === todayStr);
+              const lastRPE = sessions.length ? (sessions[sessions.length-1].difficulte || 5) : 5;
+
+              // Target: 35ml/kg base + 500ml if trained today + extra for hot season
+              const month = new Date().getMonth();
+              const isSummer = [5,6,7].includes(month);
+              const baseTarget = Math.round(weight * 35);
+              const trainingBonus = trainedToday ? 500 + Math.round((lastRPE - 5) * 100) : 0;
+              const summerBonus = isSummer ? 300 : 0;
+              const totalTarget = baseTarget + trainingBonus + summerBonus;
+
+              const totalMl = intake.reduce((s, e) => s + e.ml, 0);
+              const pct = Math.min(100, Math.round((totalMl / totalTarget) * 100));
+
+              const addWater = ml => {
+                const entry = { ml, time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), id: Date.now() };
+                const updated = [...intake, entry];
+                setIntake(updated);
+                localStorage.setItem(hydKey, JSON.stringify(updated));
+              };
+
+              const removeLastEntry = () => {
+                if (intake.length === 0) return;
+                const updated = intake.slice(0, -1);
+                setIntake(updated);
+                localStorage.setItem(hydKey, JSON.stringify(updated));
+              };
+
+              const statusColor = pct >= 100 ? "#30D158" : pct >= 60 ? "var(--yellow)" : pct >= 30 ? "#FF9F0A" : "#FF453A";
+              const statusLabel = pct >= 100 ? "Objectif atteint 🎉" : pct >= 60 ? "Bonne progression" : pct >= 30 ? "Continue à boire" : "Hydrate-toi !";
+              const remaining = Math.max(0, totalTarget - totalMl);
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>💧 HYDRATATION DU JOUR</div>
+                    <div style={{ fontSize: 11, color: statusColor, fontWeight: 700 }}>{statusLabel}</div>
+                  </div>
+
+                  {/* Ring + stats */}
+                  <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ position: "relative", width: 80, height: 80, flexShrink: 0 }}>
+                      <svg viewBox="0 0 80 80" style={{ transform: "rotate(-90deg)" }}>
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#3A3A3C" strokeWidth="7" />
+                        <circle cx="40" cy="40" r="34" fill="none" stroke={statusColor} strokeWidth="7"
+                          strokeDasharray={`${2 * Math.PI * 34}`}
+                          strokeDashoffset={`${2 * Math.PI * 34 * (1 - pct / 100)}`}
+                          strokeLinecap="round"
+                          style={{ transition: "stroke-dashoffset 0.5s" }} />
+                      </svg>
+                      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, color: statusColor }}>{pct}%</div>
+                        <div style={{ fontSize: 9, color: "#636366" }}>objectif</div>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: "#007AFF" }}>{(totalMl/1000).toFixed(1)}L</div>
+                          <div style={{ fontSize: 9, color: "#8E8E93" }}>bu aujourd'hui</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: "var(--white)" }}>{(totalTarget/1000).toFixed(1)}L</div>
+                          <div style={{ fontSize: 9, color: "#8E8E93" }}>objectif</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: remaining > 0 ? "#FF9F0A" : "#30D158" }}>{remaining > 0 ? `${(remaining/1000).toFixed(1)}L` : "✓"}</div>
+                          <div style={{ fontSize: 9, color: "#8E8E93" }}>restant</div>
+                        </div>
+                      </div>
+                      {trainedToday && <div style={{ fontSize: 10, color: "#FF9F0A", background: "#FF9F0A15", borderRadius: 6, padding: "3px 8px" }}>+{trainingBonus}ml pour ta séance · {isSummer ? "+300ml chaleur" : ""}</div>}
+                    </div>
+                  </div>
+
+                  {/* Quick add buttons */}
+                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                    {[150, 250, 330, 500].map(ml => (
+                      <button key={ml} onClick={() => addWater(ml)} style={{ flex: 1, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "8px 0", color: "#007AFF", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        +{ml}ml
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ height: 6, background: "#3A3A3C", borderRadius: 99, marginBottom: 8 }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, #007AFF, ${statusColor})`, borderRadius: 99, transition: "width 0.5s" }} />
+                  </div>
+
+                  {/* Log entries */}
+                  {intake.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 6 }}>
+                      {intake.slice(-8).map(e => (
+                        <div key={e.id} style={{ background: "#007AFF20", border: "1px solid #007AFF30", borderRadius: 6, padding: "2px 7px", fontSize: 10, color: "#007AFF" }}>
+                          {e.ml}ml <span style={{ color: "#636366" }}>{e.time}</span>
+                        </div>
+                      ))}
+                      {intake.length > 8 && <span style={{ fontSize: 10, color: "#636366" }}>+{intake.length-8} autres</span>}
+                    </div>
+                  )}
+
+                  {intake.length > 0 && (
+                    <button onClick={removeLastEntry} style={{ background: "none", border: "none", color: "#636366", fontSize: 10, cursor: "pointer", padding: 0 }}>↩ Annuler dernière entrée</button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SEASONAL TRAINING ADVISOR ── */}
             {(() => {
               const month = new Date().getMonth(); // 0-11
