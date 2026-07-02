@@ -6107,6 +6107,93 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY SUMMARY ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              const now = new Date();
+              // Start of current week (Monday)
+              const dow = (now.getDay() + 6) % 7;
+              const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow); weekStart.setHours(0,0,0,0);
+              const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(weekStart.getDate() - 7);
+
+              const thisWeek = sessions.filter(s => s.date && new Date(s.date) >= weekStart);
+              const lastWeek = sessions.filter(s => s.date && new Date(s.date) >= prevWeekStart && new Date(s.date) < weekStart);
+              if (thisWeek.length === 0 && lastWeek.length === 0) return null;
+
+              const calcStats = arr => ({
+                count: arr.length,
+                trimp: Math.round(arr.reduce((a, s) => a + ((s.duree || 0) * (s.difficulte || 5) / 10), 0)),
+                duration: Math.round(arr.reduce((a, s) => a + (s.duree || 0), 0)),
+                distance: parseFloat(arr.reduce((a, s) => a + (s.distance || 0), 0).toFixed(1)),
+              });
+              const tw = calcStats(thisWeek);
+              const lw = calcStats(lastWeek);
+              const delta = lw.trimp > 0 ? Math.round((tw.trimp - lw.trimp) / lw.trimp * 100) : null;
+
+              // Streak — consecutive days with sessions
+              let streak = 0;
+              for (let i = 0; i < 14; i++) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const ds = d.toISOString().slice(0,10);
+                if (sessions.some(s => s.date === ds)) streak++; else break;
+              }
+
+              const bestSession = thisWeek.length ? thisWeek.reduce((a, s) => (s.difficulte || 0) > (a.difficulte || 0) ? s : a, thisWeek[0]) : null;
+
+              const TYPE_ICON = { running_zone2: "🏃", running_qualite: "⚡", force_stations: "🏋️", hybride_compromis: "🔀", coach: "📋", perso: "✏️" };
+
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(28,28,30,1) 0%, rgba(15,15,20,1) 100%)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📊 SEMAINE EN COURS</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
+                        {weekStart.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} – aujourd'hui
+                      </div>
+                    </div>
+                    {streak >= 2 && (
+                      <div style={{ textAlign: "right" }}>
+                        <div className="bebas" style={{ fontSize: 20, color: "#FF9F0A", lineHeight: 1 }}>🔥{streak}</div>
+                        <div style={{ fontSize: 9, color: "#636366" }}>jours streak</div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+                    {[
+                      { l: "Séances", v: tw.count, prev: lw.count, unit: "" },
+                      { l: "TRIMP", v: tw.trimp, prev: lw.trimp, unit: "" },
+                      { l: "Durée", v: `${Math.floor(tw.duration/60)}h${tw.duration%60 ? String(tw.duration%60).padStart(2,"0") : ""}`, prev: lw.duration, unit: "" },
+                      { l: "Distance", v: tw.distance ? `${tw.distance}km` : "–", prev: lw.distance, unit: "km" },
+                    ].map(s => {
+                      const d = typeof s.v === "number" && s.prev > 0 ? Math.round((s.v - s.prev) / s.prev * 100) : null;
+                      return (
+                        <div key={s.l} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                          <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>{s.l}</div>
+                          <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", lineHeight: 1 }}>{s.v || "–"}</div>
+                          {d !== null && <div style={{ fontSize: 9, color: d > 0 ? "#30D158" : d < 0 ? "#FF453A" : "#8E8E93", marginTop: 2 }}>{d > 0 ? "+" : ""}{d}%</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {bestSession && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "rgba(201,168,64,0.08)", borderRadius: 8 }}>
+                      <div style={{ fontSize: 18 }}>{TYPE_ICON[bestSession.type] || "⚡"}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 1 }}>Meilleure séance</div>
+                        <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{bestSession.titre?.slice(0,35) || "Séance"}</div>
+                      </div>
+                      <div className="bebas" style={{ fontSize: 16, color: "#FF9F0A" }}>RPE {bestSession.difficulte}/10</div>
+                    </div>
+                  )}
+                  {delta !== null && (
+                    <div style={{ marginTop: 10, fontSize: 11, color: delta > 20 ? "#FF453A" : delta > 0 ? "#30D158" : "#8E8E93", textAlign: "center" }}>
+                      {delta > 20 ? "⚠️ Charge +20% vs semaine passée — surveille la fatigue" : delta > 0 ? `↑ Charge +${delta}% vs semaine passée — bonne progression` : `↓ Charge ${delta}% vs semaine passée — semaine légère`}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── 7-DAY RECOVERY TREND ── */}
             {(() => {
               const days = Array.from({ length: 7 }, (_, i) => {
