@@ -5433,6 +5433,55 @@ JSON:
               );
             })()}
 
+            {/* ── ATHLETE STATS CARD ── */}
+            {(() => {
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const vo2 = vma ? Math.round(vma * 3.5) : null;
+              const age = parseInt(profile.age) || null;
+              const poids = parseFloat(profile.poids) || null;
+              const fcMax = profile.fcMax || (age ? Math.round(208 - 0.7 * age) : null);
+              const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
+              const daysLeft = raceDate ? Math.ceil((raceDate - new Date()) / 86400000) : null;
+              const sessions = profile.sessions || [];
+              const totalH = Math.round(sessions.reduce((s, x) => s + (x.duree || 0), 0) / 60);
+              const sex = profile.sexe === "F" ? "F" : "H";
+
+              // HYROX level from VMA
+              const hyroxLevel = !vma ? null
+                : sex === "H" ? (vma >= 18 ? "Elite" : vma >= 15 ? "Pro" : vma >= 13 ? "Avancé" : "Débutant")
+                : (vma >= 16 ? "Elite" : vma >= 13 ? "Pro" : vma >= 11 ? "Avancé" : "Débutant");
+
+              const STATS = [
+                vma && { label: "VMA", value: `${vma.toFixed(1)}`, unit: "km/h", color: "#FF9F0A", icon: "⚡" },
+                vo2 && { label: "VO2max", value: `${vo2}`, unit: "ml/kg/min", color: "#007AFF", icon: "🫁" },
+                fcMax && { label: "FCmax", value: `${fcMax}`, unit: "bpm", color: "#FF453A", icon: "❤️" },
+                poids && { label: "Poids", value: `${poids}`, unit: "kg", color: "#30D158", icon: "⚖️" },
+                totalH > 0 && { label: "Volume total", value: `${totalH}`, unit: "heures", color: "#C9A840", icon: "🏋️" },
+                daysLeft !== null && daysLeft >= 0 && { label: "Course dans", value: `${daysLeft}`, unit: "jours", color: "#BF5AF2", icon: "🏁" },
+              ].filter(Boolean);
+
+              if (STATS.length < 2) return null;
+
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Profil Athlète</div>
+                    {hyroxLevel && <div style={{ fontSize: 10, background: "var(--yellow)", color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>{hyroxLevel} HYROX {sex}</div>}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                    {STATS.slice(0, 6).map(s => (
+                      <div key={s.label} style={{ background: `${s.color}12`, border: `1px solid ${s.color}25`, borderRadius: 10, padding: "8px 8px 6px" }}>
+                        <div style={{ fontSize: 13, marginBottom: 2 }}>{s.icon}</div>
+                        <div style={{ fontSize: 16, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                        <div style={{ fontSize: 8, color: "#8E8E93", marginTop: 2 }}>{s.unit}</div>
+                        <div style={{ fontSize: 8, color: "#636366", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── CHECK-IN RAPIDE 10 SECONDES ── */}
             {(() => {
               const checkedIn = dailyData.fatigue > 0 || dailyData.sommeil > 0;
