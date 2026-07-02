@@ -10265,6 +10265,100 @@ JSON:
               );
             })()}
 
+            {/* ── LACTATE THRESHOLD ESTIMATOR ── */}
+            {(() => {
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const age = parseInt(profile.age) || 30;
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const fcMax = parseInt(profile.fcMax) || Math.round(208 - 0.7 * age);
+              const fcRest = parseInt(profile.fcRepos) || null;
+              const sessions = profile.sessions || [];
+              const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+
+              if (!vma && runs.length === 0) return null;
+
+              // LT1 (aerobic threshold) ≈ 65-75% VMA, FC ≈ 75% FCmax
+              // LT2 (anaerobic threshold / FTP) ≈ 80-90% VMA, FC ≈ 88% FCmax
+              const lt1Pct = 0.70; // % of VMA
+              const lt2Pct = 0.85;
+
+              const lt1Kmh = vma ? Math.round(vma * lt1Pct * 10) / 10 : null;
+              const lt2Kmh = vma ? Math.round(vma * lt2Pct * 10) / 10 : null;
+
+              const kmhToPace = (kmh) => {
+                if (!kmh) return null;
+                const minKm = 60 / kmh;
+                return `${Math.floor(minKm)}:${String(Math.round((minKm % 1) * 60)).padStart(2, "0")}/km`;
+              };
+
+              const lt1Fc = Math.round(fcMax * 0.75);
+              const lt2Fc = Math.round(fcMax * 0.88);
+
+              // Training zones based on LT2
+              const ZONES = [
+                { name: "Z1 · Récup active", pctVma: [0, 0.60], pctFc: [0, 0.72], color: "#636366", desc: "Footing très facile, conversation aisée" },
+                { name: "Z2 · Endurance fond", pctVma: [0.60, 0.75], pctFc: [0.72, 0.82], color: "#30D158", desc: "Aérobie, brûle les graisses, base cardio" },
+                { name: "Z3 · Tempo (LT1→LT2)", pctVma: [0.75, 0.88], pctFc: [0.82, 0.91], color: "#FF9F0A", desc: "Confortable-difficile, allure semi/marathon" },
+                { name: "Z4 · Seuil (autour LT2)", pctVma: [0.88, 0.95], pctFc: [0.91, 0.96], color: "#FF6B35", desc: "Difficile, 20-60min max, allure 10km" },
+                { name: "Z5 · VO2max", pctVma: [0.95, 1.10], pctFc: [0.96, 1.0], color: "#FF453A", desc: "Très difficile, intervalles courts, 3-8min" },
+              ];
+
+              // Best estimate for LT2 from training data
+              const bestPace = runs.length > 0
+                ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+                : null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Seuils Lactiques & Zones</div>
+
+                  {/* LT1 / LT2 cards */}
+                  {vma && (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      {[
+                        { label: "LT1 · Seuil aérobie", kmh: lt1Kmh, fc: lt1Fc, color: "#30D158", desc: "Début accumulation lactate", pct: "70% VMA" },
+                        { label: "LT2 · Seuil anaérobie", kmh: lt2Kmh, fc: lt2Fc, color: "#FF9F0A", desc: "Max lactate steady-state", pct: "85% VMA" },
+                      ].map(lt => (
+                        <div key={lt.label} style={{ flex: 1, background: `${lt.color}12`, border: `1px solid ${lt.color}30`, borderRadius: 12, padding: "10px 10px" }}>
+                          <div style={{ fontSize: 8, color: lt.color, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{lt.label}</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: lt.color }}>{lt.kmh} <span style={{ fontSize: 10 }}>km/h</span></div>
+                          <div style={{ fontSize: 11, color: "#8E8E93" }}>{kmhToPace(lt.kmh)}</div>
+                          <div style={{ fontSize: 10, color: "#636366", marginTop: 3 }}>FC ~{lt.fc} bpm</div>
+                          <div style={{ fontSize: 8, color: "#3A3A3C", marginTop: 2 }}>{lt.pct} · {lt.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Zones */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {ZONES.map(z => {
+                      const speedLow = vma ? Math.round(vma * z.pctVma[0] * 10) / 10 : null;
+                      const speedHigh = vma ? Math.round(vma * z.pctVma[1] * 10) / 10 : null;
+                      const fcLow = Math.round(fcMax * z.pctFc[0]);
+                      const fcHigh = Math.round(fcMax * z.pctFc[1]);
+                      return (
+                        <div key={z.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: `${z.color}10`, borderRadius: 8, borderLeft: `3px solid ${z.color}` }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: z.color }}>{z.name}</div>
+                            <div style={{ fontSize: 8, color: "#636366" }}>{z.desc}</div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            {speedLow !== null && <div style={{ fontSize: 9, color: "#8E8E93" }}>{speedLow}–{speedHigh} km/h</div>}
+                            <div style={{ fontSize: 9, color: "#636366" }}>{fcLow}–{fcHigh} bpm</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 8, fontSize: 9, color: "#636366", textAlign: "center" }}>
+                    Basé sur VMA {vma || "--"} km/h · FCmax {fcMax} bpm · Méthode % VMA (Billat)
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RUNNING ECONOMY CALCULATOR ── */}
             {(() => {
               const vma = parseFloat(profile.vmaKmh) || null;
