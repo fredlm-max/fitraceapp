@@ -16406,6 +16406,67 @@ JSON: {
             <div className="bebas" style={{ fontSize: 18, color: "#30D158", letterSpacing: 1 }}>NUTRITION SÉANCE</div>
             <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{todaySession?.titre?.slice(0,20) || "Séance du jour"}</div>
           </div>
+          {/* ── SUPPLEMENT TRACKER ── */}
+          {(() => {
+            const todayDate = new Date().toISOString().slice(0,10);
+            const suppKey = `fitrace_supps_${profile.name}_${todayDate}`;
+            const poids = parseFloat(profile.poids) || 75;
+            const SUPPS = [
+              { id: "creatine",    name: "Créatine",      dose: "5g",                timing: "Post-séance ou matin",      icon: "💪", color: "#C9A840",  evidence: "A+", tip: "Charge cellulaire ATP — efficacité prouvée sur force et récup" },
+              { id: "whey",        name: "Whey Protéine", dose: `${Math.round(poids*0.3)}g`, timing: "Dans les 30 min post-séance", icon: "🥛", color: "#38bdf8", evidence: "A+", tip: "Synthèse protéique optimale dans la fenêtre anabolique" },
+              { id: "cafeine",     name: "Caféine",       dose: "3–5 mg/kg",         timing: "60 min avant séance",       icon: "☕", color: "#FF9F0A",  evidence: "A",  tip: `Soit ${Math.round(poids*3.5)}mg — améliore endurance +10%` },
+              { id: "beta_alanine",name: "Bêta-Alanine",  dose: "3.2g",              timing: "30 min avant séance",       icon: "🔥", color: "#FF453A",  evidence: "A",  tip: "Tampon lactate — réduit la brûlure musculaire aux stations" },
+              { id: "magnesium",   name: "Magnésium",     dose: "300–400mg",         timing: "Soir au coucher",           icon: "🌙", color: "#BF5AF2",  evidence: "B+", tip: "Qualité du sommeil, récupération musculaire, réduction crampes" },
+              { id: "vitd3",       name: "Vitamine D3",   dose: "2000–4000 UI",      timing: "Matin avec repas",          icon: "☀️", color: "#eab308",  evidence: "A",  tip: "Déficit très fréquent en France — impacte force et immunité" },
+            ];
+            const [checked, setChecked] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(suppKey) || "{}"); } catch { return {}; }
+            });
+            const toggle = id => {
+              const next = { ...checked, [id]: !checked[id] };
+              setChecked(next);
+              localStorage.setItem(suppKey, JSON.stringify(next));
+            };
+            const doneCount = Object.values(checked).filter(Boolean).length;
+            return (
+              <div style={{ background: "rgba(201,168,64,0.06)", border: "1px solid rgba(201,168,64,0.15)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>💊 SUPPLÉMENTS DU JOUR</div>
+                    <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
+                      {doneCount}/{SUPPS.length} pris aujourd'hui
+                    </div>
+                  </div>
+                  {doneCount === SUPPS.length && <div style={{ fontSize: 12, color: "#30D158" }}>✅ Tout pris !</div>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {SUPPS.map(s => {
+                    const done = !!checked[s.id];
+                    return (
+                      <div key={s.id} onClick={() => toggle(s.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: done ? s.color + "18" : "rgba(255,255,255,0.04)", border: `1px solid ${done ? s.color : "rgba(255,255,255,0.06)"}`, cursor: "pointer", transition: "all 0.2s" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 8, background: done ? s.color : "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0, transition: "all 0.2s" }}>
+                          {done ? "✓" : s.icon}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontSize: 13, color: done ? s.color : "var(--white)", fontWeight: 600 }}>{s.name}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ fontSize: 10, color: "#8E8E93", background: "rgba(255,255,255,0.06)", borderRadius: 4, padding: "1px 5px" }}>{s.dose}</div>
+                              <div style={{ fontSize: 9, color: s.color, fontWeight: 700 }}>{s.evidence}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 10, color: "#636366", marginTop: 2 }}>⏰ {s.timing}</div>
+                          {done && <div style={{ fontSize: 10, color: s.color, marginTop: 3, fontStyle: "italic" }}>💡 {s.tip}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── HYDRATION TRACKER ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 75;
