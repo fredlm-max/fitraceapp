@@ -20597,6 +20597,80 @@ JSON: {
             );
           })()}
 
+          {/* ── SUPPLEMENT TRACKER ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const suppKey = `fitrace_supps_${profile.name}`;
+            const logKey = `fitrace_supp_log_${profile.name}_${todayStr}`;
+
+            const poids = parseFloat(profile.poids) || 70;
+
+            const DEFAULT_SUPPS = [
+              { id: "creatine", name: "Créatine", dose: "5g", timing: "Post-entraînement", evidence: "⭐⭐⭐", desc: "Améliore force & puissance. Chargement 20g/j ×5j optionnel.", color: "#FF9F0A" },
+              { id: "omega3", name: "Oméga-3", dose: "2-3g EPA/DHA", timing: "Repas", evidence: "⭐⭐⭐", desc: "Anti-inflammatoire, récupération musculaire, santé cardio.", color: "#007AFF" },
+              { id: "vitd", name: "Vitamine D3", dose: "2000-4000 UI", timing: "Matin avec repas", evidence: "⭐⭐⭐", desc: "Immunité, force musculaire. Carence très fréquente.", color: "#FFD60A" },
+              { id: "magnesium", name: "Magnésium", dose: "300-400mg", timing: "Soir", evidence: "⭐⭐", desc: "Qualité du sommeil, crampes, récupération neuromusculaire.", color: "#30D158" },
+              { id: "caffeine", name: "Caféine", dose: `${Math.round(poids * 3)}mg`, timing: "60min avant effort", evidence: "⭐⭐⭐", desc: "Endurance, focus, puissance. Évitez après 14h.", color: "#FF453A" },
+              { id: "bcaa", name: "BCAA", dose: "5-10g", timing: "Intra ou post", evidence: "⭐", desc: "Utile si jeûne ou végétarien. Superflu si protéines suffisantes.", color: "#BF5AF2" },
+              { id: "beta", name: "Bêta-Alanine", dose: "3.2-6.4g", timing: "Pré-entraînement", evidence: "⭐⭐", desc: "Réduit la fatigue musculaire sur efforts 1-4 min. Picotements normaux.", color: "#FF6B35" },
+              { id: "iron", name: "Fer (si carence)", dose: "Selon bilan", timing: "À jeun matin", evidence: "⭐⭐⭐", desc: "Essentiel si ferritine basse. Bilan sanguin recommandé.", color: "#C9A840" },
+            ];
+
+            const [supps, setSupps] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(suppKey) || JSON.stringify(DEFAULT_SUPPS.map(s => s.id))); } catch { return DEFAULT_SUPPS.map(s => s.id); }
+            });
+            const [taken, setTaken] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(logKey) || "[]"); } catch { return []; }
+            });
+            const [expanded, setExpanded] = React.useState(null);
+
+            const toggleTaken = (id) => {
+              const updated = taken.includes(id) ? taken.filter(x => x !== id) : [...taken, id];
+              setTaken(updated); localStorage.setItem(logKey, JSON.stringify(updated));
+            };
+
+            const mySupps = DEFAULT_SUPPS.filter(s => supps.includes(s.id));
+            const doneCount = mySupps.filter(s => taken.includes(s.id)).length;
+
+            return (
+              <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Suppléments du Jour</div>
+                  <div style={{ fontSize: 11, color: doneCount === mySupps.length ? "#30D158" : "var(--yellow)", fontWeight: 700 }}>{doneCount}/{mySupps.length} ✓</div>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ height: 5, background: "#2C2C2E", borderRadius: 3, marginBottom: 12 }}>
+                  <div style={{ height: "100%", width: `${mySupps.length > 0 ? (doneCount / mySupps.length) * 100 : 0}%`, background: "#30D158", borderRadius: 3, transition: "width 0.4s" }} />
+                </div>
+
+                {mySupps.map(s => (
+                  <div key={s.id} style={{ marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: taken.includes(s.id) ? `${s.color}15` : "var(--bg3)", borderRadius: 10, border: `1px solid ${taken.includes(s.id) ? s.color + "40" : "#2C2C2E"}` }}>
+                      <button onClick={() => toggleTaken(s.id)}
+                        style={{ width: 22, height: 22, borderRadius: "50%", border: `2px solid ${s.color}`, background: taken.includes(s.id) ? s.color : "transparent", cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12 }}>
+                        {taken.includes(s.id) ? "✓" : ""}
+                      </button>
+                      <div style={{ flex: 1 }} onClick={() => setExpanded(expanded === s.id ? null : s.id)}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: taken.includes(s.id) ? s.color : "var(--fg)" }}>{s.name}</span>
+                          <span style={{ fontSize: 9, color: "#636366" }}>{s.evidence}</span>
+                        </div>
+                        <div style={{ fontSize: 9, color: "#8E8E93" }}>{s.dose} · {s.timing}</div>
+                      </div>
+                    </div>
+                    {expanded === s.id && (
+                      <div style={{ background: `${s.color}08`, borderRadius: 8, padding: "8px 12px", marginTop: 2, fontSize: 10, color: "#8E8E93", lineHeight: 1.5 }}>
+                        {s.desc}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div style={{ marginTop: 4, fontSize: 9, color: "#636366", textAlign: "center" }}>⭐⭐⭐ = preuves solides · Consultez votre médecin avant supplémentation</div>
+              </div>
+            );
+          })()}
+
           {/* ── NUTRITION TIMING GUIDE ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 70;
