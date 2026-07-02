@@ -6203,6 +6203,104 @@ JSON:
               );
             })()}
 
+            {/* ── SLEEP QUALITY TRACKER ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const sleepKey = `fitrace_sleep_${profile.name}`;
+              const [sleepLog, setSleepLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(sleepKey) || "{}"); } catch { return {}; }
+              });
+              const todaySleep = sleepLog[todayStr] || { hours: "", quality: 0 };
+              const [hours, setHours] = React.useState(todaySleep.hours || "");
+              const [quality, setQuality] = React.useState(todaySleep.quality || 0);
+
+              const saveSleep = (h, q) => {
+                const updated = { ...sleepLog, [todayStr]: { hours: h, quality: q } };
+                setSleepLog(updated);
+                localStorage.setItem(sleepKey, JSON.stringify(updated));
+              };
+
+              // Last 7 days
+              const days7 = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(); d.setDate(d.getDate() - (6 - i));
+                const k = d.toISOString().slice(0,10);
+                return { date: k, label: ["D","L","M","M","J","V","S"][d.getDay()], ...(sleepLog[k] || {}) };
+              });
+
+              const logged = days7.filter(d => d.hours && parseFloat(d.hours) > 0);
+              const avgHours = logged.length ? (logged.reduce((s, d) => s + parseFloat(d.hours), 0) / logged.length).toFixed(1) : null;
+              const avgQuality = logged.length ? (logged.reduce((s, d) => s + (d.quality || 0), 0) / logged.length).toFixed(1) : null;
+
+              const getColor = h => {
+                const v = parseFloat(h);
+                if (!v) return "#3A3A3C";
+                if (v >= 8) return "#30D158";
+                if (v >= 7) return "var(--yellow)";
+                if (v >= 6) return "#FF9F0A";
+                return "#FF453A";
+              };
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>😴 SUIVI SOMMEIL</div>
+
+                  {/* Today input */}
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 14 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 5 }}>NUIT DU {todayStr}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <input type="number" min="3" max="12" step="0.5" placeholder="7.5" value={hours} onChange={e => { setHours(e.target.value); saveSleep(e.target.value, quality); }} style={{ width: 70, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "8px 10px", color: "var(--yellow)", fontSize: 18, fontWeight: 800, textAlign: "center" }} />
+                        <span style={{ color: "#8E8E93", fontSize: 12 }}>heures</span>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 5 }}>QUALITÉ</div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {[1,2,3,4,5].map(star => (
+                          <button key={star} onClick={() => { setQuality(star); saveSleep(hours, star); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", opacity: star <= quality ? 1 : 0.25, filter: star <= quality ? "none" : "grayscale(1)" }}>⭐</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 7-day bar chart */}
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", height: 60, marginBottom: 6 }}>
+                    {days7.map(d => {
+                      const h = parseFloat(d.hours) || 0;
+                      const pct = Math.min(100, (h / 10) * 100);
+                      const color = getColor(d.hours);
+                      return (
+                        <div key={d.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                          <div style={{ fontSize: 9, color: h ? color : "transparent", fontWeight: 700 }}>{h || ""}</div>
+                          <div style={{ width: "100%", background: "#3A3A3C", borderRadius: 4, height: 40, display: "flex", alignItems: "flex-end" }}>
+                            <div style={{ width: "100%", height: `${pct}%`, background: color, borderRadius: 4, minHeight: h ? 4 : 0 }} />
+                          </div>
+                          <div style={{ fontSize: 10, color: d.date === todayStr ? "var(--yellow)" : "#636366", fontWeight: d.date === todayStr ? 700 : 400 }}>{d.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Stats row */}
+                  {avgHours && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                      {[
+                        { label: "Moy. 7j", value: `${avgHours}h`, good: parseFloat(avgHours) >= 7 },
+                        { label: "Qualité moy.", value: avgQuality ? `${avgQuality}/5 ⭐` : "—", good: parseFloat(avgQuality) >= 3.5 },
+                        { label: "Dette sommeil", value: parseFloat(avgHours) < 7 ? `${((7 - parseFloat(avgHours)) * logged.length).toFixed(0)}h` : "0h", good: parseFloat(avgHours) >= 7 },
+                      ].map(s => (
+                        <div key={s.label} style={{ flex: 1, background: "var(--bg3)", borderRadius: 8, padding: "7px 8px", textAlign: "center" }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: s.good ? "#30D158" : "#FF453A" }}>{s.value}</div>
+                          <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 8, fontSize: 10, color: "#636366" }}>≥8h = optimal · 7-8h = bon · 6-7h = insuffisant · &lt;6h = critique</div>
+                </div>
+              );
+            })()}
+
             {/* ── POST-SESSION RECOVERY PROTOCOL ── */}
             {(() => {
               const lastSess = (profile.sessions || []).slice(-1)[0];
