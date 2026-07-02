@@ -18901,6 +18901,140 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── PACE CALCULATOR ── */}
+      {(() => {
+        const [mode, setMode] = React.useState("time"); // time | pace | hyrox
+        const [dist, setDist] = React.useState("10");
+        const [tH, setTH] = React.useState("0");
+        const [tM, setTM] = React.useState("45");
+        const [tS, setTS] = React.useState("0");
+        const [pM, setPM] = React.useState("4");
+        const [pS, setPS] = React.useState("30");
+
+        const DISTANCES = [
+          { label: "1 km", km: 1 },
+          { label: "5 km", km: 5 },
+          { label: "10 km", km: 10 },
+          { label: "Semi", km: 21.0975 },
+          { label: "Marathon", km: 42.195 },
+          { label: "HYROX run (8km)", km: 8 },
+        ];
+
+        const totalSecTime = parseInt(tH || 0) * 3600 + parseInt(tM || 0) * 60 + parseInt(tS || 0);
+        const paceSecFromTime = dist ? Math.round(totalSecTime / parseFloat(dist)) : null;
+        const totalSecPace = parseInt(pM || 0) * 60 + parseInt(pS || 0);
+        const timeFromPace = dist ? Math.round(totalSecPace * parseFloat(dist)) : null;
+
+        const fmt = (s) => {
+          if (!s || s <= 0) return "--:--:--";
+          const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+          return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+        };
+        const fmtPace = (s) => s > 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}/km` : "--";
+
+        // HYROX splits: 8×1km + 8 stations (if mode hyrox)
+        const hyroxPaceSec = totalSecPace;
+        const hyroxRunTotal = hyroxPaceSec * 8;
+        const stationTotal = Math.round(hyroxRunTotal * 1.5); // stations ≈ 150% of running time
+        const hyroxFinish = hyroxRunTotal + stationTotal;
+
+        const inputStyle = { width: "50px", background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 4px", color: "var(--fg)", fontSize: 16, fontWeight: 800, textAlign: "center" };
+
+        return (
+          <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Calculateur d'Allure</div>
+
+            {/* Mode tabs */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+              {[["time", "⏱ Temps → Allure"], ["pace", "🏃 Allure → Temps"], ["hyrox", "🏋️ HYROX Split"]].map(([m, l]) => (
+                <button key={m} onClick={() => setMode(m)} style={{ flex: 1, background: mode === m ? "var(--yellow)" : "var(--bg3)", color: mode === m ? "#000" : "var(--fg)", border: "none", borderRadius: 8, padding: "6px 4px", fontSize: 9, fontWeight: 700, cursor: "pointer" }}>{l}</button>
+              ))}
+            </div>
+
+            {mode === "time" && (
+              <div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>Distance</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {DISTANCES.map(d => (
+                      <button key={d.km} onClick={() => setDist(String(d.km))} style={{ background: parseFloat(dist) === d.km ? "var(--yellow)" : "var(--bg3)", color: parseFloat(dist) === d.km ? "#000" : "var(--fg)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{d.label}</button>
+                    ))}
+                    <input type="number" value={dist} onChange={e => setDist(e.target.value)} placeholder="km" style={{ width: 52, background: "var(--bg3)", border: "1px solid #3A3A3C", borderRadius: 6, padding: "4px 6px", color: "var(--fg)", fontSize: 11 }} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>Temps objectif</div>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <input type="number" value={tH} onChange={e => setTH(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>h</span>
+                    <input type="number" value={tM} onChange={e => setTM(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>m</span>
+                    <input type="number" value={tS} onChange={e => setTS(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>s</span>
+                  </div>
+                </div>
+                {paceSecFromTime > 0 && (
+                  <div style={{ background: "#007AFF15", border: "1px solid #007AFF30", borderRadius: 10, padding: 12, textAlign: "center" }}>
+                    <div style={{ fontSize: 28, fontWeight: 900, color: "#007AFF" }}>{fmtPace(paceSecFromTime)}</div>
+                    <div style={{ fontSize: 10, color: "#636366", marginTop: 2 }}>Allure requise sur {dist} km</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mode === "pace" && (
+              <div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>Distance</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {DISTANCES.map(d => (
+                      <button key={d.km} onClick={() => setDist(String(d.km))} style={{ background: parseFloat(dist) === d.km ? "var(--yellow)" : "var(--bg3)", color: parseFloat(dist) === d.km ? "#000" : "var(--fg)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{d.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>Allure (/km)</div>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <input type="number" value={pM} onChange={e => setPM(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>min</span>
+                    <input type="number" value={pS} onChange={e => setPS(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>sec</span>
+                  </div>
+                </div>
+                {timeFromPace > 0 && (
+                  <div style={{ background: "#30D15815", border: "1px solid #30D15830", borderRadius: 10, padding: 12, textAlign: "center" }}>
+                    <div style={{ fontSize: 28, fontWeight: 900, color: "#30D158" }}>{fmt(timeFromPace)}</div>
+                    <div style={{ fontSize: 10, color: "#636366", marginTop: 2 }}>Temps estimé sur {dist} km</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mode === "hyrox" && (
+              <div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "#636366", marginBottom: 6 }}>Allure course HYROX (/km)</div>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <input type="number" value={pM} onChange={e => setPM(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>min</span>
+                    <input type="number" value={pS} onChange={e => setPS(e.target.value)} style={inputStyle} /> <span style={{ color: "#636366" }}>sec</span>
+                  </div>
+                </div>
+                {hyroxPaceSec > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {[
+                      { label: "8 × 1km (course)", val: fmt(hyroxRunTotal), color: "#FF9F0A" },
+                      { label: "8 stations (estimé)", val: fmt(stationTotal), color: "#007AFF" },
+                      { label: "Temps total HYROX", val: fmt(hyroxFinish), color: "var(--yellow)", big: true },
+                    ].map(r => (
+                      <div key={r.label} style={{ background: `${r.color}12`, border: `1px solid ${r.color}25`, borderRadius: 10, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 11, color: "#8E8E93" }}>{r.label}</span>
+                        <span style={{ fontSize: r.big ? 20 : 15, fontWeight: 900, color: r.color }}>{r.val}</span>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 9, color: "#636366", textAlign: "center" }}>Stations estimées à 150% du temps de course · Varie selon le niveau</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── WEEKLY MILEAGE PLANNER ── */}
       {(() => {
         const mileKey = `fitrace_mileage_${profile.name}`;
