@@ -7081,6 +7081,61 @@ JSON:
               );
             })()}
 
+            {/* ── DAILY MOTIVATION ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const totalSessions = sessions.length;
+              const totalKm = Math.round(sessions.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0));
+              const streak = (() => {
+                let s = 0;
+                const dates = new Set(sessions.map(x => x.date));
+                for (let i = 0; i < 100; i++) {
+                  const d = new Date(); d.setDate(d.getDate() - i);
+                  if (dates.has(d.toISOString().slice(0, 10))) s++;
+                  else if (i > 0) break;
+                }
+                return s;
+              })();
+
+              const hour = new Date().getHours();
+              const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+
+              const QUOTES = [
+                { q: "La douleur est temporaire. La gloire est éternelle.", a: "HYROX" },
+                { q: "Chaque séance compte. Chaque répétition compte.", a: "Nike" },
+                { q: "Les champions s'entraînent quand personne ne regarde.", a: "Anonymous" },
+                { q: "Ton seul adversaire, c'est qui tu étais hier.", a: "Strava" },
+                { q: "La régularité bat l'intensité sur le long terme.", a: "TrainingPeaks" },
+                { q: "Ne compte pas les jours, fais que les jours comptent.", a: "Muhammad Ali" },
+                { q: "Le succès, c'est la somme de petits efforts répétés.", a: "Robert Collier" },
+                { q: "Souffre maintenant et vis le reste de ta vie en champion.", a: "Muhammad Ali" },
+              ];
+              const quote = QUOTES[totalSessions % QUOTES.length];
+
+              return (
+                <div style={{ background: "linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%)", borderRadius: 16, padding: 16, marginBottom: 14, border: "1px solid #3A3A3C" }}>
+                  <div style={{ fontSize: 10, color: "#636366", marginBottom: 4 }}>{greeting}, {profile.name || "Athlète"} 👋</div>
+                  <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 14 }}>
+                    {[
+                      { val: totalSessions, label: "sessions", icon: "🏋️" },
+                      { val: `${totalKm}km`, label: "total", icon: "📍" },
+                      { val: `${streak}j`, label: "streak", icon: "🔥" },
+                    ].map(item => (
+                      <div key={item.label} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16 }}>{item.icon}</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: "var(--yellow)" }}>{item.val}</div>
+                        <div style={{ fontSize: 9, color: "#636366" }}>{item.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ borderTop: "1px solid #3A3A3C", paddingTop: 12 }}>
+                    <div style={{ fontSize: 11, color: "var(--fg)", fontStyle: "italic", lineHeight: 1.5, marginBottom: 4 }}>"{quote.q}"</div>
+                    <div style={{ fontSize: 9, color: "#636366" }}>— {quote.a}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── SESSION JOURNAL ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -11935,6 +11990,73 @@ JSON:
                             {st.levels.map((l, j) => (
                               <div key={j} style={{ fontSize: 8, color: "#636366" }}>{l.l}</div>
                             ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── MOBILITY PROGRESS TRACKER ── */}
+            {(() => {
+              const mobKey = `fitrace_mobility_${profile.name}`;
+              const [tests, setTests] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(mobKey) || "{}"); } catch { return {}; }
+              });
+
+              const TESTS = [
+                { id: "sit_reach", name: "Sit & Reach", unit: "cm", min: -10, max: 30, good: 10, desc: "Souplesse ischio-jambiers" },
+                { id: "shoulder_rot", name: "Rotation épaule", unit: "°", min: 0, max: 90, good: 60, desc: "Mobilité gléno-humérale" },
+                { id: "ankle_mob", name: "Flexion cheville", unit: "cm", min: 0, max: 15, good: 9, desc: "Dorsiflexion mur" },
+                { id: "hip_flex", name: "Flexion hanche", unit: "°", min: 0, max: 120, good: 90, desc: "Lunge test" },
+                { id: "thoracic", name: "Rotation thoracique", unit: "°", min: 0, max: 50, good: 35, desc: "Rotation assis" },
+              ];
+
+              const update = (id, val) => {
+                const updated = { ...tests, [id]: parseFloat(val) || 0 };
+                setTests(updated);
+                localStorage.setItem(mobKey, JSON.stringify(updated));
+              };
+
+              const score = TESTS.reduce((s, t) => {
+                const v = tests[t.id] || 0;
+                return s + (v >= t.good ? 1 : v >= t.good * 0.6 ? 0.5 : 0);
+              }, 0);
+              const totalScore = Math.round((score / TESTS.length) * 100);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Mobilité & Flexibilité</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: totalScore >= 70 ? "#30D158" : totalScore >= 40 ? "#FF9F0A" : "#FF453A" }}>{totalScore}%</div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {TESTS.map(t => {
+                      const val = tests[t.id] || "";
+                      const numVal = parseFloat(val) || 0;
+                      const pct = Math.min(100, Math.round((numVal / t.max) * 100));
+                      const isGood = numVal >= t.good;
+                      const color = isGood ? "#30D158" : numVal >= t.good * 0.6 ? "#FF9F0A" : "#636366";
+                      return (
+                        <div key={t.id}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                            <div>
+                              <span style={{ fontSize: 10, fontWeight: 600, color: "var(--fg)" }}>{t.name}</span>
+                              <span style={{ fontSize: 9, color: "#636366", marginLeft: 6 }}>{t.desc}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <input type="number" value={val} onChange={e => update(t.id, e.target.value)} placeholder={`/${t.max}`} style={{ background: "#1C1C1E", color: isGood ? "#30D158" : "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 6, padding: "2px 6px", fontSize: 11, width: 52, textAlign: "right" }} />
+                              <span style={{ fontSize: 9, color: "#636366" }}>{t.unit}</span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ flex: 1, height: 4, background: "#2C2C2E", borderRadius: 2 }}>
+                              <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2 }} />
+                            </div>
+                            <div style={{ fontSize: 8, color: "#636366", width: 30 }}>min: {t.good}{t.unit}</div>
                           </div>
                         </div>
                       );
