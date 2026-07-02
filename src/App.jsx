@@ -9233,6 +9233,82 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING VOLUME PYRAMID ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = profile.sessions || [];
+              const now = Date.now();
+              const recent = sessions.filter(s => s.date && (now - new Date(s.date)) < 28 * 86400000);
+
+              // Classify sessions into polarized zones
+              const classify = s => {
+                if (["mobilite"].includes(s.type)) return "recovery";
+                if (["running_zone2"].includes(s.type)) return "z1z2";
+                if (["running_qualite", "hybride_compromis", "coach"].includes(s.type)) return "z3plus";
+                if (["force_stations"].includes(s.type)) return "strength";
+                return "z1z2";
+              };
+
+              const counts = { z1z2: 0, z3plus: 0, strength: 0, recovery: 0 };
+              recent.forEach(s => { const c = classify(s); counts[c]++; });
+              const total = recent.length || 1;
+
+              const pz1z2 = Math.round((counts.z1z2 / total) * 100);
+              const pz3 = Math.round((counts.z3plus / total) * 100);
+              const pstr = Math.round((counts.strength / total) * 100);
+              const prec = Math.round((counts.recovery / total) * 100);
+
+              const ideal80 = pz1z2 >= 70; // 80/20 rule approximation
+              const idealStr = pstr >= 20 && pstr <= 40; // HYROX needs strength
+
+              const LAYERS = [
+                { label: "Récupération active", pct: prec, color: "#30D158", idealRange: "10-20%", icon: "🌿", width: "40%" },
+                { label: "Zone 1-2 (aérobie)", pct: pz1z2, color: "#007AFF", idealRange: "50-70%", icon: "🏃", width: "65%" },
+                { label: "Force / Stations", pct: pstr, color: "#BF5AF2", idealRange: "20-35%", icon: "💪", width: "80%" },
+                { label: "Zone 3+ (haute int.)", pct: pz3, color: "#FF453A", idealRange: "10-20%", icon: "🔥", width: "100%" },
+              ];
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📐 PYRAMIDE D'ENTRAÎNEMENT</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>28 derniers jours · {recent.length} séances</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: ideal80 ? "#30D158" : "#FF9F0A", marginBottom: 14, fontWeight: 600 }}>
+                    {ideal80 ? "✅ Polarisation correcte (méthode 80/20)" : "⚠️ Augmente le volume Z1-Z2 pour optimiser"}
+                  </div>
+
+                  {/* Pyramid SVG */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginBottom: 14 }}>
+                    {LAYERS.map((l, i) => (
+                      <div key={l.label} style={{ width: l.width, background: l.color + "22", border: `1px solid ${l.color}40`, borderRadius: 6, padding: "6px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 11, color: "var(--white)", fontWeight: 600 }}>{l.icon} {l.label}</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: l.color, fontWeight: 800 }}>{l.pct}%</span>
+                          <span style={{ fontSize: 9, color: "#636366" }}>/{l.idealRange}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Balance score */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 8 }}>DISTRIBUTION RÉELLE vs IDÉALE HYROX</div>
+                    {LAYERS.slice().reverse().map(l => (
+                      <div key={l.label} style={{ marginBottom: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                          <span style={{ fontSize: 10, color: "#AEAEB2" }}>{l.label}</span>
+                          <span style={{ fontSize: 10, color: l.color, fontWeight: 700 }}>{l.pct}%</span>
+                        </div>
+                        <div style={{ height: 5, background: "#3A3A3C", borderRadius: 99 }}>
+                          <div style={{ width: `${l.pct}%`, height: "100%", background: l.color, borderRadius: 99 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING LOAD DISTRIBUTION ── */}
             {(profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
