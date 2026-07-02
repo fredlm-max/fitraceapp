@@ -6116,6 +6116,94 @@ JSON:
               );
             })()}
 
+            {/* ── POST-SESSION RECOVERY PROTOCOL ── */}
+            {(() => {
+              const lastSess = (profile.sessions || []).slice(-1)[0];
+              if (!lastSess) return null;
+              const hoursSince = (Date.now() - new Date(lastSess.date)) / 3600000;
+              const rpe = lastSess.difficulte || 5;
+              if (rpe < 7 || hoursSince > 36) return null;
+              const poids = parseFloat(profile.poids) || 75;
+              const STEPS = [
+                {
+                  time: "0–30 min",
+                  icon: "🥛",
+                  color: "#38bdf8",
+                  title: "Fenêtre anabolique",
+                  items: [
+                    `Whey ou lait chocolat : ${Math.round(poids * 0.35)}g protéines`,
+                    `Glucides rapides : ${Math.round(poids * 0.8)}g (banane, jus)`,
+                    `Eau : ${Math.round(poids * 7)}ml minimum`,
+                  ],
+                },
+                {
+                  time: "1–2 heures",
+                  icon: "🍽️",
+                  color: "#30D158",
+                  title: "Repas complet",
+                  items: [
+                    `Protéines : ${Math.round(poids * 0.5)}g (poulet, poisson, œufs)`,
+                    `Glucides complexes : ${Math.round(poids * 1.2)}g (riz, pâtes, patate douce)`,
+                    `Légumes verts + huile olive`,
+                    rpe >= 9 ? `Sodium : soupe ou bouillon (effort max détecté)` : `Sel normal dans le repas`,
+                  ],
+                },
+                {
+                  time: "2–6 heures",
+                  icon: "🧊",
+                  color: "#a78bfa",
+                  title: "Récupération active",
+                  items: [
+                    "Bain froid 10–15°C pendant 10 min (si disponible)",
+                    "Mousse / foam roller sur quadriceps et mollets",
+                    "Étirements statiques doux 20–30 sec/groupe",
+                    "Surélève les jambes 10–15 min si douleurs",
+                  ],
+                },
+                {
+                  time: "Ce soir",
+                  icon: "🌙",
+                  color: "#C9A840",
+                  title: "Sommeil réparateur",
+                  items: [
+                    "Vise 8–9h — c'est là que le corps reconstruit",
+                    "Magnésium 300mg au coucher",
+                    "Chambre fraîche 17–19°C",
+                    rpe >= 8 ? "Évite l'alcool — réduit HRV de 30–40%" : "Évite les écrans 1h avant",
+                  ],
+                },
+              ];
+              return (
+                <div style={{ background: "linear-gradient(135deg, rgba(10,15,25,1) 0%, rgba(10,10,10,1) 100%)", border: "1px solid rgba(56,189,248,0.25)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "#38bdf8", letterSpacing: 1 }}>🔄 PROTOCOLE RÉCUPÉRATION</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
+                        Suite à ta séance RPE <span style={{ color: "#FF453A", fontWeight: 700 }}>{rpe}/10</span> · Il y a {Math.round(hoursSince)}h
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 22 }}>{rpe >= 9 ? "🔥" : "💪"}</div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {STEPS.map((s, i) => (
+                      <div key={i} style={{ display: "flex", gap: 10, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, borderLeft: `3px solid ${s.color}` }}>
+                        <div style={{ fontSize: 20, paddingTop: 2 }}>{s.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.title}</div>
+                            <div style={{ fontSize: 10, color: "#636366" }}>{s.time}</div>
+                          </div>
+                          {s.items.map((item, j) => (
+                            <div key={j} style={{ fontSize: 11, color: "#8E8E93", marginBottom: 1 }}>· {item}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY SUMMARY ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
