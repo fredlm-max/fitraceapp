@@ -26709,6 +26709,229 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── INJURY RISK TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_injury_${profile.name}`;
+        const today = new Date().toISOString().slice(0,10);
+
+        const [data, setData] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+        });
+        const [selected, setSelected] = React.useState(null);
+        const [form, setForm] = React.useState({ pain:3, stiffness:3, onset:"training", notes:"" });
+        const [viewHistory, setViewHistory] = React.useState(false);
+
+        const BODY_ZONES = [
+          { id:"left_knee", label:"Genou G", x:38, y:65, side:"L" },
+          { id:"right_knee", label:"Genou D", x:62, y:65, side:"R" },
+          { id:"left_ankle", label:"Cheville G", x:37, y:80, side:"L" },
+          { id:"right_ankle", label:"Cheville D", x:63, y:80, side:"R" },
+          { id:"left_hip", label:"Hanche G", x:42, y:50, side:"L" },
+          { id:"right_hip", label:"Hanche D", x:58, y:50, side:"R" },
+          { id:"lower_back", label:"Bas du dos", x:50, y:47, side:"C" },
+          { id:"left_shoulder", label:"Épaule G", x:30, y:28, side:"L" },
+          { id:"right_shoulder", label:"Épaule D", x:70, y:28, side:"R" },
+          { id:"left_calf", label:"Mollet G", x:38, y:73, side:"L" },
+          { id:"right_calf", label:"Mollet D", x:62, y:73, side:"R" },
+          { id:"left_hamstring", label:"IJ G", x:40, y:60, side:"L" },
+          { id:"right_hamstring", label:"IJ D", x:60, y:60, side:"R" },
+          { id:"core", label:"Abdos/Core", x:50, y:39, side:"C" },
+          { id:"neck", label:"Nuque", x:50, y:20, side:"C" },
+        ];
+
+        const ZONE_ADVICE = {
+          left_knee: ["Renforce quadriceps et ischio-jambiers", "Évite les descentes abruptes", "Glace après chaque séance"],
+          right_knee: ["Renforce quadriceps et ischio-jambiers", "Évite les descentes abruptes", "Glace après chaque séance"],
+          left_ankle: ["Exercices de proprioception", "Renforce les tibiales", "Tape ou strapping avant l'effort"],
+          right_ankle: ["Exercices de proprioception", "Renforce les tibiales", "Tape ou strapping avant l'effort"],
+          lower_back: ["Renforce le core profond", "Étire les fléchisseurs de hanche", "Vérifie ta posture de sled"],
+          left_shoulder: ["Renforce coiffe des rotateurs", "Réchauffe les épaules avant le Ski Erg", "Étire les pectoraux"],
+          right_shoulder: ["Renforce coiffe des rotateurs", "Réchauffe les épaules avant le Ski Erg", "Étire les pectoraux"],
+          left_calf: ["Montées sur pointe de pied progressives", "Étire après la course", "Réduire le volume temporairement"],
+          right_calf: ["Montées sur pointe de pied progressives", "Étire après la course", "Réduire le volume temporairement"],
+          left_hamstring: ["Étirements dynamiques avant", "Renforce excentrique", "Évite les sprints jusqu'à guérison"],
+          right_hamstring: ["Étirements dynamiques avant", "Renforce excentrique", "Évite les sprints jusqu'à guérison"],
+          core: ["Gainage profond (planche, bird-dog)", "Évite les charges lourdes axiales", "Respiration diaphragmatique"],
+          neck: ["Mobilité cervicale douce", "Vérifie position tête sur SkiErg/Rowing", "Stress + tension à gérer"],
+          left_hip: ["Mobilité hanche 90/90", "Renforce abducteurs", "Foam roller TFL et fessiers"],
+          right_hip: ["Mobilité hanche 90/90", "Renforce abducteurs", "Foam roller TFL et fessiers"],
+        };
+
+        const activeZones = data.zones || {};
+        const history = data.history || [];
+
+        const getZonePain = (id) => activeZones[id]?.pain || 0;
+        const zoneColor = (p) => p >= 7 ? "#FF453A" : p >= 4 ? "#FF9F0A" : p >= 1 ? "var(--yellow)" : "transparent";
+        const zoneBorder = (p) => p >= 1 ? (p >= 7 ? "#FF453A" : p >= 4 ? "#FF9F0A" : "var(--yellow)") : "#333";
+
+        const overallRisk = Object.values(activeZones).length === 0 ? 0 :
+          Math.round(Object.values(activeZones).reduce((s,z) => s+(z.pain||0),0) / Math.max(Object.values(activeZones).length,1) * 10);
+
+        const riskColor = overallRisk >= 60 ? "#FF453A" : overallRisk >= 30 ? "#FF9F0A" : "#30D158";
+        const riskLabel = overallRisk >= 60 ? "⛔ Risque élevé" : overallRisk >= 30 ? "⚠️ Surveillé" : "✓ Bonne santé";
+
+        const updateZone = (zoneId, updates) => {
+          const entry = { ...form, ...updates, date: today, updatedAt: new Date().toISOString() };
+          const newZones = { ...activeZones, [zoneId]: entry };
+          const newHistory = [{ zoneId, ...entry, id: Date.now() }, ...history].slice(0,100);
+          const updated = { ...data, zones: newZones, history: newHistory };
+          setData(updated);
+          localStorage.setItem(KEY, JSON.stringify(updated));
+          setSelected(null);
+        };
+
+        const clearZone = (zoneId) => {
+          const newZones = { ...activeZones };
+          delete newZones[zoneId];
+          const updated = { ...data, zones: newZones };
+          setData(updated);
+          localStorage.setItem(KEY, JSON.stringify(updated));
+          setSelected(null);
+        };
+
+        // Training load context
+        const sessions = profile.sessions || [];
+        const last7 = sessions.filter(s => {
+          const d = new Date(today); d.setDate(d.getDate()-7);
+          return s.date >= d.toISOString().slice(0,10);
+        });
+        const weeklyLoad = last7.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10):0), 0);
+        const loadWarning = weeklyLoad > 200;
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#555" }}>PRÉVENTION DES BLESSURES</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🩺 Injury Tracker</div>
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:24, fontWeight:900, color:riskColor }}>{overallRisk}</div>
+                <div style={{ fontSize:9, color:riskColor, fontWeight:700 }}>{riskLabel}</div>
+              </div>
+            </div>
+
+            {loadWarning && (
+              <div style={{ background:"rgba(255,69,58,0.1)", border:"1px solid rgba(255,69,58,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:12, fontSize:11, color:"#FF453A" }}>
+                ⚠️ Charge hebdomadaire élevée ({Math.round(weeklyLoad)} TRIMP) — risque de surmenage accru
+              </div>
+            )}
+
+            {/* Body map SVG */}
+            <div style={{ position:"relative", marginBottom:14 }}>
+              <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>CARTE DU CORPS — clique sur une zone douloureuse</div>
+              <svg viewBox="0 0 100 100" style={{ width:"100%", maxWidth:280, display:"block", margin:"0 auto" }}>
+                {/* Body silhouette */}
+                <ellipse cx="50" cy="12" rx="7" ry="8" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="38" y="20" width="24" height="25" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="25" y="21" width="12" height="18" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="63" y="21" width="12" height="18" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="38" y="44" width="11" height="28" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="51" y="44" width="11" height="28" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="38" y="70" width="11" height="18" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+                <rect x="51" y="70" width="11" height="18" rx="4" fill="#2C2C2E" stroke="#444" strokeWidth="0.5"/>
+
+                {/* Zone indicators */}
+                {BODY_ZONES.map(z => {
+                  const p = getZonePain(z.id);
+                  const isSelected = selected === z.id;
+                  return (
+                    <circle key={z.id}
+                      cx={z.x} cy={z.y} r={isSelected ? 5 : 4}
+                      fill={p > 0 ? zoneColor(p) : "transparent"}
+                      stroke={isSelected ? "#fff" : zoneBorder(p)}
+                      strokeWidth={isSelected ? 1.5 : 0.8}
+                      style={{ cursor:"pointer" }}
+                      onClick={() => { setSelected(z.id === selected ? null : z.id); setForm({ pain:p||3, stiffness:3, onset:"training", notes:"" }); }}
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* Selected zone input */}
+            {selected && (
+              <div style={{ background:"var(--bg3)", borderRadius:14, padding:14, marginBottom:12 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:10 }}>
+                  {BODY_ZONES.find(z=>z.id===selected)?.label} {activeZones[selected] ? "— modifier" : "— nouvelle douleur"}
+                </div>
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#666", marginBottom:4 }}>
+                    <span>Douleur (1=légère → 10=sévère)</span>
+                    <span style={{ color: zoneColor(form.pain)||"var(--yellow)", fontWeight:700 }}>{form.pain}/10</span>
+                  </div>
+                  <input type="range" min="1" max="10" value={form.pain}
+                    onChange={e => setForm(f=>({...f, pain:parseInt(e.target.value)}))}
+                    style={{ width:"100%", accentColor: form.pain>=7?"#FF453A":form.pain>=4?"#FF9F0A":"var(--yellow)" }}/>
+                </div>
+                <select value={form.onset} onChange={e => setForm(f=>({...f,onset:e.target.value}))}
+                  style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:12, marginBottom:8, boxSizing:"border-box" }}>
+                  <option value="training">Pendant l'entraînement</option>
+                  <option value="after">Après l'entraînement</option>
+                  <option value="rest">Au repos</option>
+                  <option value="chronic">Chronique (ancien)</option>
+                </select>
+                <input value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))}
+                  placeholder="Notes (optionnel)..."
+                  style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:12, marginBottom:10, boxSizing:"border-box" }}/>
+
+                {/* Advice */}
+                {ZONE_ADVICE[selected] && (
+                  <div style={{ background:"var(--bg2)", borderRadius:10, padding:"8px 12px", marginBottom:10 }}>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>CONSEILS</div>
+                    {ZONE_ADVICE[selected].map((tip,i) => (
+                      <div key={i} style={{ fontSize:11, color:"#888" }}>• {tip}</div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display:"flex", gap:6 }}>
+                  {activeZones[selected] && (
+                    <button onClick={() => clearZone(selected)}
+                      style={{ flex:1, background:"rgba(255,69,58,0.15)", border:"1px solid rgba(255,69,58,0.3)", borderRadius:10, padding:"9px 0", color:"#FF453A", fontSize:12, cursor:"pointer" }}>
+                      Guéri ✓
+                    </button>
+                  )}
+                  <button onClick={() => setSelected(null)}
+                    style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"9px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>
+                  <button onClick={() => updateZone(selected, {})}
+                    style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"9px 0", color:"#000", fontSize:12, fontWeight:800, cursor:"pointer" }}>Enregistrer</button>
+                </div>
+              </div>
+            )}
+
+            {/* Active issues */}
+            {Object.keys(activeZones).length > 0 && (
+              <div>
+                <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>ZONES ACTIVES</div>
+                {Object.entries(activeZones).map(([id, z]) => {
+                  const zone = BODY_ZONES.find(bz => bz.id === id);
+                  return (
+                    <div key={id} onClick={() => { setSelected(id); setForm({pain:z.pain||3, stiffness:z.stiffness||3, onset:z.onset||"training", notes:z.notes||""}); }}
+                      style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginBottom:4, cursor:"pointer" }}>
+                      <div>
+                        <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>{zone?.label || id}</div>
+                        <div style={{ fontSize:10, color:"#555" }}>{z.date} · {z.onset}</div>
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <div style={{ fontSize:14, fontWeight:900, color:zoneColor(z.pain) }}>{z.pain}/10</div>
+                        <div style={{ width:8, height:8, borderRadius:"50%", background:zoneColor(z.pain) }}/>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {Object.keys(activeZones).length === 0 && !selected && (
+              <div style={{ textAlign:"center", padding:"10px 0", color:"#555", fontSize:12 }}>
+                Aucune douleur enregistrée 💪 Clique sur le corps pour signaler
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── MOVEMENT QUALITY CHECKLIST ── */}
       {(() => {
         const checkKey = `fitrace_movement_${profile.name}`;
