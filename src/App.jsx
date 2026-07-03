@@ -14271,6 +14271,272 @@ JSON:
               );
             })()}
 
+            {/* ── VO2MAX ESTIMATOR ── */}
+            {(() => {
+              const KEY = `fitrace_vo2max_${profile.name}`;
+
+              const [tests, setTests] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [method, setMethod] = React.useState("cooper");
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ date: new Date().toISOString().slice(0,10), cooperDist:2800, paceSec:300, hrRest:55, hrMax:185, notes:"" });
+
+              const age = parseInt(profile.age) || 30;
+              const sex = (profile.sexe || "M").toUpperCase();
+              const bw = parseFloat(profile.poids) || 70;
+
+              // VO2max estimation formulas
+              const estimateCooper = (distM) => Math.round((distM - 504.9) / 44.73);
+              const estimatePace = (paceSec) => {
+                const vms = 1000 / paceSec; // m/s
+                const vmMin = vms * 60; // m/min
+                const vo2 = 0.2*vmMin + 3.5;
+                return Math.round(vo2 * 10) / 10;
+              };
+              const estimateHR = (hrRest, hrMax) => Math.round(15 * (hrMax / hrRest) * 10) / 10;
+
+              const calcVo2 = (f) => {
+                if (f.method === "cooper") return estimateCooper(f.cooperDist);
+                if (f.method === "pace") return estimatePace(f.paceSec);
+                if (f.method === "hr") return estimateHR(f.hrRest, f.hrMax);
+                return 0;
+              };
+
+              // Live estimate from current form
+              const liveVo2 = method === "cooper" ? estimateCooper(form.cooperDist)
+                : method === "pace" ? estimatePace(form.paceSec)
+                : estimateHR(form.hrRest, form.hrMax);
+
+              // Auto-estimate from best run sessions
+              const sessions = profile.sessions || [];
+              const runSess = sessions.filter(s => s.type?.toLowerCase().includes("run") && s.distance && s.duration);
+              const autoVo2 = runSess.length > 0
+                ? (() => {
+                    const best = Math.min(...runSess.map(s => (s.duration*60)/parseFloat(s.distance)));
+                    return estimatePace(best);
+                  })()
+                : null;
+
+              const currentVo2 = tests.length > 0 ? calcVo2(tests[0]) : autoVo2;
+
+              // Norms by age/sex
+              const NORMS = sex === "F"
+                ? [
+                    { label:"Excellent", min:52, color:"#30D158" },
+                    { label:"Bon", min:44, color:"#64D2FF" },
+                    { label:"Au-dessus moy.", min:37, color:"var(--yellow)" },
+                    { label:"Moyen", min:30, color:"#FF9F0A" },
+                    { label:"En-dessous moy.", min:0, color:"#FF453A" },
+                  ]
+                : [
+                    { label:"Excellent", min:56, color:"#30D158" },
+                    { label:"Bon", min:49, color:"#64D2FF" },
+                    { label:"Au-dessus moy.", min:43, color:"var(--yellow)" },
+                    { label:"Moyen", min:36, color:"#FF9F0A" },
+                    { label:"En-dessous moy.", min:0, color:"#FF453A" },
+                  ];
+
+              const categoryFor = (v) => NORMS.find(n => v >= n.min) || NORMS[NORMS.length-1];
+              const cat = currentVo2 ? categoryFor(currentVo2) : null;
+
+              const saveTest = () => {
+                const entry = { ...form, method, id: Date.now() };
+                const next = [entry, ...tests].slice(0,20);
+                setTests(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setShowForm(false);
+              };
+
+              const fmtPace = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}/km`;
+
+              // SVG trend chart
+              const chartTests = tests.slice(0,10).reverse();
+              const chartW = 280, chartH = 80;
+              const vo2Values = chartTests.map(t => calcVo2(t));
+              const allVals = [...vo2Values, autoVo2||0].filter(Boolean);
+              const minV = Math.max(0, Math.min(...allVals)-5);
+              const maxV = Math.max(...allVals)+5;
+              const xStep = chartTests.length > 1 ? chartW/(chartTests.length-1) : chartW;
+              const toY = v => chartH - ((v-minV)/(maxV-minV))*chartH;
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>GARMIN · ESTIMATION VO₂MAX</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🫁 VO₂max Tracker</div>
+                    </div>
+                    {currentVo2 && (
+                      <div style={{ textAlign:"center" }}>
+                        <div style={{ fontSize:30, fontWeight:900, color:cat?.color||"var(--yellow)" }}>{currentVo2}</div>
+                        <div style={{ fontSize:9, color:cat?.color||"#666", fontWeight:700 }}>{cat?.label}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current status */}
+                  {currentVo2 && (
+                    <>
+                      {/* Scale bar */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ display:"flex", height:10, borderRadius:5, overflow:"hidden", marginBottom:4 }}>
+                          {NORMS.slice().reverse().map((n,i) => (
+                            <div key={i} style={{ flex:1, background:n.color, opacity:0.7 }}/>
+                          ))}
+                        </div>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#555" }}>
+                          <span>Faible</span><span>Moyen</span><span>Bon</span><span>Excellent</span>
+                        </div>
+                        {/* Indicator */}
+                        <div style={{ position:"relative", height:6, marginTop:4 }}>
+                          <div style={{ position:"absolute", left:`${Math.min(95, Math.max(2, ((currentVo2-25)/(80-25))*100))}%`,
+                            width:3, height:12, background:"#fff", borderRadius:2, top:-3, transform:"translateX(-50%)" }}/>
+                        </div>
+                      </div>
+
+                      {/* Fitness equivalents */}
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+                        {[
+                          { label:"5km estimé", val:`${Math.round(((108.845-1.0567*currentVo2)/1000)*5000/60)}:${String(Math.round(((108.845-1.0567*currentVo2)/1000)*5000)%60).padStart(2,"0")}`, icon:"🏃" },
+                          { label:"10km estimé", val:`${Math.floor(((108.845-1.0567*currentVo2)/1000)*10000/60)}:${String(Math.round(((108.845-1.0567*currentVo2)/1000)*10000)%60).padStart(2,"0")}`, icon:"🛤️" },
+                          { label:"VMA≈", val:`${(currentVo2/3.5).toFixed(1)} km/h`, icon:"⚡" },
+                        ].map((s,i) => (
+                          <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                            <div style={{ fontSize:18 }}>{s.icon}</div>
+                            <div style={{ fontSize:13, fontWeight:800, color:"var(--yellow)" }}>{s.val}</div>
+                            <div style={{ fontSize:9, color:"#666" }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Auto estimate notice */}
+                  {autoVo2 && tests.length === 0 && (
+                    <div style={{ background:"rgba(201,168,64,0.1)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:12, fontSize:11, color:"#888" }}>
+                      📊 Estimé automatiquement depuis tes sessions run. Ajoute un test Cooper pour plus de précision.
+                    </div>
+                  )}
+
+                  {/* Trend chart */}
+                  {chartTests.length >= 2 && (
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>PROGRESSION</div>
+                      <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width:"100%", height:chartH }}>
+                        <defs>
+                          <linearGradient id="vo2grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--yellow)" stopOpacity="0.3"/>
+                            <stop offset="100%" stopColor="var(--yellow)" stopOpacity="0"/>
+                          </linearGradient>
+                        </defs>
+                        <polyline points={vo2Values.map((v,i)=>`${i*xStep},${toY(v)}`).join(" ")}
+                          fill="none" stroke="var(--yellow)" strokeWidth="2" strokeLinejoin="round"/>
+                        {vo2Values.map((v,i) => (
+                          <circle key={i} cx={i*xStep} cy={toY(v)} r="4" fill="var(--yellow)"/>
+                        ))}
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Form */}
+                  {showForm ? (
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:14 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:10 }}>Nouveau test VO₂max</div>
+
+                      {/* Method selector */}
+                      <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+                        {[
+                          { id:"cooper", label:"Cooper 12min", emoji:"🏃" },
+                          { id:"pace", label:"Allure best", emoji:"⚡" },
+                          { id:"hr", label:"FC repos/max", emoji:"❤️" },
+                        ].map(m => (
+                          <button key={m.id} onClick={() => setMethod(m.id)}
+                            style={{ flex:1, background: method===m.id?"var(--yellow)":"var(--bg2)", border:"none", borderRadius:8, padding:"6px 4px", color: method===m.id?"#000":"#888", fontSize:10, fontWeight: method===m.id?700:400, cursor:"pointer" }}>
+                            {m.emoji}<br/>{m.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <input type="date" value={form.date} onChange={e => setForm(f=>({...f,date:e.target.value}))}
+                        style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:12, marginBottom:10, boxSizing:"border-box" }}/>
+
+                      {method === "cooper" && (
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Distance parcourue en 12min (mètres)</div>
+                          <input type="number" min="1000" max="5000" step="50" value={form.cooperDist}
+                            onChange={e => setForm(f=>({...f,cooperDist:parseInt(e.target.value)||2800}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:14, textAlign:"center", fontWeight:700, boxSizing:"border-box" }}/>
+                        </div>
+                      )}
+                      {method === "pace" && (
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Meilleure allure récente (sec/km)</div>
+                          <input type="number" min="180" max="600" value={form.paceSec}
+                            onChange={e => setForm(f=>({...f,paceSec:parseInt(e.target.value)||300}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:14, textAlign:"center", fontWeight:700, boxSizing:"border-box" }}/>
+                          <div style={{ fontSize:10, color:"#666", marginTop:4, textAlign:"center" }}>{fmtPace(form.paceSec)}</div>
+                        </div>
+                      )}
+                      {method === "hr" && (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          <div>
+                            <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>FC repos (bpm)</div>
+                            <input type="number" min="30" max="100" value={form.hrRest}
+                              onChange={e => setForm(f=>({...f,hrRest:parseInt(e.target.value)||55}))}
+                              style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:13, textAlign:"center", boxSizing:"border-box" }}/>
+                          </div>
+                          <div>
+                            <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>FC max (bpm)</div>
+                            <input type="number" min="140" max="220" value={form.hrMax}
+                              onChange={e => setForm(f=>({...f,hrMax:parseInt(e.target.value)||185}))}
+                              style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:13, textAlign:"center", boxSizing:"border-box" }}/>
+                          </div>
+                        </div>
+                      )}
+
+                      {liveVo2 > 0 && (
+                        <div style={{ textAlign:"center", margin:"10px 0", fontSize:13, color:"var(--yellow)", fontWeight:700 }}>
+                          VO₂max estimé: {liveVo2} mL/kg/min — {categoryFor(liveVo2)?.label}
+                        </div>
+                      )}
+
+                      <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                        <button onClick={() => setShowForm(false)}
+                          style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>
+                        <button onClick={saveTest}
+                          style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"10px 0", color:"#000", fontSize:12, fontWeight:800, cursor:"pointer" }}>Sauvegarder</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowForm(true)}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px dashed #444", borderRadius:12, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>
+                      + Ajouter un test VO₂max
+                    </button>
+                  )}
+
+                  {/* History */}
+                  {tests.slice(0,3).map((t,i) => {
+                    const v = calcVo2(t);
+                    const c = categoryFor(v);
+                    return (
+                      <div key={t.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginTop:6 }}>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#fff" }}>{t.date}</div>
+                          <div style={{ fontSize:10, color:"#666" }}>{t.method === "cooper" ? `Cooper ${t.cooperDist}m` : t.method === "pace" ? fmtPace(t.paceSec) : `FC ${t.hrRest}/${t.hrMax}`}</div>
+                        </div>
+                        <div style={{ textAlign:"right" }}>
+                          <div style={{ fontSize:16, fontWeight:900, color:c?.color }}>{v}</div>
+                          <div style={{ fontSize:9, color:c?.color }}>mL/kg/min</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── VMA PROGRESSION CHART ── */}
             {(() => {
               const vmaKey = `fitrace_vma_history_${profile.name}`;
