@@ -5778,6 +5778,124 @@ JSON:
               );
             })()}
 
+            {/* ── MORNING CHECK-IN — Poids + Énergie ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const KEY_CIN = `fitrace_checkin_${profile.name}`;
+              const [cinData, setCinData] = React.useState(() => {
+                try { const d = JSON.parse(localStorage.getItem(KEY_CIN)||"{}"); return d[todayStr] || null; } catch { return null; }
+              });
+              const [editing, setEditing] = React.useState(!cinData);
+              const [weight, setWeight] = React.useState(() => cinData?.weight ?? (parseFloat(profile.poids)||70));
+              const [energy, setEnergy] = React.useState(() => cinData?.energy ?? 3);
+
+              const save = () => {
+                const entry = { weight: parseFloat(weight)||0, energy, date: todayStr };
+                setCinData(entry);
+                setEditing(false);
+                try {
+                  const all = JSON.parse(localStorage.getItem(KEY_CIN)||"{}");
+                  all[todayStr] = entry;
+                  localStorage.setItem(KEY_CIN, JSON.stringify(all));
+                } catch {}
+              };
+
+              // Trend: last 7 days avg weight
+              const hist = (() => {
+                try { return JSON.parse(localStorage.getItem(KEY_CIN)||"{}"); } catch { return {}; }
+              })();
+              const last7w = Array.from({length:7},(_,i)=>{
+                const d = new Date(); d.setDate(d.getDate()-i);
+                const k = d.toISOString().slice(0,10);
+                return hist[k]?.weight || null;
+              }).filter(Boolean);
+              const avg7 = last7w.length ? (last7w.reduce((a,b)=>a+b,0)/last7w.length).toFixed(1) : null;
+              const goalWeight = parseFloat(profile.poidsObjectif) || null;
+              const todayW = parseFloat(weight) || 0;
+              const deltaAvg = avg7 && todayW ? (todayW - parseFloat(avg7)).toFixed(1) : null;
+              const deltaGoal = goalWeight && todayW ? (todayW - goalWeight).toFixed(1) : null;
+
+              const energyLabels = ["", "Épuisé 😩", "Fatigué 😴", "Moyen 😐", "Bien 😊", "Top 🔥"];
+              const energyColors = ["", "#FF453A", "#FF9F0A", "#FF9F0A", "#30D158", "#C9A840"];
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:"14px 16px", marginBottom:14 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>☀️ Check-in matin</div>
+                    <button onClick={()=>setEditing(e=>!e)} style={{ background:"none", border:"none", color:"var(--yellow)", fontSize:10, fontWeight:700, cursor:"pointer" }}>
+                      {editing ? "Annuler" : cinData ? "Modifier" : "+ Saisir"}
+                    </button>
+                  </div>
+
+                  {editing ? (
+                    <div>
+                      {/* Weight input */}
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:9, color:"#8E8E93", marginBottom:6, fontWeight:600 }}>Poids ce matin (kg)</div>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <button onClick={()=>setWeight(w=>Math.max(30,+(+w-0.1).toFixed(1)))} style={{ width:36,height:36,borderRadius:10,background:"rgba(255,255,255,0.06)",border:"none",color:"var(--white)",fontSize:20,cursor:"pointer" }}>−</button>
+                          <input type="number" step="0.1" value={weight}
+                            onChange={e=>setWeight(e.target.value)}
+                            style={{ flex:1,textAlign:"center",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 0",color:"var(--white)",fontSize:18,fontWeight:800 }}/>
+                          <button onClick={()=>setWeight(w=>+(+w+0.1).toFixed(1))} style={{ width:36,height:36,borderRadius:10,background:"rgba(255,255,255,0.06)",border:"none",color:"var(--white)",fontSize:20,cursor:"pointer" }}>+</button>
+                        </div>
+                      </div>
+
+                      {/* Energy */}
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:9, color:"#8E8E93", marginBottom:6, fontWeight:600 }}>Niveau d'énergie</div>
+                        <div style={{ display:"flex", gap:4 }}>
+                          {[1,2,3,4,5].map(v=>(
+                            <button key={v} onClick={()=>setEnergy(v)}
+                              style={{ flex:1, background:energy===v?`${energyColors[v]}25`:"rgba(255,255,255,0.04)", border:`1.5px solid ${energy===v?energyColors[v]:"transparent"}`, borderRadius:10, padding:"6px 0", fontSize:16, cursor:"pointer", transition:"all 0.15s" }}>
+                              {energyLabels[v].split(" ")[1]}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ textAlign:"center", fontSize:10, color:energyColors[energy], fontWeight:700, marginTop:5 }}>{energyLabels[energy]}</div>
+                      </div>
+
+                      <button onClick={save} style={{ width:"100%", background:"var(--yellow)", color:"#000", border:"none", borderRadius:10, padding:10, fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  ) : cinData ? (
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      {/* Weight display */}
+                      <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"10px 8px" }}>
+                        <div className="bebas" style={{ fontSize:28, color:"var(--yellow)", lineHeight:1 }}>{cinData.weight}</div>
+                        <div style={{ fontSize:8, color:"#8E8E93", marginTop:1 }}>kg</div>
+                        {deltaAvg !== null && (
+                          <div style={{ fontSize:9, color:parseFloat(deltaAvg)<=0?"#30D158":"#FF9F0A", marginTop:3, fontWeight:700 }}>
+                            {parseFloat(deltaAvg)>0?"+":""}{deltaAvg} vs moy.7j
+                          </div>
+                        )}
+                      </div>
+                      {/* Energy display */}
+                      <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"10px 8px" }}>
+                        <div style={{ fontSize:28 }}>{energyLabels[cinData.energy].split(" ")[1]}</div>
+                        <div style={{ fontSize:9, fontWeight:700, color:energyColors[cinData.energy], marginTop:2 }}>{energyLabels[cinData.energy].split(" ")[0]}</div>
+                      </div>
+                      {/* Goal delta */}
+                      {goalWeight && (
+                        <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"10px 8px" }}>
+                          <div className="bebas" style={{ fontSize:22, color:parseFloat(deltaGoal)<=0?"#30D158":"#FF9F0A", lineHeight:1 }}>
+                            {parseFloat(deltaGoal)>0?"+":""}{deltaGoal}
+                          </div>
+                          <div style={{ fontSize:8, color:"#8E8E93", marginTop:1 }}>vs objectif</div>
+                          <div style={{ fontSize:8, color:"#4A4A4E", marginTop:1 }}>{goalWeight} kg</div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign:"center", padding:"8px 0", color:"#636366", fontSize:12 }}>
+                      Saisis ton poids et énergie ce matin pour suivre ta progression
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SOMMEIL — formulaire unique ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
