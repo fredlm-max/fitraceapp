@@ -5882,6 +5882,156 @@ JSON:
               );
             })()}
 
+            {/* ── SÉANCE DU JOUR — Smart Card (Nike Training + Garmin Coach style) ── */}
+            {(()=>{
+              const todayStr = new Date().toISOString().slice(0,10);
+
+              // 1. Recovery score (from checkin + load)
+              const KEY_CIN = `fitrace_checkin_${profile.name}`;
+              const allCin = (() => { try { return JSON.parse(localStorage.getItem(KEY_CIN)||"{}"); } catch { return {}; }})();
+              const todayCin = allCin[todayStr];
+              const energy = todayCin?.energy || 3;
+              const sessions = profile.sessions || [];
+              const recent7 = sessions.filter(s => (Date.now()-new Date(s.date))<7*86400000);
+              const loadScore = (() => {
+                const ctl = sessions.slice(-42).reduce((a,s)=>(a+(s.rpe||5)*(s.duree||30)),0)/Math.max(1,sessions.slice(-42).length);
+                const atl = recent7.reduce((a,s)=>(a+(s.rpe||5)*(s.duree||30)),0)/Math.max(1,recent7.length);
+                return ctl>0 ? Math.min(100,Math.max(0,50+Math.round(((ctl-atl)/ctl)*50))) : 50;
+              })();
+              const recoveryScore = Math.round((energy/5)*50 + loadScore*0.5);
+              const isRecovered = recoveryScore >= 60;
+              const isStrained  = recoveryScore < 35;
+
+              // 2. Planned session today (from calendar)
+              const planKey = `fitrace_planned_${profile.name}`;
+              const plan = (() => { try { return JSON.parse(localStorage.getItem(planKey)||"{}"); } catch { return {}; }})();
+              const planned = plan[todayStr];
+
+              // 3. Training phase (from race date)
+              let currentPhase = null;
+              if (profile.raceDate) {
+                const daysLeft = Math.ceil((new Date(profile.raceDate)-new Date())/86400000);
+                const weeksLeft = Math.ceil(daysLeft/7);
+                if (weeksLeft <= 1) currentPhase = "Affûtage";
+                else if (weeksLeft <= 3) currentPhase = "Spécifique";
+                else if (weeksLeft <= 8) currentPhase = "Construction";
+                else currentPhase = "Fondation";
+              }
+
+              // 4. Missing zones last 28 days
+              const ZONES = [
+                { key:"Zone 2",  icon:"🫀", color:"#007AFF", ideal:40 },
+                { key:"Qualité", icon:"⚡", color:"#C9A840", ideal:20 },
+                { key:"Force",   icon:"💪", color:"#a78bfa", ideal:20 },
+                { key:"Hybride", icon:"🔥", color:"#FF6B00", ideal:15 },
+              ];
+              const last28 = sessions.filter(s=>(Date.now()-new Date(s.date))<=28*86400000);
+              const zoneCounts = {};
+              ZONES.forEach(z=>{zoneCounts[z.key]=0;});
+              last28.forEach(s=>{
+                const k = ZONES.find(z=>(s.type||"").toLowerCase().includes(z.key.toLowerCase()) || z.key.toLowerCase().includes((s.type||"").toLowerCase()));
+                if (k) zoneCounts[k.key]++;
+              });
+              const total28 = Object.values(zoneCounts).reduce((a,b)=>a+b,0)||1;
+              const mostLacking = ZONES.map(z=>({...z,actual:Math.round(zoneCounts[z.key]/total28*100),dev:Math.round(zoneCounts[z.key]/total28*100)-z.ideal}))
+                .sort((a,b)=>a.dev-b.dev)[0];
+
+              // 5. Did already train today?
+              const trainedToday = sessions.some(s=>s.date?.slice(0,10)===todayStr);
+
+              // ── Decision logic ──
+              let rec;
+              if (trainedToday) {
+                rec = { type:"Récupération", icon:"✅", color:"#30D158", dur:"—",
+                  title:"Séance faite aujourd'hui !", detail:"Repos actif, étirements, hydratation. Bonne récup !",
+                  done:true };
+              } else if (planned) {
+                const SESSION_META = {
+                  "Zone 2":   { icon:"🫀", color:"#007AFF", dur:"45-60 min", detail:"Zone 2 : cardio modéré, tu dois pouvoir parler." },
+                  "Qualité":  { icon:"⚡", color:"#C9A840", dur:"45 min",    detail:"Intervalles : 6×4' à 85% FC max, récup 2'." },
+                  "Force":    { icon:"💪", color:"#a78bfa", dur:"50 min",    detail:"Stations HYROX : 3 circuits, charge progressive." },
+                  "Hybride":  { icon:"🔥", color:"#FF6B00", dur:"60 min",    detail:"Course + stations : 5×(2km + 1 station HYROX)." },
+                  "Mobilité": { icon:"🧘", color:"#30D158", dur:"20-30 min", detail:"Mobilité : hanches, épaules, thoracique." },
+                  "Repos":    { icon:"😴", color:"#636366", dur:"—",         detail:"Repos complet prévu. Profite !" },
+                };
+                const m = SESSION_META[planned.type] || { icon:"🎯", color:"#C9A840", dur:"—", detail:"Séance planifiée." };
+                rec = { type:planned.type, icon:m.icon, color:m.color, dur:m.dur, title:`Planifié : ${planned.type}`, detail:m.detail, planned:true };
+              } else if (isStrained) {
+                rec = { type:"Repos actif", icon:"😴", color:"#FF9F0A", dur:"20 min",
+                  title:"Récupération recommandée", detail:"Recovery score bas. Mobilité légère ou repos — ne force pas aujourd'hui.", warn:true };
+              } else if (currentPhase === "Affûtage") {
+                rec = { type:"Activation", icon:"⚡", color:"#30D158", dur:"20 min",
+                  title:"Affûtage : activation légère", detail:"Course courte à basse intensité + quelques accélérations. Pas de fatigue.", phase:true };
+              } else if (mostLacking && mostLacking.dev < -10) {
+                const m = ZONES.find(z=>z.key===mostLacking.key);
+                rec = { type:mostLacking.key, icon:m.icon, color:m.color, dur:"45-60 min",
+                  title:`Priorité : ${mostLacking.key}`, detail:`Zone sous-représentée (${mostLacking.actual}% vs ${mostLacking.ideal}% cible). Idéal pour rééquilibrer.`, zoneRec:true };
+              } else {
+                // Default based on days since last session
+                const lastDate = sessions.length>0 ? new Date(sessions[sessions.length-1].date) : null;
+                const daysSinceLast = lastDate ? Math.round((Date.now()-lastDate)/86400000) : 99;
+                if (daysSinceLast >= 3) {
+                  rec = { type:"Hybride", icon:"🔥", color:"#FF6B00", dur:"50 min",
+                    title:"Reprise recommandée", detail:"3j sans séance. Hybride modéré : course + stations HYROX à 70%." };
+                } else {
+                  rec = { type:"Zone 2", icon:"🫀", color:"#007AFF", dur:"40 min",
+                    title:"Zone 2 du jour", detail:"Endurance aérobie — base de ta progression HYROX. FC cible : 120-140 bpm." };
+                }
+              }
+
+              // Insight tag
+              const tag = rec.done ? "séance complète" : rec.planned ? "planifié" : rec.warn ? "récup" : rec.phase ? "affûtage" : rec.zoneRec ? "rééquilibrage" : "recommandé";
+
+              return (
+                <div style={{ marginBottom:14, background:`linear-gradient(135deg, ${rec.color}12 0%, rgba(0,0,0,0.4) 100%)`, border:`1.5px solid ${rec.color}35`, borderRadius:20, padding:"16px", position:"relative", overflow:"hidden" }}>
+                  {/* Glow */}
+                  <div style={{ position:"absolute", top:-20, right:-20, width:120, height:120, borderRadius:"50%", background:`radial-gradient(circle,${rec.color}20 0%,transparent 70%)`, pointerEvents:"none" }}/>
+
+                  {/* Header */}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                    <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", fontWeight:700, letterSpacing:"0.12em" }}>📅 Séance du jour</div>
+                    <div style={{ background:`${rec.color}20`, border:`1px solid ${rec.color}40`, borderRadius:20, padding:"2px 8px", fontSize:8, color:rec.color, fontWeight:700, textTransform:"uppercase" }}>{tag}</div>
+                  </div>
+
+                  {/* Main content */}
+                  <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                    {/* Icon */}
+                    <div style={{ width:56, height:56, borderRadius:16, background:`${rec.color}20`, border:`2px solid ${rec.color}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>
+                      {rec.icon}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:15, fontWeight:800, color:rec.color, lineHeight:1.2 }}>{rec.title}</div>
+                      <div style={{ fontSize:10, color:"#8E8E93", marginTop:4, lineHeight:1.4 }}>{rec.detail}</div>
+                    </div>
+                    {!rec.done && rec.dur !== "—" && (
+                      <div style={{ textAlign:"center", flexShrink:0 }}>
+                        <div className="bebas" style={{ fontSize:20, color:rec.color, lineHeight:1 }}>{rec.dur}</div>
+                        <div style={{ fontSize:8, color:"#636366" }}>durée</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recovery + context chips */}
+                  <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+                    <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:20, padding:"3px 8px", fontSize:9, color:"#8E8E93" }}>
+                      💚 Recovery {recoveryScore}/100
+                    </div>
+                    {currentPhase && (
+                      <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:20, padding:"3px 8px", fontSize:9, color:"#8E8E93" }}>
+                        📍 Phase {currentPhase}
+                      </div>
+                    )}
+                    {!rec.done && (
+                      <div onClick={()=>{ haptic([4]); setShowQuickLog(true); }}
+                        style={{ background:`${rec.color}20`, border:`1px solid ${rec.color}40`, borderRadius:20, padding:"3px 10px", fontSize:9, color:rec.color, fontWeight:700, cursor:"pointer", marginLeft:"auto" }}>
+                        ▶ Logger cette séance →
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MORNING CHECK-IN — Poids + Énergie ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
