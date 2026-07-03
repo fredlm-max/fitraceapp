@@ -1132,7 +1132,7 @@ const XP_REWARDS = {
 };
 
 const XP_LEVELS = [
-  { level: 1, name: "Rookie",       min: 0,    max: 300,  color: "#AEAEB2",     icon: "🌱" },
+  { level: 1, name: "Débutant",      min: 0,    max: 300,  color: "#AEAEB2",     icon: "🌱" },
   { level: 2, name: "Challenger",   min: 300,  max: 800,  color: "#38bdf8",  icon: "⚡" },
   { level: 3, name: "Warrior",      min: 800,  max: 1800, color: "var(--green)", icon: "💪" },
   { level: 4, name: "Elite",        min: 1800, max: 4000, color: "var(--yellow)", icon: "🔥" },
@@ -5494,15 +5494,15 @@ JSON:
         {/* HOME — toujours rendu, caché si inactif (fix hooks) */}
         <div style={{display: tab === "home" ? "block" : "none"}}>
 
-            {/* ── APEX SCORE HERO ── */}
+            {/* ── HERO UNIFIÉ : APEX + FITNESS + ÉVOLUTION ── */}
             {(() => {
               const h = new Date().getHours();
-              const greet = h < 6 ? "Bonne nuit" : h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
+              const greet = h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
               const firstName = profile.name?.split(" ")[0] || profile.name;
               const sc = calcFitnessScore(profile);
               const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 
-              // APEX Readiness Score — Sommeil + Fatigue + VFC + Hydration + Fitness
+              // APEX Readiness
               const sleepScore = Math.min(100, Math.round(((dailyData.sleepHours || 7) / 9) * 100));
               const fatigueScore = Math.round(((5 - (dailyData.fatigue || 3)) / 4) * 100);
               const hrvRaw = parseInt(dailyData.hrv) || 0;
@@ -5511,72 +5511,99 @@ JSON:
               const apexScore = Math.max(0, Math.min(100,
                 Math.round(sleepScore * 0.25 + fatigueScore * 0.30 + hrvScore * 0.20 + hydraScore * 0.10 + sc.global * 0.15)
               ));
+              const tier = apexScore >= 85 ? { label: "Prêt à tout donner", color: "#30D158" }
+                : apexScore >= 60 ? { label: "Prêt avec modération", color: "#C9A840" }
+                : apexScore >= 40 ? { label: "Méfie-toi", color: "#FF9F0A" }
+                : { label: "Récupère d'abord", color: "#FF453A" };
 
-              const tier = apexScore >= 85
-                ? { label: "Prêt à tout donner", color: "#30D158", emoji: "🟢" }
-                : apexScore >= 60
-                ? { label: "Prêt avec modération", color: "#C9A840", emoji: "🟡" }
-                : apexScore >= 40
-                ? { label: "Méfie-toi", color: "#FF9F0A", emoji: "🟠" }
-                : { label: "Récupère d'abord", color: "#FF453A", emoji: "🔴" };
+              // Évolution fitness : sessions cette semaine vs semaine précédente
+              const allSessions = profile.sessions || [];
+              const now = Date.now();
+              const w1 = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; }).length;
+              const w2 = allSessions.filter(s => { const d = new Date(s.date); return now - d >= 7*86400000 && now - d < 14*86400000; }).length;
+              const evolutionPct = w2 > 0 ? Math.round(((w1 - w2) / w2) * 100) : null;
+              const evoColor = evolutionPct > 0 ? "#30D158" : evolutionPct < 0 ? "#FF453A" : "#8E8E93";
+              const evoSign = evolutionPct > 0 ? "+" : "";
 
-              const R = 56; const C = 2 * Math.PI * R;
-              const dash = (apexScore / 100) * C;
+              const R = 54; const C = 2 * Math.PI * R;
+              const apexDash = (apexScore / 100) * C;
+              const fitDash = (sc.global / 100) * C;
 
               return (
-                <div style={{ textAlign: "center", paddingBottom: 28, borderBottom: "1px solid rgba(201,168,64,0.08)", marginBottom: 20 }}>
-                  {/* Date */}
-                  <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 20 }}>
-                    {today.charAt(0).toUpperCase() + today.slice(1)}
-                  </div>
-
-                  {/* Score Ring */}
-                  <div style={{ position: "relative", width: 190, height: 190, margin: "0 auto 20px" }}>
-                    <svg width="190" height="190" viewBox="0 0 190 190" style={{ transform: "rotate(-90deg)" }}>
-                      {/* Track */}
-                      <circle cx="95" cy="95" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="12" strokeLinecap="round"/>
-                      {/* Progress */}
-                      <circle cx="95" cy="95" r={R} fill="none" stroke={tier.color} strokeWidth="12" strokeLinecap="round"
-                        strokeDasharray={C} strokeDashoffset={C - dash}
-                        style={{ transition: "stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter: `drop-shadow(0 0 10px ${tier.color}50)` }}/>
-                    </svg>
-                    {/* Center */}
-                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                      <div className="bebas number-pop" style={{ fontSize: 68, color: "var(--white)", lineHeight: 1, letterSpacing: -2 }}>{apexScore}</div>
-                      <div style={{ fontSize: 9, color: "#4A4A4E", textTransform: "uppercase", letterSpacing: "0.2em", marginTop: 2 }}>/ 100</div>
-                    </div>
-                  </div>
-
-                  {/* Label */}
-                  <div style={{ fontSize: 9, color: "#4A4A4E", textTransform: "uppercase", letterSpacing: "0.24em", marginBottom: 8 }}>SCORE APEX</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: tier.color, marginBottom: 16, letterSpacing: "0.02em" }}>
-                    {tier.emoji} {tier.label}
-                  </div>
-
-                  {/* Tagline */}
-                  <div style={{ fontSize: 9, color: "#4A4A4E", letterSpacing: "0.14em", textTransform: "uppercase", lineHeight: 1.8, marginBottom: 16 }}>
-                    TON CORPS CHANGE CHAQUE JOUR.<br/>TON ENTRAÎNEMENT AUSSI.
-                  </div>
-
-                  {/* Greeting */}
-                  <div style={{ fontSize: 13, color: "#8E8E93" }}>
-                    {greet}, <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{firstName}</span>
-                    {streak > 0 && <span style={{ marginLeft: 10, fontSize: 11, color: "#FF9F0A", fontWeight: 600 }}>🔥 {streak}j</span>}
-                  </div>
-
-                  {/* 4 sub-factors */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginTop: 20 }}>
-                    {[
-                      { label: "Sommeil", val: sleepScore, color: "#30D158" },
-                      { label: "Fatigue", val: fatigueScore, color: "#FF9F0A" },
-                      { label: "VFC", val: hrvScore, color: "#C9A840" },
-                      { label: "Fitness", val: sc.global, color: "#BF5AF2" },
-                    ].map((f, i) => (
-                      <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10, padding: "10px 6px", textAlign: "center" }}>
-                        <div className="bebas" style={{ fontSize: 22, color: f.color, lineHeight: 1 }}>{f.val}</div>
-                        <div style={{ fontSize: 8, color: "#4A4A4E", textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 3 }}>{f.label}</div>
+                <div style={{ marginBottom: 20 }}>
+                  {/* Greeting + date */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: "#8E8E93" }}>
+                        {greet}, <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{firstName}</span>
+                        {streak > 0 && <span style={{ marginLeft: 8, fontSize: 11, color: "#FF9F0A", fontWeight: 600 }}>🔥 {streak}j</span>}
                       </div>
-                    ))}
+                      <div style={{ fontSize: 10, color: "#4A4A4E", marginTop: 2 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
+                    </div>
+                    {evolutionPct !== null && (
+                      <div style={{ background: `${evoColor}18`, border:`1px solid ${evoColor}30`, borderRadius:10, padding:"6px 10px", textAlign:"center" }}>
+                        <div style={{ fontSize:15, fontWeight:900, color:evoColor, lineHeight:1 }}>{evoSign}{evolutionPct}%</div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Évolution</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Deux anneaux côte à côte */}
+                  <div style={{ display:"flex", gap:12, marginBottom:16 }}>
+                    {/* Anneau APEX */}
+                    <div style={{ flex:1, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"16px 12px", textAlign:"center" }}>
+                      <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", letterSpacing:"0.18em", marginBottom:10 }}>SCORE APEX</div>
+                      <div style={{ position:"relative", width:108, height:108, margin:"0 auto 10px" }}>
+                        <svg width="108" height="108" viewBox="0 0 108 108" style={{ transform:"rotate(-90deg)" }}>
+                          <circle cx="54" cy="54" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" strokeLinecap="round"/>
+                          <circle cx="54" cy="54" r={R} fill="none" stroke={tier.color} strokeWidth="10" strokeLinecap="round"
+                            strokeDasharray={C} strokeDashoffset={C - apexDash}
+                            style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${tier.color}60)` }}/>
+                        </svg>
+                        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                          <div className="bebas number-pop" style={{ fontSize:36, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{apexScore}</div>
+                          <div style={{ fontSize:8, color:"#4A4A4E", letterSpacing:"0.15em" }}>/ 100</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize:11, fontWeight:700, color:tier.color }}>{tier.label}</div>
+                    </div>
+
+                    {/* Anneau FITNESS */}
+                    <div style={{ flex:1, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"16px 12px", textAlign:"center" }}>
+                      <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", letterSpacing:"0.18em", marginBottom:10 }}>SCORE FITNESS</div>
+                      <div style={{ position:"relative", width:108, height:108, margin:"0 auto 10px" }}>
+                        <svg width="108" height="108" viewBox="0 0 108 108" style={{ transform:"rotate(-90deg)" }}>
+                          <circle cx="54" cy="54" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" strokeLinecap="round"/>
+                          <circle cx="54" cy="54" r={R} fill="none"
+                            stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}
+                            strokeWidth="10" strokeLinecap="round"
+                            strokeDasharray={C} strokeDashoffset={C - fitDash}
+                            style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)" }}/>
+                        </svg>
+                        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                          <div className="bebas number-pop" style={{ fontSize:36, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{sc.global}</div>
+                          <div style={{ fontSize:8, color:"#4A4A4E", letterSpacing:"0.15em" }}>/ 100</div>
+                        </div>
+                      </div>
+                      {/* Barres Force/Endurance/Puissance */}
+                      <div style={{ display:"flex", flexDirection:"column", gap:5, textAlign:"left" }}>
+                        {[
+                          { label:"Force", val:sc.force, color:"var(--yellow)" },
+                          { label:"Endurance", val:sc.endurance, color:"#39ff80" },
+                          { label:"Puissance", val:sc.puissance, color:"#FF453A" },
+                        ].map(b => (
+                          <div key={b.label}>
+                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
+                              <span style={{ fontSize:8, color:"#8E8E93" }}>{b.label}</span>
+                              <span style={{ fontSize:8, color:b.color, fontWeight:700 }}>{b.val}%</span>
+                            </div>
+                            <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
+                              <div style={{ width:`${b.val}%`, height:"100%", background:b.color, borderRadius:99 }}/>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -6225,54 +6252,7 @@ JSON:
               );
             })()}
 
-            {/* ── ATHLETE STATS CARD ── */}
-            {(() => {
-              const vma = parseFloat(profile.vmaKmh) || null;
-              const vo2 = vma ? Math.round(vma * 3.5) : null;
-              const age = parseInt(profile.age) || null;
-              const poids = parseFloat(profile.poids) || null;
-              const fcMax = profile.fcMax || (age ? Math.round(208 - 0.7 * age) : null);
-              const raceDate = profile.raceDate ? new Date(profile.raceDate) : null;
-              const daysLeft = raceDate ? Math.ceil((raceDate - new Date()) / 86400000) : null;
-              const sessions = profile.sessions || [];
-              const totalH = Math.round(sessions.reduce((s, x) => s + (x.duree || 0), 0) / 60);
-              const sex = profile.sexe === "F" ? "F" : "H";
-
-              // HYROX level from VMA
-              const hyroxLevel = !vma ? null
-                : sex === "H" ? (vma >= 18 ? "Elite" : vma >= 15 ? "Pro" : vma >= 13 ? "Avancé" : "Débutant")
-                : (vma >= 16 ? "Elite" : vma >= 13 ? "Pro" : vma >= 11 ? "Avancé" : "Débutant");
-
-              const STATS = [
-                vma && { label: "VMA", value: `${vma.toFixed(1)}`, unit: "km/h", color: "#FF9F0A", icon: "⚡" },
-                vo2 && { label: "VO2max", value: `${vo2}`, unit: "ml/kg/min", color: "#007AFF", icon: "🫁" },
-                fcMax && { label: "FCmax", value: `${fcMax}`, unit: "bpm", color: "#FF453A", icon: "❤️" },
-                poids && { label: "Poids", value: `${poids}`, unit: "kg", color: "#30D158", icon: "⚖️" },
-                totalH > 0 && { label: "Volume total", value: `${totalH}`, unit: "heures", color: "#C9A840", icon: "🏋️" },
-                daysLeft !== null && daysLeft >= 0 && { label: "Course dans", value: `${daysLeft}`, unit: "jours", color: "#BF5AF2", icon: "🏁" },
-              ].filter(Boolean);
-
-              if (STATS.length < 2) return null;
-
-              return (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, color: "#636366", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Profil Athlète</div>
-                    {hyroxLevel && <div style={{ fontSize: 10, background: "var(--yellow)", color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>{hyroxLevel} HYROX {sex}</div>}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-                    {STATS.slice(0, 6).map(s => (
-                      <div key={s.label} style={{ background: `${s.color}12`, border: `1px solid ${s.color}25`, borderRadius: 10, padding: "8px 8px 6px" }}>
-                        <div style={{ fontSize: 13, marginBottom: 2 }}>{s.icon}</div>
-                        <div style={{ fontSize: 16, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                        <div style={{ fontSize: 8, color: "#8E8E93", marginTop: 2 }}>{s.unit}</div>
-                        <div style={{ fontSize: 8, color: "#636366", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Profil Athlète supprimé */}
 
             {/* ── CHECK-IN RAPIDE 10 SECONDES ── */}
             {(() => {
@@ -6379,6 +6359,60 @@ JSON:
                       ))}
                     </div>
                     <div style={{ fontSize:11, color: streak > 0 ? "var(--yellow)" : "#636366" }}>{streakMsg}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── ENCART NUTRITION ── */}
+            {(()=>{
+              const KEY_NUTRI = `fitrace_nutri_quick_${profile.name}`;
+              const todayStr = new Date().toISOString().slice(0,10);
+              const [nutriData, setNutriData] = React.useState(()=>{
+                try { const d = JSON.parse(localStorage.getItem(KEY_NUTRI)||"{}"); return d[todayStr]||{cal:0,prot:0,eau:0}; } catch { return {cal:0,prot:0,eau:0}; }
+              });
+              const target = { cal: profile.calories || 2500, prot: profile.proteines || 140, eau: 3 };
+              const save = (next) => {
+                setNutriData(next);
+                try { const all = JSON.parse(localStorage.getItem(KEY_NUTRI)||"{}"); all[todayStr] = next; localStorage.setItem(KEY_NUTRI, JSON.stringify(all)); } catch {}
+              };
+              const pctCal = Math.min(100, Math.round((nutriData.cal / target.cal) * 100));
+              const pctProt = Math.min(100, Math.round((nutriData.prot / target.prot) * 100));
+              const pctEau = Math.min(100, Math.round((nutriData.eau / target.eau) * 100));
+              return (
+                <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>🥗 Nutrition du jour</div>
+                    <button onClick={()=>navigateTo("nutri")} style={{ background:"none", border:"none", color:"var(--yellow)", fontSize:10, fontWeight:700, cursor:"pointer" }}>Détail →</button>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
+                    {[
+                      { label:"Calories", val:nutriData.cal, target:target.cal, unit:"kcal", color:"#FF9F0A", pct:pctCal, step:50 },
+                      { label:"Protéines", val:nutriData.prot, target:target.prot, unit:"g", color:"#39ff80", pct:pctProt, step:5 },
+                      { label:"Eau", val:nutriData.eau, target:target.eau, unit:"L", color:"#007AFF", pct:pctEau, step:0.25 },
+                    ].map(n=>(
+                      <div key={n.label} style={{ textAlign:"center" }}>
+                        <div style={{ position:"relative", width:56, height:56, margin:"0 auto 6px" }}>
+                          <svg width="56" height="56" viewBox="0 0 56 56">
+                            <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5"/>
+                            <circle cx="28" cy="28" r="24" fill="none" stroke={n.color} strokeWidth="5"
+                              strokeDasharray={`${(n.pct/100)*150.8} 150.8`} strokeLinecap="round"
+                              transform="rotate(-90 28 28)" style={{transition:"stroke-dasharray 0.6s ease"}}/>
+                          </svg>
+                          <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}>
+                            <span style={{ fontSize:10,fontWeight:900,color:n.color }}>{n.pct}%</span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize:11,fontWeight:700,color:"var(--white)",lineHeight:1 }}>{n.val}{n.unit==="L"?n.unit:""}{n.unit!=="L"?<span style={{fontSize:8,color:"#636366",marginLeft:1}}>{n.unit}</span>:null}</div>
+                        <div style={{ fontSize:8,color:"#636366",marginTop:1 }}>{n.label}</div>
+                        <div style={{ display:"flex",gap:4,justifyContent:"center",marginTop:5 }}>
+                          <button onClick={()=>save({...nutriData,[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"]:Math.max(0,+(nutriData[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"])-n.step)})}
+                            style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:5,width:22,height:22,color:"#8E8E93",fontSize:14,cursor:"pointer",lineHeight:"22px"}}>−</button>
+                          <button onClick={()=>save({...nutriData,[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"]:+(nutriData[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"])+n.step})}
+                            style={{background:`${n.color}18`,border:`1px solid ${n.color}30`,borderRadius:5,width:22,height:22,color:n.color,fontSize:14,cursor:"pointer",lineHeight:"20px"}}>+</button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -10478,7 +10512,7 @@ JSON:
               xp += (profile.adaptations||[]).length * 40;
 
               const LEVELS = [
-                { min: 0,    max: 200,  name: "Rookie",     icon: "🥉", color: "#cd7f32", gradient: "linear-gradient(135deg,#2a1800,#080808)" },
+                { min: 0,    max: 200,  name: "Débutant",   icon: "🥉", color: "#cd7f32", gradient: "linear-gradient(135deg,#2a1800,#080808)" },
                 { min: 200,  max: 500,  name: "Challenger", icon: "🥈", color: "#adb5bd", gradient: "linear-gradient(135deg,#141414,#080808)" },
                 { min: 500,  max: 1000, name: "Compétiteur",icon: "🥇", color: "#C9A840", gradient: "linear-gradient(135deg,#131500,#080808)" },
                 { min: 1000, max: 2000, name: "Athlète",    icon: "⚡", color: "#ff9a3c", gradient: "linear-gradient(135deg,#120800,#080808)" },
