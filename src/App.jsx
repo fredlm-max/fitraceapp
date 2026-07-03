@@ -8057,6 +8057,190 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY CHALLENGE ── */}
+            {(() => {
+              const today = new Date();
+              // Get start of current week (Monday)
+              const dow = today.getDay();
+              const mondayOffset = dow === 0 ? -6 : 1 - dow;
+              const monday = new Date(today);
+              monday.setDate(today.getDate() + mondayOffset);
+              const weekKey = monday.toISOString().slice(0,10);
+              const KEY = `fitrace_challenge_${profile.name}_${weekKey}`;
+              const KEY_PROGRESS = `fitrace_challenge_progress_${profile.name}_${weekKey}`;
+
+              const [progress, setProgress] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY_PROGRESS) || "{}"); } catch { return {}; }
+              });
+
+              const sessions = profile.sessions || [];
+              const bw = parseFloat(profile.poids) || 70;
+
+              // Compute CTL to pick challenge difficulty
+              const kCTL = 1 - Math.exp(-1/42);
+              let ctl = 0;
+              const todayStr = today.toISOString().slice(0,10);
+              const startD = new Date(todayStr); startD.setDate(startD.getDate() - 42);
+              for (let i = 0; i <= 42; i++) {
+                const d = new Date(startD); d.setDate(d.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = sessions.filter(s => s.date === ds).reduce((sum,s) => sum + (s.duration && s.rpe ? s.duration*(s.rpe/10) : 0), 0);
+                ctl = ctl + kCTL*(trimp - ctl);
+              }
+
+              // Seed based on week number
+              const weekSeed = monday.toISOString().split("").reduce((a,c) => a + c.charCodeAt(0), 0);
+              const pick = (arr) => arr[weekSeed % arr.length];
+
+              const level = ctl > 40 ? "advanced" : ctl > 20 ? "intermediate" : "beginner";
+
+              const CHALLENGES = {
+                beginner: [
+                  {
+                    id:"run_20km", name:"Run Challenge", emoji:"🏃", color:"var(--yellow)",
+                    desc:"Courir 20km cette semaine répartis sur plusieurs séances",
+                    type:"distance", target:20, unit:"km",
+                    tips:["Divise en 4×5km ou 2×10km","Reste en zone 2 (conversation)","Priorité à la régularité"],
+                  },
+                  {
+                    id:"sessions_4", name:"Consistency Week", emoji:"📅", color:"#30D158",
+                    desc:"Compléter 4 séances d'entraînement cette semaine",
+                    type:"sessions", target:4, unit:"séances",
+                    tips:["Varie les types de séances","1 récup active, 1 force, 2 cardio","La régularité bat l'intensité"],
+                  },
+                  {
+                    id:"burpees_150", name:"Burpee Builder", emoji:"💥", color:"#FF453A",
+                    desc:"Réaliser 150 burpees cette semaine",
+                    type:"custom", target:150, unit:"burpees",
+                    tips:["10 burpees/min = 15min total","Répartis sur 3-4 jours","Technique : planche, saut, frappe mains"],
+                  },
+                ],
+                intermediate: [
+                  {
+                    id:"run_35km", name:"Volume Builder", emoji:"🗺️", color:"var(--yellow)",
+                    desc:"Courir 35km cette semaine",
+                    type:"distance", target:35, unit:"km",
+                    tips:["Long run 15km + 2 sorties courtes","Maintiens 75-80% VMA en Z2","Récupération active entre les séances"],
+                  },
+                  {
+                    id:"hyrox_2_sessions", name:"HYROX Double", emoji:"🏋️", color:"#FF6B35",
+                    desc:"2 séances HYROX complètes cette semaine + 3 runs",
+                    type:"sessions", target:5, unit:"séances",
+                    tips:["HYROX: intensité seuil","Runs: facile à modéré","Volume total: ~5h"],
+                  },
+                  {
+                    id:"strength_3x", name:"Force HYROX", emoji:"💪", color:"#BF5AF2",
+                    desc:"3 séances de force fonctionnelle ciblant les 8 stations",
+                    type:"sessions", target:3, unit:"séances force",
+                    tips:["Farmer carry heavy sets","Sled alternatives (poussée partenaire)","Sandbag lunges 4×20"],
+                  },
+                ],
+                advanced: [
+                  {
+                    id:"run_50km", name:"Élite Volume", emoji:"⚡", color:"var(--yellow)",
+                    desc:"50km de course cette semaine — challenge élite",
+                    type:"distance", target:50, unit:"km",
+                    tips:["Polarisé: 80% Z2, 20% Z4","Long run 20km jeudi","Récupération active obligatoire"],
+                  },
+                  {
+                    id:"full_hyrox_week", name:"HYROX Week", emoji:"🔥", color:"#FF453A",
+                    desc:"Simule une semaine de préparation race — 3 HYROX + 4 runs",
+                    type:"sessions", target:7, unit:"séances",
+                    tips:["Lun: HYROX complet","Jeu: HYROX partiel","Sam: long run allure course"],
+                  },
+                  {
+                    id:"all_stations_pb", name:"Station Attack", emoji:"🎯", color:"#FFD700",
+                    desc:"Bats ton PB sur 4 stations HYROX cette semaine",
+                    type:"custom", target:4, unit:"stations améliorées",
+                    tips:["SkiErg + Rowing = endurance","Sled + Farmer = force","Film tes séances pour analyse technique"],
+                  },
+                ],
+              };
+
+              const challenge = pick(CHALLENGES[level]);
+              const daysLeft = 7 - Math.max(0, Math.min(6, (today.getDay() + 6) % 7));
+
+              // Auto-progress from sessions for distance/sessions type
+              let autoProgress = progress[challenge.id] || 0;
+              if (challenge.type === "distance") {
+                const weekSess = sessions.filter(s => s.date >= weekKey);
+                autoProgress = weekSess.reduce((s,x) => s + (parseFloat(x.distance)||0), 0);
+              } else if (challenge.type === "sessions") {
+                const weekSess = sessions.filter(s => s.date >= weekKey);
+                autoProgress = weekSess.length;
+              }
+
+              const pct = Math.min(100, Math.round((autoProgress / challenge.target) * 100));
+              const completed = pct >= 100;
+
+              const incrementCustom = (delta) => {
+                const next = Math.max(0, Math.min(challenge.target, (progress[challenge.id] || 0) + delta));
+                const updated = { ...progress, [challenge.id]: next };
+                setProgress(updated);
+                localStorage.setItem(KEY_PROGRESS, JSON.stringify(updated));
+              };
+
+              return (
+                <div style={{ background: completed ? "rgba(48,209,88,0.12)" : `linear-gradient(135deg, ${challenge.color}12, var(--bg2))`,
+                  border:`1px solid ${completed ? "#30D15866" : challenge.color+"33"}`, borderRadius:18, padding:20, marginBottom:20 }}>
+
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555", marginBottom:2 }}>Challenge semaine · {weekKey.slice(5)} · {level === "advanced" ? "Avancé" : level === "intermediate" ? "Intermédiaire" : "Débutant"}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:24 }}>{challenge.emoji}</span>
+                        <div style={{ fontSize:16, fontWeight:800, color: completed ? "#30D158" : challenge.color }}>{challenge.name}</div>
+                      </div>
+                    </div>
+                    {completed ? (
+                      <div style={{ background:"rgba(48,209,88,0.2)", border:"1px solid #30D15866", borderRadius:12, padding:"6px 12px" }}>
+                        <div style={{ fontSize:13, fontWeight:800, color:"#30D158" }}>✓ Relevé !</div>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign:"center" }}>
+                        <div style={{ fontSize:18, fontWeight:800, color:challenge.color }}>{pct}%</div>
+                        <div style={{ fontSize:9, color:"#555" }}>{daysLeft}j restants</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize:12, color:"#888", marginBottom:12, lineHeight:1.5 }}>{challenge.desc}</div>
+
+                  {/* Progress bar */}
+                  <div style={{ height:8, background:"#2C2C2E", borderRadius:4, overflow:"hidden", marginBottom:8 }}>
+                    <div style={{ height:"100%", width:`${pct}%`, background: completed ? "#30D158" : challenge.color, borderRadius:4, transition:"width 0.5s" }}/>
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#666", marginBottom:12 }}>
+                    <span style={{ fontWeight:700, color: completed ? "#30D158" : challenge.color }}>
+                      {challenge.type === "custom" ? (progress[challenge.id]||0) : autoProgress.toFixed(challenge.type==="distance"?1:0)} {challenge.unit}
+                    </span>
+                    <span>/ {challenge.target} {challenge.unit}</span>
+                  </div>
+
+                  {/* Custom type manual increment */}
+                  {challenge.type === "custom" && !completed && (
+                    <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                      <button onClick={() => incrementCustom(-1)}
+                        style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 0", color:"#888", fontSize:16, cursor:"pointer" }}>−</button>
+                      <button onClick={() => incrementCustom(1)}
+                        style={{ flex:2, background:challenge.color, border:"none", borderRadius:10, padding:"8px 0", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+                        + 1 {challenge.unit.split(" ")[0]}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tips */}
+                  <div style={{ background:"var(--bg3)", borderRadius:10, padding:"8px 12px" }}>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:4, fontWeight:700 }}>CONSEILS</div>
+                    {challenge.tips.map((tip,i) => (
+                      <div key={i} style={{ fontSize:11, color:"#888", marginBottom:i<challenge.tips.length-1?3:0 }}>• {tip}</div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY GOAL PROGRESS ── */}
             {(() => {
               const sessions = profile.sessions || [];
