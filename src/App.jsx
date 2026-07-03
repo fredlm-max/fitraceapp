@@ -21614,6 +21614,132 @@ const sessions = profile.sessions || [];
               );
             })()}
 
+            {/* ── HYROX RACE SIMULATOR ── */}
+            {(()=>{
+              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              const benchmarks = (() => { try { return JSON.parse(localStorage.getItem(benchKey)||"{}"); } catch { return {}; } })();
+              const filled = Object.keys(benchmarks).filter(k=>benchmarks[k]?.time).length;
+              if (filled < 3) return null;
+
+              const STATIONS = [
+                { id:"ski",      label:"SkiErg",          icon:"⛷️",  color:"#a78bfa" },
+                { id:"sledpush", label:"Sled Push",       icon:"🛷",  color:"#C9A840" },
+                { id:"sledpull", label:"Sled Pull",       icon:"🔗",  color:"#FF9F0A" },
+                { id:"burpee",   label:"Burpee BJ",       icon:"🤸",  color:"#FF453A" },
+                { id:"rowing",   label:"Rowing",          icon:"🚣",  color:"#38bdf8" },
+                { id:"farmers",  label:"Farmers Carry",   icon:"🧳",  color:"#30D158" },
+                { id:"sandbag",  label:"Sandbag Lunges",  icon:"🎒",  color:"#FF9F0A" },
+                { id:"wallball", label:"Wall Balls",      icon:"🏀",  color:"#C9A840" },
+              ];
+
+              const timeToSecs = (t) => { if (!t) return null; const [m,s]=t.split(":").map(Number); return m*60+(s||0); };
+              const secsToStr = (s) => { const m=Math.floor(s/60),sec=s%60; return `${m}:${String(sec).padStart(2,"0")}`; };
+
+              // Station total
+              const stationSecs = STATIONS.reduce((a,st) => {
+                const t = timeToSecs(benchmarks[st.id]?.time);
+                return a + (t||0);
+              }, 0);
+              const knownCount = STATIONS.filter(st=>benchmarks[st.id]?.time).length;
+              const estimatedStationSecs = knownCount > 0 ? Math.round(stationSecs * (8/knownCount)) : 0;
+
+              // Running: 8 × 1km entre stations (estimation selon VMA)
+              const vma = parseFloat(profile.vmaKmh) || 12;
+              const runPaceSecKm = Math.round(3600 / (vma * 0.78)); // ~78% VMA pour pace HYROX
+              const runTotalSecs = 8 * runPaceSecKm;
+
+              const totalSecs = estimatedStationSecs + runTotalSecs;
+              const totalMin = Math.floor(totalSecs/60);
+              const totalH = Math.floor(totalMin/60);
+              const remMin = totalMin % 60;
+
+              // Catégorie de performance
+              const perfCat = totalMin <= 60 ? { label:"Elite", color:"#a78bfa", icon:"🏆" }
+                : totalMin <= 75 ? { label:"Pro", color:"#C9A840", icon:"⚡" }
+                : totalMin <= 90 ? { label:"Open avancé", color:"#30D158", icon:"💪" }
+                : totalMin <= 120 ? { label:"Open", color:"#007AFF", icon:"🏃" }
+                : { label:"Finisher", color:"#8E8E93", icon:"🎯" };
+
+              // Analyse bottleneck (station la plus lente vs référence)
+              const gender = (profile.sexe==="femme"||profile.sexe==="F") ? "F" : "H";
+              const REFS_H = { ski:"3:30",sledpush:"1:45",sledpull:"1:30",burpee:"2:30",rowing:"3:40",farmers:"1:30",sandbag:"3:20",wallball:"4:00" };
+              const REFS_F = { ski:"4:30",sledpush:"2:15",sledpull:"2:00",burpee:"3:00",rowing:"4:30",farmers:"2:00",sandbag:"4:10",wallball:"5:00" };
+              const refs = gender === "H" ? REFS_H : REFS_F;
+              let bottleneck = null, worstDelta = -Infinity;
+              STATIONS.forEach(st => {
+                const my = timeToSecs(benchmarks[st.id]?.time);
+                const ref = timeToSecs(refs[st.id]);
+                if (my && ref) {
+                  const delta = my - ref; // positif = plus lent que ref
+                  if (delta > worstDelta) { worstDelta = delta; bottleneck = { ...st, delta, myTime: benchmarks[st.id].time }; }
+                }
+              });
+
+              return (
+                <div style={{ marginBottom:12, background:"linear-gradient(135deg,rgba(0,0,0,0.6),rgba(12,12,20,0.8))", border:"1px solid rgba(201,168,64,0.2)", borderRadius:18, padding:"16px", position:"relative", overflow:"hidden" }}>
+                  {/* Glow */}
+                  <div style={{ position:"absolute", top:-40, right:-40, width:160, height:160, borderRadius:"50%", background:`radial-gradient(circle,${perfCat.color}15 0%,transparent 70%)`, pointerEvents:"none" }}/>
+
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", fontWeight:700, letterSpacing:"0.1em" }}>🏁 Simulateur temps HYROX</div>
+                      <div style={{ fontSize:9, color:"#636366", marginTop:2 }}>
+                        {knownCount}/8 stations · {filled < 8 && "extrapolé pour les manquantes"}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:9, color:perfCat.color, fontWeight:700 }}>{perfCat.icon} {perfCat.label}</div>
+                    </div>
+                  </div>
+
+                  {/* Temps total */}
+                  <div style={{ textAlign:"center", marginBottom:16 }}>
+                    <div className="bebas" style={{ fontSize:54, color:"var(--yellow)", lineHeight:1, letterSpacing:-1 }}>
+                      {totalH}:{String(remMin).padStart(2,"0")}
+                    </div>
+                    <div style={{ fontSize:10, color:"#636366", marginTop:2 }}>temps estimé total</div>
+                  </div>
+
+                  {/* Décomposition */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
+                    {[
+                      { label:"Stations", val:secsToStr(estimatedStationSecs), pct:Math.round(estimatedStationSecs/totalSecs*100), color:"#C9A840" },
+                      { label:"Running 8km", val:secsToStr(runTotalSecs), pct:Math.round(runTotalSecs/totalSecs*100), color:"#007AFF" },
+                      { label:"Allure/km", val:`${Math.floor(runPaceSecKm/60)}:${String(runPaceSecKm%60).padStart(2,"0")}/km`, pct:null, color:"#30D158" },
+                    ].map(b=>(
+                      <div key={b.label} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 6px", textAlign:"center" }}>
+                        <div style={{ fontSize:13, fontWeight:900, color:b.color, fontFamily:"'Bebas Neue',sans-serif", lineHeight:1 }}>{b.val}</div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:2 }}>{b.label}</div>
+                        {b.pct !== null && <div style={{ fontSize:8, color:b.color, marginTop:1 }}>{b.pct}%</div>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Barre décomposée */}
+                  <div style={{ height:6, borderRadius:99, overflow:"hidden", background:"rgba(255,255,255,0.06)", marginBottom:8, display:"flex" }}>
+                    <div style={{ width:`${Math.round(estimatedStationSecs/totalSecs*100)}%`, background:"#C9A840", transition:"width 0.5s" }}/>
+                    <div style={{ flex:1, background:"#007AFF" }}/>
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:8, color:"#636366", marginBottom:12 }}>
+                    <span>🏋️ Stations {Math.round(estimatedStationSecs/totalSecs*100)}%</span>
+                    <span>🏃 Running {Math.round(runTotalSecs/totalSecs*100)}%</span>
+                  </div>
+
+                  {/* Bottleneck */}
+                  {bottleneck && worstDelta > 0 && (
+                    <div style={{ background:`${bottleneck.color}10`, border:`1px solid ${bottleneck.color}25`, borderRadius:10, padding:"8px 12px", display:"flex", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:18 }}>{bottleneck.icon}</span>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:bottleneck.color }}>Point faible : {bottleneck.label}</div>
+                        <div style={{ fontSize:10, color:"#8E8E93" }}>{bottleneck.myTime} vs ref {refs[bottleneck.id]} (+{worstDelta}s) — travail prioritaire</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── INSIGHTS IA — observations intelligentes ── */}
             {(profile.sessions||[]).length >= 2 && (() => {
               const sessions = profile.sessions || [];
