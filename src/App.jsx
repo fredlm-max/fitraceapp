@@ -7778,6 +7778,173 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING CALENDAR (TrainingPeaks-style) ── */}
+            {(()=>{
+              const planKey = `fitrace_planned_${profile.name}`;
+              const [plan, setPlan] = React.useState(() => { try { return JSON.parse(localStorage.getItem(planKey)||"{}"); } catch { return {}; } });
+              const [planModal, setPlanModal] = React.useState(null); // dateStr being planned
+
+              const savePlan = (dateStr, type) => {
+                const updated = type ? { ...plan, [dateStr]: { type, date: dateStr } } : (() => { const c={...plan}; delete c[dateStr]; return c; })();
+                setPlan(updated);
+                localStorage.setItem(planKey, JSON.stringify(updated));
+                setPlanModal(null);
+              };
+
+              const SESSION_TYPES = [
+                { type:"Zone 2",   icon:"🫀", color:"#007AFF" },
+                { type:"Qualité",  icon:"⚡", color:"#C9A840" },
+                { type:"Force",    icon:"💪", color:"#a78bfa" },
+                { type:"Hybride",  icon:"🔥", color:"#FF6B00" },
+                { type:"Mobilité", icon:"🧘", color:"#30D158" },
+                { type:"Repos",    icon:"😴", color:"#636366" },
+              ];
+
+              const sessions = profile.sessions || [];
+              // Build a map: dateStr → [session, ...]
+              const loggedMap = {};
+              sessions.forEach(s => {
+                const d = s.date ? s.date.slice(0,10) : null;
+                if (!d) return;
+                if (!loggedMap[d]) loggedMap[d] = [];
+                loggedMap[d].push(s);
+              });
+
+              // Build 5 weeks grid starting from Monday of 4 weeks ago
+              const today = new Date(); today.setHours(0,0,0,0);
+              const todayStr = today.toISOString().slice(0,10);
+              const dayOfWeek = (today.getDay() + 6) % 7; // 0=Mon
+              const startDate = new Date(today); startDate.setDate(today.getDate() - dayOfWeek - 28); // 4 weeks back, start of week
+              const days = [];
+              for (let i = 0; i < 35; i++) {
+                const d = new Date(startDate); d.setDate(startDate.getDate() + i);
+                days.push(d.toISOString().slice(0,10));
+              }
+              const weeks = [];
+              for (let w = 0; w < 5; w++) weeks.push(days.slice(w*7, w*7+7));
+
+              const typeColor = (t) => SESSION_TYPES.find(s=>s.type===t)?.color || "#636366";
+              const typeIcon  = (t) => SESSION_TYPES.find(s=>s.type===t)?.icon  || "•";
+
+              const DAY_LABELS = ["L","M","M","J","V","S","D"];
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, paddingLeft:2 }}>📅 Calendrier d'entraînement</div>
+
+                  {/* Day headers */}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:3, marginBottom:3 }}>
+                    {DAY_LABELS.map((l,i)=>(
+                      <div key={i} style={{ textAlign:"center", fontSize:9, color:"#636366", fontWeight:700 }}>{l}</div>
+                    ))}
+                  </div>
+
+                  {/* Weeks */}
+                  {weeks.map((week, wi)=>(
+                    <div key={wi} style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:3, marginBottom:3 }}>
+                      {week.map(dateStr => {
+                        const isToday = dateStr === todayStr;
+                        const isPast  = dateStr < todayStr;
+                        const isFuture = dateStr > todayStr;
+                        const logged  = loggedMap[dateStr] || [];
+                        const planned = plan[dateStr];
+                        const dayNum  = parseInt(dateStr.slice(8));
+                        const hasLog  = logged.length > 0;
+                        const isRest  = planned?.type === "Repos";
+
+                        const bgColor = hasLog
+                          ? (typeColor(logged[0].type || logged[0].titre) + "33")
+                          : planned && !isRest ? `${typeColor(planned.type)}22`
+                          : "rgba(255,255,255,0.04)";
+                        const borderColor = isToday ? "#C9A840"
+                          : hasLog ? typeColor(logged[0].type || logged[0].titre)
+                          : planned ? typeColor(planned.type) + "55"
+                          : "transparent";
+
+                        return (
+                          <div key={dateStr}
+                            onClick={() => { if (!isPast || hasLog) { haptic([3]); setPlanModal(dateStr); } }}
+                            style={{ aspectRatio:"1", borderRadius:8, border:`1.5px solid ${borderColor}`, background:bgColor, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor: isFuture || isToday ? "pointer" : "default", position:"relative", opacity: isPast && !hasLog && !planned ? 0.4 : 1, transition:"all 0.15s" }}>
+                            <div style={{ fontSize:9, color: isToday ? "#C9A840" : hasLog ? "#fff" : "#8E8E93", fontWeight: isToday ? 900 : 500, lineHeight:1 }}>{dayNum}</div>
+                            {hasLog && (
+                              <div style={{ fontSize:11, lineHeight:1, marginTop:1 }}>{typeIcon(logged[0].type || logged[0].titre)}</div>
+                            )}
+                            {!hasLog && planned && (
+                              <div style={{ fontSize:10, lineHeight:1, marginTop:1, opacity:0.7 }}>{typeIcon(planned.type)}</div>
+                            )}
+                            {logged.length > 1 && (
+                              <div style={{ position:"absolute", top:2, right:3, fontSize:7, color:"#C9A840", fontWeight:900 }}>{logged.length}</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+
+                  {/* Legend */}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:8 }}>
+                    {SESSION_TYPES.map(s=>(
+                      <div key={s.type} style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#8E8E93" }}>
+                        <div style={{ width:8, height:8, borderRadius:"50%", background:s.color }}/>
+                        {s.type}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Plan modal */}
+                  {planModal && (
+                    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.88)", zIndex:600, display:"flex", alignItems:"flex-end" }}
+                      onClick={()=>setPlanModal(null)}>
+                      <div className="slide-up" onClick={e=>e.stopPropagation()}
+                        style={{ background:"var(--bg2)", borderRadius:"20px 20px 0 0", padding:"24px 20px 40px", width:"100%", maxWidth:480, margin:"0 auto" }}>
+                        <div style={{ width:40, height:4, borderRadius:99, background:"#333", margin:"0 auto 16px" }}/>
+                        <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", marginBottom:4 }}>
+                          {planModal > todayStr ? "Planifier" : "Détail"} — {new Date(planModal+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}
+                        </div>
+                        {/* Séances loggées ce jour */}
+                        {(loggedMap[planModal]||[]).length > 0 && (
+                          <div style={{ marginBottom:12 }}>
+                            {(loggedMap[planModal]).map((s,i)=>(
+                              <div key={i} style={{ background:`${typeColor(s.type||s.titre)}15`, border:`1px solid ${typeColor(s.type||s.titre)}30`, borderRadius:10, padding:"8px 12px", marginBottom:6, display:"flex", alignItems:"center", gap:10 }}>
+                                <span style={{ fontSize:18 }}>{typeIcon(s.type||s.titre)}</span>
+                                <div>
+                                  <div style={{ fontSize:12, fontWeight:700, color:"var(--white)" }}>{s.titre || s.type}</div>
+                                  <div style={{ fontSize:10, color:"#8E8E93" }}>{s.duree} min · RPE {s.rpe}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {planModal >= todayStr && (
+                          <>
+                            <div style={{ fontSize:10, color:"#636366", marginBottom:10 }}>Choisir le type de séance planifiée :</div>
+                            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:12 }}>
+                              {SESSION_TYPES.map(s=>{
+                                const isSel = plan[planModal]?.type === s.type;
+                                return (
+                                  <div key={s.type} onClick={()=>savePlan(planModal, s.type)}
+                                    style={{ background: isSel ? `${s.color}25` : "rgba(255,255,255,0.04)", border:`1.5px solid ${isSel ? s.color : "rgba(255,255,255,0.1)"}`, borderRadius:12, padding:"10px 6px", textAlign:"center", cursor:"pointer" }}>
+                                    <div style={{ fontSize:22 }}>{s.icon}</div>
+                                    <div style={{ fontSize:9, color: isSel ? s.color : "#8E8E93", marginTop:3, fontWeight: isSel ? 700 : 400 }}>{s.type}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {plan[planModal] && (
+                              <button onClick={()=>savePlan(planModal, null)}
+                                style={{ width:"100%", padding:"10px", background:"rgba(255,69,58,0.15)", border:"1px solid rgba(255,69,58,0.3)", borderRadius:12, color:"#FF453A", fontSize:12, cursor:"pointer" }}>
+                                🗑 Supprimer la planification
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── RECORDS & MILESTONES ── */}
             {(()=>{
               const sessions = profile.sessions || [];
