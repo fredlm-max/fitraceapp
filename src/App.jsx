@@ -30669,6 +30669,104 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── PRE-RACE CHECKLIST ── */}
+      {(() => {
+        const KEY = `fitrace_checklist_${profile.name}`;
+        const [checked, setChecked] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+        const [activePhase, setActivePhase] = React.useState("J-3");
+
+        const PHASES = [
+          { id:"J-7", label:"J-7", icon:"📅", items:[
+            { id:"j7_1", cat:"🏃 Training",    text:"Dernière longue sortie — allure facile" },
+            { id:"j7_2", cat:"🥗 Nutrition",   text:"Augmenter les glucides progressivement" },
+            { id:"j7_3", cat:"📦 Logistique",  text:"Confirmer inscription + dossard" },
+            { id:"j7_4", cat:"📦 Logistique",  text:"Réserver hébergement si déplacement" },
+            { id:"j7_5", cat:"🧘 Mental",      text:"Visualisation de la course 10 min" },
+          ]},
+          { id:"J-3", label:"J-3", icon:"🎒", items:[
+            { id:"j3_1", cat:"👟 Équipement",  text:"Chaussures (pas de nouveauté !)" },
+            { id:"j3_2", cat:"👟 Équipement",  text:"Tenue de compétition lavée" },
+            { id:"j3_3", cat:"👟 Équipement",  text:"Montre GPS chargée + ceinture cardio" },
+            { id:"j3_4", cat:"👟 Équipement",  text:"Gants Farmer's Carry / Sled" },
+            { id:"j3_5", cat:"🥗 Nutrition",   text:"Acheter gels / barres pour la course" },
+            { id:"j3_6", cat:"🏃 Training",    text:"Séance activation légère + strides" },
+          ]},
+          { id:"J-1", label:"J-1", icon:"🌙", items:[
+            { id:"j1_1", cat:"🥗 Nutrition",   text:"Pasta party : riz/pâtes + protéines" },
+            { id:"j1_2", cat:"🥗 Nutrition",   text:"Hydratation 3L eau + électrolytes" },
+            { id:"j1_3", cat:"🛌 Sommeil",     text:"Coucher tôt — 8h de sommeil minimum" },
+            { id:"j1_4", cat:"📦 Logistique",  text:"Sac compétition complet préparé" },
+            { id:"j1_5", cat:"📦 Logistique",  text:"Itinéraire + réveil réglé (H-60min)" },
+            { id:"j1_6", cat:"🧘 Mental",      text:"Écrire ses 3 objectifs de course" },
+            { id:"j1_7", cat:"🧘 Mental",      text:"Visualisation séquence complète 15min" },
+          ]},
+          { id:"J", label:"Jour J", icon:"🏁", items:[
+            { id:"jj_1", cat:"☀️ Matin",       text:"Petit-déj H-3 : 600-800 kcal glucides" },
+            { id:"jj_2", cat:"☀️ Matin",       text:"Café + gel 30min avant si habitude" },
+            { id:"jj_3", cat:"🏃 Warm-up",     text:"Échauffement 15min : jog + mobilité" },
+            { id:"jj_4", cat:"🏃 Warm-up",     text:"Strides 4×100m à allure HYROX" },
+            { id:"jj_5", cat:"🧘 Mental",      text:"Box breathing 5min avant le départ" },
+            { id:"jj_6", cat:"🧘 Mental",      text:"Revoir stratégie de pacing par station" },
+            { id:"jj_7", cat:"👟 Équipement",  text:"Dossard + puce chronométrage vérifiés" },
+            { id:"jj_8", cat:"👟 Équipement",  text:"Lacets doublés / solidement attachés" },
+          ]},
+        ];
+
+        const toggle = (id) => {
+          const next = { ...checked, [id]: !checked[id] };
+          setChecked(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const activePhaseData = PHASES.find(p=>p.id===activePhase);
+        const phaseProgress = activePhaseData
+          ? Math.round(activePhaseData.items.filter(i=>checked[i.id]).length / activePhaseData.items.length * 100)
+          : 0;
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>📋 Checklist Pré-Course</div>
+            <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+              {PHASES.map(p=>{
+                const pct = Math.round(p.items.filter(i=>checked[i.id]).length/p.items.length*100);
+                return (
+                  <button key={p.id} onClick={()=>setActivePhase(p.id)}
+                    style={{ flex:1,background:activePhase===p.id?"var(--yellow)":"var(--bg3)",color:activePhase===p.id?"#000":"#8E8E93",border:"none",borderRadius:10,padding:"6px 4px",cursor:"pointer",textAlign:"center" }}>
+                    <div style={{ fontSize:14 }}>{p.icon}</div>
+                    <div style={{ fontSize:8,fontWeight:activePhase===p.id?800:400 }}>{p.label}</div>
+                    <div style={{ fontSize:7,color:activePhase===p.id?"#0008":pct===100?"#30D158":"#636366",marginTop:1 }}>{pct===100?"✓":pct+"%"}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {activePhaseData && (
+              <>
+                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
+                  <div style={{ flex:1,height:5,background:"#2C2C2E",borderRadius:3,overflow:"hidden" }}>
+                    <div style={{ height:"100%",width:`${phaseProgress}%`,background:phaseProgress===100?"#30D158":"var(--yellow)",borderRadius:3,transition:"width 0.3s" }}/>
+                  </div>
+                  <div style={{ fontSize:10,fontWeight:800,color:phaseProgress===100?"#30D158":"var(--yellow)" }}>{phaseProgress===100?"✅":phaseProgress+"%"}</div>
+                </div>
+                {[...new Set(activePhaseData.items.map(i=>i.cat))].map(cat=>(
+                  <div key={cat} style={{ marginBottom:8 }}>
+                    <div style={{ fontSize:9,color:"#636366",fontWeight:700,marginBottom:4 }}>{cat}</div>
+                    {activePhaseData.items.filter(i=>i.cat===cat).map(item=>(
+                      <button key={item.id} onClick={()=>toggle(item.id)}
+                        style={{ display:"flex",alignItems:"center",gap:10,width:"100%",background:checked[item.id]?"#1C3A24":"var(--bg3)",border:`1px solid ${checked[item.id]?"#30D15840":"transparent"}`,borderRadius:8,padding:"8px 10px",cursor:"pointer",marginBottom:3,textAlign:"left" }}>
+                        <div style={{ width:18,height:18,borderRadius:4,border:`2px solid ${checked[item.id]?"#30D158":"#636366"}`,background:checked[item.id]?"#30D158":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                          {checked[item.id] && <span style={{ fontSize:11,color:"#000",fontWeight:900 }}>✓</span>}
+                        </div>
+                        <span style={{ fontSize:11,color:checked[item.id]?"#30D158":"var(--white)",textDecoration:checked[item.id]?"line-through":"none",opacity:checked[item.id]?0.7:1 }}>{item.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── COMPETITION HISTORY LOG ── */}
       {(() => {
         const KEY = `fitrace_comp_history_${profile.name}`;
