@@ -5571,6 +5571,189 @@ JSON:
               );
             })()}
 
+            {/* ── SMART TRAINING ALERTS ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const today = new Date().toISOString().slice(0,10);
+              const KEY_DISMISS = `fitrace_alerts_dismissed_${profile.name}`;
+              const [dismissed, setDismissed] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY_DISMISS) || "[]"); } catch { return []; }
+              });
+
+              const dismiss = (id) => {
+                const next = [...dismissed, id];
+                setDismissed(next);
+                localStorage.setItem(KEY_DISMISS, JSON.stringify(next));
+              };
+
+              // Compute metrics
+              const kATL = 1 - Math.exp(-1/7), kCTL = 1 - Math.exp(-1/42);
+              let atl = 0, ctl = 0;
+              const startD = new Date(today); startD.setDate(startD.getDate() - 42);
+              for (let i = 0; i <= 42; i++) {
+                const d = new Date(startD); d.setDate(d.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = sessions.filter(s => s.date === ds).reduce((sum,s) => sum + (s.duration && s.rpe ? s.duration*(s.rpe/10) : 0), 0);
+                atl = atl + kATL*(trimp - atl); ctl = ctl + kCTL*(trimp - ctl);
+              }
+              const tsb = ctl - atl;
+
+              // Last 7 days sessions
+              const last7 = sessions.filter(s => {
+                const diff = (new Date(today) - new Date(s.date)) / 86400000;
+                return diff >= 0 && diff < 7;
+              });
+              const last7Trimp = last7.reduce((sum,s) => sum + (s.duration && s.rpe ? s.duration*(s.rpe/10) : 0), 0);
+              const last7Rpe = last7.length ? last7.reduce((sum,s) => sum + (parseFloat(s.rpe) || 0), 0) / last7.length : 0;
+
+              // Days since last session
+              const sortedSess = [...sessions].sort((a,b) => b.date?.localeCompare(a.date));
+              const lastSessionDate = sortedSess[0]?.date;
+              const daysSinceLast = lastSessionDate ? Math.floor((new Date(today) - new Date(lastSessionDate)) / 86400000) : 99;
+
+              // PRs in last 7 days
+              const recentPRs = sessions.filter(s => {
+                const diff = (new Date(today) - new Date(s.date)) / 86400000;
+                if (diff < 0 || diff >= 7 || !s.distance || !s.duration) return false;
+                const pace = s.duration / s.distance;
+                const sameType = sessions.filter(o => o.type === s.type && o.distance === s.distance && o.date < s.date);
+                if (!sameType.length) return false;
+                const bestPrev = Math.min(...sameType.map(o => o.duration / o.distance));
+                return pace < bestPrev;
+              });
+
+              // Competition from comp history
+              const compKey = `fitrace_comp_history_${profile.name}`;
+              let nextRace = null;
+              try {
+                const comps = JSON.parse(localStorage.getItem(compKey) || "[]");
+                const future = comps.filter(c => c.date > today).sort((a,b) => a.date.localeCompare(b.date));
+                if (future.length) nextRace = future[0];
+              } catch {}
+
+              // Build alerts
+              const alerts = [];
+
+              // Overtraining alert
+              if (tsb < -20) {
+                alerts.push({
+                  id: `overtrain_${today.slice(0,7)}`,
+                  type: "warning",
+                  emoji: "⚠️",
+                  color: "#FF453A",
+                  title: "Risque de surcharge",
+                  message: `TSB à ${tsb.toFixed(0)} — fatigue élevée. Planifie 48h de récupération active.`,
+                });
+              }
+
+              // Inactivity alert
+              if (daysSinceLast >= 4 && daysSinceLast < 99) {
+                alerts.push({
+                  id: `inactive_${today}`,
+                  type: "info",
+                  emoji: "💤",
+                  color: "#FF9F0A",
+                  title: `${daysSinceLast} jours sans entraînement`,
+                  message: "Ton CTL commence à décliner. Une séance légère suffira à relancer la machine.",
+                });
+              }
+
+              // High RPE streak
+              if (last7.length >= 3 && last7Rpe > 7.5) {
+                alerts.push({
+                  id: `highrpe_${today.slice(0,7)}`,
+                  type: "warning",
+                  emoji: "🔥",
+                  color: "#FF6B35",
+                  title: "Intensité élevée cette semaine",
+                  message: `RPE moyen: ${last7Rpe.toFixed(1)}/10 sur ${last7.length} séances. Intègre une sortie Z2 demain.`,
+                });
+              }
+
+              // PR alert
+              if (recentPRs.length > 0) {
+                alerts.push({
+                  id: `pr_${recentPRs[0].date}_${recentPRs[0].type}`,
+                  type: "success",
+                  emoji: "🏆",
+                  color: "#30D158",
+                  title: `Nouveau PR — ${recentPRs[0].type || "Course"}`,
+                  message: `Meilleure allure sur ${recentPRs[0].distance}km ! Continue sur cette lancée.`,
+                });
+              }
+
+              // Race countdown
+              if (nextRace) {
+                const daysToRace = Math.ceil((new Date(nextRace.date) - new Date(today)) / 86400000);
+                if (daysToRace <= 30) {
+                  alerts.push({
+                    id: `race_${nextRace.date}`,
+                    type: daysToRace <= 7 ? "warning" : "info",
+                    emoji: "🏁",
+                    color: daysToRace <= 7 ? "#BF5AF2" : "var(--yellow)",
+                    title: `${nextRace.location || "Course"} dans ${daysToRace}j`,
+                    message: daysToRace <= 7
+                      ? "Semaine de course ! Réduis le volume, maintiens l'intensité. Repose tes jambes."
+                      : `${daysToRace} jours pour peaufiner ta forme. Priorité: vitesse spécifique & récupération.`,
+                  });
+                }
+              }
+
+              // Form peak alert
+              if (tsb > 10 && ctl > 30) {
+                alerts.push({
+                  id: `peak_${today.slice(0,7)}`,
+                  type: "success",
+                  emoji: "⚡",
+                  color: "#5AC8FA",
+                  title: "Forme optimale",
+                  message: `TSB +${tsb.toFixed(0)} — tu es dans ta fenêtre de performance. C'est le moment de tester un PB !`,
+                });
+              }
+
+              // Weekly volume low
+              if (last7Trimp < ctl * 0.5 && ctl > 20 && daysSinceLast < 4) {
+                alerts.push({
+                  id: `lowvol_${today.slice(0,7)}`,
+                  type: "info",
+                  emoji: "📉",
+                  color: "#5AC8FA",
+                  title: "Volume en baisse",
+                  message: `Charge cette semaine (${last7Trimp.toFixed(0)} TRIMP) bien en dessous de ta moyenne (CTL ${ctl.toFixed(0)}). Tu peux pousser plus.`,
+                });
+              }
+
+              const visible = alerts.filter(a => !dismissed.includes(a.id));
+              if (visible.length === 0) return null;
+
+              return (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", marginBottom:8 }}>
+                    Alertes intelligentes
+                    <span style={{ fontSize:11, fontWeight:400, color:"#666", marginLeft:8 }}>{visible.length} active{visible.length>1?"s":""}</span>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {visible.map(alert => (
+                      <div key={alert.id} style={{
+                        background:`${alert.color}15`,
+                        border:`1px solid ${alert.color}44`,
+                        borderRadius:14, padding:"10px 14px",
+                        display:"flex", gap:10, alignItems:"flex-start"
+                      }}>
+                        <span style={{ fontSize:18, flexShrink:0, marginTop:1 }}>{alert.emoji}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:alert.color, marginBottom:2 }}>{alert.title}</div>
+                          <div style={{ fontSize:12, color:"#999", lineHeight:1.4 }}>{alert.message}</div>
+                        </div>
+                        <button onClick={() => dismiss(alert.id)}
+                          style={{ background:"none", border:"none", color:"#555", fontSize:16, cursor:"pointer", flexShrink:0, lineHeight:1, padding:0, marginTop:2 }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── FATIGUE STATUS BANNER ── */}
             {(() => {
               const sessions = profile.sessions || [];
