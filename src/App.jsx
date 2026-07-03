@@ -22200,6 +22200,147 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── MENTAL PERFORMANCE JOURNAL ── */}
+      {(() => {
+        const todayStr = new Date().toISOString().slice(0,10);
+        const KEY = `fitrace_mental_${profile.name}`;
+        const [entries, setEntries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [mode, setMode] = React.useState("view"); // view | pre | post
+        const [form, setForm] = React.useState({ confidence:3, focus:3, motivation:3, stress:3, notes:"" });
+
+        const todayEntry = entries.find(e=>e.date===todayStr);
+
+        const save = (type) => {
+          const next = entries.filter(e=>!(e.date===todayStr && e.type===type));
+          next.push({ date:todayStr, type, ...form, ts:Date.now() });
+          next.sort((a,b)=>b.ts-a.ts);
+          setEntries(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setMode("view");
+          setForm({ confidence:3, focus:3, motivation:3, stress:3, notes:"" });
+        };
+
+        // Last 7 days trend
+        const last7 = Array.from({length:7},(_,i)=>{
+          const d = new Date(Date.now()-i*86400000).toISOString().slice(0,10);
+          const dayEntries = entries.filter(e=>e.date===d);
+          if (!dayEntries.length) return null;
+          const avg = dayEntries.reduce((s,e)=>s+(e.confidence+e.focus+e.motivation)/3,0)/dayEntries.length;
+          return { date:d, avg };
+        }).reverse();
+
+        const avgScore = last7.filter(Boolean).length
+          ? Math.round(last7.filter(Boolean).reduce((s,e)=>s+e.avg,0)/last7.filter(Boolean).length*10)/10
+          : null;
+
+        const METRICS = [
+          { key:"confidence", label:"Confiance", icon:"💪", color:"#007AFF" },
+          { key:"focus",      label:"Focus",     icon:"🎯", color:"#BF5AF2" },
+          { key:"motivation", label:"Motivation",icon:"🔥", color:"#FF9F0A" },
+          { key:"stress",     label:"Stress",    icon:"⚡", color:"#FF453A", invert:true },
+        ];
+
+        const W=280, H=60;
+        const validDays = last7.filter(Boolean);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🧠 Journal Mental</div>
+              {avgScore && <div style={{ fontSize:10,color:"#30D158",fontWeight:700 }}>Moy. 7j: {avgScore}/5</div>}
+            </div>
+
+            {mode==="view" && (
+              <>
+                {/* 7-day sparkline */}
+                {validDays.length >= 2 && (
+                  <div style={{ marginBottom:12 }}>
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+                      {last7.map((d,i)=>{
+                        if (!d) return null;
+                        const x = 10 + (i/(last7.length-1))*(W-20);
+                        const y = H-10 - ((d.avg-1)/4)*(H-20);
+                        return <circle key={i} cx={x} cy={y} r={3} fill="#30D158" opacity={0.8}/>;
+                      })}
+                      {last7.reduce((pts,d,i)=>{
+                        if (!d) return pts;
+                        const x = 10 + (i/(last7.length-1))*(W-20);
+                        const y = H-10 - ((d.avg-1)/4)*(H-20);
+                        return [...pts, `${x},${y}`];
+                      },[]).length>=2 && (
+                        <polyline points={last7.reduce((pts,d,i)=>{
+                          if (!d) return pts;
+                          const x = 10 + (i/(last7.length-1))*(W-20);
+                          const y = H-10 - ((d.avg-1)/4)*(H-20);
+                          return [...pts, `${x},${y}`];
+                        },[]).join(" ")} fill="none" stroke="#30D158" strokeWidth={1.5} opacity={0.7}/>
+                      )}
+                    </svg>
+                  </div>
+                )}
+
+                {/* Today's entry */}
+                {todayEntry && (
+                  <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:10 }}>
+                    <div style={{ fontSize:9,color:"#636366",marginBottom:8 }}>Aujourd'hui · {todayEntry.type==="pre"?"Avant séance":"Après séance"}</div>
+                    <div style={{ display:"flex",gap:6 }}>
+                      {METRICS.map(m=>(
+                        <div key={m.key} style={{ flex:1,textAlign:"center" }}>
+                          <div style={{ fontSize:10 }}>{m.icon}</div>
+                          <div style={{ fontSize:14,fontWeight:900,color:m.color }}>{todayEntry[m.key]}</div>
+                          <div style={{ fontSize:7,color:"#636366" }}>{m.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {todayEntry.notes && <div style={{ fontSize:9,color:"#8E8E93",marginTop:8,fontStyle:"italic" }}>"{todayEntry.notes}"</div>}
+                  </div>
+                )}
+
+                <div style={{ display:"flex",gap:6 }}>
+                  <button onClick={()=>{setMode("pre");setForm({ confidence:3,focus:3,motivation:3,stress:3,notes:"" });}}
+                    style={{ flex:1,background:"var(--bg3)",color:"#007AFF",border:"1px solid #007AFF30",borderRadius:10,padding:8,fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                    ☀️ Avant séance
+                  </button>
+                  <button onClick={()=>{setMode("post");setForm({ confidence:3,focus:3,motivation:3,stress:3,notes:"" });}}
+                    style={{ flex:1,background:"var(--bg3)",color:"#30D158",border:"1px solid #30D15830",borderRadius:10,padding:8,fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                    🌙 Après séance
+                  </button>
+                </div>
+              </>
+            )}
+
+            {(mode==="pre"||mode==="post") && (
+              <div>
+                <div style={{ fontSize:11,fontWeight:700,color:"var(--white)",marginBottom:12 }}>
+                  {mode==="pre"?"☀️ Avant séance — comment tu te sens ?":"🌙 Après séance — bilan mental"}
+                </div>
+                {METRICS.map(m=>(
+                  <div key={m.key} style={{ marginBottom:12 }}>
+                    <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
+                      <span style={{ fontSize:10,color:"#8E8E93" }}>{m.icon} {m.label}</span>
+                      <span style={{ fontSize:12,fontWeight:900,color:m.color }}>{form[m.key]}/5</span>
+                    </div>
+                    <div style={{ display:"flex",gap:4 }}>
+                      {[1,2,3,4,5].map(v=>(
+                        <button key={v} onClick={()=>setForm(f=>({...f,[m.key]:v}))}
+                          style={{ flex:1,height:28,background:form[m.key]>=v?m.color:"#2C2C2E",border:"none",borderRadius:6,cursor:"pointer",transition:"background 0.15s" }}/>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}
+                  placeholder="Notes libres (objectif, ressenti, blocage...)"
+                  style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:10,padding:"8px 10px",color:"var(--white)",fontSize:11,resize:"none",height:56,boxSizing:"border-box",marginBottom:10 }}/>
+                <div style={{ display:"flex",gap:6 }}>
+                  <button onClick={()=>setMode("view")} style={{ flex:1,background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:10,padding:8,fontSize:11,cursor:"pointer" }}>Annuler</button>
+                  <button onClick={()=>save(mode)} style={{ flex:2,background:"#30D158",color:"#000",border:"none",borderRadius:10,padding:8,fontSize:12,fontWeight:800,cursor:"pointer" }}>Enregistrer</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── MOVEMENT QUALITY CHECKLIST ── */}
       {(() => {
         const checkKey = `fitrace_movement_${profile.name}`;
