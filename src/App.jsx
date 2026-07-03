@@ -26043,6 +26043,148 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── SEASON GOAL TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_goals_${profile.name}`;
+        const [goals, setGoals] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [showForm, setShowForm] = React.useState(false);
+        const [form, setForm] = React.useState({ name:"", type:"hyrox_time", target:"", unit:"", deadline:"" });
+
+        const sessions = profile.sessions || [];
+        const now = Date.now();
+
+        const GOAL_TYPES = [
+          { v:"hyrox_time",    l:"Temps HYROX",    unit:"h:mm:ss", icon:"🏁", help:"ex: 1:15:00" },
+          { v:"weekly_ses",    l:"Séances/semaine", unit:"séances", icon:"📅", help:"ex: 5" },
+          { v:"monthly_km",    l:"Km ce mois",      unit:"km",      icon:"📏", help:"ex: 150" },
+          { v:"total_ses",     l:"Total séances",   unit:"séances", icon:"🏋️", help:"ex: 100" },
+          { v:"custom",        l:"Objectif libre",  unit:"",        icon:"⭐", help:"ex: 200 reps" },
+        ];
+
+        const computeProgress = (g) => {
+          if (g.type==="weekly_ses") {
+            const weekStart = new Date(now-new Date().getDay()*86400000).toISOString().slice(0,10);
+            const count = sessions.filter(s=>s.date>=weekStart).length;
+            return { current:count, target:parseFloat(g.target)||5, unit:"séances" };
+          }
+          if (g.type==="monthly_km") {
+            const monthStart = new Date().toISOString().slice(0,8)+"01";
+            const km = sessions.filter(s=>s.date>=monthStart).reduce((s,e)=>s+(e.km||0),0);
+            return { current:parseFloat(km.toFixed(1)), target:parseFloat(g.target)||100, unit:"km" };
+          }
+          if (g.type==="total_ses") {
+            return { current:sessions.length, target:parseFloat(g.target)||100, unit:"séances" };
+          }
+          if (g.type==="hyrox_time") {
+            // Best HYROX race time
+            const races = (() => { try { return JSON.parse(localStorage.getItem(`fitrace_comp_history_${profile.name}`)||"[]"); } catch { return []; } })();
+            const best = races.filter(r=>r.timeSec).reduce((b,r)=>(!b||r.timeSec<b)?r.timeSec:b, null);
+            if (!best) return { current:null, target:g.target, unit:"" };
+            const tgtParts = g.target.split(":").map(Number);
+            const tgtSec = (tgtParts[0]||0)*3600+(tgtParts[1]||0)*60+(tgtParts[2]||0);
+            const pct = tgtSec > 0 ? Math.min(100, Math.round((1-(best-tgtSec)/tgtSec)*100)) : 0;
+            const fmtT = (s) => `${Math.floor(s/3600)}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+            return { current:fmtT(best), target:g.target, unit:"", pct, special:true };
+          }
+          return { current:0, target:parseFloat(g.target)||1, unit:g.unit };
+        };
+
+        const saveGoal = () => {
+          if (!form.name||!form.target) return;
+          const next = [{ id:Date.now(), ...form }, ...goals];
+          setGoals(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowForm(false);
+          setForm({ name:"", type:"hyrox_time", target:"", unit:"", deadline:"" });
+        };
+
+        const removeGoal = (id) => {
+          const next = goals.filter(g=>g.id!==id);
+          setGoals(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const daysLeft = (deadline) => {
+          if (!deadline) return null;
+          const d = Math.ceil((new Date(deadline)-now)/86400000);
+          return d;
+        };
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🎯 Objectifs Saison</div>
+              <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"5px 14px",fontSize:10,fontWeight:800,cursor:"pointer" }}>
+                {showForm?"Annuler":"+ Objectif"}
+              </button>
+            </div>
+
+            {showForm && (
+              <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nom de l'objectif"
+                  style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"8px 10px",color:"var(--white)",fontSize:12,fontWeight:700,marginBottom:8,boxSizing:"border-box" }}/>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:4,marginBottom:8 }}>
+                  {GOAL_TYPES.map(t=>(
+                    <button key={t.v} onClick={()=>setForm(f=>({...f,type:t.v,unit:t.unit}))}
+                      style={{ background:form.type===t.v?"var(--yellow)":"#2C2C2E",color:form.type===t.v?"#000":"#8E8E93",border:"none",borderRadius:8,padding:"5px 8px",fontSize:9,fontWeight:form.type===t.v?800:400,cursor:"pointer" }}>
+                      {t.icon} {t.l}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                  <input value={form.target} onChange={e=>setForm(f=>({...f,target:e.target.value}))}
+                    placeholder={GOAL_TYPES.find(t=>t.v===form.type)?.help||"Valeur cible"}
+                    style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"8px 10px",color:"var(--white)",fontSize:12 }}/>
+                  <input type="date" value={form.deadline} onChange={e=>setForm(f=>({...f,deadline:e.target.value}))}
+                    style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"8px 10px",color:"var(--white)",fontSize:11 }}/>
+                </div>
+                <button onClick={saveGoal} style={{ width:"100%",background:form.name&&form.target?"var(--yellow)":"#2C2C2E",color:form.name&&form.target?"#000":"#636366",border:"none",borderRadius:10,padding:8,fontSize:12,fontWeight:800,cursor:"pointer" }}>
+                  Ajouter
+                </button>
+              </div>
+            )}
+
+            {goals.length===0 && !showForm && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"16px 0" }}>Définis tes objectifs de saison 🎯</div>
+            )}
+
+            {goals.map(g=>{
+              const gt = GOAL_TYPES.find(t=>t.v===g.type) || GOAL_TYPES[4];
+              const prog = computeProgress(g);
+              const pct = prog.special ? (prog.pct||0) : Math.min(100, prog.target>0 ? Math.round((prog.current/prog.target)*100) : 0);
+              const pctColor = pct>=100?"#30D158":pct>=60?"#FF9F0A":"#007AFF";
+              const dl = daysLeft(g.deadline);
+              return (
+                <div key={g.id} style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:6 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8 }}>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:2 }}>
+                        <span style={{ fontSize:14 }}>{gt.icon}</span>
+                        <div style={{ fontSize:12,fontWeight:800,color:"var(--white)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{g.name}</div>
+                      </div>
+                      <div style={{ fontSize:9,color:"#636366" }}>
+                        {gt.l}{dl!==null?` · ${dl>0?dl+"j restants":"Échéance atteinte"}`:""}</div>
+                    </div>
+                    <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:16,fontWeight:900,color:pctColor }}>{pct}%</div>
+                        {!prog.special && <div style={{ fontSize:8,color:"#636366" }}>{prog.current}/{prog.target}{prog.unit?" "+prog.unit:""}</div>}
+                        {prog.special && prog.current && <div style={{ fontSize:8,color:"#636366" }}>Meilleur: {prog.current}</div>}
+                      </div>
+                      <button onClick={()=>removeGoal(g.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+                    </div>
+                  </div>
+                  <div style={{ height:6,background:"#2C2C2E",borderRadius:3,overflow:"hidden" }}>
+                    <div style={{ height:"100%",width:`${pct}%`,background:pct>=100?"linear-gradient(90deg,#30D158,#00FF88)":pctColor,borderRadius:3,transition:"width 0.4s" }}/>
+                  </div>
+                  {pct>=100 && <div style={{ fontSize:9,color:"#30D158",fontWeight:700,marginTop:4,textAlign:"center" }}>🎉 Objectif atteint !</div>}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX WEEKLY TRAINING PLAN ── */}
       {(() => {
         const vma = parseFloat(profile.vma) || 14;
