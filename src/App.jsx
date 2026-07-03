@@ -19908,6 +19908,139 @@ const sessions = profile.sessions || [];
               );
             })()}
 
+            {/* ── WHOOP RECOVERY SCORE ── */}
+            {(()=>{
+              const todayStr = new Date().toISOString().slice(0,10);
+              const KEY_CIN = `fitrace_checkin_${profile.name}`;
+              const allCheckins = (() => { try { return JSON.parse(localStorage.getItem(KEY_CIN)||"{}"); } catch { return {}; } })();
+              const todayCheckin = allCheckins[todayStr];
+              const sessions = profile.sessions || [];
+
+              // Need at least some data to show score
+              const recentSessions = sessions.filter(s => {
+                const d = new Date(s.date); const now = new Date();
+                return (now - d) < 7 * 86400000;
+              });
+
+              if (!todayCheckin && recentSessions.length === 0) return null;
+
+              // ── Score components ──
+              // 1. HRV component (if available)
+              const hrv = parseFloat(todayCheckin?.hrv) || 0;
+              const last14 = Object.entries(allCheckins)
+                .filter(([d]) => d < todayStr && d >= new Date(Date.now()-14*86400000).toISOString().slice(0,10))
+                .map(([,v]) => parseFloat(v.hrv)||0).filter(x=>x>0);
+              const hrvBaseline = last14.length >= 3 ? last14.reduce((a,b)=>a+b,0)/last14.length : 0;
+              let hrvScore = 50; // neutral if no HRV data
+              if (hrv > 0 && hrvBaseline > 0) {
+                const pct = hrv / hrvBaseline;
+                hrvScore = Math.min(100, Math.max(0, Math.round(pct * 50)));
+              } else if (hrv > 0) {
+                hrvScore = hrv > 60 ? 80 : hrv > 45 ? 60 : 40;
+              }
+
+              // 2. Sleep/energy component
+              const energy = todayCheckin?.energy || 3;
+              const energyScore = Math.round((energy / 5) * 100);
+
+              // 3. Training load component (TSB proxy)
+              const toSecs = s => (s.rpe || 5) * (s.duree || 30);
+              const ctl = sessions.slice(-42).reduce((a,s,i,arr) => {
+                const w = (i+1)/arr.length; return a + toSecs(s)*w;
+              }, 0) / Math.max(1, sessions.slice(-42).length);
+              const atl = recentSessions.reduce((a,s) => a + toSecs(s),0) / Math.max(1, recentSessions.length);
+              const tsb = ctl > 0 ? Math.round(((ctl - atl) / ctl) * 50) : 0; // -50..+50
+              const loadScore = Math.min(100, Math.max(0, 50 + tsb));
+
+              // ── Weighted total ──
+              let score, weights, divisor;
+              if (hrv > 0) {
+                score = Math.round(hrvScore * 0.40 + energyScore * 0.30 + loadScore * 0.30);
+                weights = [{ label:"VFC", val:Math.round(hrvScore), w:40 }, { label:"Énergie", val:Math.round(energyScore), w:30 }, { label:"Charge", val:Math.round(loadScore), w:30 }];
+              } else {
+                score = Math.round(energyScore * 0.50 + loadScore * 0.50);
+                weights = [{ label:"Énergie", val:Math.round(energyScore), w:50 }, { label:"Charge", val:Math.round(loadScore), w:50 }];
+              }
+
+              const cat = score >= 67
+                ? { label:"Récupéré", color:"#30D158", emoji:"🟢", tip:"Ton corps est prêt. Séance intense possible." }
+                : score >= 34
+                ? { label:"Modéré", color:"#FF9F0A", emoji:"🟡", tip:"Récupération partielle. Privilégie Zone 2 ou mobilité." }
+                : { label:"Fatigué", color:"#FF453A", emoji:"🔴", tip:"Repos actif recommandé. Évite les séances intenses." };
+
+              // Arc SVG (semi-circle gauge)
+              const R = 44, cx = 60, cy = 60;
+              const startAngle = -210, endAngle = 30; // 240° arc
+              const range = endAngle - startAngle;
+              const scorePct = score / 100;
+              const fillAngle = startAngle + scorePct * range;
+              const toRad = a => a * Math.PI / 180;
+              const arcPath = (a1, a2) => {
+                const x1 = cx + R * Math.cos(toRad(a1)), y1 = cy + R * Math.sin(toRad(a1));
+                const x2 = cx + R * Math.cos(toRad(a2)), y2 = cy + R * Math.sin(toRad(a2));
+                const large = Math.abs(a2-a1) > 180 ? 1 : 0;
+                return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`;
+              };
+
+              return (
+                <div style={{ marginBottom:12, background:"rgba(255,255,255,0.03)", border:`1px solid ${cat.color}30`, borderRadius:18, padding:"16px", position:"relative", overflow:"hidden" }}>
+                  {/* Background glow */}
+                  <div style={{ position:"absolute", top:-30, left:-30, width:140, height:140, borderRadius:"50%", background:`radial-gradient(circle,${cat.color}12 0%,transparent 70%)`, pointerEvents:"none" }}/>
+
+                  <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", fontWeight:700, letterSpacing:"0.12em", marginBottom:12 }}>💚 Recovery Score · Whoop-style</div>
+
+                  <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                    {/* Arc gauge */}
+                    <div style={{ flexShrink:0 }}>
+                      <svg width="120" height="72" viewBox="0 0 120 80" style={{ overflow:"visible" }}>
+                        {/* Track */}
+                        <path d={arcPath(-210, 30)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" strokeLinecap="round"/>
+                        {/* Fill */}
+                        <path d={arcPath(-210, fillAngle)} fill="none" stroke={cat.color} strokeWidth="8" strokeLinecap="round"
+                          style={{ filter:`drop-shadow(0 0 4px ${cat.color}80)` }}/>
+                        {/* Zone markers */}
+                        {[-210 + 0.34*range, -210 + 0.67*range].map((a,i) => (
+                          <circle key={i} cx={cx + R*Math.cos(toRad(a))} cy={cy + R*Math.sin(toRad(a))} r="3" fill={i===0?"#FF453A":"#FF9F0A"}/>
+                        ))}
+                        {/* Score text */}
+                        <text x={cx} y={cy-4} textAnchor="middle" fill={cat.color} fontSize="22" fontFamily="'Bebas Neue',sans-serif" fontWeight="900">{score}</text>
+                        <text x={cx} y={cy+10} textAnchor="middle" fill="#636366" fontSize="8" fontFamily="system-ui">/ 100</text>
+                      </svg>
+                    </div>
+
+                    {/* Right side */}
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:16, fontWeight:900, color:cat.color, lineHeight:1 }}>{cat.emoji} {cat.label}</div>
+                      <div style={{ fontSize:10, color:"#8E8E93", marginTop:4, lineHeight:1.4 }}>{cat.tip}</div>
+
+                      {/* Component bars */}
+                      <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:5 }}>
+                        {weights.map(w=>(
+                          <div key={w.label}>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:8, color:"#636366", marginBottom:2 }}>
+                              <span>{w.label}</span><span style={{ color:cat.color }}>{w.val}</span>
+                            </div>
+                            <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:99 }}>
+                              <div style={{ height:"100%", width:`${w.val}%`, background:cat.color, borderRadius:99, transition:"width 0.6s", opacity:0.7 }}/>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* HRV note if available */}
+                  {hrv > 0 && hrvBaseline > 0 && (
+                    <div style={{ marginTop:10, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"6px 10px", display:"flex", justifyContent:"space-between", fontSize:9, color:"#8E8E93" }}>
+                      <span>VFC aujourd'hui : <strong style={{ color:"var(--white)" }}>{hrv}ms</strong></span>
+                      <span>Baseline 14j : <strong style={{ color:"var(--white)" }}>{Math.round(hrvBaseline)}ms</strong></span>
+                      <span style={{ color: hrv >= hrvBaseline ? "#30D158" : "#FF9F0A" }}>{hrv >= hrvBaseline ? "↑ Au-dessus" : "↓ En-dessous"}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SCORE SEMAINE ── */}
             {(profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
