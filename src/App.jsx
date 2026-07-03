@@ -32403,6 +32403,201 @@ JSON: {
             );
           })()}
 
+          {/* ── SUPPLEMENT TRACKER ── */}
+          {(() => {
+            const KEY = `fitrace_supps_${profile.name}`;
+            const LOG_KEY = `fitrace_supps_log_${profile.name}`;
+            const today = new Date().toISOString().slice(0,10);
+
+            const [stack, setStack] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+            });
+            const [log, setLog] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(LOG_KEY) || "{}"); } catch { return {}; }
+            });
+            const [showAdd, setShowAdd] = React.useState(false);
+            const [form, setForm] = React.useState({ name:"", dose:"", unit:"g", timing:"pre", notes:"", emoji:"💊" });
+
+            const PRESETS = [
+              { name:"Créatine", dose:"5", unit:"g", timing:"post", emoji:"💪", notes:"Avec eau ou jus" },
+              { name:"Whey Protein", dose:"30", unit:"g", timing:"post", emoji:"🥛", notes:"Dans les 30min post-entraînement" },
+              { name:"Caféine", dose:"200", unit:"mg", timing:"pre", emoji:"☕", notes:"60min avant l'effort" },
+              { name:"Bêta-alanine", dose:"3.2", unit:"g", timing:"pre", emoji:"⚡", notes:"Peut causer des picotements" },
+              { name:"BCAA", dose:"10", unit:"g", timing:"intra", emoji:"🧪", notes:"Pendant l'effort" },
+              { name:"Oméga-3", dose:"1", unit:"g", timing:"morning", emoji:"🐟", notes:"Avec le repas" },
+              { name:"Magnésium", dose:"300", unit:"mg", timing:"evening", emoji:"🌙", notes:"Le soir avant le coucher" },
+              { name:"Vitamine D3", dose:"2000", unit:"UI", timing:"morning", emoji:"☀️", notes:"Avec corps gras" },
+            ];
+
+            const TIMINGS = {
+              morning: { label:"Matin", emoji:"🌅" },
+              pre: { label:"Pré-training", emoji:"⚡" },
+              intra: { label:"Intra-training", emoji:"🏃" },
+              post: { label:"Post-training", emoji:"💪" },
+              evening: { label:"Soir", emoji:"🌙" },
+              anytime: { label:"N'importe quand", emoji:"🔄" },
+            };
+
+            const todayLog = log[today] || {};
+            const isTaken = (id) => !!todayLog[id];
+
+            const toggleTaken = (id) => {
+              const updated = { ...log, [today]: { ...todayLog, [id]: !todayLog[id] ? new Date().toLocaleTimeString("fr",{hour:"2-digit",minute:"2-digit"}) : null }};
+              setLog(updated);
+              localStorage.setItem(LOG_KEY, JSON.stringify(updated));
+            };
+
+            const addSupp = (s) => {
+              const entry = { ...s, id: Date.now() };
+              const next = [...stack, entry];
+              setStack(next);
+              localStorage.setItem(KEY, JSON.stringify(next));
+              setShowAdd(false);
+              setForm({ name:"", dose:"", unit:"g", timing:"pre", notes:"", emoji:"💊" });
+            };
+
+            const removeSupp = (id) => {
+              const next = stack.filter(s => s.id !== id);
+              setStack(next);
+              localStorage.setItem(KEY, JSON.stringify(next));
+            };
+
+            // Compliance last 7 days
+            const compliance = (() => {
+              if (stack.length === 0) return 0;
+              let total = 0, done = 0;
+              for (let i=0; i<7; i++) {
+                const d = new Date(today); d.setDate(d.getDate()-i);
+                const ds = d.toISOString().slice(0,10);
+                const dayLog = log[ds] || {};
+                stack.forEach(s => {
+                  total++;
+                  if (dayLog[s.id]) done++;
+                });
+              }
+              return total > 0 ? Math.round(done/total*100) : 0;
+            })();
+
+            const takenToday = stack.filter(s => isTaken(s.id)).length;
+
+            // Group by timing
+            const byTiming = Object.entries(TIMINGS).map(([t, meta]) => ({
+              timing: t, meta, supps: stack.filter(s => s.timing === t)
+            })).filter(g => g.supps.length > 0);
+
+            return (
+              <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                  <div>
+                    <div style={{ fontSize:11, color:"#555" }}>STACK DE SUPPLÉMENTS</div>
+                    <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>💊 Supplement Tracker</div>
+                  </div>
+                  <div style={{ textAlign:"center" }}>
+                    <div style={{ fontSize:22, fontWeight:900, color: takenToday === stack.length && stack.length > 0 ? "#30D158" : "var(--yellow)" }}>
+                      {takenToday}/{stack.length}
+                    </div>
+                    <div style={{ fontSize:9, color:"#666" }}>pris aujourd'hui</div>
+                  </div>
+                </div>
+
+                {/* Compliance bar */}
+                {stack.length > 0 && (
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#666", marginBottom:4 }}>
+                      <span>Compliance 7 jours</span>
+                      <span style={{ color: compliance>=80?"#30D158":compliance>=50?"var(--yellow)":"#FF453A", fontWeight:700 }}>{compliance}%</span>
+                    </div>
+                    <div style={{ height:6, background:"var(--bg3)", borderRadius:3 }}>
+                      <div style={{ height:"100%", width:`${compliance}%`, background:compliance>=80?"#30D158":compliance>=50?"var(--yellow)":"#FF453A", borderRadius:3, transition:"width 0.4s" }}/>
+                    </div>
+                  </div>
+                )}
+
+                {/* Groups by timing */}
+                {byTiming.map(({ timing, meta, supps }) => (
+                  <div key={timing} style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:10, color:"#666", marginBottom:6 }}>{meta.emoji} {meta.label.toUpperCase()}</div>
+                    {supps.map(s => {
+                      const taken = isTaken(s.id);
+                      const time = todayLog[s.id];
+                      return (
+                        <div key={s.id} style={{ display:"flex", alignItems:"center", gap:10, background:"var(--bg3)", borderRadius:12, padding:"10px 14px", marginBottom:5 }}>
+                          <button onClick={() => toggleTaken(s.id)}
+                            style={{ width:32, height:32, borderRadius:"50%", background: taken ? "#30D158" : "var(--bg2)", border:`2px solid ${taken?"#30D158":"#444"}`, color:"#fff", fontSize:16, cursor:"pointer", flexShrink:0 }}>
+                            {taken ? "✓" : ""}
+                          </button>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                              <span style={{ fontSize:16 }}>{s.emoji}</span>
+                              <span style={{ fontSize:13, fontWeight:700, color: taken?"#aaa":"#fff", textDecoration: taken?"line-through":"none" }}>{s.name}</span>
+                              <span style={{ fontSize:11, color:"#666" }}>{s.dose}{s.unit}</span>
+                            </div>
+                            {s.notes && <div style={{ fontSize:10, color:"#555", marginTop:2 }}>{s.notes}</div>}
+                          </div>
+                          <div style={{ textAlign:"right" }}>
+                            {taken && <div style={{ fontSize:10, color:"#30D158" }}>✓ {time}</div>}
+                            <button onClick={() => removeSupp(s.id)} style={{ background:"transparent", border:"none", color:"#555", fontSize:12, cursor:"pointer", marginTop:2 }}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+
+                {stack.length === 0 && !showAdd && (
+                  <div style={{ textAlign:"center", padding:"16px 0", color:"#555", fontSize:12 }}>
+                    Ajoute tes suppléments pour suivre ta compliance 💊
+                  </div>
+                )}
+
+                {/* Add form */}
+                {showAdd ? (
+                  <div style={{ background:"var(--bg3)", borderRadius:14, padding:14, marginTop:8 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#fff", marginBottom:10 }}>Présets rapides</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:12 }}>
+                      {PRESETS.map((p,i) => (
+                        <button key={i} onClick={() => addSupp(p)}
+                          style={{ background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"5px 10px", color:"#aaa", fontSize:11, cursor:"pointer" }}>
+                          {p.emoji} {p.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize:11, color:"#666", marginBottom:8 }}>— ou personnalisé —</div>
+                    <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:6, marginBottom:8 }}>
+                      <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))} placeholder="Nom"
+                        style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                      <input value={form.dose} onChange={e => setForm(f=>({...f,dose:e.target.value}))} placeholder="Dose"
+                        style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 8px", color:"#fff", fontSize:12, textAlign:"center" }}/>
+                      <input value={form.unit} onChange={e => setForm(f=>({...f,unit:e.target.value}))} placeholder="Unité"
+                        style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 8px", color:"#fff", fontSize:12, textAlign:"center" }}/>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:10 }}>
+                      <select value={form.timing} onChange={e => setForm(f=>({...f,timing:e.target.value}))}
+                        style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}>
+                        {Object.entries(TIMINGS).map(([k,v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+                      </select>
+                      <input value={form.emoji} onChange={e => setForm(f=>({...f,emoji:e.target.value}))} placeholder="Emoji"
+                        style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:16, textAlign:"center" }}/>
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => setShowAdd(false)}
+                        style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"9px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>
+                      <button onClick={() => form.name && addSupp({ ...form, id: Date.now() })} disabled={!form.name}
+                        style={{ flex:2, background: form.name?"var(--yellow)":"#333", border:"none", borderRadius:10, padding:"9px 0", color: form.name?"#000":"#555", fontSize:12, fontWeight:800, cursor:"pointer" }}>
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowAdd(true)}
+                    style={{ width:"100%", background:"var(--bg3)", border:"1px dashed #444", borderRadius:12, padding:"11px 0", color:"#888", fontSize:12, cursor:"pointer", marginTop:8 }}>
+                    + Ajouter un supplément
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── DAILY NUTRITION LOG ── */}
           {(() => {
             const KEY = `fitrace_nutlog_${profile.name}`;
