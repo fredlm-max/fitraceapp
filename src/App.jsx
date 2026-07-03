@@ -9131,6 +9131,190 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING DIARY ── */}
+            {(() => {
+              const KEY = `fitrace_diary_${profile.name}`;
+              const [entries, setEntries] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [editing, setEditing] = React.useState(null); // session id or "new"
+              const [search, setSearch] = React.useState("");
+              const [form, setForm] = React.useState({ date:"", title:"", body:"", mood:3, highlights:"", nextsteps:"" });
+
+              const MOODS = ["😴","😔","😐","🙂","🔥"];
+              const sessions = profile.sessions || [];
+
+              // Find sessions that don't have diary entries yet (last 7 days)
+              const recent = sessions.slice(0,10);
+              const hasDiary = (sid) => entries.some(e => e.sessionId === sid || e.date === sid);
+
+              const openNew = (sess) => {
+                setForm({
+                  date: sess.date,
+                  title: `${sess.type || "Séance"} · ${sess.date}`,
+                  body: "",
+                  mood: 3,
+                  highlights: "",
+                  nextsteps: "",
+                  sessionId: sess.id,
+                  type: sess.type,
+                  duration: sess.duration,
+                  distance: sess.distance,
+                  rpe: sess.rpe,
+                });
+                setEditing("new");
+              };
+
+              const saveEntry = () => {
+                const entry = { ...form, id: Date.now(), createdAt: new Date().toISOString() };
+                const filtered = entries.filter(e => e.id !== editing);
+                const next = [entry, ...filtered].slice(0, 100).sort((a,b) => b.date.localeCompare(a.date));
+                setEntries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setEditing(null);
+              };
+
+              const deleteEntry = (id) => {
+                const next = entries.filter(e => e.id !== id);
+                setEntries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+              };
+
+              const editEntry = (e) => {
+                setForm({ ...e });
+                setEditing(e.id);
+              };
+
+              const filtered = entries.filter(e =>
+                !search || e.title?.toLowerCase().includes(search.toLowerCase()) ||
+                e.body?.toLowerCase().includes(search.toLowerCase()) ||
+                e.type?.toLowerCase().includes(search.toLowerCase())
+              );
+
+              if (editing !== null) {
+                return (
+                  <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:"var(--yellow)", marginBottom:12 }}>
+                      ✏️ {editing === "new" ? "Nouvelle entrée" : "Modifier entrée"}
+                    </div>
+
+                    <input value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))}
+                      placeholder="Titre de la séance..."
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:14, fontWeight:700, marginBottom:10, boxSizing:"border-box" }}/>
+
+                    {/* Session stats preview */}
+                    {form.duration && (
+                      <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                        {[
+                          {v:`${form.duration}min`, label:"Durée"},
+                          form.distance && {v:`${form.distance}km`, label:"Distance"},
+                          form.rpe && {v:`RPE ${form.rpe}`, label:"Intensité"},
+                        ].filter(Boolean).map((s,i) => (
+                          <div key={i} style={{ background:"var(--bg3)", borderRadius:8, padding:"4px 10px", fontSize:11, color:"#aaa" }}>
+                            <span style={{ color:"var(--yellow)", fontWeight:700 }}>{s.v}</span> {s.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Mood */}
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>HUMEUR / ÉTAT</div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        {MOODS.map((m,i) => (
+                          <button key={i} onClick={() => setForm(f=>({...f,mood:i}))}
+                            style={{ flex:1, background: form.mood===i?"var(--bg3)":"transparent", border:`2px solid ${form.mood===i?"var(--yellow)":"transparent"}`, borderRadius:10, padding:"8px 0", fontSize:22, cursor:"pointer" }}>
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <textarea value={form.body} onChange={e => setForm(f=>({...f,body:e.target.value}))}
+                      placeholder="Comment s'est passée la séance ? Sensations, contexte, météo..."
+                      rows={4}
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:13, resize:"vertical", marginBottom:8, boxSizing:"border-box", lineHeight:1.6 }}/>
+
+                    <input value={form.highlights} onChange={e => setForm(f=>({...f,highlights:e.target.value}))}
+                      placeholder="✨ Points positifs / PBs"
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, marginBottom:8, boxSizing:"border-box" }}/>
+
+                    <input value={form.nextsteps} onChange={e => setForm(f=>({...f,nextsteps:e.target.value}))}
+                      placeholder="📋 Points à améliorer / prochaines étapes"
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, marginBottom:12, boxSizing:"border-box" }}/>
+
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => setEditing(null)}
+                        style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                      <button onClick={saveEntry}
+                        style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"11px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Sauvegarder</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>STRAVA · JOURNAL D'ENTRAÎNEMENT</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>📔 Training Diary</div>
+                    </div>
+                    <button onClick={() => { setForm({date:new Date().toISOString().slice(0,10),title:"",body:"",mood:3,highlights:"",nextsteps:""}); setEditing("new"); }}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"7px 14px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      + Entrée
+                    </button>
+                  </div>
+
+                  {/* Quick-log recent sessions without diary */}
+                  {recent.filter(s => !hasDiary(s.id || s.date)).slice(0,3).length > 0 && (
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>SÉANCES SANS JOURNAL</div>
+                      {recent.filter(s => !hasDiary(s.id || s.date)).slice(0,3).map((s,i) => (
+                        <button key={i} onClick={() => openNew(s)}
+                          style={{ width:"100%", background:"rgba(201,168,64,0.08)", border:"1px dashed rgba(201,168,64,0.3)", borderRadius:10, padding:"8px 14px", color:"var(--yellow)", fontSize:12, cursor:"pointer", textAlign:"left", marginBottom:4, display:"flex", justifyContent:"space-between" }}>
+                          <span>📝 {s.type || "Séance"} · {s.date}</span>
+                          <span style={{ color:"#555" }}>{s.duration}min{s.distance?` · ${s.distance}km`:""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Search */}
+                  {entries.length > 3 && (
+                    <input value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="🔍 Rechercher dans le journal..."
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, marginBottom:12, boxSizing:"border-box" }}/>
+                  )}
+
+                  {/* Entries */}
+                  {filtered.slice(0,5).map(e => (
+                    <div key={e.id} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:2 }}>{MOODS[e.mood||3]} {e.title}</div>
+                          <div style={{ fontSize:10, color:"#555" }}>{e.date}</div>
+                        </div>
+                        <div style={{ display:"flex", gap:6 }}>
+                          <button onClick={() => editEntry(e)} style={{ background:"transparent", border:"none", color:"#888", fontSize:13, cursor:"pointer" }}>✏️</button>
+                          <button onClick={() => deleteEntry(e.id)} style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:13, cursor:"pointer" }}>✕</button>
+                        </div>
+                      </div>
+                      {e.body && <div style={{ fontSize:12, color:"#aaa", lineHeight:1.5, marginBottom:6 }}>{e.body.slice(0,120)}{e.body.length>120?"…":""}</div>}
+                      {e.highlights && <div style={{ fontSize:11, color:"#30D158" }}>✨ {e.highlights}</div>}
+                      {e.nextsteps && <div style={{ fontSize:11, color:"#64D2FF", marginTop:2 }}>📋 {e.nextsteps}</div>}
+                    </div>
+                  ))}
+
+                  {entries.length === 0 && (
+                    <div style={{ textAlign:"center", padding:"20px 0", color:"#555", fontSize:13 }}>
+                      Commence à documenter tes séances pour suivre ta progression 📔
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING STREAK CALENDAR ── */}
             {(() => {
               const sessions = profile.sessions || [];
