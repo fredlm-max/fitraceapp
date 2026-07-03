@@ -15131,6 +15131,205 @@ JSON:
               );
             })()}
 
+            {/* ── YEAR IN REVIEW ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const today = new Date();
+              const [selectedYear, setSelectedYear] = React.useState(today.getFullYear());
+
+              const yearSess = sessions.filter(s => s.date?.startsWith(String(selectedYear)));
+              if (yearSess.length === 0 && selectedYear === today.getFullYear() && sessions.length === 0) return null;
+
+              // Aggregate stats
+              const totalSess = yearSess.length;
+              const totalMin = yearSess.reduce((s,x) => s + (parseFloat(x.duration)||0), 0);
+              const totalKm = yearSess.reduce((s,x) => s + (parseFloat(x.distance)||0), 0);
+              const totalTrimp = yearSess.reduce((s,x) => s + (x.duration && x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const avgRpe = totalSess > 0 ? yearSess.reduce((s,x) => s + (parseFloat(x.rpe)||0), 0) / totalSess : 0;
+
+              // By month
+              const byMonth = Array.from({length:12}, (_,i) => ({
+                month: i,
+                sess: yearSess.filter(s => parseInt(s.date?.slice(5,7)) === i+1).length,
+                km: yearSess.filter(s => parseInt(s.date?.slice(5,7)) === i+1).reduce((s,x) => s + (parseFloat(x.distance)||0), 0),
+                trimp: yearSess.filter(s => parseInt(s.date?.slice(5,7)) === i+1).reduce((s,x) => s + (x.duration && x.rpe ? x.duration*(x.rpe/10) : 0), 0),
+              }));
+              const bestMonth = [...byMonth].sort((a,b) => b.sess - a.sess)[0];
+
+              // By week – best week
+              const weekMap = {};
+              yearSess.forEach(s => {
+                const d = new Date(s.date+"T12:00:00");
+                const weekStart = new Date(d);
+                weekStart.setDate(d.getDate() - d.getDay() + 1);
+                const wk = weekStart.toISOString().slice(0,10);
+                if (!weekMap[wk]) weekMap[wk] = { sess:0, km:0, min:0 };
+                weekMap[wk].sess++;
+                weekMap[wk].km += parseFloat(s.distance)||0;
+                weekMap[wk].min += parseFloat(s.duration)||0;
+              });
+              const bestWeek = Object.entries(weekMap).sort((a,b) => b[1].sess - a[1].sess)[0];
+
+              // By type
+              const typeMap = {};
+              yearSess.forEach(s => {
+                const t = s.type || "Autre";
+                typeMap[t] = (typeMap[t] || 0) + 1;
+              });
+              const topTypes = Object.entries(typeMap).sort((a,b) => b[1]-a[1]).slice(0,4);
+
+              // PRs this year
+              const prs = [];
+              yearSess.forEach(s => {
+                if (!s.distance || !s.duration) return;
+                const pace = s.duration / s.distance;
+                const prevBest = sessions.filter(o => o.type === s.type && o.distance === s.distance && o.date < s.date && !o.date?.startsWith(String(selectedYear)));
+                if (prevBest.length > 0) {
+                  const best = Math.min(...prevBest.map(o => o.duration / o.distance));
+                  if (pace < best) prs.push(s);
+                }
+              });
+
+              // SVG monthly bar chart
+              const W = 320, H = 80, PAD = {l:6, r:6, t:10, b:20};
+              const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+              const maxSess = Math.max(...byMonth.map(m => m.sess), 1);
+              const barW = cW / 12;
+              const monthAbbr = ["J","F","M","A","M","J","J","A","S","O","N","D"];
+
+              const typeColors = ["var(--yellow)","#30D158","#BF5AF2","#FF9F0A","#FF453A","#5AC8FA"];
+              const availableYears = [...new Set(sessions.map(s => s.date?.slice(0,4)).filter(Boolean))].sort().reverse();
+              if (!availableYears.includes(String(selectedYear))) availableYears.unshift(String(selectedYear));
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Année en revue</div>
+                      <div style={{ fontSize:11, color:"#666", marginTop:2 }}>{totalSess} séance{totalSess!==1?"s":""} · Strava-style recap</div>
+                    </div>
+                    <div style={{ display:"flex", gap:4 }}>
+                      {availableYears.slice(0,3).map(y => (
+                        <button key={y} onClick={() => setSelectedYear(parseInt(y))}
+                          style={{ background: selectedYear===parseInt(y) ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:8, padding:"5px 10px",
+                            color: selectedYear===parseInt(y) ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                          {y}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {totalSess === 0 ? (
+                    <div style={{ textAlign:"center", color:"#555", fontSize:13, padding:"20px 0" }}>Aucune séance en {selectedYear}</div>
+                  ) : (
+                    <>
+                      {/* Big stats */}
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10, marginBottom:16 }}>
+                        {[
+                          { label:"Séances", val:totalSess, unit:"", color:"var(--yellow)", emoji:"🏋️" },
+                          { label:"Heures", val:(totalMin/60).toFixed(0), unit:"h", color:"#30D158", emoji:"⏱️" },
+                          { label:"Distance", val:totalKm.toFixed(0), unit:"km", color:"#BF5AF2", emoji:"📍" },
+                          { label:"Charge (TRIMP)", val:Math.round(totalTrimp), unit:"", color:"#FF6B35", emoji:"⚡" },
+                        ].map(s => (
+                          <div key={s.label} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:24 }}>{s.emoji}</span>
+                            <div>
+                              <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.val}<span style={{ fontSize:13, fontWeight:400 }}>{s.unit}</span></div>
+                              <div style={{ fontSize:10, color:"#666" }}>{s.label}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Monthly chart */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:8 }}>Séances par mois</div>
+                        <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W }}>
+                          {byMonth.map((m, i) => {
+                            const bh = (m.sess / maxSess) * cH;
+                            const x = PAD.l + i * barW + barW*0.1;
+                            const bWidth = barW * 0.8;
+                            const isCurMonth = selectedYear === today.getFullYear() && i === today.getMonth();
+                            return (
+                              <g key={i}>
+                                <rect x={x} y={PAD.t + cH - bh} width={bWidth} height={bh}
+                                  fill={isCurMonth ? "var(--yellow)" : m.month === bestMonth.month ? "#30D158" : "#2C2C2E"}
+                                  rx="2"/>
+                                {m.sess > 0 && <text x={x + bWidth/2} y={PAD.t + cH - bh - 2} textAnchor="middle" fontSize="7" fill={m.month === bestMonth.month ? "#30D158" : "#666"}>{m.sess}</text>}
+                                <text x={x + bWidth/2} y={H - 4} textAnchor="middle" fontSize="8" fill={isCurMonth ? "var(--yellow)" : "#555"}>{monthAbbr[i]}</text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      </div>
+
+                      {/* Highlights */}
+                      <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+                        {bestMonth.sess > 0 && (
+                          <div style={{ background:"rgba(48,209,88,0.12)", border:"1px solid #30D15844", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:20 }}>🏆</span>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#30D158" }}>Meilleur mois</div>
+                              <div style={{ fontSize:11, color:"#999" }}>
+                                {["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"][bestMonth.month]} · {bestMonth.sess} séances · {bestMonth.km.toFixed(0)} km
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {bestWeek && (
+                          <div style={{ background:"rgba(0,122,255,0.12)", border:"1px solid rgba(0,122,255,0.3)", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:20 }}>🔥</span>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"var(--yellow)" }}>Meilleure semaine</div>
+                              <div style={{ fontSize:11, color:"#999" }}>
+                                Sem. du {bestWeek[0].slice(5)} · {bestWeek[1].sess} séances · {bestWeek[1].km.toFixed(0)} km · {Math.round(bestWeek[1].min/60)}h
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {prs.length > 0 && (
+                          <div style={{ background:"rgba(191,90,242,0.12)", border:"1px solid rgba(191,90,242,0.3)", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:20 }}>⭐</span>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#BF5AF2" }}>Records personnels</div>
+                              <div style={{ fontSize:11, color:"#999" }}>{prs.length} PR{prs.length>1?"s":""} cette année</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Top activity types */}
+                      {topTypes.length > 0 && (
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:8 }}>Activités favorites</div>
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                            {topTypes.map(([type, count], i) => (
+                              <div key={type} style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", display:"flex", gap:6, alignItems:"center" }}>
+                                <div style={{ width:8, height:8, borderRadius:"50%", background:typeColors[i] }}/>
+                                <span style={{ fontSize:12, color:"var(--white)", fontWeight:600 }}>{type}</span>
+                                <span style={{ fontSize:11, color:"#666" }}>×{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* RPE average */}
+                      {avgRpe > 0 && (
+                        <div style={{ marginTop:12, background:"var(--bg3)", borderRadius:12, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div style={{ fontSize:12, color:"#888" }}>Intensité moyenne</div>
+                          <div style={{ fontSize:16, fontWeight:800, color: avgRpe >= 7 ? "#FF453A" : avgRpe >= 5 ? "#FF9F0A" : "#30D158" }}>
+                            RPE {avgRpe.toFixed(1)}/10
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── ANNUAL TRAINING HEATMAP ── */}
             {(() => {
               const sessions = profile.sessions || [];
