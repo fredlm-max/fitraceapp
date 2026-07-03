@@ -5681,33 +5681,18 @@ JSON:
               );
             })()}
 
-            {/* ── SOMMEIL UNIFIÉ (Manuel + WHOOP) ── */}
+            {/* ── SOMMEIL — formulaire unique ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
-              // Clé unifiée — données manuel
-              const KEY_M = `fitrace_sleep2_${profile.name}`;
-              // Clé WHOOP
-              const KEY_W = `fitrace_sleep_${profile.name}`;
+              const KEY = `fitrace_sleep_unified_${profile.name}`;
 
-              const [mode, setMode] = React.useState("manuel"); // "manuel" | "whoop"
+              const [logs, setLogs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+              const todayLog = logs[todayStr];
+
               const [editing, setEditing] = React.useState(false);
-
-              // --- Données MANUEL ---
-              const [logsM, setLogsM] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY_M)) || {}; } catch { return {}; } });
-              const [formM, setFormM] = React.useState({ h:7, m:30, quality:3 });
-              const todayM = logsM[todayStr];
-
-              const saveManuel = () => {
-                const next = { ...logsM, [todayStr]:{ h:formM.h, m:formM.m, quality:formM.quality } };
-                setLogsM(next);
-                localStorage.setItem(KEY_M, JSON.stringify(next));
-                setEditing(false);
-              };
-
-              // --- Données WHOOP ---
-              const [logsW, setLogsW] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY_W) || "[]"); } catch { return []; } });
-              const [formW, setFormW] = React.useState({ date:todayStr, bedtime:"23:00", wake:"07:00", quality:7, hrv:"", restingHr:"" });
-              const todayW = logsW.find(e => e.date === todayStr);
+              const [form, setForm] = React.useState(() => todayLog ? { ...todayLog } : {
+                h:7, m:30, quality:3, bedtime:"23:00", wake:"07:00", hrv:"", restingHr:""
+              });
 
               const calcDur = (bed, wake) => {
                 if (!bed || !wake) return 0;
@@ -5718,41 +5703,31 @@ JSON:
                 return mins/60;
               };
 
-              const saveWhoop = () => {
-                const dur = parseFloat(calcDur(formW.bedtime, formW.wake).toFixed(1));
-                const entry = { ...formW, dur, id: Date.now() };
-                const next = [entry, ...logsW.filter(e=>e.date!==todayStr)].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,90);
-                setLogsW(next);
-                localStorage.setItem(KEY_W, JSON.stringify(next));
+              // Durée : priorité heure coucher/réveil si renseignés, sinon h/m manuel
+              const durFromTimes = calcDur(form.bedtime, form.wake);
+              const activeDur = durFromTimes > 0 ? durFromTimes : form.h + form.m/60;
+
+              const save = () => {
+                const dur = parseFloat((durFromTimes > 0 ? durFromTimes : form.h + form.m/60).toFixed(1));
+                const entry = { ...form, dur };
+                const next = { ...logs, [todayStr]: entry };
+                setLogs(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
                 setEditing(false);
               };
 
-              // --- Score & display ---
-              const QLABELS = ["","Très mauvais","Mauvais","Moyen","Bon","Excellent"];
-
-              // Données actives selon le mode
-              const activeEntry = mode === "manuel" ? todayM : todayW;
-              const activeDur = mode === "manuel"
-                ? (todayM ? todayM.h + (todayM.m||0)/60 : null)
-                : (todayW ? todayW.dur : null);
-              const activeQuality = mode === "manuel"
-                ? (todayM ? todayM.quality * 2 : null)  // /5 → /10
-                : (todayW ? todayW.quality : null);      // déjà /10
-
-              const sleepScore = activeDur ? Math.min(100, Math.round((activeDur/8)*60 + (activeQuality||5)/10*40)) : null;
+              // Score
+              const dur = todayLog ? (todayLog.dur || todayLog.h + (todayLog.m||0)/60) : null;
+              const sleepScore = dur ? Math.min(100, Math.round((dur/8)*60 + (todayLog.quality/5)*40)) : null;
               const scoreColor = !sleepScore ? "#636366" : sleepScore>=80?"#30D158":sleepScore>=60?"#FF9F0A":"#FF453A";
               const scoreLabel = !sleepScore ? "—" : sleepScore>=80?"Excellent":sleepScore>=60?"Correct":"Insuffisant";
+              const QLABELS = ["","Très mauvais","Mauvais","Moyen","Bon","Excellent"];
 
-              // Historique 14j pour chart (priorité mode actif)
+              // Chart 14j
               const days14 = Array.from({length:14},(_,i)=>{
                 const d = new Date(Date.now()-(13-i)*86400000).toISOString().slice(0,10);
-                if (mode==="manuel") {
-                  const l = logsM[d];
-                  return { d, dur: l ? l.h+(l.m||0)/60 : null, q: l ? l.quality*2 : null };
-                } else {
-                  const l = logsW.find(e=>e.date===d);
-                  return { d, dur: l ? l.dur : null, q: l ? l.quality : null };
-                }
+                const l = logs[d];
+                return { d, dur: l ? (l.dur||l.h+(l.m||0)/60) : null };
               });
               const validDays = days14.filter(d=>d.dur);
               const avgH = validDays.length ? Math.round(validDays.reduce((s,d)=>s+d.dur,0)/validDays.length*10)/10 : null;
@@ -5762,26 +5737,15 @@ JSON:
                   {/* Header */}
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div style={{ fontSize:10, color:"#636366", fontWeight:700, letterSpacing:1, textTransform:"uppercase" }}>🌙 Sommeil</div>
-                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                      {/* Toggle Manuel / WHOOP */}
-                      <div style={{ display:"flex", background:"var(--bg3)", borderRadius:8, padding:2, gap:2 }}>
-                        {["manuel","whoop"].map(m=>(
-                          <button key={m} onClick={()=>{ setMode(m); setEditing(false); }}
-                            style={{ background:mode===m?"var(--yellow)":"transparent", color:mode===m?"#000":"#636366", border:"none", borderRadius:6, padding:"3px 9px", fontSize:9, fontWeight:700, cursor:"pointer", textTransform:"uppercase", letterSpacing:"0.05em" }}>
-                            {m==="manuel"?"Manuel":"WHOOP"}
-                          </button>
-                        ))}
-                      </div>
-                      <button onClick={()=>{ if (!editing && activeEntry) { mode==="manuel" ? setFormM({h:todayM.h,m:todayM.m||0,quality:todayM.quality}) : setFormW({...todayW}); } setEditing(e=>!e); }}
-                        style={{ background:"var(--bg3)", color:"var(--yellow)", border:"none", borderRadius:8, padding:"4px 10px", fontSize:10, fontWeight:700, cursor:"pointer" }}>
-                        {editing?"Annuler":activeEntry?"Modifier":"+ Log"}
-                      </button>
-                    </div>
+                    <button onClick={()=>{ if (!editing && todayLog) setForm({...todayLog}); setEditing(e=>!e); }}
+                      style={{ background:"var(--bg3)", color:"var(--yellow)", border:"none", borderRadius:8, padding:"4px 12px", fontSize:10, fontWeight:700, cursor:"pointer" }}>
+                      {editing ? "Annuler" : todayLog ? "Modifier" : "+ Log nuit"}
+                    </button>
                   </div>
 
-                  {/* Résumé du jour */}
+                  {/* Résumé */}
                   {!editing && (
-                    <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:14 }}>
+                    <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:12 }}>
                       <div style={{ position:"relative", width:68, height:68, flexShrink:0 }}>
                         <svg width="68" height="68" viewBox="0 0 68 68">
                           <circle cx="34" cy="34" r="29" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6"/>
@@ -5795,114 +5759,123 @@ JSON:
                         </div>
                       </div>
                       <div style={{ flex:1 }}>
-                        {activeEntry ? (
+                        {todayLog ? (
                           <>
                             <div style={{ fontSize:15, fontWeight:900, color:"var(--white)", marginBottom:2 }}>
-                              {activeDur ? `${Math.floor(activeDur)}h${Math.round((activeDur%1)*60).toString().padStart(2,"0")}` : "—"} de sommeil
+                              {dur ? `${Math.floor(dur)}h${Math.round((dur%1)*60).toString().padStart(2,"0")}` : "—"} de sommeil
                             </div>
                             <div style={{ fontSize:11, color:scoreColor, fontWeight:700, marginBottom:4 }}>{scoreLabel}</div>
-                            {mode==="manuel" && todayM && (
-                              <div style={{ fontSize:9, color:"#636366" }}>
-                                {"★".repeat(todayM.quality)}{"☆".repeat(5-todayM.quality)} · {QLABELS[todayM.quality]}
-                              </div>
-                            )}
-                            {mode==="whoop" && todayW && (
-                              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                                <span style={{ fontSize:9, color:"#636366" }}>Qualité <span style={{ color:"var(--white)", fontWeight:700 }}>{todayW.quality}/10</span></span>
-                                {todayW.hrv && <span style={{ fontSize:9, color:"#636366" }}>VFC <span style={{ color:"var(--yellow)", fontWeight:700 }}>{todayW.hrv}ms</span></span>}
-                                {todayW.restingHr && <span style={{ fontSize:9, color:"#636366" }}>FC repos <span style={{ color:"#FF453A", fontWeight:700 }}>{todayW.restingHr}bpm</span></span>}
-                                {todayW.bedtime && <span style={{ fontSize:9, color:"#636366" }}>{todayW.bedtime}→{todayW.wake}</span>}
-                              </div>
-                            )}
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              <span style={{ fontSize:9, color:"#636366" }}>{"★".repeat(todayLog.quality)}{"☆".repeat(5-todayLog.quality)}</span>
+                              {todayLog.bedtime && <span style={{ fontSize:9, color:"#636366" }}>{todayLog.bedtime} → {todayLog.wake}</span>}
+                              {todayLog.hrv && <span style={{ fontSize:9, color:"#636366" }}>VFC <span style={{ color:"var(--yellow)", fontWeight:700 }}>{todayLog.hrv}ms</span></span>}
+                              {todayLog.restingHr && <span style={{ fontSize:9, color:"#636366" }}>FC <span style={{ color:"#FF453A", fontWeight:700 }}>{todayLog.restingHr}bpm</span></span>}
+                            </div>
                             {avgH && <div style={{ fontSize:8, color:"#8E8E93", marginTop:4 }}>Moy. 14j : {avgH}h</div>}
                           </>
                         ) : (
-                          <div style={{ color:"#636366", fontSize:11 }}>
-                            {mode==="manuel" ? "Log rapide : durée + qualité ressentie" : "Log WHOOP : heure coucher, réveil, VFC..."}
+                          <div style={{ color:"#636366", fontSize:11, lineHeight:1.5 }}>
+                            Enregistre ta nuit pour améliorer ton score de récupération
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Formulaire MANUEL */}
-                  {editing && mode==="manuel" && (
-                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:12, marginBottom:12 }}>
-                      <div style={{ fontSize:10, fontWeight:700, color:"var(--white)", marginBottom:10 }}>Durée</div>
-                      <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:14 }}>
-                        {[{val:formM.h,key:"h",max:12,unit:"h"},{val:formM.m,key:"m",max:59,unit:"min",step:15}].map(f=>(
-                          <div key={f.unit} style={{ display:"flex", alignItems:"center", gap:4 }}>
-                            <button onClick={()=>setFormM(p=>({...p,[f.key]:Math.max(0,p[f.key]-(f.step||1))}))}
-                              style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:6,width:28,height:28,fontSize:16,cursor:"pointer" }}>−</button>
-                            <span style={{ fontSize:20,fontWeight:900,color:"var(--yellow)",minWidth:34,textAlign:"center" }}>{f.unit==="min"?String(f.val).padStart(2,"0"):f.val}</span>
-                            <button onClick={()=>setFormM(p=>({...p,[f.key]:Math.min(f.max,p[f.key]+(f.step||1))}))}
-                              style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:6,width:28,height:28,fontSize:16,cursor:"pointer" }}>+</button>
-                            <span style={{ fontSize:10,color:"#636366" }}>{f.unit}</span>
+                  {/* Formulaire unique */}
+                  {editing && (
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:14, marginBottom:12 }}>
+
+                      {/* Bloc 1 : Durée manuelle */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:9, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Durée</div>
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          {[{val:form.h,key:"h",max:12,unit:"h"},{val:form.m,key:"m",max:59,unit:"min",step:15}].map(f=>(
+                            <div key={f.unit} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                              <button onClick={()=>setForm(p=>({...p,[f.key]:Math.max(0,p[f.key]-(f.step||1))}))}
+                                style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:6,width:28,height:28,fontSize:16,cursor:"pointer" }}>−</button>
+                              <span style={{ fontSize:20,fontWeight:900,color:"var(--yellow)",minWidth:34,textAlign:"center" }}>{f.unit==="min"?String(f.val).padStart(2,"0"):f.val}</span>
+                              <button onClick={()=>setForm(p=>({...p,[f.key]:Math.min(f.max,p[f.key]+(f.step||1))}))}
+                                style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:6,width:28,height:28,fontSize:16,cursor:"pointer" }}>+</button>
+                              <span style={{ fontSize:10,color:"#636366" }}>{f.unit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Séparateur */}
+                      <div style={{ height:1, background:"rgba(255,255,255,0.06)", marginBottom:14 }}/>
+
+                      {/* Bloc 2 : Heure coucher / réveil */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:9, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Heure coucher / réveil <span style={{ color:"#444", fontWeight:400 }}>(optionnel — remplace la durée)</span></div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          <div>
+                            <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Coucher</div>
+                            <input type="time" value={form.bedtime} onChange={e=>setForm(f=>({...f,bedtime:e.target.value}))}
+                              style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:13,boxSizing:"border-box" }}/>
                           </div>
-                        ))}
+                          <div>
+                            <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Réveil</div>
+                            <input type="time" value={form.wake} onChange={e=>setForm(f=>({...f,wake:e.target.value}))}
+                              style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:13,boxSizing:"border-box" }}/>
+                          </div>
+                        </div>
+                        {durFromTimes > 0 && (
+                          <div style={{ fontSize:11, color:"var(--yellow)", textAlign:"center", marginTop:8 }}>⏱ {durFromTimes.toFixed(1)}h calculées</div>
+                        )}
                       </div>
-                      <div style={{ fontSize:10, fontWeight:700, color:"var(--white)", marginBottom:8 }}>Qualité ressentie</div>
-                      <div style={{ display:"flex", gap:4, marginBottom:10 }}>
-                        {[1,2,3,4,5].map(v=>(
-                          <button key={v} onClick={()=>setFormM(p=>({...p,quality:v}))}
-                            style={{ flex:1,background:formM.quality>=v?"#FF9F0A30":"#2C2C2E",color:formM.quality>=v?"#FF9F0A":"#636366",border:`1px solid ${formM.quality>=v?"#FF9F0A50":"transparent"}`,borderRadius:8,padding:"8px 0",fontSize:18,cursor:"pointer" }}>★</button>
-                        ))}
+
+                      {/* Séparateur */}
+                      <div style={{ height:1, background:"rgba(255,255,255,0.06)", marginBottom:14 }}/>
+
+                      {/* Bloc 3 : Qualité */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:9, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Qualité ressentie</div>
+                        <div style={{ display:"flex", gap:4, marginBottom:6 }}>
+                          {[1,2,3,4,5].map(v=>(
+                            <button key={v} onClick={()=>setForm(p=>({...p,quality:v}))}
+                              style={{ flex:1,background:form.quality>=v?"#FF9F0A25":"#2C2C2E",color:form.quality>=v?"#FF9F0A":"#636366",border:`1px solid ${form.quality>=v?"#FF9F0A40":"transparent"}`,borderRadius:8,padding:"8px 0",fontSize:18,cursor:"pointer" }}>★</button>
+                          ))}
+                        </div>
+                        <div style={{ fontSize:9, color:"#8E8E93", textAlign:"center" }}>{QLABELS[form.quality]}</div>
                       </div>
-                      <div style={{ fontSize:9,color:"#8E8E93",textAlign:"center",marginBottom:10 }}>{QLABELS[formM.quality]}</div>
-                      <button onClick={saveManuel} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:10,fontSize:13,fontWeight:800,cursor:"pointer" }}>Enregistrer</button>
+
+                      {/* Séparateur */}
+                      <div style={{ height:1, background:"rgba(255,255,255,0.06)", marginBottom:14 }}/>
+
+                      {/* Bloc 4 : VFC + FC repos */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:9, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Données WHOOP <span style={{ color:"#444", fontWeight:400 }}>(optionnel)</span></div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          <div>
+                            <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>VFC (ms)</div>
+                            <input type="number" value={form.hrv} onChange={e=>setForm(f=>({...f,hrv:e.target.value}))} placeholder="ex: 65"
+                              style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:12,boxSizing:"border-box" }}/>
+                          </div>
+                          <div>
+                            <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>FC repos (bpm)</div>
+                            <input type="number" value={form.restingHr} onChange={e=>setForm(f=>({...f,restingHr:e.target.value}))} placeholder="ex: 52"
+                              style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:12,boxSizing:"border-box" }}/>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button onClick={save} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:11,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
                     </div>
                   )}
 
-                  {/* Formulaire WHOOP */}
-                  {editing && mode==="whoop" && (
-                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:12, marginBottom:12 }}>
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
-                        <div>
-                          <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Coucher</div>
-                          <input type="time" value={formW.bedtime} onChange={e=>setFormW(f=>({...f,bedtime:e.target.value}))}
-                            style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:13,boxSizing:"border-box" }}/>
-                        </div>
-                        <div>
-                          <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Réveil</div>
-                          <input type="time" value={formW.wake} onChange={e=>setFormW(f=>({...f,wake:e.target.value}))}
-                            style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:13,boxSizing:"border-box" }}/>
-                        </div>
-                      </div>
-                      {calcDur(formW.bedtime,formW.wake)>0 && (
-                        <div style={{ fontSize:11,color:"var(--yellow)",textAlign:"center",marginBottom:10 }}>⏱ {calcDur(formW.bedtime,formW.wake).toFixed(1)}h de sommeil</div>
-                      )}
-                      <div style={{ marginBottom:10 }}>
-                        <div style={{ display:"flex",justifyContent:"space-between",fontSize:9,color:"#636366",marginBottom:4 }}>
-                          <span>Qualité</span><span style={{ color:"var(--yellow)",fontWeight:700 }}>{formW.quality}/10</span>
-                        </div>
-                        <input type="range" min="1" max="10" value={formW.quality} onChange={e=>setFormW(f=>({...f,quality:parseInt(e.target.value)}))}
-                          style={{ width:"100%",accentColor:"var(--yellow)" }}/>
-                      </div>
-                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10 }}>
-                        <div>
-                          <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>VFC (ms)</div>
-                          <input type="number" value={formW.hrv} onChange={e=>setFormW(f=>({...f,hrv:e.target.value}))} placeholder="ex: 65"
-                            style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:12,boxSizing:"border-box" }}/>
-                        </div>
-                        <div>
-                          <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>FC repos (bpm)</div>
-                          <input type="number" value={formW.restingHr} onChange={e=>setFormW(f=>({...f,restingHr:e.target.value}))} placeholder="ex: 52"
-                            style={{ width:"100%",background:"var(--bg2)",border:"1px solid #333",borderRadius:8,padding:"7px 8px",color:"#fff",fontSize:12,boxSizing:"border-box" }}/>
-                        </div>
-                      </div>
-                      <button onClick={saveWhoop} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:10,fontSize:13,fontWeight:800,cursor:"pointer" }}>Enregistrer</button>
-                    </div>
-                  )}
-
-                  {/* Mini chart 14j */}
+                  {/* Chart 14j */}
                   {validDays.length > 0 && (
                     <>
-                      <div style={{ display:"flex",gap:2,alignItems:"flex-end",height:28,marginTop:4 }}>
+                      <div style={{ display:"flex",gap:2,alignItems:"flex-end",height:28 }}>
                         {days14.map((d,i)=>{
                           if (!d.dur) return <div key={i} style={{ flex:1,height:3,background:"rgba(255,255,255,0.06)",borderRadius:2 }}/>;
                           const h = Math.max(3, Math.round((d.dur/9)*26));
                           const c = d.dur>=7?"#30D158":d.dur>=6?"#FF9F0A":"#FF453A";
-                          return <div key={i} style={{ flex:1,height:h,background:c,borderRadius:"2px 2px 0 0",opacity:0.75 }}/>;
+                          return <div key={i} style={{ flex:1,height:h,background:c,borderRadius:"2px 2px 0 0",opacity:0.8 }}/>;
                         })}
                       </div>
                       <div style={{ display:"flex",justifyContent:"space-between",marginTop:3 }}>
