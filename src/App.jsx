@@ -14263,6 +14263,156 @@ JSON:
               );
             })()}
 
+            {/* ── POLARIZED TRAINING ANALYZER ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const [weeks, setWeeks] = React.useState(8);
+
+              const today = new Date().toISOString().slice(0,10);
+              const cutoff = new Date(today);
+              cutoff.setDate(cutoff.getDate() - weeks * 7);
+              const cutoffStr = cutoff.toISOString().slice(0,10);
+
+              const recent = sessions.filter(s => s.date >= cutoffStr && s.rpe);
+              if (recent.length < 3) return null;
+
+              // Zone classification by RPE
+              // Z1: RPE 1-4 (easy, recovery)
+              // Z2: RPE 5-6 (aerobic, moderate)
+              // Z3: RPE 7-10 (threshold, VO2max, anaerobic)
+              const byZone = { z1:[], z2:[], z3:[] };
+              recent.forEach(s => {
+                const rpe = parseFloat(s.rpe);
+                if (rpe <= 4) byZone.z1.push(s);
+                else if (rpe <= 6) byZone.z2.push(s);
+                else byZone.z3.push(s);
+              });
+
+              const total = recent.length;
+              const z1Pct = Math.round(byZone.z1.length / total * 100);
+              const z2Pct = Math.round(byZone.z2.length / total * 100);
+              const z3Pct = Math.round(byZone.z3.length / total * 100);
+
+              // By TRIMP (more accurate polarization measure)
+              const z1Trimp = byZone.z1.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const z2Trimp = byZone.z2.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const z3Trimp = byZone.z3.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const totalTrimp = z1Trimp + z2Trimp + z3Trimp;
+
+              const z1TP = totalTrimp > 0 ? Math.round(z1Trimp/totalTrimp*100) : 0;
+              const z2TP = totalTrimp > 0 ? Math.round(z2Trimp/totalTrimp*100) : 0;
+              const z3TP = totalTrimp > 0 ? Math.round(z3Trimp/totalTrimp*100) : 0;
+
+              // Optimal: 80% Z1+Z2, 20% Z3 (polarized model)
+              const lowPct = z1TP + z2TP;
+              const highPct = z3TP;
+              const score = 100 - Math.abs(lowPct - 80) * 1.5 - Math.abs(highPct - 20) * 1.5;
+              const polarScore = Math.max(0, Math.min(100, Math.round(score)));
+              const scoreColor = polarScore >= 80 ? "#30D158" : polarScore >= 60 ? "#FF9F0A" : "#FF453A";
+
+              // Advice
+              const getAdvice = () => {
+                if (highPct > 35) return { msg: "Trop d'intensité élevée. Ajoute 2-3 séances Z1/Z2 (course facile, vélo léger) pour équilibrer.", color:"#FF453A" };
+                if (highPct < 10) return { msg: "Manque de séances intenses. Intègre 1-2 séances seuil ou intervalles par semaine.", color:"#FF9F0A" };
+                if (z1TP < 30) return { msg: "Volume de récupération insuffisant. Les séances faciles construisent la base aérobie — ne les néglige pas.", color:"#FF9F0A" };
+                return { msg: "Distribution polarisée idéale ! Continue à maintenir ce ratio 80/20 pour progresser sans te blesser.", color:"#30D158" };
+              };
+              const advice = getAdvice();
+
+              // SVG donut chart
+              const R = 55, r = 32, CX = 70, CY = 70;
+              const polar = (pct, startAngle) => {
+                const angle = (pct/100) * 2 * Math.PI;
+                const x1 = CX + R * Math.cos(startAngle), y1 = CY + R * Math.sin(startAngle);
+                const x2 = CX + R * Math.cos(startAngle+angle), y2 = CY + R * Math.sin(startAngle+angle);
+                const ix1 = CX + r * Math.cos(startAngle), iy1 = CY + r * Math.sin(startAngle);
+                const ix2 = CX + r * Math.cos(startAngle+angle), iy2 = CY + r * Math.sin(startAngle+angle);
+                const large = angle > Math.PI ? 1 : 0;
+                return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${r} ${r} 0 ${large} 0 ${ix1} ${iy1} Z`;
+              };
+              const a0 = -Math.PI/2;
+              const a1 = a0 + (z1TP/100)*2*Math.PI;
+              const a2 = a1 + (z2TP/100)*2*Math.PI;
+
+              const ZONE_META = [
+                { key:"z1", label:"Zone 1", sub:"RPE 1-4 · Récupération/Base", color:"#30D158", pct:z1TP, count:byZone.z1.length },
+                { key:"z2", label:"Zone 2", sub:"RPE 5-6 · Aérobie modéré", color:"#FF9F0A", pct:z2TP, count:byZone.z2.length },
+                { key:"z3", label:"Zone 3", sub:"RPE 7-10 · Seuil/VO₂max", color:"#FF453A", pct:z3TP, count:byZone.z3.length },
+              ];
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Entraînement polarisé</div>
+                      <div style={{ fontSize:11, color:"#666", marginTop:2 }}>Modèle 80/20 · {recent.length} séances</div>
+                    </div>
+                    <div style={{ display:"flex", gap:4 }}>
+                      {[4,8,12].map(w => (
+                        <button key={w} onClick={() => setWeeks(w)}
+                          style={{ background: weeks===w ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:8, padding:"4px 10px",
+                            color: weeks===w ? "#fff" : "#888", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          {w}S
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display:"flex", gap:16, alignItems:"center", marginBottom:14 }}>
+                    {/* Donut chart */}
+                    <svg width="140" height="140" viewBox="0 0 140 140" style={{ flexShrink:0 }}>
+                      {z1TP > 0 && <path d={polar(z1TP, a0)} fill="#30D158"/>}
+                      {z2TP > 0 && <path d={polar(z2TP, a1)} fill="#FF9F0A"/>}
+                      {z3TP > 0 && <path d={polar(z3TP, a2)} fill="#FF453A"/>}
+                      {/* Inner circle */}
+                      <circle cx={CX} cy={CY} r={r-2} fill="var(--bg2)"/>
+                      <text x={CX} y={CY-8} textAnchor="middle" fontSize="20" fontWeight="800" fill={scoreColor}>{polarScore}</text>
+                      <text x={CX} y={CY+6} textAnchor="middle" fontSize="9" fill="#666">Score</text>
+                      <text x={CX} y={CY+18} textAnchor="middle" fontSize="8" fill="#555">Polarisation</text>
+                    </svg>
+
+                    {/* Zone legend */}
+                    <div style={{ flex:1 }}>
+                      {ZONE_META.map(z => (
+                        <div key={z.key} style={{ marginBottom:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:z.color }}>{z.label}</div>
+                            <div style={{ fontSize:13, fontWeight:800, color:z.color }}>{z.pct}%</div>
+                          </div>
+                          <div style={{ height:5, background:"#2C2C2E", borderRadius:3, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${z.pct}%`, background:z.color, borderRadius:3 }}/>
+                          </div>
+                          <div style={{ fontSize:9, color:"#555", marginTop:1 }}>{z.sub} · {z.count} séance{z.count!==1?"s":""}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Optimal comparison */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:2 }}>Ton ratio actuel</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:scoreColor }}>{lowPct}% / {highPct}%</div>
+                      <div style={{ fontSize:9, color:"#666" }}>Z1+Z2 / Z3</div>
+                    </div>
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:2 }}>Ratio optimal 80/20</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"var(--yellow)" }}>80% / 20%</div>
+                      <div style={{ fontSize:9, color:"#666" }}>Z1+Z2 / Z3</div>
+                    </div>
+                  </div>
+
+                  {/* Advice */}
+                  <div style={{ background:`${advice.color}15`, border:`1px solid ${advice.color}44`, borderRadius:12, padding:"10px 14px" }}>
+                    <div style={{ fontSize:11, color:advice.color, fontWeight:700, marginBottom:3 }}>
+                      {polarScore >= 80 ? "✓" : "💡"} Recommandation
+                    </div>
+                    <div style={{ fontSize:12, color:"#999", lineHeight:1.5 }}>{advice.msg}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RPE DISTRIBUTION CHART ── */}
             {(() => {
               const sessions = profile.sessions || [];
