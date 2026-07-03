@@ -33281,6 +33281,185 @@ JSON: {
             );
           })()}
 
+          {/* ── NUTRITION PERIODIZATION ── */}
+          {(() => {
+            const CFG_KEY = `fitrace_nutperiod_${profile.name}`;
+
+            const [cfg, setCfg] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); } catch { return {}; }
+            });
+
+            const bw = parseFloat(profile.poids) || 70;
+            const sessions = profile.sessions || [];
+            const today = new Date().toISOString().slice(0,10);
+
+            const saveCfg = (updates) => {
+              const next = { ...cfg, ...updates };
+              setCfg(next);
+              localStorage.setItem(CFG_KEY, JSON.stringify(next));
+            };
+
+            // User goals
+            const goal = cfg.goal || "performance"; // performance, cut, maintain
+            const tdee = cfg.tdee || Math.round(bw * 33);
+
+            // Day types & macros
+            const DAY_TYPES = {
+              high: {
+                label:"Jour chargé",
+                emoji:"🔥",
+                desc:"Séance longue ou intense (>60min, RPE>7)",
+                color:"#FF9F0A",
+                carbsMult: goal==="cut" ? 3.5 : goal==="performance" ? 5 : 4,
+                protMult: 2.0,
+                fatMult: 0.8,
+                calAdj: goal==="cut" ? 0 : goal==="performance" ? 300 : 150,
+              },
+              moderate: {
+                label:"Jour modéré",
+                emoji:"🏃",
+                desc:"Séance courte ou légère (30-60min, RPE<7)",
+                color:"var(--yellow)",
+                carbsMult: goal==="cut" ? 2.5 : goal==="performance" ? 3.5 : 3,
+                protMult: 2.0,
+                fatMult: 1.0,
+                calAdj: goal==="cut" ? -150 : 0,
+              },
+              rest: {
+                label:"Jour de repos",
+                emoji:"😴",
+                desc:"Pas de séance ou récupération active",
+                color:"#64D2FF",
+                carbsMult: goal==="cut" ? 1.5 : goal==="performance" ? 2 : 2,
+                protMult: 2.2,
+                fatMult: 1.2,
+                calAdj: goal==="cut" ? -300 : -200,
+              },
+            };
+
+            // Auto-detect today's day type
+            const todaySessions = sessions.filter(s => s.date === today);
+            const totalDur = todaySessions.reduce((s,x) => s+(x.duration||0), 0);
+            const avgRpe = todaySessions.length ? todaySessions.reduce((s,x) => s+(x.rpe||5), 0)/todaySessions.length : 0;
+
+            const autoType = todaySessions.length === 0 ? "rest"
+              : (totalDur >= 60 || avgRpe >= 7) ? "high"
+              : "moderate";
+
+            const [selectedType, setSelectedType] = React.useState(autoType);
+            const dayType = DAY_TYPES[selectedType];
+
+            const kcal = tdee + dayType.calAdj;
+            const prot = Math.round(bw * dayType.protMult);
+            const carbs = Math.round(bw * dayType.carbsMult);
+            const fat = Math.round((kcal - prot*4 - carbs*4) / 9);
+
+            // Weekly plan summary
+            const WEEK_DAYS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+            const weekPlan = cfg.weekPlan || ["moderate","high","rest","high","moderate","rest","high"];
+
+            const weekAvgKcal = weekPlan.reduce((s,t) => s+(tdee + DAY_TYPES[t].calAdj), 0) / 7;
+            const weekCarbs = weekPlan.reduce((s,t) => s+Math.round(bw*DAY_TYPES[t].carbsMult), 0);
+
+            return (
+              <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ fontSize:11, color:"#555" }}>TRAININGPEAKS · CARB CYCLING</div>
+                  <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>📊 Nutrition Periodization</div>
+                </div>
+
+                {/* Goal selector */}
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>OBJECTIF NUTRITIONNEL</div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    {[
+                      { id:"cut", label:"Sèche", emoji:"⬇️" },
+                      { id:"maintain", label:"Maintien", emoji:"⚖️" },
+                      { id:"performance", label:"Performance", emoji:"🚀" },
+                    ].map(g => (
+                      <button key={g.id} onClick={() => saveCfg({ goal: g.id })}
+                        style={{ flex:1, background: goal===g.id ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"8px 0", color: goal===g.id ? "#000":"#888", fontSize:11, fontWeight: goal===g.id?700:400, cursor:"pointer" }}>
+                        {g.emoji}<br/>{g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* TDEE input */}
+                <div style={{ background:"var(--bg3)", borderRadius:10, padding:"10px 14px", marginBottom:14 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div style={{ fontSize:11, color:"#666" }}>Métabolisme de base (TDEE)</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <input type="number" min="1500" max="5000" value={tdee}
+                        onChange={e => saveCfg({ tdee: parseInt(e.target.value)||2200 })}
+                        style={{ width:70, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"4px 8px", color:"var(--yellow)", fontSize:13, fontWeight:700, textAlign:"center" }}/>
+                      <span style={{ fontSize:11, color:"#555" }}>kcal</span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize:10, color:"#444", marginTop:4 }}>Auto-estimé: {Math.round(bw*33)} kcal (33 kcal/kg)</div>
+                </div>
+
+                {/* Today's type */}
+                <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>
+                  TYPE DE JOUR — <span style={{ color: autoType===selectedType ? "#30D158":"var(--yellow)" }}>
+                    {autoType===selectedType ? "détecté automatiquement ✓" : "modifié manuellement"}
+                  </span>
+                </div>
+                <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+                  {Object.entries(DAY_TYPES).map(([t, dt]) => (
+                    <button key={t} onClick={() => setSelectedType(t)}
+                      style={{ flex:1, background: selectedType===t ? `${dt.color}22` : "var(--bg3)", border:`2px solid ${selectedType===t ? dt.color : "transparent"}`, borderRadius:12, padding:"10px 6px", cursor:"pointer", textAlign:"center" }}>
+                      <div style={{ fontSize:18 }}>{dt.emoji}</div>
+                      <div style={{ fontSize:10, color: selectedType===t ? dt.color : "#666", fontWeight: selectedType===t?700:400 }}>{dt.label}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Today's macros */}
+                <div style={{ background:`${dayType.color}11`, border:`1px solid ${dayType.color}44`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
+                  <div style={{ fontSize:11, color:dayType.color, fontWeight:700, marginBottom:10 }}>{dayType.emoji} {dayType.label} — {dayType.desc}</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
+                    {[
+                      { label:"Calories", val:`${kcal}`, unit:"kcal", color:dayType.color },
+                      { label:"Protéines", val:`${prot}`, unit:"g", color:"#FF6B35" },
+                      { label:"Glucides", val:`${carbs}`, unit:"g", color:"#FFD700" },
+                      { label:"Lipides", val:`${Math.max(0,fat)}`, unit:"g", color:"#64D2FF" },
+                    ].map((m,i) => (
+                      <div key={i} style={{ background:"var(--bg3)", borderRadius:10, padding:"8px 6px", textAlign:"center" }}>
+                        <div style={{ fontSize:15, fontWeight:900, color:m.color }}>{m.val}</div>
+                        <div style={{ fontSize:9, color:"#555" }}>{m.unit}</div>
+                        <div style={{ fontSize:9, color:"#666" }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Weekly plan */}
+                <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>PLAN HEBDOMADAIRE</div>
+                <div style={{ display:"flex", gap:4, marginBottom:8 }}>
+                  {weekPlan.map((t,i) => {
+                    const dt = DAY_TYPES[t];
+                    return (
+                      <div key={i} onClick={() => {
+                        const next = [...weekPlan];
+                        next[i] = t==="high"?"moderate":t==="moderate"?"rest":"high";
+                        saveCfg({ weekPlan: next });
+                      }}
+                        style={{ flex:1, background:`${dt.color}22`, border:`1px solid ${dt.color}44`, borderRadius:8, padding:"6px 2px", textAlign:"center", cursor:"pointer" }}>
+                        <div style={{ fontSize:10, color:dt.color }}>{dt.emoji}</div>
+                        <div style={{ fontSize:8, color:"#555" }}>{WEEK_DAYS[i]}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#666" }}>
+                  <span>Moy. hebdo: <strong style={{ color:"#fff" }}>{Math.round(weekAvgKcal)} kcal/j</strong></span>
+                  <span>Glucides: <strong style={{ color:"#FFD700" }}>{weekCarbs}g/sem</strong></span>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── HYROX RACE DAY FUEL CALCULATOR ── */}
           {(() => {
             const bw = parseFloat(profile.poids) || 70;
