@@ -6882,6 +6882,106 @@ JSON:
               );
             })()}
 
+            {/* ── WORKOUT LIBRARY — Nike Training Club style ── */}
+            {(() => {
+              const LIBRARY = [
+                {
+                  id:"skierg_intervals", type:"running_qualite", icon:"🎿", color:"#C9A840",
+                  title:"SkiErg Intervals", duration:30, rpe:8,
+                  tags:["HYROX","VMA","Anaérobie"],
+                  desc:"6 × 250m SkiErg à 90% intensité, récup 60s. Booste ta puissance aérobie."
+                },
+                {
+                  id:"zone2_run", type:"running_zone2", icon:"🏃", color:"#30D158",
+                  title:"Zone 2 Run 40min", duration:40, rpe:5,
+                  tags:["Endurance","Base","FC 120-140"],
+                  desc:"Course continue à basse intensité. Tu dois pouvoir tenir une conversation. Base de toute préparation HYROX."
+                },
+                {
+                  id:"sled_circuit", type:"force_stations", icon:"🏋️", color:"#a78bfa",
+                  title:"Sled Circuit HYROX", duration:45, rpe:8,
+                  tags:["Force","Stations","HYROX-Specific"],
+                  desc:"3 circuits : Sled Push 50m + Sled Pull 50m + 20 Sandbag Lunges. Récup 3min entre circuits."
+                },
+                {
+                  id:"race_sim", type:"hybride_compromis", icon:"🔥", color:"#FF6B00",
+                  title:"Race Simulation", duration:60, rpe:9,
+                  tags:["Race Pace","Hybride","Complet"],
+                  desc:"1km course + 1 station HYROX × 8 répétitions. L'entraînement le plus spécifique à la race."
+                },
+                {
+                  id:"mobility_hyrox", type:"mobilite", icon:"🧘", color:"#007AFF",
+                  title:"Mobilité HYROX", duration:25, rpe:3,
+                  tags:["Récupération","Mobilité","Hanches"],
+                  desc:"Hanches, épaules, thoracique. Indispensable après les séances lourdes pour prévenir les blessures."
+                },
+                {
+                  id:"farmer_wallball", type:"force_stations", icon:"🧲", color:"#BF5AF2",
+                  title:"Farmer's + Wall Ball", duration:35, rpe:7,
+                  tags:["Grip","Shoulder","HYROX"],
+                  desc:"5 × 40m Farmer's Carry + 5 × 20 Wall Ball (20/14 lbs). Renforce les points faibles HYROX."
+                },
+              ];
+
+              const [selectedWorkout, setSelectedWorkout] = React.useState(null);
+
+              if (selectedWorkout) {
+                const w = LIBRARY.find(x => x.id === selectedWorkout);
+                return (
+                  <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px", marginBottom:12, border:`1px solid ${w.color}40` }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                      <button onClick={() => setSelectedWorkout(null)} style={{ background:"none", border:"none", color:"#8E8E93", fontSize:20, cursor:"pointer", padding:0 }}>←</button>
+                      <div style={{ fontSize:24 }}>{w.icon}</div>
+                      <div>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>{w.title}</div>
+                        <div style={{ fontSize:10, color:"#555" }}>{w.duration} min · RPE {w.rpe}/10</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:13, color:"#8E8E93", lineHeight:1.65, marginBottom:14 }}>{w.desc}</div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
+                      {w.tags.map(t => (
+                        <span key={t} style={{ fontSize:9, color:w.color, background:`${w.color}15`, borderRadius:5, padding:"2px 8px", fontWeight:700 }}>{t}</span>
+                      ))}
+                    </div>
+                    <button onClick={() => { haptic([10,20,10]); setLiveTimerType(w.type); setShowLiveTimer(true); setSelectedWorkout(null); }}
+                      style={{ width:"100%", padding:"13px", borderRadius:14, background:w.color, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, color:"#000", boxShadow:`0 4px 20px ${w.color}50` }}>
+                      ▶ Démarrer le timer
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px", marginBottom:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1 }}>Bibliothèque</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>Séances HYROX</div>
+                    </div>
+                    <span style={{ fontSize:22 }}>📚</span>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {LIBRARY.map(w => (
+                      <div key={w.id} onClick={() => { haptic([4]); setSelectedWorkout(w.id); }}
+                        style={{ display:"flex", alignItems:"center", gap:12, background:`${w.color}08`, border:`1px solid ${w.color}20`, borderRadius:12, padding:"10px 12px", cursor:"pointer", transition:"all 0.15s" }}>
+                        <div style={{ width:36, height:36, borderRadius:10, background:`${w.color}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{w.icon}</div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:2 }}>{w.title}</div>
+                          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                            <span style={{ fontSize:9, color:"#555" }}>⏱ {w.duration} min</span>
+                            <span style={{ fontSize:9, color:"#555" }}>·</span>
+                            <span style={{ fontSize:9, color:"#555" }}>RPE {w.rpe}/10</span>
+                            <span style={{ fontSize:9, color:w.color, fontWeight:700, marginLeft:"auto" }}>{w.tags[0]}</span>
+                          </div>
+                        </div>
+                        <div style={{ fontSize:12, color:`${w.color}80`, flexShrink:0 }}>›</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MORNING CHECK-IN — Poids + Énergie ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
