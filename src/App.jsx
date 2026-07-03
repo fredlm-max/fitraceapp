@@ -28290,6 +28290,80 @@ function HyroxBenchmarkTab({ profile }) {
         </div>
       )}
 
+      {/* ── WORLD RANKINGS COMPARISON ── */}
+      {filledCount >= 3 && (
+        <div style={{ background: "var(--bg2)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 16, padding: "16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 10, color: "#555", textTransform: "uppercase", letterSpacing: 1 }}>world.hyrox.com</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "var(--white)" }}>Classement mondial</div>
+            </div>
+            <span style={{ fontSize: 22 }}>🌍</span>
+          </div>
+
+          {/* Legend */}
+          <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+            {[{label:"Elite 10%",color:"#C9A840"},{label:"Médiane",color:"#30D158"},{label:"P75",color:"#FF9F0A"},{label:"Toi",color:"#007AFF"}].map(l => (
+              <div key={l.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:l.color }} />
+                <span style={{ fontSize:9, color:"#555" }}>{l.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {stationScores.filter(s => s.userSec).map(s => {
+            const b = s.bench;
+            if (!b.elite || !b.median) return null;
+            // Build position markers: elite=left edge, p75=right edge, p25=further right
+            // Normalize: 0% = p25 time (slow), 100% = elite time (fast)
+            // Lower time = better (faster), so invert: pos = (p25 - userSec) / (p25 - elite) * 100
+            const range = b.p25 - b.elite;
+            const userPos = range > 0 ? Math.max(0, Math.min(100, Math.round((b.p25 - s.userSec) / range * 100))) : 50;
+            const medianPos = range > 0 ? Math.round((b.p25 - b.median) / range * 100) : 50;
+            const p75Pos = range > 0 ? Math.round((b.p25 - b.p75) / range * 100) : 25;
+
+            const fmtTime = (sec) => {
+              const m = Math.floor(sec/60), s2 = sec%60;
+              return `${m}:${String(s2).padStart(2,"0")}`;
+            };
+
+            const userCategory = userPos >= 80 ? {label:"Elite",color:"#C9A840"} : userPos >= 50 ? {label:"Top 25%",color:"#30D158"} : userPos >= 25 ? {label:"Médiane",color:"#FF9F0A"} : {label:"À travailler",color:"#FF453A"};
+
+            return (
+              <div key={s.id} style={{ marginBottom: 12 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontSize:14 }}>{s.icon}</span>
+                    <span style={{ fontSize:11, color:"var(--white)", fontWeight:600 }}>{s.nom}</span>
+                    <span style={{ fontSize:9, color:userCategory.color, fontWeight:700, background:`${userCategory.color}15`, borderRadius:5, padding:"1px 6px" }}>{userCategory.label}</span>
+                  </div>
+                  <span style={{ fontSize:11, fontWeight:700, color:"#007AFF" }}>{fmtTime(s.userSec)}</span>
+                </div>
+                {/* Track */}
+                <div style={{ position:"relative", height:14, background:"rgba(255,255,255,0.06)", borderRadius:7, overflow:"visible" }}>
+                  {/* Filled bar up to user position */}
+                  <div style={{ position:"absolute", left:0, top:0, bottom:0, width:`${userPos}%`, background:`linear-gradient(90deg, #FF453A, #FF9F0A, #30D158, #C9A840)`, borderRadius:7, transition:"width 1s cubic-bezier(.4,0,.2,1)", opacity:0.6 }} />
+                  {/* Reference markers */}
+                  {[
+                    {pos:medianPos, color:"#30D158", label:"med"},
+                    {pos:p75Pos, color:"#FF9F0A", label:"p75"},
+                    {pos:100, color:"#C9A840", label:"elite"},
+                  ].map((m,i) => (
+                    <div key={i} style={{ position:"absolute", top:-2, left:`${m.pos}%`, width:3, height:18, background:m.color, borderRadius:2, transform:"translateX(-50%)", boxShadow:`0 0 4px ${m.color}` }} />
+                  ))}
+                  {/* User dot */}
+                  <div style={{ position:"absolute", top:"50%", left:`${userPos}%`, transform:"translate(-50%,-50%)", width:14, height:14, borderRadius:"50%", background:"#007AFF", border:"2px solid #fff", boxShadow:"0 0 8px #007AFF", zIndex:2, transition:"left 1s cubic-bezier(.4,0,.2,1)" }} />
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:3 }}>
+                  <span style={{ fontSize:8, color:"#3A3A3C" }}>Plus lent</span>
+                  <span style={{ fontSize:8, color:"#3A3A3C" }}>Elite {fmtTime(b.elite)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Invite à compléter ses temps */}
       {filledCount < 3 && filledCount > 0 && (
         <div style={{ background: "var(--bg2)", border: "1px solid var(--bg3)", borderRadius: 16, padding: "14px", textAlign: "center", marginBottom: 16 }}>
