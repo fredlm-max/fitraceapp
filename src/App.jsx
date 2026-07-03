@@ -8110,6 +8110,152 @@ JSON:
               );
             })()}
 
+            {/* ── ACTIVITY FEED ── */}
+            {(() => {
+              const sessions = (profile.sessions || []).slice().sort((a,b) => b.date.localeCompare(a.date));
+              const [shown, setShown] = React.useState(5);
+              const [kudosSet, setKudosSet] = React.useState(() => {
+                try { return new Set(JSON.parse(localStorage.getItem(`fitrace_kudos_${profile.name}`) || "[]")); } catch { return new Set(); }
+              });
+
+              const toggleKudos = (id) => {
+                const next = new Set(kudosSet);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                setKudosSet(next);
+                localStorage.setItem(`fitrace_kudos_${profile.name}`, JSON.stringify([...next]));
+              };
+
+              const typeEmoji = {
+                "Course": "🏃", "Vélo": "🚴", "Natation": "🏊", "Musculation": "💪",
+                "HYROX": "🏋️", "SkiErg": "⛷️", "Rowing": "🚣", "Sled": "🛷",
+                "Yoga": "🧘", "Marche": "🚶", "HIIT": "⚡", "CrossFit": "🔥",
+              };
+              const getEmoji = (type) => {
+                for (const [k,v] of Object.entries(typeEmoji)) if (type?.includes(k)) return v;
+                return "🏅";
+              };
+              const getRpeColor = (rpe) => {
+                if (!rpe) return "#888";
+                if (rpe <= 4) return "#30D158";
+                if (rpe <= 6) return "#FF9F0A";
+                if (rpe <= 8) return "#FF6B35";
+                return "#FF453A";
+              };
+              const fmtDur = (min) => {
+                if (!min) return null;
+                const h = Math.floor(min/60), m = min%60;
+                return h > 0 ? `${h}h${m>0?m+"min":""}` : `${m}min`;
+              };
+              const relDate = (dateStr) => {
+                const today = new Date().toISOString().slice(0,10);
+                const diff = Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
+                if (diff === 0) return "Aujourd'hui";
+                if (diff === 1) return "Hier";
+                if (diff < 7) return `Il y a ${diff} jours`;
+                if (diff < 30) return `Il y a ${Math.floor(diff/7)} semaine${Math.floor(diff/7)>1?"s":""}`;
+                return dateStr.slice(5).replace("-","/");
+              };
+
+              if (sessions.length === 0) return null;
+
+              return (
+                <div style={{ marginBottom:20 }}>
+                  <div style={{ fontSize:16, fontWeight:700, color:"var(--white)", marginBottom:12 }}>Activités récentes</div>
+                  {sessions.slice(0, shown).map((s, i) => {
+                    const id = s.id || (s.date + s.type + i);
+                    const kudos = kudosSet.has(id);
+                    const trimp = s.duration && s.rpe ? Math.round(s.duration * (s.rpe/10)) : null;
+                    const emoji = getEmoji(s.type);
+                    const rpeColor = getRpeColor(s.rpe);
+
+                    return (
+                      <div key={id} style={{ background:"var(--bg2)", borderRadius:16, padding:16, marginBottom:10, border:"1px solid #2C2C2E" }}>
+                        {/* Header */}
+                        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                          <div style={{ width:40, height:40, borderRadius:"50%", background:"var(--bg3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
+                            {emoji}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              {s.type || "Entraînement"}
+                            </div>
+                            <div style={{ fontSize:11, color:"#666" }}>{relDate(s.date)} · {s.date}</div>
+                          </div>
+                          {s.rpe && (
+                            <div style={{ background:rpeColor+"22", border:`1px solid ${rpeColor}44`, borderRadius:8, padding:"3px 8px", fontSize:11, fontWeight:700, color:rpeColor, flexShrink:0 }}>
+                              RPE {s.rpe}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Stats row */}
+                        <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+                          {s.duration && (
+                            <div style={{ background:"var(--bg3)", borderRadius:8, padding:"5px 10px", textAlign:"center" }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:"var(--white)" }}>{fmtDur(s.duration)}</div>
+                              <div style={{ fontSize:9, color:"#666" }}>Durée</div>
+                            </div>
+                          )}
+                          {s.distance && (
+                            <div style={{ background:"var(--bg3)", borderRadius:8, padding:"5px 10px", textAlign:"center" }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:"var(--yellow)" }}>{s.distance} km</div>
+                              <div style={{ fontSize:9, color:"#666" }}>Distance</div>
+                            </div>
+                          )}
+                          {trimp && (
+                            <div style={{ background:"var(--bg3)", borderRadius:8, padding:"5px 10px", textAlign:"center" }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#BF5AF2" }}>{trimp}</div>
+                              <div style={{ fontSize:9, color:"#666" }}>TRIMP</div>
+                            </div>
+                          )}
+                          {s.distance && s.duration && (
+                            <div style={{ background:"var(--bg3)", borderRadius:8, padding:"5px 10px", textAlign:"center" }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#30D158" }}>
+                                {(s.duration / s.distance).toFixed(1)} min/km
+                              </div>
+                              <div style={{ fontSize:9, color:"#666" }}>Allure</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* RPE bar */}
+                        {s.rpe && (
+                          <div style={{ height:4, borderRadius:2, background:"#2C2C2E", marginBottom:10, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${(s.rpe/10)*100}%`, background:`linear-gradient(90deg,#30D158,${rpeColor})`, borderRadius:2 }}/>
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {s.notes && (
+                          <div style={{ fontSize:12, color:"#888", fontStyle:"italic", marginBottom:10, paddingLeft:4 }}>
+                            "{s.notes}"
+                          </div>
+                        )}
+
+                        {/* Kudos */}
+                        <div style={{ display:"flex", justifyContent:"flex-end" }}>
+                          <button onClick={() => toggleKudos(id)}
+                            style={{ background: kudos ? "rgba(0,122,255,0.2)" : "var(--bg3)", border: kudos ? "1px solid var(--yellow)" : "1px solid #2C2C2E", borderRadius:20, padding:"5px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+                            <span style={{ fontSize:14 }}>{kudos ? "👏" : "🤝"}</span>
+                            <span style={{ fontSize:12, color: kudos ? "var(--yellow)" : "#666", fontWeight: kudos ? 700 : 400 }}>
+                              {kudos ? "Bravo !" : "Kudos"}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {sessions.length > shown && (
+                    <button onClick={() => setShown(s => s + 5)}
+                      style={{ width:"100%", background:"var(--bg2)", border:"1px solid #2C2C2E", borderRadius:12, padding:"10px 0", color:"var(--yellow)", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                      Voir plus ({sessions.length - shown} activités)
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING STREAK CALENDAR ── */}
             {(() => {
               const sessions = profile.sessions || [];
