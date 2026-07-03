@@ -21511,6 +21511,187 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── STATION TECHNIQUE CARDS ── */}
+      {(() => {
+        const STATIONS = [
+          {
+            name:"SkiErg", icon:"🎿", color:"#007AFF",
+            cues:["Tirez avec les triceps, pas les épaules","Core gainé à chaque traction","Pieds écartés largeur épaules","Regard vers le bas, dos droit"],
+            breathing:"Expirez à chaque traction — rythme 1 traction = 1 expiration",
+            pacing:"Partez à 70% · augmentez les 200 derniers mètres",
+            mistakes:["Haussement des épaules = fatigue rapide","Genoux verrouillés = pression lombaire","Trop vite au départ = acide lactique"],
+            targetWpm:"85-100 SPM",
+          },
+          {
+            name:"Sled Push", icon:"🛷", color:"#FF9F0A",
+            cues:["Inclinaison 45° vers le sled","Poussez depuis les hanches","Pas courts et puissants","Gardez la tête dans l'axe du corps"],
+            breathing:"Bloquez le souffle sur la poussée, relâchez entre les pas",
+            pacing:"Sprint maximal — station courte, donnez tout",
+            mistakes:["Dos trop vertical = perte de force","Bras fléchis = poussée inefficace","Regarder en haut = tension cervicale"],
+            targetWpm:"Max effort",
+          },
+          {
+            name:"Sled Pull", icon:"⛓️", color:"#FF453A",
+            cues:["Cordes tendues en permanence","Tirez avec le bas du dos et les fessiers","Pas vers l'arrière courts et stables","Bras fléchis à 90°"],
+            breathing:"Expirez sur chaque traction des cordes",
+            pacing:"Effort soutenu, pas d'accélération brusque",
+            mistakes:["Cordes lâches = perte d'énergie","Dos arrondi sous charge","Pas trop larges = instabilité"],
+            targetWpm:"Puissance > vitesse",
+          },
+          {
+            name:"Burpee Broad Jump", icon:"🐸", color:"#30D158",
+            cues:["Plancher sur les mains, pas les genoux","Saut de grenouille: genoux haut","Atterrissage souple, amortissez","Enchaînez sans pause au sol"],
+            breathing:"Inspirez au sol, expirez au saut — ne bloquez pas",
+            pacing:"Pace régulier dès le départ, évitez le sprint-pause",
+            mistakes:["Tête qui pendouille au sol","Atterrissage jambes tendues = chocs","Saut trop court = pénalité de distance"],
+            targetWpm:"18-25/min",
+          },
+          {
+            name:"Rowing", icon:"🚣", color:"#BF5AF2",
+            cues:["Poussez avec les jambes EN PREMIER","Corps légèrement incliné arrière au finish","Tirez les mains vers le bas sternum","Recovery lente: mains → corps → genoux"],
+            breathing:"Expirez sur la traction, inspirez sur la récupération",
+            pacing:"Partez à 2:05/500m, finissez à 1:55/500m",
+            mistakes:["Tirer avec les bras avant les jambes","Se pencher trop en arrière","Genoux qui rentrent sur la poussée"],
+            targetWpm:"24-28 SPM",
+          },
+          {
+            name:"Farmer's Carry", icon:"🏋️", color:"#FF9F0A",
+            cues:["Kettlebells contre les cuisses","Épaules basses et en arrière","Marche rapide, pas de course","Core engagé en permanence"],
+            breathing:"Respirez librement, ne bloquez pas",
+            pacing:"Marche rapide soutenue sans pause",
+            mistakes:["Pencher latéralement = fatigue lombaire","Kettlebells trop écartés du corps","Regarder ses pieds = déséquilibre"],
+            targetWpm:"Pas rapides et stables",
+          },
+          {
+            name:"Sandbag Lunges", icon:"💪", color:"#FF453A",
+            cues:["Sac sur une épaule ou en position ours","Genou avant à 90°, genou arrière effleure le sol","Poussez sur le talon avant","Alternez les épaules si sac unilatéral"],
+            breathing:"Expirez sur la montée du lunge",
+            pacing:"Pas constants, ne vous arrêtez pas",
+            mistakes:["Genou avant qui dépasse le pied","Tronc penché trop en avant","Sac instable = dépense énergétique inutile"],
+            targetWpm:"Contrôle > vitesse",
+          },
+          {
+            name:"Wall Balls", icon:"🏀", color:"#30D158",
+            cues:["Squat profond: hanches sous les genoux","Lancez depuis la poitrine, pas les bras","Attrapez à la descente du squat","Cible: 9m H / 7m F"],
+            breathing:"Expirez sur le lancer, inspirez en descendant",
+            pacing:"Rythme métronome: 15-20 reps/min",
+            mistakes:["Pas assez profond dans le squat","Ball trop loin de la cible","Attraper trop haut = mauvaise mécanique"],
+            targetWpm:"15-20/min",
+          },
+        ];
+
+        const KEY = `fitrace_station_scores_${profile.name}`;
+        const [scores, setScores] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+        const [active, setActive] = React.useState(null);
+        const [tab, setTab] = React.useState("cues");
+
+        const setScore = (stationName, val) => {
+          const next = { ...scores, [stationName]: val };
+          setScores(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const activeStation = STATIONS.find(s=>s.name===active);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Technique par Station</div>
+
+            {/* Station grid */}
+            <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom: active ? 14 : 0 }}>
+              {STATIONS.map(s=>{
+                const score = scores[s.name] || 0;
+                const isActive = active===s.name;
+                return (
+                  <button key={s.name} onClick={()=>setActive(isActive?null:s.name)}
+                    style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:isActive?s.color+"20":"var(--bg3)",border:`2px solid ${isActive?s.color:"transparent"}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",minWidth:70,flex:"1 1 70px" }}>
+                    <span style={{ fontSize:20 }}>{s.icon}</span>
+                    <div style={{ fontSize:8,fontWeight:700,color:isActive?s.color:"#8E8E93",textAlign:"center" }}>{s.name}</div>
+                    <div style={{ display:"flex",gap:1 }}>
+                      {[1,2,3,4,5].map(i=>(
+                        <div key={i} style={{ width:5,height:5,borderRadius:"50%",background:i<=score?s.color:"#2C2C2E" }}/>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Detail panel */}
+            {activeStation && (
+              <div style={{ background:"var(--bg3)",borderRadius:14,padding:14 }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <span style={{ fontSize:24 }}>{activeStation.icon}</span>
+                    <div>
+                      <div style={{ fontSize:14,fontWeight:900,color:activeStation.color }}>{activeStation.name}</div>
+                      <div style={{ fontSize:9,color:"#636366" }}>Rythme cible: {activeStation.targetWpm}</div>
+                    </div>
+                  </div>
+                  <button onClick={()=>setActive(null)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:18,cursor:"pointer" }}>×</button>
+                </div>
+
+                {/* Tabs */}
+                <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                  {["cues","breathing","mistakes"].map(t=>(
+                    <button key={t} onClick={()=>setTab(t)}
+                      style={{ flex:1,background:tab===t?activeStation.color:"#2C2C2E",color:tab===t?"#fff":"#8E8E93",border:"none",borderRadius:8,padding:"5px 0",fontSize:9,fontWeight:700,cursor:"pointer" }}>
+                      {t==="cues"?"🎯 Cues":t==="breathing"?"💨 Souffle":"⚠️ Erreurs"}
+                    </button>
+                  ))}
+                </div>
+
+                {tab==="cues" && (
+                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    {activeStation.cues.map((c,i)=>(
+                      <div key={i} style={{ display:"flex",gap:8,alignItems:"flex-start" }}>
+                        <div style={{ width:18,height:18,borderRadius:"50%",background:activeStation.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#000",flexShrink:0 }}>{i+1}</div>
+                        <div style={{ fontSize:11,color:"var(--white)",lineHeight:1.4 }}>{c}</div>
+                      </div>
+                    ))}
+                    <div style={{ background:activeStation.color+"15",borderRadius:10,padding:"8px 10px",marginTop:4 }}>
+                      <div style={{ fontSize:8,color:activeStation.color,fontWeight:700,marginBottom:2 }}>⚡ PACING</div>
+                      <div style={{ fontSize:10,color:"var(--white)" }}>{activeStation.pacing}</div>
+                    </div>
+                  </div>
+                )}
+
+                {tab==="breathing" && (
+                  <div style={{ background:"#1C3A24",borderRadius:12,padding:14,textAlign:"center" }}>
+                    <div style={{ fontSize:28,marginBottom:8 }}>💨</div>
+                    <div style={{ fontSize:12,color:"#30D158",fontWeight:700,lineHeight:1.5 }}>{activeStation.breathing}</div>
+                  </div>
+                )}
+
+                {tab==="mistakes" && (
+                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    {activeStation.mistakes.map((m,i)=>(
+                      <div key={i} style={{ display:"flex",gap:8,alignItems:"flex-start",background:"#3A1C1C",borderRadius:8,padding:"8px 10px" }}>
+                        <span style={{ fontSize:14 }}>⚠️</span>
+                        <div style={{ fontSize:11,color:"#FF453A",lineHeight:1.4 }}>{m}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Self-assessment */}
+                <div style={{ marginTop:14 }}>
+                  <div style={{ fontSize:9,color:"#636366",marginBottom:6 }}>Mon niveau sur cette station:</div>
+                  <div style={{ display:"flex",gap:4 }}>
+                    {[{v:1,l:"Débutant",c:"#FF453A"},{v:2,l:"En progrès",c:"#FF9F0A"},{v:3,l:"Correct",c:"#FF9F0A"},{v:4,l:"Bon",c:"#30D158"},{v:5,l:"Expert",c:"#30D158"}].map(opt=>(
+                      <button key={opt.v} onClick={()=>setScore(activeStation.name,opt.v)}
+                        style={{ flex:1,background:scores[activeStation.name]===opt.v?opt.c:"#2C2C2E",color:scores[activeStation.name]===opt.v?"#000":"#636366",border:"none",borderRadius:8,padding:"6px 2px",fontSize:8,fontWeight:700,cursor:"pointer",textAlign:"center" }}>
+                        {"★".repeat(opt.v)}<br/><span style={{ fontWeight:400 }}>{opt.l}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── LIVE SESSION TRACKER ── */}
       {(() => {
         const [liveActive, setLiveActive] = React.useState(false);
