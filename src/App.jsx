@@ -8095,6 +8095,138 @@ JSON:
               );
             })()}
 
+            {/* ── CONSISTENCY HEATMAP (GitHub/Strava-style) ── */}
+            {(()=>{
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              // Build load map per day (last 52 weeks = 364 days)
+              const loadMap = {};
+              sessions.forEach(s => {
+                const d = s.date?.slice(0,10);
+                if (!d) return;
+                const load = (s.rpe||5) * (s.duree||s.duration||30);
+                loadMap[d] = (loadMap[d]||0) + load;
+              });
+
+              const now = new Date(); now.setHours(0,0,0,0);
+              // Start from 52 weeks ago, on Monday
+              const start = new Date(now);
+              start.setDate(now.getDate() - 363);
+              const startDow = (start.getDay()+6)%7;
+              start.setDate(start.getDate() - startDow); // rewind to Monday
+
+              const days = [];
+              for (let i = 0; i < 371; i++) {
+                const d = new Date(start); d.setDate(start.getDate()+i);
+                if (d > now) break;
+                const ds = d.toISOString().slice(0,10);
+                days.push({ ds, load: loadMap[ds]||0, month: d.getMonth(), dow: (d.getDay()+6)%7, day: d });
+              }
+
+              const maxLoad = Math.max(...days.map(d=>d.load), 1);
+              const totalSess = days.filter(d=>d.load>0).length;
+              const totalDays = days.length;
+              const streakDays = (() => {
+                let cur = 0;
+                for (let i = days.length-1; i >= 0; i--) {
+                  if (days[i].load > 0) cur++;
+                  else break;
+                }
+                return cur;
+              })();
+              // Longest streak
+              let bestStreak = 0, tmpStreak = 0;
+              days.forEach(d => {
+                if (d.load>0) { tmpStreak++; if(tmpStreak>bestStreak) bestStreak=tmpStreak; }
+                else tmpStreak=0;
+              });
+
+              const cellSize = 9, cellGap = 2, cols = Math.ceil(days.length/7);
+              const W = cols*(cellSize+cellGap), H = 7*(cellSize+cellGap)+20;
+
+              const loadColor = (load) => {
+                if (!load) return "rgba(255,255,255,0.06)";
+                const p = load/maxLoad;
+                if (p < 0.25) return "#0d3a1e";
+                if (p < 0.50) return "#166534";
+                if (p < 0.75) return "#16a34a";
+                return "#30D158";
+              };
+
+              // Month labels
+              const monthLabels = [];
+              let prevMonth = -1;
+              days.forEach((d,i) => {
+                const col = Math.floor(i/7);
+                if (d.month !== prevMonth && d.dow === 0) {
+                  monthLabels.push({ col, label: d.day.toLocaleDateString("fr-FR",{month:"short"}) });
+                  prevMonth = d.month;
+                }
+              });
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, paddingLeft:2 }}>🗓 Consistance — 52 semaines</div>
+
+                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"14px 16px" }}>
+
+                    {/* Stats row */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:12 }}>
+                      {[
+                        { label:"Jours actifs", val:totalSess, color:"#30D158" },
+                        { label:"Taux", val:`${Math.round(totalSess/totalDays*100)}%`, color:"#C9A840" },
+                        { label:"Streak actuel", val:`${streakDays}j`, color:"#007AFF" },
+                        { label:"Meilleur streak", val:`${bestStreak}j`, color:"#a78bfa" },
+                      ].map(s=>(
+                        <div key={s.label} style={{ textAlign:"center" }}>
+                          <div className="bebas" style={{ fontSize:18, color:s.color, lineHeight:1 }}>{s.val}</div>
+                          <div style={{ fontSize:8, color:"#636366", marginTop:2 }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Heatmap SVG */}
+                    <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+                      <svg width={W+20} height={H+16} viewBox={`0 0 ${W+20} ${H+16}`} style={{ display:"block", minWidth: W+20 }}>
+                        {/* Month labels */}
+                        {monthLabels.map((m,i)=>(
+                          <text key={i} x={20+m.col*(cellSize+cellGap)} y={10} fill="#636366" fontSize="7" fontFamily="system-ui">{m.label}</text>
+                        ))}
+                        {/* Day labels (L M M J V S D) */}
+                        {["L","","M","","V","","D"].map((l,i)=>(
+                          <text key={i} x={0} y={16+i*(cellSize+cellGap)+cellSize/2+3} fill="#636366" fontSize="6" fontFamily="system-ui">{l}</text>
+                        ))}
+                        {/* Cells */}
+                        {days.map((d,i)=>{
+                          const col = Math.floor(i/7);
+                          const row = i%7;
+                          const x = 20 + col*(cellSize+cellGap);
+                          const y = 14 + row*(cellSize+cellGap);
+                          const isToday = d.ds === new Date().toISOString().slice(0,10);
+                          return (
+                            <rect key={i} x={x} y={y} width={cellSize} height={cellSize} rx="2"
+                              fill={loadColor(d.load)}
+                              stroke={isToday ? "#C9A840" : "none"} strokeWidth={isToday?"1":"0"}
+                              opacity="0.95"/>
+                          );
+                        })}
+                      </svg>
+                    </div>
+
+                    {/* Legend */}
+                    <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:6, justifyContent:"flex-end" }}>
+                      <span style={{ fontSize:8, color:"#636366" }}>Moins</span>
+                      {["rgba(255,255,255,0.06)","#0d3a1e","#166534","#16a34a","#30D158"].map((c,i)=>(
+                        <div key={i} style={{ width:9, height:9, borderRadius:2, background:c }}/>
+                      ))}
+                      <span style={{ fontSize:8, color:"#636366" }}>Plus</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ZONE DISTRIBUTION ANALYSIS (Garmin-style) ── */}
             {(()=>{
               const sessions = (profile.sessions || []).filter(s => {
