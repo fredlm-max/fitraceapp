@@ -26812,6 +26812,248 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── BREATHING & HRV PROTOCOLS ── */}
+      {(() => {
+        const LOG_KEY = `fitrace_breathing_${profile.name}`;
+
+        const PROTOCOLS = [
+          {
+            id:"box",
+            name:"Box Breathing",
+            emoji:"📦",
+            desc:"Calme le système nerveux · Navy SEALs",
+            color:"#64D2FF",
+            phases:[
+              { name:"Inspire", dur:4, color:"#64D2FF" },
+              { name:"Retiens", dur:4, color:"var(--yellow)" },
+              { name:"Expire", dur:4, color:"#30D158" },
+              { name:"Retiens", dur:4, color:"var(--yellow)" },
+            ],
+            cycles:5,
+            benefit:"Réduit le cortisol, active le parasympathique",
+          },
+          {
+            id:"478",
+            name:"4-7-8 Sommeil",
+            emoji:"😴",
+            desc:"Endormissement rapide · Dr Andrew Weil",
+            color:"#BF5AF2",
+            phases:[
+              { name:"Inspire", dur:4, color:"#64D2FF" },
+              { name:"Retiens", dur:7, color:"var(--yellow)" },
+              { name:"Expire", dur:8, color:"#30D158" },
+            ],
+            cycles:4,
+            benefit:"Favorise l'endormissement et la récupération nocturne",
+          },
+          {
+            id:"coherence",
+            name:"Cohérence Cardiaque",
+            emoji:"❤️",
+            desc:"5.5 respirations/min · HRV optimal",
+            color:"#FF453A",
+            phases:[
+              { name:"Inspire", dur:5.5, color:"#64D2FF" },
+              { name:"Expire", dur:5.5, color:"#30D158" },
+            ],
+            cycles:6,
+            benefit:"Maximise la VRC, équilibre le système nerveux autonome",
+          },
+          {
+            id:"sigh",
+            name:"Physiological Sigh",
+            emoji:"😮‍💨",
+            desc:"Réduction stress immédiate · Huberman Lab",
+            color:"#FF9F0A",
+            phases:[
+              { name:"Double inspire", dur:2, color:"#64D2FF" },
+              { name:"Inspire +", dur:1, color:"#64D2FF" },
+              { name:"Longue expiration", dur:8, color:"#30D158" },
+            ],
+            cycles:5,
+            benefit:"Dégonfle les alvéoles, réduit le CO₂, apaisement immédiat",
+          },
+          {
+            id:"wim_hof",
+            name:"Wim Hof Boost",
+            emoji:"🧊",
+            desc:"Activation & énergie · avant l'effort",
+            color:"#30D158",
+            phases:[
+              { name:"30 inspirations rapides", dur:30, color:"#64D2FF" },
+              { name:"Expire & retiens poumons vides", dur:15, color:"var(--yellow)" },
+              { name:"Inspire profond & retiens", dur:15, color:"#FF9F0A" },
+            ],
+            cycles:3,
+            benefit:"Augmente l'énergie, alcalinise, stimule le système immunitaire",
+          },
+        ];
+
+        const [active, setActive] = React.useState(null);
+        const [phase, setPhase] = React.useState(0);
+        const [cycle, setCycle] = React.useState(0);
+        const [elapsed, setElapsed] = React.useState(0);
+        const [running, setRunning] = React.useState(false);
+        const [done, setDone] = React.useState(false);
+        const [log, setLog] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(LOG_KEY) || "[]"); } catch { return []; }
+        });
+
+        const proto = PROTOCOLS.find(p => p.id === active);
+
+        React.useEffect(() => {
+          if (!running || !proto) return;
+          const tick = setInterval(() => {
+            setElapsed(e => {
+              const newE = e + 0.1;
+              const phaseObj = proto.phases[phase];
+              if (newE >= phaseObj.dur) {
+                const nextPhase = (phase + 1) % proto.phases.length;
+                if (nextPhase === 0) {
+                  const nextCycle = cycle + 1;
+                  if (nextCycle >= proto.cycles) {
+                    clearInterval(tick);
+                    setRunning(false);
+                    setDone(true);
+                    const entry = { id: proto.id, name: proto.name, date: new Date().toISOString().slice(0,10), cycles: proto.cycles };
+                    const nextLog = [entry, ...log].slice(0,50);
+                    setLog(nextLog);
+                    localStorage.setItem(LOG_KEY, JSON.stringify(nextLog));
+                    return 0;
+                  }
+                  setCycle(nextCycle);
+                }
+                setPhase(nextPhase);
+                return 0;
+              }
+              return newE;
+            });
+          }, 100);
+          return () => clearInterval(tick);
+        }, [running, phase, cycle, proto, log]);
+
+        const startProto = (id) => {
+          setActive(id);
+          setPhase(0);
+          setCycle(0);
+          setElapsed(0);
+          setRunning(true);
+          setDone(false);
+        };
+
+        const stopProto = () => {
+          setActive(null);
+          setRunning(false);
+          setDone(false);
+          setElapsed(0);
+          setPhase(0);
+          setCycle(0);
+        };
+
+        if (active && proto) {
+          const currentPhase = proto.phases[phase];
+          const phasePct = Math.min(1, elapsed / currentPhase.dur);
+          // Circle animation
+          const circleR = 60;
+          const circum = 2 * Math.PI * circleR;
+          const isExpire = currentPhase.name.toLowerCase().includes("expire") || currentPhase.name.toLowerCase().includes("expir");
+          const animPct = isExpire ? 1 - phasePct : phasePct;
+
+          return (
+            <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:24, marginBottom:20, textAlign:"center" }}>
+              <div style={{ fontSize:11, color:"#555", marginBottom:4 }}>{proto.emoji} {proto.name.toUpperCase()}</div>
+              <div style={{ fontSize:11, color:proto.color, marginBottom:16 }}>Cycle {cycle+1}/{proto.cycles}</div>
+
+              {/* Breathing circle animation */}
+              <div style={{ position:"relative", width:160, height:160, margin:"0 auto 20px" }}>
+                <svg viewBox="0 0 160 160" style={{ transform:"rotate(-90deg)", width:160, height:160 }}>
+                  <circle cx="80" cy="80" r={circleR} fill="none" stroke="var(--bg3)" strokeWidth="6"/>
+                  <circle cx="80" cy="80" r={circleR} fill="none"
+                    stroke={currentPhase.color} strokeWidth="6" strokeLinecap="round"
+                    strokeDasharray={`${animPct * circum} ${circum}`}
+                    style={{ transition:"stroke-dasharray 0.1s linear" }}/>
+                </svg>
+                <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                  <div style={{ fontSize:13, fontWeight:800, color:currentPhase.color }}>{currentPhase.name}</div>
+                  <div style={{ fontSize:26, fontWeight:900, color:"#fff", margin:"4px 0" }}>
+                    {Math.max(0, Math.ceil(currentPhase.dur - elapsed))}s
+                  </div>
+                  <div style={{ fontSize:10, color:"#555" }}>{currentPhase.dur}s total</div>
+                </div>
+              </div>
+
+              {/* Phase indicators */}
+              <div style={{ display:"flex", justifyContent:"center", gap:8, marginBottom:20 }}>
+                {proto.phases.map((p,i) => (
+                  <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                    <div style={{ width:6, height:6, borderRadius:"50%", background: i===phase ? p.color : "#333", transition:"background 0.3s" }}/>
+                    <div style={{ fontSize:9, color: i===phase ? p.color : "#444" }}>{p.dur}s</div>
+                  </div>
+                ))}
+              </div>
+
+              {done ? (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:24, marginBottom:8 }}>✅</div>
+                  <div style={{ fontSize:14, fontWeight:800, color:"#30D158", marginBottom:4 }}>Session terminée !</div>
+                  <div style={{ fontSize:12, color:"#888" }}>{proto.benefit}</div>
+                </div>
+              ) : (
+                <button onClick={() => setRunning(r => !r)}
+                  style={{ background:"var(--bg3)", border:"none", borderRadius:12, padding:"10px 24px", color:"#888", fontSize:13, cursor:"pointer", marginBottom:12 }}>
+                  {running ? "⏸ Pause" : "▶ Reprendre"}
+                </button>
+              )}
+
+              <br/>
+              <button onClick={stopProto}
+                style={{ background:"transparent", border:"none", color:"#555", fontSize:12, cursor:"pointer" }}>
+                ← Retour
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:11, color:"#555" }}>WHOOP · HUBERMAN LAB · COHÉRENCE CARDIAQUE</div>
+              <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🫁 Breathing Protocols</div>
+            </div>
+
+            {log.length > 0 && (
+              <div style={{ background:"var(--bg3)", borderRadius:10, padding:"7px 14px", marginBottom:12, fontSize:11, color:"#666" }}>
+                Dernière session: <strong style={{ color:"#fff" }}>{log[0].name}</strong> · {log[0].date}
+              </div>
+            )}
+
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {PROTOCOLS.map(p => {
+                const donesToday = log.filter(e => e.date === new Date().toISOString().slice(0,10) && e.id === p.id).length;
+                return (
+                  <div key={p.id} style={{ background:"var(--bg3)", border:`1px solid ${donesToday ? p.color+"44" : "#333"}`, borderRadius:14, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      <div style={{ width:42, height:42, background:`${p.color}22`, border:`2px solid ${p.color}44`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                        {p.emoji}
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{p.name} {donesToday > 0 ? <span style={{ fontSize:9, color:p.color }}>✓ {donesToday}×</span> : ""}</div>
+                        <div style={{ fontSize:10, color:"#666", marginBottom:2 }}>{p.desc}</div>
+                        <div style={{ fontSize:10, color:p.color }}>{p.cycles} cycles · {p.phases.reduce((s,ph)=>s+ph.dur,0)*p.cycles}s total</div>
+                      </div>
+                    </div>
+                    <button onClick={() => startProto(p.id)}
+                      style={{ background:p.color, border:"none", borderRadius:10, padding:"8px 14px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
+                      ▶ Start
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── RECOVERY PROTOCOL WIZARD ── */}
       {(() => {
         const KEY = `fitrace_recovery_log_${profile.name}`;
