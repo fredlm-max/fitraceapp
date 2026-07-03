@@ -22955,6 +22955,33 @@ const sessions = profile.sessions || [];
                               {s.trimp && <span style={{ fontSize: 9, color: "#C9A840", background: "rgba(201,168,64,0.08)", borderRadius: 5, padding: "2px 7px" }}>TRIMP {s.trimp}</span>}
                               {s.ressenti && <span style={{ fontSize: 9, color: ressentiColor, background: `${ressentiColor}12`, borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>{s.ressenti === "bien" ? "Calibré" : s.ressenti === "facile" ? "Facile" : "Dur"}</span>}
                               {s.douleurs && s.douleurs !== "Aucune douleur" && <span style={{ fontSize: 9, color: "var(--red)", background: "rgba(255,71,71,0.08)", borderRadius: 5, padding: "2px 7px" }}>⚠️ {s.douleurs}</span>}
+                              {/* Training Effect badge */}
+                              {(()=>{
+                                const rpe = s.rpe || s.difficulte || 5;
+                                const dur = s.duree || s.tempsReel || 30;
+                                const type = s.type || "";
+                                // Aerobic effect: high for zone2/hybride at moderate-high RPE and duration
+                                const aerobicBase = type.includes("zone2") ? 1.2 : type.includes("hybride") ? 1.0 : type.includes("qualite") ? 0.7 : type.includes("force") ? 0.3 : 0.8;
+                                const aerobic = Math.min(5, Math.max(1, +(aerobicBase + (rpe/10)*2 + (dur/60)*0.8).toFixed(1)));
+                                // Anaerobic effect: high for quality/force at high RPE
+                                const anaerobicBase = type.includes("qualite") ? 1.5 : type.includes("force") ? 1.3 : type.includes("hybride") ? 0.8 : type.includes("zone2") ? 0.1 : 0.5;
+                                const anaerobic = Math.min(5, Math.max(0, +(anaerobicBase + (Math.max(0,rpe-6)/4)*2.5).toFixed(1)));
+                                const aerColor = aerobic >= 4 ? "#FF453A" : aerobic >= 3 ? "#FF9F0A" : aerobic >= 2 ? "#30D158" : "#8E8E93";
+                                const anaColor = anaerobic >= 3 ? "#FF453A" : anaerobic >= 2 ? "#FF9F0A" : anaerobic >= 1 ? "#30D158" : "#636366";
+                                return (
+                                  <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
+                                    <span style={{ fontSize:9, color:"#555", textTransform:"uppercase", letterSpacing:0.5 }}>TE</span>
+                                    <span style={{ fontSize:9, fontWeight:700, color:aerColor, background:`${aerColor}18`, borderRadius:5, padding:"2px 6px" }}>
+                                      A {aerobic.toFixed(1)}
+                                    </span>
+                                    {anaerobic >= 1 && (
+                                      <span style={{ fontSize:9, fontWeight:700, color:anaColor, background:`${anaColor}18`, borderRadius:5, padding:"2px 6px" }}>
+                                        An {anaerobic.toFixed(1)}
+                                      </span>
+                                    )}
+                                  </span>
+                                );
+                              })()}
                             </div>
 
                             {/* Expanded details */}
