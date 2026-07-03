@@ -6311,6 +6311,122 @@ JSON:
               );
             })()}
 
+            {/* ── HYROX RACE READINESS SCORE ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 2) return null;
+
+              // ── Factor 1: Fitness (CTL-based) ──
+              const kCTL = 1 - Math.exp(-1/42);
+              const kATL = 1 - Math.exp(-1/7);
+              let ctl = 0, atl = 0;
+              const todayD = new Date(); todayD.setHours(0,0,0,0);
+              const orig = new Date(todayD); orig.setDate(orig.getDate() - 56);
+              for (let i = 0; i <= 56; i++) {
+                const d = new Date(orig); d.setDate(d.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const load = sessions.filter(s=>s.date?.slice(0,10)===ds).reduce((a,s)=>a+(s.rpe||5)*(s.duree||30),0);
+                ctl = ctl + kCTL*(load - ctl);
+                atl = atl + kATL*(load - atl);
+              }
+              const fitnessScore = Math.min(100, Math.round(ctl / 4));
+
+              // ── Factor 2: Station benchmarks ──
+              const STATIONS_IDS = ["skierg","sled_push","sled_pull","burpee","rower","farmers","sandbag","wallball"];
+              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              let benches = {};
+              try { benches = JSON.parse(localStorage.getItem(benchKey)||"{}"); } catch {}
+              const benchCount = STATIONS_IDS.filter(id => benches[id]?.time).length;
+              const benchScore = Math.round((benchCount / STATIONS_IDS.length) * 100);
+
+              // ── Factor 3: Zone balance (last 28 days) ──
+              const last28 = sessions.filter(s=>(Date.now()-new Date(s.date))<=28*86400000);
+              const ZONE_TYPES = ["running_zone2","running_qualite","force_stations","hybride_compromis","mobilite"];
+              const presentZones = new Set(last28.map(s=>s.type));
+              const zoneScore = Math.round((ZONE_TYPES.filter(z=>presentZones.has(z)).length / ZONE_TYPES.length) * 100);
+
+              // ── Factor 4: Consistency (last 21 days) ──
+              const last21Days = Array.from({length:21},(_,i)=>{const d=new Date(todayD);d.setDate(d.getDate()-i);return d.toISOString().slice(0,10);});
+              const activeDays = last21Days.filter(d=>sessions.some(s=>s.date?.slice(0,10)===d)).length;
+              const consistencyScore = Math.min(100, Math.round((activeDays / 12) * 100));
+
+              // ── Composite ──
+              const WEIGHTS = [0.30, 0.25, 0.25, 0.20];
+              const FACTORS = [fitnessScore, benchScore, zoneScore, consistencyScore];
+              const overall = Math.round(FACTORS.reduce((sum,v,i)=>sum+v*WEIGHTS[i],0));
+
+              const FACTOR_LABELS = [
+                { label:"Condition physique", icon:"💪", score:fitnessScore, tip:"CTL sur 6 semaines" },
+                { label:"Stations HYROX",     icon:"🏋️", score:benchScore,   tip:`${benchCount}/8 benchmarkées` },
+                { label:"Équilibre des zones", icon:"⚖️", score:zoneScore,    tip:"Diversité d'entraînement" },
+                { label:"Régularité",          icon:"📅", score:consistencyScore, tip:`${activeDays}/21 jours actifs` },
+              ];
+
+              const scoreColor = overall >= 80 ? "#30D158" : overall >= 65 ? "#C9A840" : overall >= 45 ? "#FF9F0A" : "#FF453A";
+              const scoreLabel = overall >= 80 ? "Prêt !" : overall >= 65 ? "En bonne voie" : overall >= 45 ? "À développer" : "Fondations à poser";
+              const weakest = FACTOR_LABELS.reduce((a,b)=>a.score<b.score?a:b);
+
+              const circumference = 2 * Math.PI * 44;
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px", marginBottom:12, border:`1px solid ${scoreColor}25` }}>
+                  {/* Title */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1, marginBottom:2 }}>HYROX Readiness</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:scoreColor }}>{scoreLabel}</div>
+                    </div>
+                    {/* Score ring */}
+                    <div style={{ position:"relative", width:72, height:72 }}>
+                      <svg width="72" height="72" style={{ transform:"rotate(-90deg)" }}>
+                        <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+                        <circle cx="36" cy="36" r="30" fill="none" stroke={scoreColor} strokeWidth="7"
+                          strokeDasharray={`${2*Math.PI*30}`}
+                          strokeDashoffset={`${2*Math.PI*30*(1-overall/100)}`}
+                          strokeLinecap="round"
+                          style={{ filter:`drop-shadow(0 0 8px ${scoreColor})`, transition:"stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)" }}
+                        />
+                      </svg>
+                      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                        <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:22, color:"#fff", lineHeight:1 }}>{overall}</div>
+                        <div style={{ fontSize:8, color:"#555" }}>/100</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4 factors */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {FACTOR_LABELS.map((f,i) => {
+                      const fColor = f.score >= 75 ? "#30D158" : f.score >= 50 ? "#C9A840" : "#FF9F0A";
+                      return (
+                        <div key={i}>
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                              <span style={{ fontSize:11 }}>{f.icon}</span>
+                              <span style={{ fontSize:11, color:"#8E8E93" }}>{f.label}</span>
+                              <span style={{ fontSize:9, color:"#3A3A3C" }}>· {f.tip}</span>
+                            </div>
+                            <span style={{ fontSize:11, fontWeight:700, color:fColor }}>{f.score}%</span>
+                          </div>
+                          <div style={{ height:4, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${f.score}%`, background:fColor, borderRadius:2, transition:"width 1s cubic-bezier(.4,0,.2,1)", boxShadow:`0 0 6px ${fColor}60` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Weakest link advice */}
+                  <div style={{ marginTop:12, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 12px", display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:16 }}>💡</span>
+                    <span style={{ fontSize:11, color:"#8E8E93", lineHeight:1.4 }}>
+                      Priorité : améliore <strong style={{color:"#fff"}}>{weakest.label}</strong> ({weakest.score}%) pour progresser le plus vite.
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ACTIVITY RINGS — Apple Watch style ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
