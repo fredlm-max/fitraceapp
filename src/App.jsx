@@ -31145,6 +31145,220 @@ JSON: {
             );
           })()}
 
+          {/* ── DAILY NUTRITION LOG ── */}
+          {(() => {
+            const KEY = `fitrace_nutlog_${profile.name}`;
+            const today = new Date().toISOString().slice(0,10);
+
+            const [log, setLog] = React.useState(() => {
+              try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+            });
+            const [viewDate, setViewDate] = React.useState(today);
+            const [showForm, setShowForm] = React.useState(false);
+            const [form, setForm] = React.useState({ name:"", meal:"breakfast", kcal:0, prot:0, carbs:0, fat:0 });
+
+            const bw = parseFloat(profile.poids) || 70;
+            const goal = parseFloat(profile.objectifKcal) || Math.round(bw * 32);
+            const protGoal = Math.round(bw * 1.8);
+            const carbGoal = Math.round((goal * 0.45) / 4);
+            const fatGoal = Math.round((goal * 0.25) / 9);
+
+            const MEALS = [
+              { id:"breakfast", label:"Petit-déjeuner", emoji:"🌅" },
+              { id:"lunch", label:"Déjeuner", emoji:"☀️" },
+              { id:"snack", label:"Collation", emoji:"🍎" },
+              { id:"dinner", label:"Dîner", emoji:"🌙" },
+              { id:"post", label:"Post-entraînement", emoji:"💪" },
+            ];
+
+            const dayLog = log[viewDate] || [];
+            const totals = dayLog.reduce((t,e) => ({
+              kcal: t.kcal+(e.kcal||0), prot: t.prot+(e.prot||0),
+              carbs: t.carbs+(e.carbs||0), fat: t.fat+(e.fat||0)
+            }), { kcal:0, prot:0, carbs:0, fat:0 });
+
+            const addEntry = () => {
+              const entry = { ...form, id: Date.now() };
+              const updated = { ...log, [viewDate]: [...dayLog, entry] };
+              setLog(updated);
+              localStorage.setItem(KEY, JSON.stringify(updated));
+              setForm({ name:"", meal:"breakfast", kcal:0, prot:0, carbs:0, fat:0 });
+              setShowForm(false);
+            };
+
+            const removeEntry = (id) => {
+              const updated = { ...log, [viewDate]: dayLog.filter(e => e.id !== id) };
+              setLog(updated);
+              localStorage.setItem(KEY, JSON.stringify(updated));
+            };
+
+            const pct = (val, g) => Math.min(100, g > 0 ? Math.round(val/g*100) : 0);
+            const macroColor = (val, goal) => val > goal*1.1 ? "#FF453A" : val >= goal*0.9 ? "#30D158" : "var(--yellow)";
+
+            const prevDay = () => {
+              const d = new Date(viewDate); d.setDate(d.getDate()-1);
+              setViewDate(d.toISOString().slice(0,10));
+            };
+            const nextDay = () => {
+              const d = new Date(viewDate); d.setDate(d.getDate()+1);
+              if (d.toISOString().slice(0,10) <= today) setViewDate(d.toISOString().slice(0,10));
+            };
+
+            const QUICK_ADD = [
+              { name:"Riz cuit (100g)", kcal:130, prot:2.7, carbs:28, fat:0.3, meal:"lunch" },
+              { name:"Blanc de poulet (100g)", kcal:165, prot:31, carbs:0, fat:3.6, meal:"lunch" },
+              { name:"Œuf entier", kcal:78, prot:6, carbs:0.6, fat:5, meal:"breakfast" },
+              { name:"Banane", kcal:89, prot:1.1, carbs:23, fat:0.3, meal:"snack" },
+              { name:"Whey protein (30g)", kcal:120, prot:24, carbs:3, fat:2, meal:"post" },
+              { name:"Flocons d'avoine (80g)", kcal:300, prot:10, carbs:54, fat:5, meal:"breakfast" },
+            ];
+
+            return (
+              <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                {/* Header */}
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                  <div>
+                    <div style={{ fontSize:11, color:"#555" }}>MYFITNESSPAL · JOURNAL ALIMENTAIRE</div>
+                    <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🥗 Nutrition Log</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <button onClick={prevDay} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:"#888", cursor:"pointer", fontSize:14 }}>‹</button>
+                    <div style={{ fontSize:11, color:"#aaa", minWidth:70, textAlign:"center" }}>
+                      {viewDate === today ? "Aujourd'hui" : viewDate.slice(5)}
+                    </div>
+                    <button onClick={nextDay} disabled={viewDate === today}
+                      style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color: viewDate===today?"#333":"#888", cursor:"pointer", fontSize:14 }}>›</button>
+                  </div>
+                </div>
+
+                {/* Calorie ring */}
+                <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:14 }}>
+                  <div style={{ position:"relative", width:72, height:72, flexShrink:0 }}>
+                    <svg viewBox="0 0 72 72" style={{ transform:"rotate(-90deg)" }}>
+                      <circle cx="36" cy="36" r="30" fill="none" stroke="var(--bg3)" strokeWidth="8"/>
+                      <circle cx="36" cy="36" r="30" fill="none"
+                        stroke={totals.kcal > goal*1.05 ? "#FF453A" : "var(--yellow)"}
+                        strokeWidth="8" strokeLinecap="round"
+                        strokeDasharray={`${Math.min(188.5, (totals.kcal/goal)*188.5)} 188.5`}/>
+                    </svg>
+                    <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                      <div style={{ fontSize:14, fontWeight:900, color:"#fff" }}>{totals.kcal}</div>
+                      <div style={{ fontSize:8, color:"#666" }}>kcal</div>
+                    </div>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#888", marginBottom:2 }}>
+                      <span>Objectif: <strong style={{ color:"#fff" }}>{goal} kcal</strong></span>
+                      <span style={{ color: totals.kcal > goal ? "#FF453A" : "#30D158" }}>
+                        {totals.kcal > goal ? `+${totals.kcal-goal}` : `${goal-totals.kcal} restants`}
+                      </span>
+                    </div>
+                    {[
+                      { label:"Protéines", val:totals.prot, goal:protGoal, unit:"g", color:"#FF6B35" },
+                      { label:"Glucides", val:totals.carbs, goal:carbGoal, unit:"g", color:"#FFD700" },
+                      { label:"Lipides", val:totals.fat, goal:fatGoal, unit:"g", color:"#64D2FF" },
+                    ].map((m,i) => (
+                      <div key={i} style={{ marginBottom:4 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#666", marginBottom:2 }}>
+                          <span>{m.label}</span>
+                          <span style={{ color: macroColor(m.val, m.goal), fontWeight:700 }}>{m.val}g / {m.goal}g</span>
+                        </div>
+                        <div style={{ height:5, background:"var(--bg3)", borderRadius:3 }}>
+                          <div style={{ height:"100%", width:`${pct(m.val, m.goal)}%`, background:m.color, borderRadius:3 }}/>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Meal groups */}
+                {MEALS.map(meal => {
+                  const entries = dayLog.filter(e => e.meal === meal.id);
+                  const mealKcal = entries.reduce((s,e) => s+(e.kcal||0), 0);
+                  if (entries.length === 0 && !showForm) return null;
+                  return (
+                    <div key={meal.id} style={{ marginBottom:10 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#666", marginBottom:4 }}>
+                        <span>{meal.emoji} {meal.label}</span>
+                        <span>{mealKcal} kcal</span>
+                      </div>
+                      {entries.map(e => (
+                        <div key={e.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--bg3)", borderRadius:10, padding:"7px 12px", marginBottom:3 }}>
+                          <div>
+                            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>{e.name}</div>
+                            <div style={{ fontSize:10, color:"#666" }}>P:{e.prot}g C:{e.carbs}g L:{e.fat}g</div>
+                          </div>
+                          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                            <span style={{ fontSize:12, fontWeight:700, color:"var(--yellow)" }}>{e.kcal} kcal</span>
+                            <button onClick={() => removeEntry(e.id)}
+                              style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:14, cursor:"pointer" }}>✕</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+
+                {/* Quick add */}
+                {!showForm && (
+                  <>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>AJOUT RAPIDE</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:12 }}>
+                      {QUICK_ADD.map((q,i) => (
+                        <button key={i} onClick={() => {
+                          const entry = { ...q, id: Date.now() };
+                          const updated = { ...log, [viewDate]: [...dayLog, entry] };
+                          setLog(updated);
+                          localStorage.setItem(KEY, JSON.stringify(updated));
+                        }}
+                          style={{ background:"var(--bg3)", border:"1px solid #333", borderRadius:8, padding:"5px 10px", color:"#aaa", fontSize:10, cursor:"pointer", textAlign:"left" }}>
+                          {q.name}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => setShowForm(true)}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px dashed #444", borderRadius:12, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>
+                      + Ajouter un aliment
+                    </button>
+                  </>
+                )}
+
+                {/* Form */}
+                {showForm && (
+                  <div style={{ background:"var(--bg3)", borderRadius:14, padding:14 }}>
+                    <input value={form.name} onChange={e => setForm(f => ({...f, name:e.target.value}))} placeholder="Aliment / plat"
+                      style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:13, marginBottom:8, boxSizing:"border-box" }}/>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6, marginBottom:8 }}>
+                      {[{f:"kcal",label:"kcal"},{f:"prot",label:"Prot(g)"},{f:"carbs",label:"Gluc(g)"},{f:"fat",label:"Lip(g)"}].map(({f,label}) => (
+                        <div key={f}>
+                          <div style={{ fontSize:9, color:"#666", marginBottom:3 }}>{label}</div>
+                          <input type="number" min="0" value={form[f]} onChange={e => setForm(prev => ({...prev, [f]:parseFloat(e.target.value)||0}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 6px", color:"#fff", fontSize:12, boxSizing:"border-box", textAlign:"center" }}/>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
+                      {MEALS.map(m => (
+                        <button key={m.id} onClick={() => setForm(f => ({...f, meal:m.id}))}
+                          style={{ background: form.meal===m.id ? "var(--yellow)" : "var(--bg2)", border:"none", borderRadius:8, padding:"4px 10px", color: form.meal===m.id ? "#000":"#888", fontSize:11, cursor:"pointer", fontWeight: form.meal===m.id ? 700:400 }}>
+                          {m.emoji} {m.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => setShowForm(false)}
+                        style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                      <button onClick={addEntry} disabled={!form.name.trim()}
+                        style={{ flex:2, background: form.name.trim() ? "var(--yellow)" : "#333", border:"none", borderRadius:10, padding:"10px 0", color: form.name.trim() ? "#000":"#555", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── MACRO HISTORY CHART ── */}
           {(() => {
             const poids = profile.poids || 70;
