@@ -3249,54 +3249,158 @@ function PaceCalcWidget({ profile }) {
   );
 }
 
-function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, haptic, profile }) {
-  const [ql, setQl] = React.useState({ water: dailyData.hydration, weight: dailyData.poidsJour, hrv: dailyData.hrv });
+function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, haptic, profile, onUpdateProfile }) {
+  const SESSION_TYPES = [
+    { key: "running_zone2",    label: "Zone 2",   icon: "🏃", color: "#007AFF", sub: "Endurance fondamentale" },
+    { key: "running_qualite",  label: "Qualité",  icon: "⚡", color: "#FF9F0A", sub: "Fractionné / VMA" },
+    { key: "force_stations",   label: "Force",    icon: "🏋️", color: "#C9A840", sub: "Stations HYROX" },
+    { key: "hybride_compromis",label: "Hybride",  icon: "🔀", color: "#BF5AF2", sub: "Run + stations" },
+    { key: "mobilite",         label: "Mobilité", icon: "🧘", color: "#30D158", sub: "Récup active" },
+    { key: "repos",            label: "Repos",    icon: "😴", color: "#636366", sub: "Jour off" },
+  ];
+  const DURATIONS = [20, 30, 45, 60, 75, 90];
+
+  const [step, setStep] = React.useState(0); // 0=type 1=details 2=done
+  const [type, setType] = React.useState(null);
+  const [duree, setDuree] = React.useState(45);
+  const [rpe, setRpe] = React.useState(6);
+  const [notes, setNotes] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  const chosen = SESSION_TYPES.find(s => s.key === type);
+
   const save = async () => {
-    haptic([10,30,10]);
-    setDailyData(d => ({ ...d, hydration: ql.water, poidsJour: ql.weight, hrv: ql.hrv }));
-    setShowQuickLog(false);
-    showToast("✅ Données enregistrées", "success", 2000);
+    if (!type) return;
+    setSaving(true);
+    haptic([10, 30, 10]);
+    const today = new Date().toISOString().slice(0, 10);
+    const newSession = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      type,
+      titre: chosen?.label + (notes ? ` · ${notes.slice(0,30)}` : ""),
+      duree,
+      rpe,
+      difficulty: rpe,
+      note: notes,
+      source: "quick_log",
+    };
+    const updatedSessions = [...(profile.sessions || []), newSession];
+    await onUpdateProfile({ ...profile, sessions: updatedSessions });
+    setSaving(false);
+    setStep(2);
+    setTimeout(() => { setShowQuickLog(false); showToast(`✅ Séance "${chosen?.label}" enregistrée`, "success", 2500); }, 900);
   };
+
+  const RPE_LABELS = ["","Très léger","Léger","Modéré","Modéré+","Difficile","Difficile+","Dur","Très dur","Maximal","Max absolu"];
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 97, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }} onClick={() => setShowQuickLog(false)} />
-      <div style={{ position: "relative", background: "var(--bg2)", borderRadius: "24px 24px 0 0", padding: "20px 20px calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--white)" }}>⚡ Log rapide</div>
-          <div style={{ fontSize: 10, color: "#8E8E93" }}>Enregistrement auto</div>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }} onClick={() => setShowQuickLog(false)} />
+      <div className="slide-up" style={{ position: "relative", background: "#0d0d0d", borderRadius: "24px 24px 0 0", padding: "0 0 calc(env(safe-area-inset-bottom,16px) + 80px)", borderTop: "1px solid rgba(255,255,255,0.08)", maxHeight: "85vh", overflowY: "auto" }}>
+
+        {/* Handle */}
+        <div style={{ padding: "14px 0 0", textAlign: "center" }}>
+          <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.15)", borderRadius: 99, margin: "0 auto" }} />
         </div>
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>💧 Eau</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: ql.water >= 8 ? "var(--green)" : "var(--yellow)" }}>{ql.water}/8 verres</span>
-          </div>
-          <div style={{ display: "flex", gap: 5 }}>
-            {Array.from({ length: 8 }, (_, i) => (
-              <button key={i} onClick={() => { haptic([5]); setQl(q => ({ ...q, water: i < q.water ? i : i + 1 })); }}
-                style={{ flex: 1, height: 32, borderRadius: 8, border: `1.5px solid ${i < ql.water ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.1)"}`, background: i < ql.water ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.05)", cursor: "pointer", fontSize: 12 }}>
-                {i < ql.water ? "💧" : "○"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 6px" }}>
           <div>
-            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 600, marginBottom: 6 }}>⚖️ Poids (kg)</div>
-            <input type="number" step="0.1" min="40" max="150" value={ql.weight} onChange={e => setQl(q => ({ ...q, weight: e.target.value }))}
-              placeholder={`${profile.poids||75}`}
-              style={{ width: "100%", background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
+            <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>
+              {step === 0 ? "LOG UNE SÉANCE" : step === 1 ? "DÉTAILS" : "ENREGISTRÉ ✓"}
+            </div>
+            {step === 1 && chosen && (
+              <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{chosen.icon} {chosen.label} · {chosen.sub}</div>
+            )}
           </div>
-          <div>
-            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 600, marginBottom: 6 }}>💓 VFC (ms)</div>
-            <input type="number" min="20" max="120" step="1" value={ql.hrv} onChange={e => setQl(q => ({ ...q, hrv: e.target.value }))}
-              placeholder="Ex: 65"
-              style={{ width: "100%", background: "rgba(255,255,255,0.08)", border: "1.5px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "10px 12px", color: "var(--white)", fontSize: 15, outline: "none", fontFamily: "'DM Sans',sans-serif", boxSizing: "border-box" }} />
-          </div>
+          <button onClick={() => setShowQuickLog(false)}
+            style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", color: "#8E8E93", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
-        <button onClick={save}
-          style={{ width: "100%", padding: "15px", borderRadius: 16, border: "none", background: "linear-gradient(135deg, var(--yellow), #b8cc38)", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-          ✅ Enregistrer
-        </button>
+
+        <div style={{ padding: "10px 20px" }}>
+
+          {/* ÉTAPE 0 : Choix du type */}
+          {step === 0 && (
+            <div>
+              <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 10 }}>Quel type de séance ?</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {SESSION_TYPES.map(s => (
+                  <button key={s.key} onClick={async () => { haptic([8]); if (s.key === "repos") { setType(s.key); setSaving(true); const today2 = new Date().toISOString().slice(0,10); const newS = { id:Date.now(), date:new Date().toISOString(), type:"repos", titre:"Repos", duree:0, rpe:1, difficulty:1, source:"quick_log" }; await onUpdateProfile({ ...profile, sessions:[...(profile.sessions||[]),newS] }); setSaving(false); setShowQuickLog(false); showToast("😴 Jour de repos enregistré","success",2000); return; } setType(s.key); setStep(1); }}
+                    style={{ background: type === s.key ? `${s.color}18` : "rgba(255,255,255,0.03)", border: `1.5px solid ${type === s.key ? s.color : "rgba(255,255,255,0.07)"}`, borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>{s.icon}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--white)", lineHeight: 1 }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: "#636366", marginTop: 3 }}>{s.sub}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 1 : Durée + RPE */}
+          {step === 1 && (
+            <div>
+              {/* Durée */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 10 }}>Durée</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {DURATIONS.map(d => (
+                    <button key={d} onClick={() => { haptic([5]); setDuree(d); }}
+                      style={{ flex: "1 1 calc(33% - 6px)", minWidth: 60, background: duree === d ? "rgba(201,168,64,0.15)" : "rgba(255,255,255,0.04)", border: `1.5px solid ${duree === d ? "var(--yellow)" : "rgba(255,255,255,0.08)"}`, borderRadius: 12, padding: "10px 0", color: duree === d ? "var(--yellow)" : "#8E8E93", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      {d}min
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* RPE */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>Intensité perçue (RPE)</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: rpe <= 3 ? "#30D158" : rpe <= 6 ? "var(--yellow)" : "#FF453A" }}>{rpe}/10 · {RPE_LABELS[rpe]}</div>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[1,2,3,4,5,6,7,8,9,10].map(v => {
+                    const col = v <= 3 ? "#30D158" : v <= 6 ? "#FF9F0A" : "#FF453A";
+                    return (
+                      <button key={v} onClick={() => { haptic([5]); setRpe(v); }}
+                        style={{ flex: 1, height: 36, borderRadius: 8, border: "none", background: v <= rpe ? col : "rgba(255,255,255,0.05)", cursor: "pointer", transition: "background 0.1s", fontSize: 10, color: v <= rpe ? "#000" : "#444", fontWeight: 700 }}>
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Note optionnelle */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, marginBottom: 8 }}>Note (optionnel)</div>
+                <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ex: 8×400m, sensations top..." maxLength={60}
+                  style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12, padding: "11px 14px", color: "var(--white)", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              </div>
+
+              {/* Boutons */}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setStep(0)} style={{ flex: 1, padding: "13px", borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "#8E8E93", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>← Retour</button>
+                <button onClick={save} disabled={saving}
+                  style={{ flex: 2, padding: "13px", borderRadius: 14, border: "none", background: saving ? "rgba(201,168,64,0.3)" : "var(--yellow)", color: "#000", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1 }}>
+                  {saving ? "…" : "ENREGISTRER ✓"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ÉTAPE 2 : Confirmation */}
+          {step === 2 && (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+              <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)", letterSpacing: 1 }}>SÉANCE LOGGUÉE</div>
+              <div style={{ fontSize: 13, color: "#8E8E93", marginTop: 6 }}>{chosen?.icon} {chosen?.label} · {duree}min · RPE {rpe}/10</div>
+              <div style={{ fontSize: 11, color: "#636366", marginTop: 4 }}>Apparaîtra dans ta progression</div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
@@ -22352,7 +22456,7 @@ const sessions = profile.sessions || [];
       </button>
 
       {/* Quick Log Modal */}
-      {showQuickLog && <QuickLogModal dailyData={dailyData} setDailyData={setDailyData} setShowQuickLog={setShowQuickLog} showToast={showToast} haptic={haptic} profile={profile} />}
+      {showQuickLog && <QuickLogModal dailyData={dailyData} setDailyData={setDailyData} setShowQuickLog={setShowQuickLog} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
 
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
