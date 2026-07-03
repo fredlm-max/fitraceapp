@@ -6311,6 +6311,115 @@ JSON:
               );
             })()}
 
+            {/* ── RACE COUNTDOWN + PERIODIZATION TIMELINE ── */}
+            {(() => {
+              if (!profile.raceDate) return null;
+              const today = new Date(); today.setHours(0,0,0,0);
+              const raceDay = new Date(profile.raceDate); raceDay.setHours(0,0,0,0);
+              const daysLeft = Math.max(0, Math.ceil((raceDay - today) / 86400000));
+              const totalWeeks = Math.ceil(daysLeft / 7);
+              if (daysLeft > 365) return null; // sanity — don't show for far-future races
+
+              // Training blocks
+              const BLOCKS = [
+                { name:"Fondation",   weeks:null, color:"#30D158", icon:"🌱", desc:"Base aérobie, mobilité, habitudes" },
+                { name:"Construction",weeks:null, color:"#007AFF", icon:"🔨", desc:"Volume + stations HYROX progressives" },
+                { name:"Spécifique", weeks:null, color:"#C9A840", icon:"⚡", desc:"Simulations race, intervalles HYROX" },
+                { name:"Affûtage",   weeks:1,    color:"#FF9F0A", icon:"🎯", desc:"Réduction charge, activation" },
+              ];
+
+              // Assign week counts proportionally
+              if (totalWeeks >= 8) {
+                BLOCKS[0].weeks = Math.max(2, Math.round(totalWeeks * 0.3));
+                BLOCKS[1].weeks = Math.max(2, Math.round(totalWeeks * 0.35));
+                BLOCKS[2].weeks = totalWeeks - BLOCKS[0].weeks - BLOCKS[1].weeks - 1;
+                BLOCKS[3].weeks = 1;
+              } else if (totalWeeks >= 4) {
+                BLOCKS[0].weeks = 1; BLOCKS[1].weeks = Math.max(1, totalWeeks - 3); BLOCKS[2].weeks = 1; BLOCKS[3].weeks = 1;
+              } else {
+                BLOCKS[0].weeks = 0; BLOCKS[1].weeks = 0; BLOCKS[2].weeks = Math.max(0, totalWeeks - 1); BLOCKS[3].weeks = 1;
+              }
+
+              // Current block
+              let weeksLeft = totalWeeks;
+              let currentBlock = BLOCKS[0];
+              let blockPct = 0;
+              let weekInBlock = 0;
+              for (const b of [...BLOCKS].reverse()) {
+                if (weeksLeft <= b.weeks) { currentBlock = b; weekInBlock = b.weeks - weeksLeft; blockPct = b.weeks > 0 ? weekInBlock / b.weeks : 1; break; }
+                weeksLeft -= b.weeks;
+              }
+              if (daysLeft === 0) { currentBlock = { name:"RACE DAY", icon:"🏁", color:"#FF453A", desc:"C'est le grand jour !" }; blockPct = 1; }
+
+              const raceStr = raceDay.toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" });
+              const urgencyColor = daysLeft <= 7 ? "#FF453A" : daysLeft <= 21 ? "#FF9F0A" : daysLeft <= 42 ? "#C9A840" : "#30D158";
+
+              return (
+                <div style={{ borderRadius:18, overflow:"hidden", marginBottom:12, border:`1px solid ${currentBlock.color}30` }}>
+                  {/* Hero countdown */}
+                  <div style={{ background:`linear-gradient(135deg, ${currentBlock.color}18 0%, rgba(0,0,0,0) 100%)`, padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1 }}>HYROX Race Day</div>
+                      <div style={{ fontSize:12, color:"#8E8E93", marginBottom:4 }}>{raceStr}</div>
+                      <div style={{ display:"flex", alignItems:"baseline", gap:4 }}>
+                        <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:48, color:urgencyColor, lineHeight:1, filter:`drop-shadow(0 0 12px ${urgencyColor}60)` }}>
+                          {daysLeft === 0 ? "GO" : daysLeft}
+                        </div>
+                        {daysLeft > 0 && <div style={{ fontSize:14, color:"#555", marginBottom:4 }}>jours</div>}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:32 }}>{currentBlock.icon}</div>
+                      <div style={{ fontSize:10, color:currentBlock.color, fontWeight:700, marginTop:4 }}>{currentBlock.name}</div>
+                      <div style={{ fontSize:9, color:"#555" }}>Phase actuelle</div>
+                    </div>
+                  </div>
+
+                  {/* Progress timeline */}
+                  <div style={{ background:"#1C1C1E", padding:"12px 16px" }}>
+                    <div style={{ display:"flex", gap:3, marginBottom:8 }}>
+                      {BLOCKS.filter(b=>b.weeks>0).map((b,i) => {
+                        const isActive = b.name === currentBlock.name;
+                        const isPast = BLOCKS.filter(x=>x.weeks>0).indexOf(b) < BLOCKS.filter(x=>x.weeks>0).indexOf(BLOCKS.find(x=>x.name===currentBlock.name));
+                        return (
+                          <div key={i} style={{ flex:b.weeks, height:6, borderRadius:3, background: isPast ? `${b.color}80` : isActive ? b.color : "rgba(255,255,255,0.08)", boxShadow: isActive ? `0 0 8px ${b.color}` : "none", transition:"all 0.5s" }} />
+                        );
+                      })}
+                      <div style={{ width:8, height:6, borderRadius:3, background: daysLeft===0 ? "#FF453A" : "rgba(255,69,58,0.3)" }}>🏁</div>
+                    </div>
+
+                    {/* Block labels */}
+                    <div style={{ display:"flex", gap:3 }}>
+                      {BLOCKS.filter(b=>b.weeks>0).map((b,i) => {
+                        const isActive = b.name === currentBlock.name;
+                        return (
+                          <div key={i} style={{ flex:b.weeks, minWidth:0, overflow:"hidden" }}>
+                            <div style={{ fontSize:8, color: isActive ? b.color : "#444", fontWeight: isActive ? 700 : 400, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                              {b.icon} {b.name}
+                            </div>
+                            <div style={{ fontSize:7, color:"#3A3A3C" }}>{b.weeks}w</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Current block detail */}
+                    <div style={{ marginTop:10, background:"rgba(255,255,255,0.04)", borderRadius:8, padding:"6px 10px", display:"flex", alignItems:"center", gap:6 }}>
+                      <div style={{ width:3, height:24, borderRadius:2, background:currentBlock.color, flexShrink:0 }} />
+                      <div>
+                        <div style={{ fontSize:10, color:currentBlock.color, fontWeight:700 }}>{currentBlock.name}</div>
+                        <div style={{ fontSize:10, color:"#8E8E93" }}>{currentBlock.desc}</div>
+                      </div>
+                      <div style={{ marginLeft:"auto", textAlign:"right", flexShrink:0 }}>
+                        <div style={{ fontSize:11, color:"#fff", fontWeight:700 }}>{totalWeeks}w</div>
+                        <div style={{ fontSize:9, color:"#555" }}>restantes</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY CHALLENGE — Nike Training Club style ── */}
             {(() => {
               const sessions = profile.sessions || [];
