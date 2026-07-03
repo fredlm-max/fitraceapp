@@ -8070,6 +8070,135 @@ JSON:
               );
             })()}
 
+            {/* ── PROGRESSIVE OVERLOAD TRACKER (TrainingPeaks/Garmin-style) ── */}
+            {(()=>{
+              const allSessions = profile.sessions || [];
+              if (allSessions.length < 4) return null;
+
+              const now = new Date(); now.setHours(0,0,0,0);
+              const dayOfWeek = (now.getDay() + 6) % 7; // 0=Mon
+
+              // Build 8-week buckets (most recent = week 7)
+              const weeks = Array.from({ length: 8 }, (_, i) => {
+                const monOffset = dayOfWeek + (7 * (7 - i));
+                const mon = new Date(now); mon.setDate(now.getDate() - monOffset);
+                const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+                const bucket = allSessions.filter(s => {
+                  const d = new Date(s.date);
+                  return d >= mon && d <= sun;
+                });
+                const load = bucket.reduce((a,s) => a + ((s.rpe||5) * (s.duree||s.duration||30)), 0);
+                const vol  = bucket.reduce((a,s) => a + (s.duree||s.duration||0), 0);
+                const label = mon.toLocaleDateString("fr-FR", { day:"numeric", month:"short" });
+                return { label, load, vol, count: bucket.length, mon, sun };
+              });
+
+              const maxLoad = Math.max(...weeks.map(w=>w.load), 1);
+              const curW  = weeks[7];
+              const prevW = weeks[6];
+              const delta = prevW.load > 0 ? Math.round(((curW.load - prevW.load) / prevW.load) * 100) : null;
+
+              // 10% rule alert
+              const alert10 = delta !== null && delta > 10;
+              const drop20  = delta !== null && delta < -20;
+              const alertColor = alert10 ? "#FF453A" : drop20 ? "#FF9F0A" : "#30D158";
+              const alertMsg   = alert10
+                ? `⚠️ Charge +${delta}% vs semaine dernière — risque de blessure (règle des 10%)`
+                : drop20
+                ? `📉 Charge ${delta}% — désentraînement possible. Augmente le volume.`
+                : delta !== null
+                ? `✅ Progression saine (${delta > 0 ? "+" : ""}${delta}% vs semaine dernière)`
+                : null;
+
+              // Trend line points for SVG
+              const W = 300, H = 80, PAD = { l:4, r:4, t:8, b:20 };
+              const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+              const barW = Math.floor(cW / 8) - 3;
+              const barX = (i) => PAD.l + i * (cW / 8) + (cW / 8 - barW) / 2;
+              const barH = (load) => Math.max(2, (load / maxLoad) * cH);
+              const barY = (load) => PAD.t + cH - barH(load);
+
+              // Trend line (last 8 weeks)
+              const trendPoints = weeks.map((w,i) => `${barX(i)+barW/2},${barY(w.load)+barH(w.load)/2}`).join(" ");
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, paddingLeft:2 }}>📈 Charge progressive — règle des 10%</div>
+
+                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"16px" }}>
+
+                    {/* Current vs Prev summary */}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:14 }}>
+                      {[
+                        { label:"Cette semaine", val: curW.load > 0 ? Math.round(curW.load) : "—", sub:`${curW.count} séances`, color:"#C9A840" },
+                        { label:"Semaine préc.", val: prevW.load > 0 ? Math.round(prevW.load) : "—", sub:`${prevW.count} séances`, color:"#8E8E93" },
+                        { label:"Évolution",     val: delta !== null ? `${delta>0?"+":""}${delta}%` : "—", sub:"vs S-1", color: alertColor },
+                      ].map(b=>(
+                        <div key={b.label} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 6px", textAlign:"center" }}>
+                          <div className="bebas" style={{ fontSize:18, color:b.color, lineHeight:1 }}>{b.val}</div>
+                          <div style={{ fontSize:8, color:"#636366", marginTop:2 }}>{b.label}</div>
+                          <div style={{ fontSize:8, color:"#8E8E93" }}>{b.sub}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 8-week bar chart */}
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:"block", marginBottom:6 }}>
+                      {/* Grid lines */}
+                      {[0.25,0.5,0.75,1].map(f=>(
+                        <line key={f} x1={PAD.l} y1={PAD.t + cH*(1-f)} x2={W-PAD.r} y2={PAD.t + cH*(1-f)}
+                          stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+                      ))}
+                      {/* Bars */}
+                      {weeks.map((w,i)=>{
+                        const isCur  = i === 7;
+                        const isPrev = i === 6;
+                        const bh = barH(w.load), bx = barX(i), by = barY(w.load);
+                        const col = isCur ? "#C9A840" : isPrev ? "#636366" : "rgba(255,255,255,0.15)";
+                        return (
+                          <g key={i}>
+                            <rect x={bx} y={by} width={barW} height={bh} rx="3" fill={col} opacity={w.load>0?1:0.3}/>
+                            {/* 10% safe zone from prev */}
+                            {isCur && prevW.load > 0 && (
+                              <line x1={bx-2} x2={bx+barW+2} y1={barY(prevW.load * 1.1)} y2={barY(prevW.load * 1.1)}
+                                stroke="#FF453A" strokeWidth="1" strokeDasharray="3,2" opacity="0.7"/>
+                            )}
+                            <text x={bx+barW/2} y={H-4} textAnchor="middle" fill="#636366" fontSize="6" fontFamily="system-ui">
+                              {w.label.split(" ")[0]}
+                            </text>
+                          </g>
+                        );
+                      })}
+                      {/* Trend polyline */}
+                      {weeks.some(w=>w.load>0) && (
+                        <polyline points={trendPoints} fill="none" stroke="rgba(201,168,64,0.3)" strokeWidth="1.5" strokeLinejoin="round"/>
+                      )}
+                    </svg>
+
+                    {/* Legend */}
+                    <div style={{ display:"flex", gap:12, fontSize:8, color:"#636366", marginBottom: alertMsg ? 10 : 0 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                        <div style={{ width:8, height:8, background:"#C9A840", borderRadius:2 }}/> Cette semaine
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                        <div style={{ width:8, height:8, background:"#636366", borderRadius:2 }}/> Semaine préc.
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                        <div style={{ width:16, height:1, background:"#FF453A", borderTop:"1px dashed #FF453A" }}/> Limite +10%
+                      </div>
+                    </div>
+
+                    {/* Alert */}
+                    {alertMsg && (
+                      <div style={{ background:`${alertColor}12`, border:`1px solid ${alertColor}30`, borderRadius:10, padding:"8px 12px", fontSize:11, color:alertColor, fontWeight: alert10 ? 700 : 400 }}>
+                        {alertMsg}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RECORDS & MILESTONES ── */}
             {(()=>{
               const sessions = profile.sessions || [];
