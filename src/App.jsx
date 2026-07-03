@@ -8548,6 +8548,140 @@ JSON:
               );
             })()}
 
+            {/* ── BODY MEASUREMENTS TRACKER (MyFitnessPal-style) ── */}
+            {(()=>{
+              const KEY = `fitrace_mensur_${profile.name}`;
+              const [logs, setLogs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)||"[]"); } catch { return []; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ taille:"", poitrine:"", bras:"", cuisse:"", hanches:"" });
+
+              const MEASURES = [
+                { key:"taille",   label:"Tour de taille", icon:"📏", color:"#FF9F0A", unit:"cm" },
+                { key:"poitrine", label:"Poitrine",       icon:"💪", color:"#a78bfa", unit:"cm" },
+                { key:"bras",     label:"Bras (biceps)",  icon:"🦾", color:"#30D158", unit:"cm" },
+                { key:"cuisse",   label:"Cuisse",         icon:"🦵", color:"#38bdf8", unit:"cm" },
+                { key:"hanches",  label:"Hanches",        icon:"⭕", color:"#FF6B6B", unit:"cm" },
+              ];
+
+              const save = () => {
+                const entry = { date: new Date().toISOString().slice(0,10), ...Object.fromEntries(Object.entries(form).filter(([,v])=>v!=="").map(([k,v])=>[k,parseFloat(v)])) };
+                if (Object.keys(entry).length <= 1) return;
+                const next = [...logs, entry];
+                setLogs(next);
+                try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+                setShowForm(false);
+                setForm({ taille:"", poitrine:"", bras:"", cuisse:"", hanches:"" });
+              };
+
+              if (logs.length === 0 && !showForm) return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8, paddingLeft:2 }}>📐 Mensurations corporelles</div>
+                  <div onClick={()=>setShowForm(true)} style={{ background:"rgba(255,255,255,0.03)", border:"1.5px dashed rgba(255,255,255,0.12)", borderRadius:14, padding:"16px", textAlign:"center", cursor:"pointer" }}>
+                    <div style={{ fontSize:24, marginBottom:6 }}>📏</div>
+                    <div style={{ fontSize:12, color:"#8E8E93" }}>Ajoute tes mensurations pour suivre ta composition corporelle</div>
+                    <div style={{ fontSize:11, color:"#C9A840", fontWeight:700, marginTop:8 }}>+ Première mesure</div>
+                  </div>
+                </div>
+              );
+
+              // Latest values per measure
+              const latest = {};
+              const first  = {};
+              MEASURES.forEach(m => {
+                const vals = logs.filter(l=>l[m.key]!=null).map(l=>({v:l[m.key],date:l.date}));
+                if (vals.length > 0) { latest[m.key] = vals[vals.length-1]; first[m.key] = vals[0]; }
+              });
+
+              // Mini sparkline per measure (last 8 entries)
+              const spark = (key) => {
+                const vals = logs.filter(l=>l[key]!=null).map(l=>l[key]);
+                if (vals.length < 2) return null;
+                const last8 = vals.slice(-8);
+                const mn = Math.min(...last8), mx = Math.max(...last8), range = mx-mn||1;
+                return last8.map((v,i)=>({
+                  x: 4 + i * (52/(last8.length-1)),
+                  y: 30 - ((v-mn)/range)*22
+                }));
+              };
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, paddingLeft:2 }}>
+                    <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>📐 Mensurations corporelles</div>
+                    <button onClick={()=>setShowForm(o=>!o)} style={{ background:"rgba(201,168,64,0.1)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:8, padding:"3px 10px", color:"var(--yellow)", fontSize:10, fontWeight:700, cursor:"pointer" }}>
+                      {showForm ? "Annuler" : "+ Mesurer"}
+                    </button>
+                  </div>
+
+                  {/* Input form */}
+                  {showForm && (
+                    <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, padding:"14px", marginBottom:10 }}>
+                      <div style={{ fontSize:10, color:"#636366", marginBottom:10 }}>Remplis au moins 1 mesure :</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                        {MEASURES.map(m=>(
+                          <div key={m.key}>
+                            <div style={{ fontSize:9, color:"#8E8E93", marginBottom:4 }}>{m.icon} {m.label}</div>
+                            <div style={{ display:"flex", alignItems:"center", background:"rgba(255,255,255,0.05)", borderRadius:8, overflow:"hidden" }}>
+                              <input type="number" step="0.5" value={form[m.key]} onChange={e=>setForm(f=>({...f,[m.key]:e.target.value}))}
+                                placeholder={latest[m.key]?.v ? String(latest[m.key].v) : "—"}
+                                style={{ flex:1, background:"none", border:"none", outline:"none", color:m.color, fontSize:14, fontWeight:700, padding:"8px", textAlign:"center" }}/>
+                              <span style={{ fontSize:9, color:"#636366", paddingRight:8 }}>cm</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={save} style={{ width:"100%", background:"var(--yellow)", color:"#000", border:"none", borderRadius:10, padding:"10px", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                        💾 Enregistrer
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Measures grid */}
+                  {Object.keys(latest).length > 0 && (
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                      {MEASURES.filter(m=>latest[m.key]).map(m=>{
+                        const cur  = latest[m.key].v;
+                        const ini  = first[m.key].v;
+                        const delta = +(cur - ini).toFixed(1);
+                        const pts = spark(m.key);
+                        const isGoodDown = m.key === "taille" || m.key === "hanches" || m.key === "cuisse";
+                        const deltaColor = delta === 0 ? "#636366" : (delta < 0 === isGoodDown) ? "#30D158" : "#FF9F0A";
+                        return (
+                          <div key={m.key} style={{ background:`${m.color}08`, border:`1px solid ${m.color}20`, borderRadius:12, padding:"10px 12px", position:"relative", overflow:"hidden" }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                              <div>
+                                <div style={{ fontSize:9, color:"#636366" }}>{m.icon} {m.label}</div>
+                                <div className="bebas" style={{ fontSize:24, color:m.color, lineHeight:1.1, marginTop:2 }}>{cur}<span style={{fontSize:11,color:"#636366"}}> cm</span></div>
+                                {delta !== 0 && (
+                                  <div style={{ fontSize:9, color:deltaColor, fontWeight:700 }}>
+                                    {delta>0?"+":""}{delta}cm depuis le 1er test
+                                  </div>
+                                )}
+                              </div>
+                              {/* Sparkline */}
+                              {pts && (
+                                <svg width="60" height="34" viewBox="0 0 60 34" style={{ flexShrink:0 }}>
+                                  <polyline points={pts.map(p=>`${p.x},${p.y}`).join(" ")} fill="none" stroke={m.color} strokeWidth="1.5" strokeLinejoin="round" opacity="0.8"/>
+                                  <circle cx={pts[pts.length-1].x} cy={pts[pts.length-1].y} r="2.5" fill={m.color}/>
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Last measurement date */}
+                  {logs.length > 0 && (
+                    <div style={{ fontSize:9, color:"#636366", textAlign:"right", marginTop:6 }}>
+                      {logs.length} mesure{logs.length>1?"s":" "} · Dernière : {new Date(logs[logs.length-1].date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── PROGRESSIVE OVERLOAD TRACKER (TrainingPeaks/Garmin-style) ── */}
             {(()=>{
               const allSessions = profile.sessions || [];
