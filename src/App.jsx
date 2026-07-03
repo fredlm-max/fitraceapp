@@ -11725,6 +11725,117 @@ JSON:
               );
             })()}
 
+            {/* ── INJURY & RECOVERY TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_injuries_${profile.name}`;
+              const [injuries, setInjuries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ area:"Genou gauche", severity:2, status:"active", notes:"", date:new Date().toISOString().slice(0,10) });
+
+              const AREAS = ["Genou gauche","Genou droit","Cheville gauche","Cheville droite","Hanche gauche","Hanche droite","Dos lombaire","Épaule gauche","Épaule droite","Mollet gauche","Mollet droit","Ischio gauche","Ischio droit","Pied gauche","Pied droit","Autre"];
+              const SEVERITY = [{v:1,l:"Légère",c:"#30D158"},{v:2,l:"Modérée",c:"#FF9F0A"},{v:3,l:"Sévère",c:"#FF453A"}];
+              const STATUS = [{v:"active",l:"Active 🔴"},{v:"improving",l:"En progrès 🟡"},{v:"healed",l:"Guérie ✅"}];
+
+              const addInjury = () => {
+                const next = [{ id:Date.now(), ...form }, ...injuries];
+                setInjuries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setShowForm(false);
+                setForm({ area:"Genou gauche", severity:2, status:"active", notes:"", date:new Date().toISOString().slice(0,10) });
+              };
+
+              const updateStatus = (id, status) => {
+                const next = injuries.map(i => i.id===id ? {...i, status} : i);
+                setInjuries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+              };
+
+              const removeInjury = (id) => {
+                const next = injuries.filter(i => i.id!==id);
+                setInjuries(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+              };
+
+              const activeCount = injuries.filter(i=>i.status==="active").length;
+              const healedCount = injuries.filter(i=>i.status==="healed").length;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🩹 Suivi Blessures</div>
+                    <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+                      {activeCount>0 && <div style={{ fontSize:9,color:"#FF453A",fontWeight:700 }}>{activeCount} active{activeCount>1?"s":""}</div>}
+                      {healedCount>0 && <div style={{ fontSize:9,color:"#30D158",fontWeight:700 }}>{healedCount} guérie{healedCount>1?"s":""}</div>}
+                      <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                        {showForm?"✕":"+"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                      <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                        <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
+                          style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                        <select value={form.area} onChange={e=>setForm(f=>({...f,area:e.target.value}))}
+                          style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}>
+                          {AREAS.map(a=><option key={a}>{a}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Sévérité:</div>
+                        <div style={{ display:"flex",gap:6 }}>
+                          {SEVERITY.map(s=>(
+                            <button key={s.v} onClick={()=>setForm(f=>({...f,severity:s.v}))}
+                              style={{ flex:1,background:form.severity===s.v?s.c+"40":"#2C2C2E",color:form.severity===s.v?s.c:"#636366",border:`1px solid ${form.severity===s.v?s.c:"transparent"}`,borderRadius:8,padding:"6px 0",fontSize:10,fontWeight:form.severity===s.v?800:400,cursor:"pointer" }}>
+                              {s.l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <input type="text" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Description, symptômes..."
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11,boxSizing:"border-box",marginBottom:8 }}/>
+                      <button onClick={addInjury} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:8,fontSize:12,fontWeight:800,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  )}
+
+                  {injuries.length === 0 && !showForm && (
+                    <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"12px 0" }}>
+                      Aucune blessure enregistrée 💪
+                    </div>
+                  )}
+
+                  {injuries.map(inj => {
+                    const sev = SEVERITY.find(s=>s.v===inj.severity) || SEVERITY[1];
+                    const isActive = inj.status==="active";
+                    const isImproving = inj.status==="improving";
+                    return (
+                      <div key={inj.id} style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:6,borderLeft:`3px solid ${isActive?sev.c:isImproving?"#FF9F0A":"#30D158"}` }}>
+                        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6 }}>
+                          <div>
+                            <div style={{ fontSize:12,fontWeight:800,color:"var(--white)" }}>{inj.area}</div>
+                            <div style={{ fontSize:9,color:"#636366" }}>{inj.date} · <span style={{ color:sev.c,fontWeight:700 }}>{sev.l}</span></div>
+                            {inj.notes && <div style={{ fontSize:9,color:"#8E8E93",marginTop:2 }}>{inj.notes}</div>}
+                          </div>
+                          <button onClick={()=>removeInjury(inj.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer",lineHeight:1 }}>×</button>
+                        </div>
+                        <div style={{ display:"flex",gap:4 }}>
+                          {STATUS.map(st=>(
+                            <button key={st.v} onClick={()=>updateStatus(inj.id,st.v)}
+                              style={{ flex:1,background:inj.status===st.v?"#2C2C2E":"transparent",color:inj.status===st.v?"var(--white)":"#636366",border:`1px solid ${inj.status===st.v?"#3A3A3C":"transparent"}`,borderRadius:6,padding:"4px 2px",fontSize:8,fontWeight:inj.status===st.v?700:400,cursor:"pointer" }}>
+                              {st.l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── SWEAT RATE CALCULATOR ── */}
             {(() => {
               const poids = parseFloat(profile.poids) || 70;
