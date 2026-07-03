@@ -6343,6 +6343,47 @@ JSON:
               );
             })()}
 
+            {/* ── STREAK WIDGET ── */}
+            {(()=>{
+              const allSessions = profile.sessions || [];
+              const today = new Date(); today.setHours(0,0,0,0);
+              const sessionDays = new Set(allSessions.map(s => s.date ? new Date(s.date).toISOString().split("T")[0] : null).filter(Boolean));
+              let streak = 0;
+              let check = new Date(today);
+              while (true) {
+                const key = check.toISOString().split("T")[0];
+                if (sessionDays.has(key)) { streak++; check.setDate(check.getDate() - 1); }
+                else if (streak === 0) { check.setDate(check.getDate() - 1); if (today - check > 2 * 86400000) break; }
+                else break;
+              }
+              const last7 = Array.from({length:7}, (_,i) => {
+                const d = new Date(today); d.setDate(d.getDate() - (6-i));
+                return { key: d.toISOString().split("T")[0], day: d.toLocaleDateString("fr-FR",{weekday:"short"}).slice(0,1).toUpperCase(), isToday: i===6 };
+              });
+              const streakMsg = streak === 0 ? "Lance ta série aujourd'hui !" : streak === 1 ? "1er jour — continue !" : `${streak} jours de suite — 🔥`;
+              return (
+                <div style={{ marginBottom:10, padding:"14px 16px", background:"rgba(201,168,64,0.06)", border:"1px solid rgba(201,168,64,0.15)", borderRadius:16, display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ textAlign:"center", flexShrink:0 }}>
+                    <div className="bebas" style={{ fontSize:32, color:"var(--yellow)", lineHeight:1 }}>{streak}</div>
+                    <div style={{ fontSize:9, color:"#8E8E93", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em" }}>Série</div>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      {last7.map(d => (
+                        <div key={d.key} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                          <div style={{ width:26, height:26, borderRadius:"50%", background: sessionDays.has(d.key) ? "var(--yellow)" : "rgba(255,255,255,0.06)", border: d.isToday ? "1.5px solid rgba(201,168,64,0.5)" : "none", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            {sessionDays.has(d.key) && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                          <div style={{ fontSize:8, color: d.isToday ? "var(--yellow)" : "#636366", fontWeight: d.isToday ? 700 : 400 }}>{d.day}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize:11, color: streak > 0 ? "var(--yellow)" : "#636366" }}>{streakMsg}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RACCOURCIS ESSENTIELS ── */}
             <button onClick={() => { haptic([8]); navigateTo("today"); }}
               style={{ width:"100%", padding:"16px 20px", background:"var(--yellow)", border:"none", borderRadius:18, display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", marginBottom:10, boxShadow:"0 4px 20px rgba(201,168,64,0.25)" }}>
