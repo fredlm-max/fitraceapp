@@ -13477,6 +13477,149 @@ JSON:
               );
             })()}
 
+            {/* ── HYDRATION TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_hydration_${profile.name}`;
+              const today = new Date().toISOString().slice(0,10);
+
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+              });
+              const [viewDate, setViewDate] = React.useState(today);
+
+              const bw = parseFloat(profile.poids) || 70;
+              const dailyGoal = Math.round(bw * 35); // ml: 35ml/kg
+
+              // Sweat loss from today's sessions
+              const todaySessions = (profile.sessions||[]).filter(s => s.date === viewDate);
+              const sweatLoss = todaySessions.reduce((sum, s) => sum + Math.round((s.duration||0) * 0.8 * 10) * 10, 0); // ~800ml/h
+              const totalGoal = dailyGoal + sweatLoss;
+
+              const dayIntake = log[viewDate] || [];
+              const totalMl = dayIntake.reduce((s,e) => s+(e.ml||0), 0);
+              const pct = Math.min(100, Math.round(totalMl/totalGoal*100));
+
+              const DRINKS = [
+                { label:"Verre (200ml)", ml:200, emoji:"🥛" },
+                { label:"Grande bouteille (500ml)", ml:500, emoji:"🍶" },
+                { label:"Bidon (750ml)", ml:750, emoji:"🚰" },
+                { label:"Litre (1L)", ml:1000, emoji:"💧" },
+                { label:"Café/thé (250ml)", ml:250, emoji:"☕" },
+                { label:"Boisson sport (500ml)", ml:500, emoji:"⚡" },
+              ];
+
+              const addDrink = (ml, label) => {
+                const entry = { ml, label, time: new Date().toLocaleTimeString("fr", {hour:"2-digit",minute:"2-digit"}), id: Date.now() };
+                const updated = { ...log, [viewDate]: [...dayIntake, entry] };
+                setLog(updated);
+                localStorage.setItem(KEY, JSON.stringify(updated));
+              };
+
+              const removeLast = () => {
+                if (!dayIntake.length) return;
+                const updated = { ...log, [viewDate]: dayIntake.slice(0,-1) };
+                setLog(updated);
+                localStorage.setItem(KEY, JSON.stringify(updated));
+              };
+
+              const prevDay = () => { const d=new Date(viewDate); d.setDate(d.getDate()-1); setViewDate(d.toISOString().slice(0,10)); };
+              const nextDay = () => { const d=new Date(viewDate); d.setDate(d.getDate()+1); if(d.toISOString().slice(0,10)<=today) setViewDate(d.toISOString().slice(0,10)); };
+
+              const statusColor = pct >= 90 ? "#30D158" : pct >= 60 ? "var(--yellow)" : "#FF453A";
+              const statusLabel = pct >= 90 ? "Hydraté ✓" : pct >= 60 ? "En cours" : "Insuffisant ⚠";
+
+              // 7-day history
+              const last7 = Array.from({length:7},(_,i) => {
+                const d = new Date(today); d.setDate(d.getDate()-6+i);
+                const ds = d.toISOString().slice(0,10);
+                const amt = (log[ds]||[]).reduce((s,e)=>s+(e.ml||0),0);
+                return { date:ds, amt, label:d.toLocaleDateString("fr",{weekday:"short"}).slice(0,2) };
+              });
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>GARMIN · HYDRATATION QUOTIDIENNE</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>💧 Hydration Tracker</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <button onClick={prevDay} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:"#888", cursor:"pointer", fontSize:14 }}>‹</button>
+                      <span style={{ fontSize:11, color:"#aaa" }}>{viewDate===today?"Auj.":viewDate.slice(5)}</span>
+                      <button onClick={nextDay} disabled={viewDate===today} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:viewDate===today?"#333":"#888", cursor:"pointer", fontSize:14 }}>›</button>
+                    </div>
+                  </div>
+
+                  {/* Big ring */}
+                  <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:16 }}>
+                    <div style={{ position:"relative", width:90, height:90, flexShrink:0 }}>
+                      <svg viewBox="0 0 90 90">
+                        <circle cx="45" cy="45" r="38" fill="none" stroke="var(--bg3)" strokeWidth="10"/>
+                        <circle cx="45" cy="45" r="38" fill="none"
+                          stroke={statusColor} strokeWidth="10" strokeLinecap="round"
+                          strokeDasharray={`${(pct/100)*238.76} 238.76`}
+                          transform="rotate(-90 45 45)"/>
+                      </svg>
+                      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                        <div style={{ fontSize:18, fontWeight:900, color:statusColor }}>{pct}%</div>
+                        <div style={{ fontSize:8, color:"#666" }}>hydraté</div>
+                      </div>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:22, fontWeight:900, color:"#fff" }}>{(totalMl/1000).toFixed(1)}L</div>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:6 }}>/ {(totalGoal/1000).toFixed(1)}L objectif</div>
+                      <div style={{ fontSize:11, color:statusColor, fontWeight:700 }}>{statusLabel}</div>
+                      {sweatLoss > 0 && <div style={{ fontSize:10, color:"#555", marginTop:4 }}>+{(sweatLoss/1000).toFixed(1)}L sueur (séance)</div>}
+                    </div>
+                  </div>
+
+                  {/* Quick add buttons */}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6, marginBottom:12 }}>
+                    {DRINKS.map((d,i) => (
+                      <button key={i} onClick={() => addDrink(d.ml, d.label)}
+                        style={{ background:"var(--bg3)", border:"1px solid #333", borderRadius:10, padding:"9px 6px", color:"#fff", cursor:"pointer", textAlign:"center" }}>
+                        <div style={{ fontSize:18 }}>{d.emoji}</div>
+                        <div style={{ fontSize:10, color:"#aaa", marginTop:2 }}>{d.ml}ml</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Today's log */}
+                  {dayIntake.length > 0 && (
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 14px", marginBottom:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                        <div style={{ fontSize:10, color:"#555" }}>JOURNAL ({dayIntake.length} entrées)</div>
+                        <button onClick={removeLast} style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:11, cursor:"pointer" }}>− Annuler dernier</button>
+                      </div>
+                      {dayIntake.slice(-4).reverse().map((e,i) => (
+                        <div key={e.id} style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#888", marginBottom:2 }}>
+                          <span>{e.time} — {e.label}</span>
+                          <span style={{ color:"#64D2FF", fontWeight:700 }}>+{e.ml}ml</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 7-day bars */}
+                  <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>7 DERNIERS JOURS</div>
+                  <div style={{ display:"flex", gap:4, alignItems:"flex-end", height:50 }}>
+                    {last7.map((d,i) => {
+                      const h = Math.min(100, (d.amt/totalGoal)*100);
+                      const c = d.amt>=totalGoal*0.9?"#30D158":d.amt>=totalGoal*0.6?"var(--yellow)":"#FF453A";
+                      const isToday = d.date===today;
+                      return (
+                        <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                          <div style={{ background:c, width:"100%", height:`${Math.max(h,4)}%`, borderRadius:"3px 3px 0 0", opacity: isToday?1:0.6, border: isToday?"1px solid #fff":"none" }}/>
+                          <div style={{ fontSize:8, color: isToday?"#fff":"#555" }}>{d.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── SWEAT RATE CALCULATOR ── */}
             {(() => {
               const poids = parseFloat(profile.poids) || 70;
