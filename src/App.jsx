@@ -5494,7 +5494,7 @@ JSON:
         {/* HOME — toujours rendu, caché si inactif (fix hooks) */}
         <div style={{display: tab === "home" ? "block" : "none"}}>
 
-            {/* ── HERO UNIFIÉ : APEX + FITNESS + ÉVOLUTION ── */}
+            {/* ── HERO CARD PARTAGEABLE : APEX + FITNESS ── */}
             {(() => {
               const h = new Date().getHours();
               const greet = h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
@@ -5516,93 +5516,165 @@ JSON:
                 : apexScore >= 40 ? { label: "Méfie-toi", color: "#FF9F0A" }
                 : { label: "Récupère d'abord", color: "#FF453A" };
 
-              // Évolution fitness : sessions cette semaine vs semaine précédente
+              // Charge d'entraînement (ATL sur 7j)
               const allSessions = profile.sessions || [];
               const now = Date.now();
+              const chargeSem = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; })
+                .reduce((sum,s) => sum + (s.duree||0) * ((s.rpe||5)/10), 0);
+              const chargeMax = 600;
+              const chargePct = Math.min(100, Math.round((chargeSem / chargeMax) * 100));
+              const chargeLabel = chargePct >= 80 ? "Élevée" : chargePct >= 50 ? "Optimale" : chargePct >= 20 ? "Légère" : "Faible";
+              const chargeColor = chargePct >= 80 ? "#FF453A" : chargePct >= 50 ? "#30D158" : "#FF9F0A";
+
+              // Nutrition (from quick log)
+              const todayStr = new Date().toISOString().slice(0,10);
+              const nutriRaw = (() => { try { return JSON.parse(localStorage.getItem(`fitrace_nutri_quick_${profile.name}`))||{}; } catch { return {}; } })();
+              const nutriToday = nutriRaw[todayStr] || { cal:0, prot:0, eau:0 };
+              const nutPct = Math.min(100, Math.round((nutriToday.cal / (profile.calories||2500)) * 100));
+
+              // Évolution séances
               const w1 = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; }).length;
               const w2 = allSessions.filter(s => { const d = new Date(s.date); return now - d >= 7*86400000 && now - d < 14*86400000; }).length;
               const evolutionPct = w2 > 0 ? Math.round(((w1 - w2) / w2) * 100) : null;
               const evoColor = evolutionPct > 0 ? "#30D158" : evolutionPct < 0 ? "#FF453A" : "#8E8E93";
               const evoSign = evolutionPct > 0 ? "+" : "";
 
-              const R = 54; const C = 2 * Math.PI * R;
-              const apexDash = (apexScore / 100) * C;
-              const fitDash = (sc.global / 100) * C;
+              const R = 48; const C = 2 * Math.PI * R;
+
+              const doShare = () => {
+                const txt = `🏆 Mon score APEX FitRace : ${apexScore}/100 — ${tier.label}\n💪 Score Fitness : ${sc.global}/100\n🌙 Sommeil : ${sleepScore}% · 🥗 Nutrition : ${nutPct}% · ⚡ Charge : ${chargeLabel}\n#HYROX #FitRace #APEX`;
+                if (navigator.share) {
+                  navigator.share({ title: "Mon score APEX FitRace", text: txt }).catch(()=>{});
+                } else {
+                  navigator.clipboard?.writeText(txt).then(()=>showToast("Copié dans le presse-papiers !", "success"));
+                }
+              };
 
               return (
-                <div style={{ marginBottom: 20 }}>
-                  {/* Greeting + date */}
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: 16 }}>
+                <div style={{ marginBottom: 16 }}>
+                  {/* Greeting */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div>
-                      <div style={{ fontSize: 13, color: "#8E8E93" }}>
-                        {greet}, <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{firstName}</span>
-                        {streak > 0 && <span style={{ marginLeft: 8, fontSize: 11, color: "#FF9F0A", fontWeight: 600 }}>🔥 {streak}j</span>}
+                      <div style={{ fontSize:13, color:"#8E8E93" }}>
+                        {greet}, <span style={{ color:"var(--yellow)", fontWeight:700 }}>{firstName}</span>
+                        {streak > 0 && <span style={{ marginLeft:8, fontSize:11, color:"#FF9F0A", fontWeight:600 }}>🔥 {streak}j</span>}
                       </div>
-                      <div style={{ fontSize: 10, color: "#4A4A4E", marginTop: 2 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
+                      <div style={{ fontSize:10, color:"#4A4A4E", marginTop:2 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
                     </div>
                     {evolutionPct !== null && (
-                      <div style={{ background: `${evoColor}18`, border:`1px solid ${evoColor}30`, borderRadius:10, padding:"6px 10px", textAlign:"center" }}>
-                        <div style={{ fontSize:15, fontWeight:900, color:evoColor, lineHeight:1 }}>{evoSign}{evolutionPct}%</div>
-                        <div style={{ fontSize:8, color:"#636366", marginTop:2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Évolution</div>
+                      <div style={{ background:`${evoColor}18`, border:`1px solid ${evoColor}30`, borderRadius:10, padding:"5px 10px", textAlign:"center" }}>
+                        <div style={{ fontSize:14, fontWeight:900, color:evoColor, lineHeight:1 }}>{evoSign}{evolutionPct}%</div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:1 }}>Évolution</div>
                       </div>
                     )}
                   </div>
 
-                  {/* Deux anneaux côte à côte */}
-                  <div style={{ display:"flex", gap:12, marginBottom:16 }}>
-                    {/* Anneau APEX */}
-                    <div style={{ flex:1, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"16px 12px", textAlign:"center" }}>
-                      <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", letterSpacing:"0.18em", marginBottom:10 }}>SCORE APEX</div>
-                      <div style={{ position:"relative", width:108, height:108, margin:"0 auto 10px" }}>
-                        <svg width="108" height="108" viewBox="0 0 108 108" style={{ transform:"rotate(-90deg)" }}>
-                          <circle cx="54" cy="54" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" strokeLinecap="round"/>
-                          <circle cx="54" cy="54" r={R} fill="none" stroke={tier.color} strokeWidth="10" strokeLinecap="round"
-                            strokeDasharray={C} strokeDashoffset={C - apexDash}
-                            style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${tier.color}60)` }}/>
-                        </svg>
-                        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-                          <div className="bebas number-pop" style={{ fontSize:36, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{apexScore}</div>
-                          <div style={{ fontSize:8, color:"#4A4A4E", letterSpacing:"0.15em" }}>/ 100</div>
+                  {/* GRANDE CARTE PARTAGEABLE */}
+                  <div style={{ background:"linear-gradient(145deg,#111 0%,#0a0a0a 100%)", border:"1px solid rgba(201,168,64,0.18)", borderRadius:22, padding:"20px 16px 16px", position:"relative", overflow:"hidden" }}>
+                    {/* Halo déco */}
+                    <div style={{ position:"absolute", top:-40, left:"50%", transform:"translateX(-50%)", width:280, height:140, background:"radial-gradient(ellipse,rgba(201,168,64,0.06) 0%,transparent 70%)", pointerEvents:"none" }}/>
+
+                    {/* Contenu : 2 colonnes */}
+                    <div style={{ display:"flex", gap:16, marginBottom:16 }}>
+
+                      {/* Colonne gauche : APEX */}
+                      <div style={{ flex:1, textAlign:"center" }}>
+                        <div style={{ fontSize:8, color:"#636366", textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:8 }}>SCORE APEX</div>
+                        <div style={{ position:"relative", width:100, height:100, margin:"0 auto 8px" }}>
+                          <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform:"rotate(-90deg)" }}>
+                            <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" strokeLinecap="round"/>
+                            <circle cx="50" cy="50" r={R} fill="none" stroke={tier.color} strokeWidth="9" strokeLinecap="round"
+                              strokeDasharray={C} strokeDashoffset={C - (apexScore/100)*C}
+                              style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${tier.color}70)` }}/>
+                          </svg>
+                          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                            <div className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{apexScore}</div>
+                            <div style={{ fontSize:8, color:"#4A4A4E" }}>/ 100</div>
+                          </div>
+                        </div>
+                        {/* Tier label */}
+                        <div style={{ fontSize:11, fontWeight:700, color:tier.color, marginBottom:12 }}>{tier.label}</div>
+                        {/* 3 indicateurs : Sommeil / Nutrition / Charge */}
+                        <div style={{ display:"flex", flexDirection:"column", gap:6, textAlign:"left" }}>
+                          {[
+                            { icon:"🌙", label:"Sommeil", pct:sleepScore, color:"#BF5AF2" },
+                            { icon:"🥗", label:"Nutrition", pct:nutPct, color:"#30D158" },
+                            { icon:"⚡", label:"Charge", pct:chargePct, color:chargeColor, sub:chargeLabel },
+                          ].map(ind => (
+                            <div key={ind.label}>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                  <span style={{ fontSize:10 }}>{ind.icon}</span>
+                                  <span style={{ fontSize:9, color:"#8E8E93" }}>{ind.label}</span>
+                                </div>
+                                <span style={{ fontSize:9, color:ind.color, fontWeight:700 }}>{ind.sub || `${ind.pct}%`}</span>
+                              </div>
+                              <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
+                                <div style={{ width:`${ind.pct}%`, height:"100%", background:ind.color, borderRadius:99, transition:"width 0.8s ease" }}/>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div style={{ fontSize:11, fontWeight:700, color:tier.color }}>{tier.label}</div>
+
+                      {/* Séparateur vertical */}
+                      <div style={{ width:1, background:"rgba(201,168,64,0.12)", flexShrink:0 }}/>
+
+                      {/* Colonne droite : FITNESS */}
+                      <div style={{ flex:1, textAlign:"center" }}>
+                        <div style={{ fontSize:8, color:"#636366", textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:8 }}>SCORE FITNESS</div>
+                        <div style={{ position:"relative", width:100, height:100, margin:"0 auto 8px" }}>
+                          <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform:"rotate(-90deg)" }}>
+                            <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" strokeLinecap="round"/>
+                            <circle cx="50" cy="50" r={R} fill="none"
+                              stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}
+                              strokeWidth="9" strokeLinecap="round"
+                              strokeDasharray={C} strokeDashoffset={C - (sc.global/100)*C}
+                              style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)" }}/>
+                          </svg>
+                          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                            <div className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{sc.global}</div>
+                            <div style={{ fontSize:8, color:"#4A4A4E" }}>/ 100</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize:11, fontWeight:700, color:sc.global>=75?"#39ff80":sc.global>=50?"#C9A840":"#ff9a3c", marginBottom:12 }}>
+                          {sc.global>=75?"Peak Form":sc.global>=50?"En progression":"À construire"}
+                        </div>
+                        {/* Barres Force / Endurance / Puissance */}
+                        <div style={{ display:"flex", flexDirection:"column", gap:6, textAlign:"left" }}>
+                          {[
+                            { icon:"🏋️", label:"Force", val:sc.force, color:"#C9A840" },
+                            { icon:"🏃", label:"Endurance", val:sc.endurance, color:"#39ff80" },
+                            { icon:"⚡", label:"Puissance", val:sc.puissance, color:"#FF453A" },
+                          ].map(b => (
+                            <div key={b.label}>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                  <span style={{ fontSize:10 }}>{b.icon}</span>
+                                  <span style={{ fontSize:9, color:"#8E8E93" }}>{b.label}</span>
+                                </div>
+                                <span style={{ fontSize:9, color:b.color, fontWeight:700 }}>{b.val}%</span>
+                              </div>
+                              <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
+                                <div style={{ width:`${b.val}%`, height:"100%", background:b.color, borderRadius:99 }}/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Anneau FITNESS */}
-                    <div style={{ flex:1, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"16px 12px", textAlign:"center" }}>
-                      <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", letterSpacing:"0.18em", marginBottom:10 }}>SCORE FITNESS</div>
-                      <div style={{ position:"relative", width:108, height:108, margin:"0 auto 10px" }}>
-                        <svg width="108" height="108" viewBox="0 0 108 108" style={{ transform:"rotate(-90deg)" }}>
-                          <circle cx="54" cy="54" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" strokeLinecap="round"/>
-                          <circle cx="54" cy="54" r={R} fill="none"
-                            stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}
-                            strokeWidth="10" strokeLinecap="round"
-                            strokeDasharray={C} strokeDashoffset={C - fitDash}
-                            style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)" }}/>
-                        </svg>
-                        <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-                          <div className="bebas number-pop" style={{ fontSize:36, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{sc.global}</div>
-                          <div style={{ fontSize:8, color:"#4A4A4E", letterSpacing:"0.15em" }}>/ 100</div>
-                        </div>
+                    {/* Ligne bas : watermark + bouton partager */}
+                    <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <div className="bebas" style={{ fontSize:14, color:"var(--yellow)", letterSpacing:3, lineHeight:1 }}>FITRACE</div>
+                        <div style={{ fontSize:8, color:"#4A4A4E", letterSpacing:"0.1em" }}>HYROX TRAINING</div>
                       </div>
-                      {/* Barres Force/Endurance/Puissance */}
-                      <div style={{ display:"flex", flexDirection:"column", gap:5, textAlign:"left" }}>
-                        {[
-                          { label:"Force", val:sc.force, color:"var(--yellow)" },
-                          { label:"Endurance", val:sc.endurance, color:"#39ff80" },
-                          { label:"Puissance", val:sc.puissance, color:"#FF453A" },
-                        ].map(b => (
-                          <div key={b.label}>
-                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-                              <span style={{ fontSize:8, color:"#8E8E93" }}>{b.label}</span>
-                              <span style={{ fontSize:8, color:b.color, fontWeight:700 }}>{b.val}%</span>
-                            </div>
-                            <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
-                              <div style={{ width:`${b.val}%`, height:"100%", background:b.color, borderRadius:99 }}/>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <button onClick={doShare}
+                        style={{ display:"flex", alignItems:"center", gap:6, background:"var(--yellow)", border:"none", borderRadius:10, padding:"8px 14px", cursor:"pointer" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        <span className="bebas" style={{ fontSize:13, color:"#000", letterSpacing:1.5 }}>PARTAGER</span>
+                      </button>
                     </div>
                   </div>
                 </div>
