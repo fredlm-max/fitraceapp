@@ -16924,6 +16924,213 @@ JSON:
               );
             })()}
 
+            {/* ── GEAR & SHOE TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_gear_${profile.name}`;
+              const ASSIGN_KEY = `fitrace_gear_assign_${profile.name}`;
+
+              const [gear, setGear] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [assign, setAssign] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(ASSIGN_KEY) || "{}"); } catch { return {}; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ name:"", brand:"", model:"", type:"shoe", startKm:0, maxKm:700, color:"#FF6B35", acquired:"", notes:"" });
+
+              const GEAR_TYPES = [
+                { id:"shoe", label:"Chaussures de course", emoji:"👟", maxKm:700 },
+                { id:"shoe_hyrox", label:"Chaussures HYROX", emoji:"🏋️", maxKm:400 },
+                { id:"wetsuit", label:"Combinaison", emoji:"🩱", maxKm:0 },
+                { id:"shorts", label:"Short/Cuissard", emoji:"🩲", maxKm:0 },
+                { id:"watch", label:"Montre GPS", emoji:"⌚", maxKm:0 },
+                { id:"bag", label:"Sac HYROX", emoji:"🎒", maxKm:0 },
+              ];
+
+              const sessions = profile.sessions || [];
+
+              // Calculate km per gear from sessions
+              const gearKm = (gearId) => {
+                return sessions
+                  .filter(s => assign[s.id || s.date] === gearId || assign[s.date] === gearId)
+                  .reduce((s,x) => s + (parseFloat(x.distance)||0), 0);
+              };
+
+              const totalKm = (g) => (g.startKm || 0) + gearKm(g.id);
+
+              const wearPct = (g) => g.maxKm > 0 ? Math.min(100, Math.round(totalKm(g)/g.maxKm*100)) : 0;
+              const wearColor = (pct) => pct >= 90 ? "#FF453A" : pct >= 70 ? "#FF9F0A" : "#30D158";
+
+              const saveGear = () => {
+                const entry = { ...form, id: Date.now(), addedAt: new Date().toISOString().slice(0,10) };
+                const next = [...gear, entry];
+                setGear(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setShowForm(false);
+                setForm({ name:"", brand:"", model:"", type:"shoe", startKm:0, maxKm:700, color:"#FF6B35", acquired:"", notes:"" });
+              };
+
+              const retireGear = (id) => {
+                const next = gear.map(g => g.id === id ? {...g, retired:true} : g);
+                setGear(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+              };
+
+              const activeGear = gear.filter(g => !g.retired);
+              const retiredGear = gear.filter(g => g.retired);
+
+              const [showRetired, setShowRetired] = React.useState(false);
+
+              // Latest session - assign gear
+              const latestSession = sessions[0];
+              const [defaultGear, setDefaultGear] = React.useState(() => assign.default || null);
+
+              const setDefault = (gearId) => {
+                const next = { ...assign, default: gearId };
+                setAssign(next);
+                localStorage.setItem(ASSIGN_KEY, JSON.stringify(next));
+                setDefaultGear(gearId);
+              };
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>STRAVA · ÉQUIPEMENT</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>👟 Gear Tracker</div>
+                    </div>
+                    <button onClick={() => setShowForm(true)}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"7px 14px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      + Gear
+                    </button>
+                  </div>
+
+                  {/* Wear alerts */}
+                  {activeGear.filter(g => g.maxKm > 0 && wearPct(g) >= 70).map(g => (
+                    <div key={g.id} style={{ background:"rgba(255,69,58,0.1)", border:"1px solid rgba(255,69,58,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:10, fontSize:11 }}>
+                      {wearPct(g) >= 90
+                        ? <span style={{ color:"#FF453A" }}>⛔ <strong>{g.name}</strong> — remplacement requis ! ({Math.round(totalKm(g))}km / {g.maxKm}km)</span>
+                        : <span style={{ color:"#FF9F0A" }}>⚠️ <strong>{g.name}</strong> — fin de vie proche ({Math.round(totalKm(g))}km / {g.maxKm}km)</span>
+                      }
+                    </div>
+                  ))}
+
+                  {/* Active gear */}
+                  {activeGear.length === 0 && !showForm && (
+                    <div style={{ textAlign:"center", padding:"16px 0", color:"#555", fontSize:12 }}>
+                      Ajoute tes chaussures pour suivre leur kilométrage 👟
+                    </div>
+                  )}
+
+                  {activeGear.map(g => {
+                    const km = Math.round(totalKm(g));
+                    const pct = wearPct(g);
+                    const typeInfo = GEAR_TYPES.find(t => t.id === g.type) || GEAR_TYPES[0];
+                    const isDefault = defaultGear === g.id;
+                    return (
+                      <div key={g.id} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                            <div style={{ width:40, height:40, background:`${g.color}22`, border:`2px solid ${g.color}`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                              {typeInfo.emoji}
+                            </div>
+                            <div>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{g.name}</div>
+                              <div style={{ fontSize:10, color:"#666" }}>{g.brand} {g.model} {g.acquired ? `· depuis ${g.acquired}` : ""}</div>
+                              {isDefault && <div style={{ fontSize:9, color:"var(--yellow)", fontWeight:700 }}>★ Principal</div>}
+                            </div>
+                          </div>
+                          <div style={{ textAlign:"right" }}>
+                            <div style={{ fontSize:18, fontWeight:900, color: g.maxKm > 0 ? wearColor(pct) : "var(--yellow)" }}>{km} km</div>
+                            {g.maxKm > 0 && <div style={{ fontSize:9, color:"#555" }}>/ {g.maxKm}km</div>}
+                          </div>
+                        </div>
+
+                        {g.maxKm > 0 && (
+                          <div style={{ marginBottom:8 }}>
+                            <div style={{ height:8, background:"var(--bg2)", borderRadius:4, overflow:"hidden" }}>
+                              <div style={{ height:"100%", width:`${pct}%`, background:wearColor(pct), borderRadius:4, transition:"width 0.4s" }}/>
+                            </div>
+                            <div style={{ fontSize:9, color:"#555", marginTop:2, textAlign:"right" }}>{pct}% usé · ~{Math.max(0,g.maxKm-km)}km restants</div>
+                          </div>
+                        )}
+
+                        <div style={{ display:"flex", gap:6 }}>
+                          <button onClick={() => setDefault(isDefault ? null : g.id)}
+                            style={{ flex:1, background: isDefault?"rgba(201,168,64,0.2)":"var(--bg2)", border:`1px solid ${isDefault?"var(--yellow)":"#333"}`, borderRadius:8, padding:"5px 0", color: isDefault?"var(--yellow)":"#666", fontSize:11, cursor:"pointer" }}>
+                            ★ {isDefault ? "Principal" : "Définir"}
+                          </button>
+                          <button onClick={() => retireGear(g.id)}
+                            style={{ flex:1, background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"5px 0", color:"#888", fontSize:11, cursor:"pointer" }}>
+                            Retirer
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add form */}
+                  {showForm && (
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:14, marginBottom:8 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:12 }}>Nouveau gear</div>
+
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
+                        {GEAR_TYPES.map(t => (
+                          <button key={t.id} onClick={() => setForm(f=>({...f, type:t.id, maxKm:t.maxKm}))}
+                            style={{ background: form.type===t.id?"var(--yellow)":"var(--bg2)", border:"none", borderRadius:8, padding:"5px 10px", color: form.type===t.id?"#000":"#888", fontSize:11, cursor:"pointer", fontWeight: form.type===t.id?700:400 }}>
+                            {t.emoji} {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                        <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nom (ex: Nike Vomero 17)"
+                          style={{ gridColumn:"1/-1", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12 }}/>
+                        <input value={form.brand} onChange={e=>setForm(f=>({...f,brand:e.target.value}))} placeholder="Marque"
+                          style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                        <input value={form.model} onChange={e=>setForm(f=>({...f,model:e.target.value}))} placeholder="Modèle"
+                          style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Km déjà parcourus</div>
+                          <input type="number" min="0" value={form.startKm} onChange={e=>setForm(f=>({...f,startKm:parseInt(e.target.value)||0}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Alerte usure (km)</div>
+                          <input type="number" min="0" value={form.maxKm} onChange={e=>setForm(f=>({...f,maxKm:parseInt(e.target.value)||0}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                        </div>
+                        <input type="date" value={form.acquired} onChange={e=>setForm(f=>({...f,acquired:e.target.value}))}
+                          style={{ gridColumn:"1/-1", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                      </div>
+
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={() => setShowForm(false)}
+                          style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>
+                        <button onClick={saveGear} disabled={!form.name}
+                          style={{ flex:2, background:form.name?"var(--yellow)":"#333", border:"none", borderRadius:10, padding:"10px 0", color:form.name?"#000":"#555", fontSize:12, fontWeight:800, cursor:"pointer" }}>
+                          Ajouter le gear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {retiredGear.length > 0 && (
+                    <button onClick={() => setShowRetired(r => !r)}
+                      style={{ width:"100%", background:"transparent", border:"none", color:"#555", fontSize:11, cursor:"pointer", marginTop:4 }}>
+                      {showRetired ? "▲" : "▼"} {retiredGear.length} gear(s) retirés
+                    </button>
+                  )}
+                  {showRetired && retiredGear.map(g => (
+                    <div key={g.id} style={{ background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginTop:4, opacity:0.5, display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ fontSize:12, color:"#888" }}>{g.name}</span>
+                      <span style={{ fontSize:11, color:"#666" }}>{Math.round(totalKm(g))}km total</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
             {/* ── ANNUAL TRAINING HEATMAP ── */}
             {(() => {
               const sessions = profile.sessions || [];
