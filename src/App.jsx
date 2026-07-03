@@ -6794,6 +6794,107 @@ JSON:
               );
             })()}
 
+            {/* ── 7-DAY LOAD OVERVIEW — Garmin Connect style ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length === 0) return null;
+
+              const today = new Date(); today.setHours(0,0,0,0);
+              const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+              const monday = new Date(today); monday.setDate(today.getDate() - dayOfWeek + 1);
+
+              const TYPE_COLORS = {
+                running_zone2:"#30D158", running_qualite:"#C9A840", force_stations:"#a78bfa",
+                hybride_compromis:"#FF6B00", mobilite:"#007AFF", repos:"#3A3A3C"
+              };
+              const TYPE_ICONS = {
+                running_zone2:"🏃", running_qualite:"⚡", force_stations:"🏋️",
+                hybride_compromis:"🔀", mobilite:"🧘", repos:"😴"
+              };
+
+              // Build 7 days with their sessions
+              const days = Array.from({length: 7}, (_, i) => {
+                const d = new Date(monday); d.setDate(monday.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const daySessions = sessions.filter(s => s.date?.slice(0,10) === ds);
+                const load = daySessions.reduce((a,s) => a+(s.rpe||5)*(s.duree||30), 0);
+                const isToday = d.toISOString().slice(0,10) === today.toISOString().slice(0,10);
+                const isPast = d <= today;
+                const label = ["L","M","M","J","V","S","D"][i];
+                const primaryType = daySessions.length > 0 ? (daySessions.sort((a,b)=>(b.rpe||5)*(b.duree||30)-(a.rpe||5)*(a.duree||30))[0].type) : null;
+                return { ds, load, sessions: daySessions, isToday, isPast, label, primaryType };
+              });
+
+              const maxLoad = Math.max(...days.map(d => d.load), 1);
+              const weekTotal = days.reduce((a,d) => a+d.load, 0);
+              const weekSessions = days.reduce((a,d) => a+d.sessions.length, 0);
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"14px 16px", marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1 }}>Charge hebdomadaire</div>
+                    <div style={{ display:"flex", gap:10 }}>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#C9A840" }}>{weekSessions}</div>
+                        <div style={{ fontSize:8, color:"#555" }}>séances</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#fff" }}>{Math.round(weekTotal/100)/10}k</div>
+                        <div style={{ fontSize:8, color:"#555" }}>charge</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display:"flex", gap:4, height:60, alignItems:"flex-end" }}>
+                    {days.map((day, i) => {
+                      const barH = day.load > 0 ? Math.max(8, Math.round((day.load / maxLoad) * 52)) : 3;
+                      const color = day.primaryType ? TYPE_COLORS[day.primaryType] || "#555" : "rgba(255,255,255,0.06)";
+                      return (
+                        <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                          {/* Session type icon (if any) */}
+                          <div style={{ fontSize:9, height:14, display:"flex", alignItems:"center" }}>
+                            {day.sessions.length > 0 && <span>{TYPE_ICONS[day.primaryType] || "💪"}</span>}
+                          </div>
+                          {/* Bar */}
+                          <div style={{ width:"100%", height:barH, borderRadius:"3px 3px 0 0",
+                            background: day.isToday ? (day.load > 0 ? `linear-gradient(180deg, #C9A840, #FF9F0A)` : "rgba(201,168,64,0.15)") : color,
+                            boxShadow: day.isToday && day.load > 0 ? "0 0 8px rgba(201,168,64,0.6)" : "none",
+                            border: day.isToday ? "1px solid rgba(201,168,64,0.4)" : "none",
+                            transition:"height 0.6s cubic-bezier(.4,0,.2,1)",
+                            alignSelf:"flex-end",
+                          }} />
+                          {/* Day label */}
+                          <div style={{ fontSize:9, color: day.isToday ? "#C9A840" : day.isPast ? "#555" : "#3A3A3C", fontWeight: day.isToday ? 700 : 400 }}>
+                            {day.label}
+                          </div>
+                          {/* Session count dot */}
+                          {day.sessions.length > 1 && (
+                            <div style={{ width:4, height:4, borderRadius:"50%", background: color, marginTop:-2 }} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Type legend */}
+                  {days.some(d => d.primaryType) && (
+                    <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
+                      {[...new Set(days.filter(d=>d.primaryType).map(d=>d.primaryType))].map(type => {
+                        const c = TYPE_COLORS[type] || "#555";
+                        const labels = {running_zone2:"Zone 2",running_qualite:"Qualité",force_stations:"Force",hybride_compromis:"Hybride",mobilite:"Mobilité"};
+                        return (
+                          <div key={type} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                            <div style={{ width:6, height:6, borderRadius:"50%", background:c }} />
+                            <span style={{ fontSize:9, color:"#555" }}>{labels[type]||type}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── ACTIVITY RINGS — Apple Watch style ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
