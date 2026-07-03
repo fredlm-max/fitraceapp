@@ -31644,6 +31644,120 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── HYROX PACING CALCULATOR ── */}
+      {(() => {
+        const [targetH, setTargetH] = React.useState(1);
+        const [targetM, setTargetM] = React.useState(15);
+        const [targetS, setTargetS] = React.useState(0);
+        const [runPct, setRunPct] = React.useState(55); // % du temps en course
+
+        const totalSec = targetH*3600 + targetM*60 + targetS;
+        const runSec = Math.round(totalSec * runPct/100);
+        const stationSec = totalSec - runSec;
+
+        // 8 runs × distances différentes: 1km×2 + 1km×6 (simplifié: ~1km chacun = 8km total run)
+        const RUN_DISTANCES = [1,1,1,1,1,1,1,1]; // km par run
+        const totalRunKm = 8;
+        const secPerKm = Math.round(runSec / totalRunKm);
+        const paceMin = Math.floor(secPerKm/60);
+        const paceSec = secPerKm%60;
+
+        // Station time distribution (based on typical pro splits)
+        const STATIONS = [
+          { name:"SkiErg",         pctSt:13, dist:"1000m" },
+          { name:"Sled Push",      pctSt:10, dist:"50m"   },
+          { name:"Sled Pull",      pctSt:10, dist:"50m"   },
+          { name:"Burpee B.J.",    pctSt:16, dist:"80m"   },
+          { name:"Rowing",         pctSt:13, dist:"1000m" },
+          { name:"Farmer Carry",   pctSt:8,  dist:"200m"  },
+          { name:"Sandbag Lunges", pctSt:16, dist:"100m"  },
+          { name:"Wall Balls",     pctSt:14, dist:"100 reps"},
+        ];
+
+        const fmtSec = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+        let cumSec = 0;
+        const segments = [];
+        for (let i=0;i<8;i++) {
+          const runSegSec = Math.round(runSec/8);
+          const stationSegSec = Math.round(stationSec * STATIONS[i].pctSt/100);
+          cumSec += runSegSec;
+          segments.push({ run:runSegSec, station:stationSegSec, cumAfterRun:cumSec, station_name:STATIONS[i].name, dist:STATIONS[i].dist });
+          cumSec += stationSegSec;
+        }
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:14 }}>⏱️ Pacing Calculator</div>
+
+            {/* Target time input */}
+            <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom:12 }}>
+              <span style={{ fontSize:10,color:"#8E8E93",minWidth:80 }}>Objectif:</span>
+              {[{val:targetH,set:setTargetH,max:3,unit:"h"},{val:targetM,set:setTargetM,max:59,unit:"min"},{val:targetS,set:setTargetS,max:59,unit:"s",step:5}].map(f=>(
+                <div key={f.unit} style={{ display:"flex",alignItems:"center",gap:3 }}>
+                  <button onClick={()=>f.set(v=>Math.max(0,v-(f.step||1)))}
+                    style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:6,width:22,height:22,fontSize:14,cursor:"pointer" }}>−</button>
+                  <span style={{ fontSize:15,fontWeight:900,color:"var(--yellow)",minWidth:22,textAlign:"center" }}>{String(f.val).padStart(2,"0")}</span>
+                  <button onClick={()=>f.set(v=>Math.min(f.max,v+(f.step||1)))}
+                    style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:6,width:22,height:22,fontSize:14,cursor:"pointer" }}>+</button>
+                  <span style={{ fontSize:9,color:"#636366" }}>{f.unit}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Run/Station split slider */}
+            <div style={{ marginBottom:14 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
+                <span style={{ fontSize:9,color:"#8E8E93" }}>🏃 Course {runPct}% — Stations {100-runPct}% 🏋️</span>
+              </div>
+              <input type="range" min={45} max={65} value={runPct} onChange={e=>setRunPct(+e.target.value)}
+                style={{ width:"100%",accentColor:"var(--yellow)" }}/>
+              <div style={{ height:6,background:"#2C2C2E",borderRadius:3,overflow:"hidden",marginTop:4 }}>
+                <div style={{ height:"100%",width:`${runPct}%`,background:"linear-gradient(90deg,#007AFF,var(--yellow))",borderRadius:3 }}/>
+              </div>
+            </div>
+
+            {/* Key pacing metrics */}
+            <div style={{ display:"flex",gap:6,marginBottom:14 }}>
+              <div style={{ flex:1,background:"#1C2A3A",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                <div style={{ fontSize:14,fontWeight:900,color:"#007AFF" }}>{paceMin}:{String(paceSec).padStart(2,"0")}</div>
+                <div style={{ fontSize:8,color:"#636366" }}>min/km course</div>
+              </div>
+              <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                <div style={{ fontSize:14,fontWeight:900,color:"var(--yellow)" }}>{fmtSec(runSec)}</div>
+                <div style={{ fontSize:8,color:"#636366" }}>temps course total</div>
+              </div>
+              <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 6px",textAlign:"center" }}>
+                <div style={{ fontSize:14,fontWeight:900,color:"#FF9F0A" }}>{fmtSec(stationSec)}</div>
+                <div style={{ fontSize:8,color:"#636366" }}>temps stations total</div>
+              </div>
+            </div>
+
+            {/* Segment breakdown */}
+            <div style={{ fontSize:9,color:"#636366",marginBottom:6 }}>Découpage par segment</div>
+            {segments.map((seg,i)=>(
+              <div key={i} style={{ display:"flex",gap:6,alignItems:"center",marginBottom:4 }}>
+                <div style={{ fontSize:8,color:"#636366",width:14,textAlign:"right" }}>{i+1}</div>
+                {/* Run bar */}
+                <div style={{ flex:runPct,height:20,background:"#1C2A3A",borderRadius:"4px 0 0 4px",display:"flex",alignItems:"center",paddingLeft:6,overflow:"hidden" }}>
+                  <span style={{ fontSize:8,color:"#007AFF",fontWeight:700,whiteSpace:"nowrap" }}>🏃 {fmtSec(seg.run)}</span>
+                </div>
+                {/* Station bar */}
+                <div style={{ flex:100-runPct,height:20,background:"#2A1C1C",borderRadius:"0 4px 4px 0",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:6,overflow:"hidden" }}>
+                  <span style={{ fontSize:7,color:"#FF9F0A",fontWeight:700,whiteSpace:"nowrap" }}>{seg.station_name.split(" ")[0]} {fmtSec(seg.station)}</span>
+                </div>
+                {/* Cumulative */}
+                <div style={{ fontSize:8,color:"#636366",width:34,textAlign:"right" }}>{fmtSec(Math.min(seg.cumAfterRun+seg.station,totalSec))}</div>
+              </div>
+            ))}
+
+            <div style={{ textAlign:"center",fontSize:9,color:"#30D158",fontWeight:700,marginTop:8,padding:"6px 0",background:"#1C3A24",borderRadius:8 }}>
+              Arrivée visée: {fmtSec(totalSec)} 🏁
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── HYROX LEADERBOARD COMPARISON ── */}
       {(() => {
         const sex = profile.sexe === "F" ? "F" : "H";
