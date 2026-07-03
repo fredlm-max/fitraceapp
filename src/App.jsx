@@ -5433,6 +5433,144 @@ JSON:
               );
             })()}
 
+            {/* ── SLEEP QUALITY TRACKER ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const KEY = `fitrace_sleep2_${profile.name}`;
+              const [logs, setLogs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+              const [editing, setEditing] = React.useState(false);
+              const [form, setForm] = React.useState({ h:7, m:30, quality:3 });
+
+              const todayLog = logs[todayStr];
+
+              const save = () => {
+                const next = { ...logs, [todayStr]:{ h:form.h, m:form.m, quality:form.quality } };
+                setLogs(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setEditing(false);
+              };
+
+              // Last 14 days
+              const days14 = Array.from({length:14},(_,i)=>{
+                const d = new Date(Date.now()-(13-i)*86400000).toISOString().slice(0,10);
+                return { date:d, log:logs[d]||null };
+              });
+
+              const avgH = (() => {
+                const valid = days14.filter(d=>d.log);
+                if (!valid.length) return null;
+                return Math.round(valid.reduce((s,d)=>s+(d.log.h+(d.log.m||0)/60),0)/valid.length*10)/10;
+              })();
+
+              const avgQ = (() => {
+                const valid = days14.filter(d=>d.log);
+                if (!valid.length) return null;
+                return Math.round(valid.reduce((s,d)=>s+d.log.quality,0)/valid.length*10)/10;
+              })();
+
+              const sleepScore = todayLog ? Math.min(100, Math.round(
+                ((todayLog.h + (todayLog.m||0)/60) / 8) * 60 + (todayLog.quality / 5) * 40
+              )) : null;
+
+              const scoreColor = sleepScore >= 80 ? "#30D158" : sleepScore >= 60 ? "#FF9F0A" : "#FF453A";
+              const scoreLabel = sleepScore >= 80 ? "Excellent" : sleepScore >= 60 ? "Correct" : "Insuffisant";
+
+              const QUALITY_LABELS = ["","Très mauvais","Mauvais","Moyen","Bon","Excellent"];
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🌙 Sommeil</div>
+                    <button onClick={()=>{ if (!editing && todayLog) setForm({h:todayLog.h,m:todayLog.m||30,quality:todayLog.quality}); setEditing(e=>!e); }}
+                      style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                      {editing ? "Annuler" : todayLog ? "Modifier" : "+ Log nuit"}
+                    </button>
+                  </div>
+
+                  {!editing && todayLog && (
+                    <div style={{ display:"flex",gap:10,alignItems:"center",marginBottom:14 }}>
+                      {/* Score circle */}
+                      <div style={{ position:"relative",width:70,height:70,flexShrink:0 }}>
+                        <svg width="70" height="70" viewBox="0 0 70 70">
+                          <circle cx="35" cy="35" r="30" fill="none" stroke="#2C2C2E" strokeWidth="6"/>
+                          <circle cx="35" cy="35" r="30" fill="none" stroke={scoreColor} strokeWidth="6"
+                            strokeDasharray={`${(sleepScore/100)*188} 188`} strokeLinecap="round"
+                            transform="rotate(-90 35 35)"/>
+                          <text x="35" y="38" textAnchor="middle" fill={scoreColor} fontSize="16" fontWeight="900">{sleepScore}</text>
+                        </svg>
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14,fontWeight:900,color:"var(--white)" }}>
+                          {todayLog.h}h{todayLog.m>0?`${String(todayLog.m).padStart(2,"0")}`:""} de sommeil
+                        </div>
+                        <div style={{ fontSize:10,color:scoreColor,fontWeight:700 }}>{scoreLabel}</div>
+                        <div style={{ fontSize:9,color:"#636366",marginTop:2 }}>
+                          Qualité: {"★".repeat(todayLog.quality)}{"☆".repeat(5-todayLog.quality)} · {QUALITY_LABELS[todayLog.quality]}
+                        </div>
+                        {avgH && <div style={{ fontSize:8,color:"#8E8E93",marginTop:2 }}>Moy. 14j: {avgH}h · Qualité {avgQ}/5</div>}
+                      </div>
+                    </div>
+                  )}
+
+                  {!editing && !todayLog && (
+                    <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"8px 0",marginBottom:10 }}>
+                      Enregistre ta nuit pour un score de récupération complet
+                    </div>
+                  )}
+
+                  {editing && (
+                    <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                      <div style={{ fontSize:10,fontWeight:700,color:"var(--white)",marginBottom:10 }}>Durée de sommeil</div>
+                      <div style={{ display:"flex",gap:8,alignItems:"center",marginBottom:14 }}>
+                        {[{val:form.h,set:"h",max:12,unit:"h"},{val:form.m,set:"m",max:59,unit:"min",step:15}].map(f=>(
+                          <div key={f.unit} style={{ display:"flex",alignItems:"center",gap:4 }}>
+                            <button onClick={()=>setForm(p=>({...p,[f.set]:Math.max(0,p[f.set]-(f.step||1))}))}
+                              style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:6,width:28,height:28,fontSize:16,cursor:"pointer" }}>−</button>
+                            <span style={{ fontSize:18,fontWeight:900,color:"var(--yellow)",minWidth:36,textAlign:"center" }}>{f.unit==="min"?String(f.val).padStart(2,"0"):f.val}</span>
+                            <button onClick={()=>setForm(p=>({...p,[f.set]:Math.min(f.max,p[f.set]+(f.step||1))}))}
+                              style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:6,width:28,height:28,fontSize:16,cursor:"pointer" }}>+</button>
+                            <span style={{ fontSize:10,color:"#636366" }}>{f.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:10,fontWeight:700,color:"var(--white)",marginBottom:8 }}>Qualité ressentie</div>
+                      <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                        {[1,2,3,4,5].map(v=>(
+                          <button key={v} onClick={()=>setForm(p=>({...p,quality:v}))}
+                            style={{ flex:1,background:form.quality>=v?"#FF9F0A40":"#2C2C2E",color:form.quality>=v?"#FF9F0A":"#636366",border:`1px solid ${form.quality>=v?"#FF9F0A40":"transparent"}`,borderRadius:8,padding:"8px 0",fontSize:16,cursor:"pointer" }}>
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:9,color:"#8E8E93",textAlign:"center",marginBottom:10 }}>{QUALITY_LABELS[form.quality]}</div>
+                      <button onClick={save} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:9,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 14-day mini chart */}
+                  {days14.some(d=>d.log) && (
+                    <div style={{ display:"flex",gap:2,alignItems:"flex-end",height:30 }}>
+                      {days14.map((d,i)=>{
+                        if (!d.log) return <div key={i} style={{ flex:1,height:4,background:"#2C2C2E",borderRadius:2 }}/>;
+                        const dur = d.log.h + (d.log.m||0)/60;
+                        const h = Math.max(4, Math.round((dur/9)*28));
+                        const c = dur>=7?"#30D158":dur>=6?"#FF9F0A":"#FF453A";
+                        return <div key={i} style={{ flex:1,height:h,background:c,borderRadius:"2px 2px 0 0",opacity:0.7+0.3*(d.log.quality/5) }}/>;
+                      })}
+                    </div>
+                  )}
+                  {days14.some(d=>d.log) && (
+                    <div style={{ display:"flex",justifyContent:"space-between",marginTop:4 }}>
+                      <div style={{ fontSize:7,color:"#636366" }}>−14j</div>
+                      <div style={{ fontSize:7,color:"#636366" }}>Aujourd'hui</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── FATIGUE STATUS BANNER ── */}
             {(() => {
               const sessions = profile.sessions || [];
