@@ -7043,41 +7043,231 @@ JSON:
                   id:"skierg_intervals", type:"running_qualite", icon:"🎿", color:"#C9A840",
                   title:"SkiErg Intervals", duration:30, rpe:8,
                   tags:["HYROX","VMA","Anaérobie"],
-                  desc:"6 × 250m SkiErg à 90% intensité, récup 60s. Booste ta puissance aérobie."
+                  desc:"6 × 250m SkiErg à 90% intensité, récup 60s. Booste ta puissance aérobie.",
+                  steps:[
+                    {label:"Échauffement SkiErg", dur:300, icon:"🔥", tip:"Allure très légère, réveil musculaire"},
+                    {label:"Intervalle 1 — 250m", dur:75, icon:"⚡", tip:"90% intensité max — sprint contrôlé"},
+                    {label:"Récupération", dur:60, icon:"😮‍💨", tip:"Marche lente, baisse le rythme cardiaque"},
+                    {label:"Intervalle 2 — 250m", dur:75, icon:"⚡", tip:"Même allure que l'intervalle 1"},
+                    {label:"Récupération", dur:60, icon:"😮‍💨", tip:"Respire profondément"},
+                    {label:"Intervalle 3 — 250m", dur:75, icon:"⚡", tip:"Maintiens la cadence"},
+                    {label:"Récupération", dur:60, icon:"😮‍💨", tip:"Tu es à mi-chemin !"},
+                    {label:"Intervalle 4 — 250m", dur:75, icon:"⚡", tip:"Plus que 3 !"},
+                    {label:"Récupération", dur:60, icon:"😮‍💨", tip:"Shake hands, relâche les épaules"},
+                    {label:"Intervalle 5 — 250m", dur:75, icon:"⚡", tip:"Avant-dernier effort !"},
+                    {label:"Récupération", dur:60, icon:"😮‍💨", tip:"Prépare le dernier sprint"},
+                    {label:"Intervalle 6 — 250m 🏁", dur:75, icon:"🔥", tip:"TOUT DONNER — dernier effort !"},
+                    {label:"Retour au calme", dur:180, icon:"🧘", tip:"5 min de ski léger, puis étirements épaules"},
+                  ]
                 },
                 {
                   id:"zone2_run", type:"running_zone2", icon:"🏃", color:"#30D158",
                   title:"Zone 2 Run 40min", duration:40, rpe:5,
                   tags:["Endurance","Base","FC 120-140"],
-                  desc:"Course continue à basse intensité. Tu dois pouvoir tenir une conversation. Base de toute préparation HYROX."
+                  desc:"Course continue à basse intensité. Tu dois pouvoir tenir une conversation. Base de toute préparation HYROX.",
+                  steps:[
+                    {label:"Marche d'activation", dur:180, icon:"🚶", tip:"Mobilisation articulaire, hanches et chevilles"},
+                    {label:"Zone 1 — rodage", dur:300, icon:"🏃", tip:"Très lent — FC <120 bpm"},
+                    {label:"Zone 2 — effort principal", dur:1800, icon:"💚", tip:"FC 120-140 bpm — tu dois pouvoir parler"},
+                    {label:"Zone 2 — effort principal (suite)", dur:600, icon:"💚", tip:"Maintiens le rythme — régularité"},
+                    {label:"Retour au calme", dur:120, icon:"🧘", tip:"Décélère progressivement, puis étirements"},
+                  ]
                 },
                 {
                   id:"sled_circuit", type:"force_stations", icon:"🏋️", color:"#a78bfa",
                   title:"Sled Circuit HYROX", duration:45, rpe:8,
                   tags:["Force","Stations","HYROX-Specific"],
-                  desc:"3 circuits : Sled Push 50m + Sled Pull 50m + 20 Sandbag Lunges. Récup 3min entre circuits."
-                },
-                {
-                  id:"race_sim", type:"hybride_compromis", icon:"🔥", color:"#FF6B00",
-                  title:"Race Simulation", duration:60, rpe:9,
-                  tags:["Race Pace","Hybride","Complet"],
-                  desc:"1km course + 1 station HYROX × 8 répétitions. L'entraînement le plus spécifique à la race."
+                  desc:"3 circuits : Sled Push 50m + Sled Pull 50m + 20 Sandbag Lunges. Récup 3min entre circuits.",
+                  steps:[
+                    {label:"Activation musculaire", dur:300, icon:"🔥", tip:"Squats, fentes, rotations épaules"},
+                    {label:"Circuit 1 — Sled Push 50m", dur:90, icon:"🛷", tip:"Corps horizontal, pas larges et puissants"},
+                    {label:"Sled Pull 50m", dur:90, icon:"🔗", tip:"Marche arrière, fléchis les genoux"},
+                    {label:"20 Sandbag Lunges", dur:60, icon:"🎒", tip:"Fentes profondes, sac sur l'épaule"},
+                    {label:"Récupération", dur:180, icon:"😮‍💨", tip:"Marche, hydrate-toi"},
+                    {label:"Circuit 2 — Sled Push 50m", dur:90, icon:"🛷", tip:"Maintiens la puissance vs circuit 1"},
+                    {label:"Sled Pull 50m", dur:90, icon:"🔗", tip:"Contrôle le dos — ne te courbe pas"},
+                    {label:"20 Sandbag Lunges", dur:60, icon:"🎒", tip:"Dernier tiers — force-toi !"},
+                    {label:"Récupération", dur:180, icon:"😮‍💨", tip:"Marche, stretch hanche fléchisseur"},
+                    {label:"Circuit 3 FINAL — Sled Push 50m", dur:90, icon:"🔥", tip:"DERNIÈRE CHANCE — sprint !"},
+                    {label:"Sled Pull 50m", dur:90, icon:"🔗", tip:"Tout le corps, grip fort"},
+                    {label:"20 Sandbag Lunges 🏁", dur:60, icon:"🎒", tip:"Finissez fort !"},
+                    {label:"Étirements finaux", dur:300, icon:"🧘", tip:"Quadriceps, ischio, épaules — 30s par muscle"},
+                  ]
                 },
                 {
                   id:"mobility_hyrox", type:"mobilite", icon:"🧘", color:"#007AFF",
                   title:"Mobilité HYROX", duration:25, rpe:3,
                   tags:["Récupération","Mobilité","Hanches"],
-                  desc:"Hanches, épaules, thoracique. Indispensable après les séances lourdes pour prévenir les blessures."
+                  desc:"Hanches, épaules, thoracique. Indispensable après les séances lourdes pour prévenir les blessures.",
+                  steps:[
+                    {label:"Foam Roller — jambes", dur:180, icon:"🎠", tip:"30s par zone : quadriceps, IT Band, mollets"},
+                    {label:"Hip Flexor Stretch", dur:120, icon:"🧘", tip:"Genou au sol, bassin vers l'avant — 60s chaque côté"},
+                    {label:"Pigeon Pose — hanches", dur:120, icon:"🕊️", tip:"Hanche ouverte, dos droit — 60s chaque côté"},
+                    {label:"Thoracic rotation", dur:120, icon:"🔄", tip:"Mains sur les épaules, rotation maximale"},
+                    {label:"Shoulder CARS", dur:90, icon:"💫", tip:"Rotation complète articulaire, 5 chaque côté"},
+                    {label:"Cat-Cow — mobilité dos", dur:90, icon:"🐱", tip:"10 répétitions lentes, inspirez sur l'arche"},
+                    {label:"Child's Pose", dur:60, icon:"🙇", tip:"Bras tendus, front au sol — relâchement total"},
+                    {label:"Dead Bug x10", dur:90, icon:"🦋", tip:"Core activé, dos plaqué au sol"},
+                    {label:"Respiration finale", dur:60, icon:"🌬️", tip:"4-7-8 : inspirez 4s, retenez 7s, expirez 8s"},
+                  ]
                 },
                 {
                   id:"farmer_wallball", type:"force_stations", icon:"🧲", color:"#BF5AF2",
                   title:"Farmer's + Wall Ball", duration:35, rpe:7,
                   tags:["Grip","Shoulder","HYROX"],
-                  desc:"5 × 40m Farmer's Carry + 5 × 20 Wall Ball (20/14 lbs). Renforce les points faibles HYROX."
+                  desc:"5 × 40m Farmer's Carry + 5 × 20 Wall Ball (20/14 lbs). Renforce les points faibles HYROX.",
+                  steps:[
+                    {label:"Activation grip + épaules", dur:240, icon:"🔥", tip:"Dead hang 30s, rotations épaules, face pulls"},
+                    {label:"Set 1 — Farmer's 40m", dur:45, icon:"🧳", tip:"Kettlebells/haltères, dos droit, regard haut"},
+                    {label:"20 Wall Balls", dur:60, icon:"🏀", tip:"Squat profond, lancé à 3m — sans s'arrêter"},
+                    {label:"Récupération 90s", dur:90, icon:"😮‍💨", tip:"Shake les mains, respire"},
+                    {label:"Set 2 — Farmer's 40m", dur:45, icon:"🧳", tip:"Même charge — maintiens le rythme"},
+                    {label:"20 Wall Balls", dur:60, icon:"🏀", tip:"Continuité sur les 20 reps — pas de pause"},
+                    {label:"Récupération 90s", dur:90, icon:"😮‍💨", tip:"Hydratation"},
+                    {label:"Set 3 — Farmer's 40m", dur:45, icon:"🧳", tip:"Grip commence à brûler — focus sur la posture"},
+                    {label:"20 Wall Balls", dur:60, icon:"🏀", tip:"Si besoin : 10+10 avec 5s pause"},
+                    {label:"Récupération 90s", dur:90, icon:"😮‍💨", tip:"Tu es à 60% !"},
+                    {label:"Set 4 — Farmer's 40m", dur:45, icon:"🧳", tip:"Résistance mentale — ne lâche pas !"},
+                    {label:"20 Wall Balls", dur:60, icon:"🏀", tip:"Coordination bras-jambes — reste fluide"},
+                    {label:"Récupération 90s", dur:90, icon:"😮‍💨", tip:"Dernier set !"},
+                    {label:"Set 5 FINAL — Farmer's 40m 🏁", dur:45, icon:"🔥", tip:"MAX EFFORT"},
+                    {label:"20 Wall Balls FINAL 🏁", dur:60, icon:"🔥", tip:"TOUT DONNER !"},
+                    {label:"Récupération + étirements", dur:240, icon:"🧘", tip:"Avant-bras, épaules, pectoraux — 45s chaque"},
+                  ]
                 },
               ];
 
               const [selectedWorkout, setSelectedWorkout] = React.useState(null);
+              const [guidedMode, setGuidedMode] = React.useState(false);
+              const [guidedStep, setGuidedStep] = React.useState(0);
+              const [stepTimer, setStepTimer] = React.useState(0);
+              const [stepRunning, setStepRunning] = React.useState(false);
+              const [guidedTotal, setGuidedTotal] = React.useState(0);
+
+              React.useEffect(() => {
+                if (!guidedMode || !stepRunning) return;
+                const id = setInterval(() => {
+                  setStepTimer(t => {
+                    if (t <= 1) {
+                      haptic([10,20]);
+                      const w = LIBRARY.find(x => x.id === selectedWorkout);
+                      if (guidedStep < w.steps.length - 1) {
+                        setGuidedStep(s => s + 1);
+                        setStepTimer(w.steps[guidedStep + 1]?.dur || 60);
+                        setGuidedTotal(tot => tot + (w.steps[guidedStep]?.dur || 0));
+                      } else {
+                        setStepRunning(false);
+                        setGuidedTotal(tot => tot + (w.steps[guidedStep]?.dur || 0));
+                        haptic([20,40,20,40,30]);
+                      }
+                      return t - 1;
+                    }
+                    return t - 1;
+                  });
+                }, 1000);
+                return () => clearInterval(id);
+              }, [guidedMode, stepRunning, guidedStep, selectedWorkout]);
+
+              if (guidedMode && selectedWorkout) {
+                const w = LIBRARY.find(x => x.id === selectedWorkout);
+                const step = w.steps[guidedStep];
+                const isLast = guidedStep >= w.steps.length - 1;
+                const isDone = isLast && !stepRunning && guidedTotal > 0;
+                const pct = step ? Math.min(1, 1 - stepTimer / step.dur) : 0;
+                const circumference = 2 * Math.PI * 56;
+                const fmtTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+                return (
+                  <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px", marginBottom:12, border:`1px solid ${w.color}40` }}>
+                    {/* Header */}
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                      <button onClick={() => { setGuidedMode(false); setGuidedStep(0); setStepRunning(false); setStepTimer(0); setGuidedTotal(0); }}
+                        style={{ background:"none", border:"none", color:"#8E8E93", fontSize:20, cursor:"pointer", padding:0 }}>←</button>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:12, fontWeight:800, color:w.color }}>{w.title} — Mode Guidé</div>
+                        <div style={{ fontSize:9, color:"#555" }}>Étape {guidedStep+1}/{w.steps.length}</div>
+                      </div>
+                      {!isDone && (
+                        <div style={{ fontSize:9, color:"#555" }}>
+                          {w.steps.slice(guidedStep+1).reduce((a,s)=>a+s.dur,0+stepTimer)}s restantes
+                        </div>
+                      )}
+                    </div>
+
+                    {isDone ? (
+                      /* Completed */
+                      <div style={{ textAlign:"center", padding:"20px 0" }}>
+                        <div style={{ fontSize:48, marginBottom:8 }}>🎉</div>
+                        <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:24, color:"#fff", marginBottom:4 }}>Séance terminée !</div>
+                        <div style={{ fontSize:12, color:"#555", marginBottom:20 }}>{w.steps.length} étapes · {Math.round(guidedTotal/60)} min</div>
+                        <button onClick={() => { haptic([10,20,10]); setLiveTimerType(w.type); setShowLiveTimer(true); setGuidedMode(false); setSelectedWorkout(null); }}
+                          style={{ width:"100%", padding:"13px", borderRadius:14, background:w.color, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, color:"#000" }}>
+                          ✓ Logger la séance
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Progress dots */}
+                        <div style={{ display:"flex", gap:3, marginBottom:14, flexWrap:"wrap" }}>
+                          {w.steps.map((_,i) => (
+                            <div key={i} style={{ flex:"0 0 auto", width: Math.max(4, Math.min(16, 280/w.steps.length - 3)), height:4, borderRadius:2,
+                              background: i < guidedStep ? w.color : i === guidedStep ? w.color : "rgba(255,255,255,0.1)",
+                              opacity: i === guidedStep ? 1 : i < guidedStep ? 0.6 : 0.2,
+                              boxShadow: i === guidedStep ? `0 0 6px ${w.color}` : "none"
+                            }} />
+                          ))}
+                        </div>
+
+                        {/* Ring timer */}
+                        <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
+                          <div style={{ position:"relative", width:120, height:120, flexShrink:0 }}>
+                            <svg width="120" height="120" style={{ transform:"rotate(-90deg)" }}>
+                              <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+                              <circle cx="60" cy="60" r="56" fill="none" stroke={w.color} strokeWidth="6"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={circumference * (1 - pct)}
+                                strokeLinecap="round"
+                                style={{ filter:`drop-shadow(0 0 6px ${w.color})`, transition:"stroke-dashoffset 1s linear" }}
+                              />
+                            </svg>
+                            <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                              <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:28, color:"#fff", lineHeight:1 }}>{fmtTime(stepTimer)}</div>
+                              <div style={{ fontSize:16 }}>{step?.icon}</div>
+                            </div>
+                          </div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{step?.label}</div>
+                            <div style={{ fontSize:11, color:"#8E8E93", lineHeight:1.5, marginBottom:8 }}>{step?.tip}</div>
+                            {/* Next step preview */}
+                            {!isLast && <div style={{ fontSize:9, color:"#3A3A3C" }}>Suivant : {w.steps[guidedStep+1]?.icon} {w.steps[guidedStep+1]?.label}</div>}
+                          </div>
+                        </div>
+
+                        {/* Controls */}
+                        <div style={{ display:"flex", gap:10 }}>
+                          <button onClick={() => { setStepRunning(r => !r); haptic([8]); }}
+                            style={{ flex:1, padding:"11px", borderRadius:12, background: stepRunning ? "rgba(255,255,255,0.08)" : w.color, border:"none", cursor:"pointer", fontSize:13, fontWeight:700, color: stepRunning ? "#fff" : "#000" }}>
+                            {stepRunning ? "⏸ Pause" : (stepTimer > 0 && stepTimer < (step?.dur||60) ? "▶ Reprendre" : "▶ Démarrer")}
+                          </button>
+                          <button onClick={() => {
+                            haptic([4]);
+                            setGuidedTotal(t => t + stepTimer);
+                            if (guidedStep < w.steps.length - 1) {
+                              const next = guidedStep + 1;
+                              setGuidedStep(next);
+                              setStepTimer(w.steps[next].dur);
+                              setStepRunning(true);
+                            } else { setStepRunning(false); }
+                          }}
+                            style={{ padding:"11px 16px", borderRadius:12, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", cursor:"pointer", fontSize:13, color:"#8E8E93" }}>
+                            Skip →
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              }
 
               if (selectedWorkout) {
                 const w = LIBRARY.find(x => x.id === selectedWorkout);
@@ -7088,7 +7278,7 @@ JSON:
                       <div style={{ fontSize:24 }}>{w.icon}</div>
                       <div>
                         <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>{w.title}</div>
-                        <div style={{ fontSize:10, color:"#555" }}>{w.duration} min · RPE {w.rpe}/10</div>
+                        <div style={{ fontSize:10, color:"#555" }}>{w.duration} min · RPE {w.rpe}/10 · {w.steps?.length || 0} étapes</div>
                       </div>
                     </div>
                     <div style={{ fontSize:13, color:"#8E8E93", lineHeight:1.65, marginBottom:14 }}>{w.desc}</div>
@@ -7097,10 +7287,40 @@ JSON:
                         <span key={t} style={{ fontSize:9, color:w.color, background:`${w.color}15`, borderRadius:5, padding:"2px 8px", fontWeight:700 }}>{t}</span>
                       ))}
                     </div>
-                    <button onClick={() => { haptic([10,20,10]); setLiveTimerType(w.type); setShowLiveTimer(true); setSelectedWorkout(null); }}
-                      style={{ width:"100%", padding:"13px", borderRadius:14, background:w.color, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, color:"#000", boxShadow:`0 4px 20px ${w.color}50` }}>
-                      ▶ Démarrer le timer
-                    </button>
+                    {/* Steps preview */}
+                    {w.steps && (
+                      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"10px 12px", marginBottom:14 }}>
+                        <div style={{ fontSize:9, color:"#555", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Programme — {w.steps.length} étapes</div>
+                        {w.steps.slice(0,4).map((s,i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", borderBottom: i < Math.min(3,w.steps.length-1) ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                            <span style={{ fontSize:12 }}>{s.icon}</span>
+                            <span style={{ fontSize:11, color:"#8E8E93", flex:1 }}>{s.label}</span>
+                            <span style={{ fontSize:10, color:"#555" }}>{Math.floor(s.dur/60)}:{String(s.dur%60).padStart(2,"0")}</span>
+                          </div>
+                        ))}
+                        {w.steps.length > 4 && <div style={{ fontSize:9, color:"#555", marginTop:6 }}>+ {w.steps.length-4} étapes de plus...</div>}
+                      </div>
+                    )}
+                    {/* Two action buttons */}
+                    <div style={{ display:"flex", gap:8 }}>
+                      {w.steps && (
+                        <button onClick={() => {
+                          haptic([10,20,10]);
+                          setGuidedMode(true);
+                          setGuidedStep(0);
+                          setStepTimer(w.steps[0].dur);
+                          setStepRunning(false);
+                          setGuidedTotal(0);
+                        }}
+                          style={{ flex:1, padding:"13px", borderRadius:14, background:w.color, border:"none", cursor:"pointer", fontSize:13, fontWeight:800, color:"#000", boxShadow:`0 4px 20px ${w.color}50` }}>
+                          🎯 Mode guidé
+                        </button>
+                      )}
+                      <button onClick={() => { haptic([10,20,10]); setLiveTimerType(w.type); setShowLiveTimer(true); setSelectedWorkout(null); }}
+                        style={{ flex:1, padding:"13px", borderRadius:14, background:"rgba(255,255,255,0.08)", border:`1px solid ${w.color}40`, cursor:"pointer", fontSize:13, fontWeight:700, color:"#fff" }}>
+                        ▶ Timer libre
+                      </button>
+                    </div>
                   </div>
                 );
               }
