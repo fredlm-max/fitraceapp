@@ -22368,6 +22368,138 @@ const sessions = profile.sessions || [];
               );
             })()}
 
+            {/* ── RACE DAY PACING CALCULATOR ── */}
+            {(()=>{
+              const [targetH, setTargetH] = React.useState("1");
+              const [targetM, setTargetM] = React.useState("15");
+              const [open, setOpen] = React.useState(false);
+
+              const STATIONS = [
+                { id:"ski",      label:"SkiErg",         icon:"⛷️",  weight:1.1, color:"#a78bfa" },
+                { id:"sledpush", label:"Sled Push",      icon:"🛷",  weight:1.3, color:"#C9A840" },
+                { id:"sledpull", label:"Sled Pull",      icon:"🔗",  weight:1.2, color:"#FF9F0A" },
+                { id:"burpee",   label:"Burpee BJ",      icon:"🤸",  weight:1.4, color:"#FF453A" },
+                { id:"rowing",   label:"Rowing",         icon:"🚣",  weight:1.1, color:"#38bdf8" },
+                { id:"farmers",  label:"Farmers Carry",  icon:"🧳",  weight:0.8, color:"#30D158" },
+                { id:"sandbag",  label:"Sandbag Lunges", icon:"🎒",  weight:1.2, color:"#FF9F0A" },
+                { id:"wallball", label:"Wall Balls",     icon:"🏀",  weight:1.0, color:"#C9A840" },
+              ];
+
+              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              const benchmarks = (() => { try { return JSON.parse(localStorage.getItem(benchKey)||"{}"); } catch { return {}; } })();
+
+              const totalSecs = (parseInt(targetH)||0)*3600 + (parseInt(targetM)||0)*60;
+              const secsToStr = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+              // Running: 8×1km = 8km total; target ~50% of total time for top performers
+              // HYROX elite: stations ~45%, running ~55%
+              const runPct = 0.52; // 52% for running (8km segments)
+              const staPct = 0.48; // 48% for 8 stations
+
+              const runTotal = Math.round(totalSecs * runPct);
+              const runPacePerKm = Math.round(runTotal / 8);
+              const staTotal = totalSecs - runTotal;
+
+              // Distribute station time by weight
+              const totalWeight = STATIONS.reduce((a,s)=>a+s.weight,0);
+              const staSplits = STATIONS.map(st => {
+                const alloc = Math.round((st.weight / totalWeight) * staTotal);
+                const pr = benchmarks[st.id]?.time;
+                const prSecs = pr ? (() => { const [m,s]=pr.split(":").map(Number); return m*60+(s||0); })() : null;
+                const gap = prSecs !== null ? alloc - prSecs : null;
+                return { ...st, alloc, pr, prSecs, gap };
+              });
+
+              // Overall feasibility
+              const stationsWithPR = staSplits.filter(s=>s.prSecs!==null);
+              const hardOnes = staSplits.filter(s=>s.gap!==null && s.gap < -10); // need >10s faster than current PR
+              const feasible = stationsWithPR.length === 0 || hardOnes.length === 0;
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div onClick={()=>setOpen(o=>!o)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", userSelect:"none" }}>
+                    <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>🎯 Calculateur de splits HYROX</div>
+                    <span style={{ fontSize:12, color:"#636366" }}>{open?"▲":"▼"}</span>
+                  </div>
+
+                  {open && (
+                    <div style={{ marginTop:10, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"16px" }}>
+
+                      {/* Target input */}
+                      <div style={{ fontSize:10, color:"#636366", marginBottom:10 }}>Objectif de temps :</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:9, color:"#636366", marginBottom:4 }}>Heures</div>
+                          <input type="number" min="0" max="3" value={targetH} onChange={e=>setTargetH(e.target.value)}
+                            style={{ width:"100%", background:"var(--bg3,#2C2C2E)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px", color:"var(--white,#fff)", fontSize:20, textAlign:"center", outline:"none", fontFamily:"'Bebas Neue',sans-serif" }}/>
+                        </div>
+                        <div style={{ fontSize:24, color:"#636366", marginTop:12 }}>:</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:9, color:"#636366", marginBottom:4 }}>Minutes</div>
+                          <input type="number" min="0" max="59" value={targetM} onChange={e=>setTargetM(String(Math.min(59,parseInt(e.target.value)||0)))}
+                            style={{ width:"100%", background:"var(--bg3,#2C2C2E)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px", color:"var(--white,#fff)", fontSize:20, textAlign:"center", outline:"none", fontFamily:"'Bebas Neue',sans-serif" }}/>
+                        </div>
+                        <div style={{ flex:1.5, textAlign:"center", marginTop:12 }}>
+                          <div style={{ fontSize:28, fontFamily:"'Bebas Neue',sans-serif", color:"#C9A840", lineHeight:1 }}>
+                            {Math.floor(totalSecs/3600)}:{String(Math.floor((totalSecs%3600)/60)).padStart(2,"0")}
+                          </div>
+                          <div style={{ fontSize:9, color: feasible ? "#30D158" : "#FF453A", marginTop:2, fontWeight:700 }}>
+                            {stationsWithPR.length > 0 ? (feasible ? "✅ Objectif atteignable" : `⚠️ ${hardOnes.length} station(s) insuffisante(s)`) : "Renseigne tes benchmarks"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Running split */}
+                      <div style={{ background:"rgba(0,122,255,0.1)", border:"1px solid rgba(0,122,255,0.25)", borderRadius:12, padding:"10px 14px", marginBottom:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#007AFF" }}>🏃 Running 8 × 1km</div>
+                          <div style={{ fontSize:9, color:"#8E8E93" }}>Total : {secsToStr(runTotal)} · {Math.round(runPct*100)}% du temps</div>
+                        </div>
+                        <div style={{ textAlign:"right" }}>
+                          <div className="bebas" style={{ fontSize:22, color:"#007AFF", lineHeight:1 }}>{secsToStr(runPacePerKm)}/km</div>
+                          <div style={{ fontSize:9, color:"#636366" }}>allure cible</div>
+                        </div>
+                      </div>
+
+                      {/* Station splits */}
+                      <div style={{ fontSize:10, color:"#636366", fontWeight:700, marginBottom:8 }}>Splits stations ({Math.round(staPct*100)}% = {secsToStr(staTotal)}) :</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                        {staSplits.map(st=>{
+                          const ok = st.gap === null || st.gap >= -5;
+                          const tight = st.gap !== null && st.gap >= -10 && st.gap < -5;
+                          const hard = st.gap !== null && st.gap < -10;
+                          const statusColor = hard ? "#FF453A" : tight ? "#FF9F0A" : "#30D158";
+                          return (
+                            <div key={st.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:`${st.color}08`, borderRadius:10, border:`1px solid ${st.color}20` }}>
+                              <span style={{ fontSize:16, flexShrink:0 }}>{st.icon}</span>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontSize:11, fontWeight:600, color:"var(--white,#fff)" }}>{st.label}</div>
+                                {st.pr && (
+                                  <div style={{ fontSize:9, color:"#636366" }}>PR actuel : {st.pr} · {st.gap > 0 ? `+${st.gap}s marge` : st.gap < 0 ? `${st.gap}s à gagner` : "pile"}</div>
+                                )}
+                              </div>
+                              <div style={{ textAlign:"right", flexShrink:0 }}>
+                                <div className="bebas" style={{ fontSize:18, color:st.color, lineHeight:1 }}>{secsToStr(st.alloc)}</div>
+                                {st.pr && <div style={{ fontSize:9, color:statusColor, fontWeight:700 }}>{hard?"❌ Insuffisant":tight?"⚡ Limite":"✅ Ok"}</div>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Strategy tip */}
+                      {hardOnes.length > 0 && (
+                        <div style={{ marginTop:10, background:"rgba(255,69,58,0.08)", border:"1px solid rgba(255,69,58,0.2)", borderRadius:10, padding:"8px 12px", fontSize:10, color:"#8E8E93" }}>
+                          <span style={{ color:"#FF453A", fontWeight:700 }}>Stations limitantes : </span>
+                          {hardOnes.map(s=>s.label).join(", ")} — travaille ces stations en priorité ou ajuste ton objectif de temps.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── INSIGHTS IA — observations intelligentes ── */}
             {(profile.sessions||[]).length >= 2 && (() => {
               const sessions = profile.sessions || [];
