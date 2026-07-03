@@ -12428,6 +12428,151 @@ JSON:
               );
             })()}
 
+            {/* ── PERFORMANCE TRENDS ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 5) return null;
+
+              const now = Date.now();
+              // Last 8 weeks, grouped
+              const weeks = Array.from({length:8},(_,i)=>{
+                const start = new Date(now-(7-i)*7*86400000).toISOString().slice(0,10);
+                const end   = new Date(now-(7-i-1)*7*86400000).toISOString().slice(0,10);
+                const wSess = sessions.filter(s=>s.date>=start&&s.date<end);
+                const runs = wSess.filter(s=>s.km>0&&s.duration>0);
+                const avgPace = runs.length ? runs.reduce((s,e)=>s+(e.duration/e.km),0)/runs.length : null; // min/km
+                const avgRpe = wSess.length ? wSess.reduce((s,e)=>s+(e.rpe||5),0)/wSess.length : null;
+                const vol = wSess.reduce((s,e)=>s+(e.km||0),0);
+                return { label:`S${i+1}`, avgPace, avgRpe, vol, count:wSess.length };
+              });
+
+              const METRICS = [
+                {
+                  key:"avgPace", label:"Allure moy.", unit:"min/km", icon:"⚡",
+                  color:"#007AFF", lowerBetter:true,
+                  fmt:(v)=>v?`${Math.floor(v)}:${String(Math.round((v%1)*60)).padStart(2,"0")}`:"–",
+                },
+                {
+                  key:"avgRpe", label:"RPE moyen", unit:"/10", icon:"💥",
+                  color:"#FF9F0A", lowerBetter:false,
+                  fmt:(v)=>v?v.toFixed(1):"–",
+                },
+                {
+                  key:"vol", label:"Volume", unit:"km", icon:"📏",
+                  color:"#30D158", lowerBetter:false,
+                  fmt:(v)=>v?v.toFixed(1)+"km":"–",
+                },
+              ];
+
+              const [activeMet, setActiveMet] = React.useState("avgPace");
+              const met = METRICS.find(m=>m.key===activeMet);
+
+              const validWeeks = weeks.filter(w=>w[activeMet]!==null&&w[activeMet]!==0);
+              const vals = validWeeks.map(w=>w[activeMet]);
+              const minV = Math.min(...vals), maxV = Math.max(...vals,minV+0.01);
+
+              // Linear trend (least squares)
+              const n = vals.length;
+              let trend = null;
+              if (n >= 3) {
+                const xMean = (n-1)/2;
+                const yMean = vals.reduce((s,v)=>s+v,0)/n;
+                const num = vals.reduce((s,v,i)=>s+(i-xMean)*(v-yMean),0);
+                const den = vals.reduce((s,_,i)=>s+(i-xMean)**2,0);
+                const slope = den ? num/den : 0;
+                trend = slope;
+              }
+
+              const improving = trend !== null && (met.lowerBetter ? trend < -0.001 : trend > 0.001);
+              const regressing = trend !== null && (met.lowerBetter ? trend > 0.001 : trend < -0.001);
+              const trendColor = improving ? "#30D158" : regressing ? "#FF453A" : "#FF9F0A";
+              const trendLabel = improving ? "↗ En progression" : regressing ? "↘ En régression" : "→ Stable";
+
+              const W=300,H=80,PL=4,PR=4,PT=8,PB=16;
+              const cW=W-PL-PR, cH=H-PT-PB;
+
+              const points = validWeeks.map((w,i)=>{
+                const idx = weeks.indexOf(w);
+                const x = PL + (idx/7)*cW;
+                const y = PT + cH - ((w[activeMet]-minV)/(maxV-minV))*cH;
+                return { x, y, w };
+              });
+
+              const polyline = points.map(p=>`${p.x},${p.y}`).join(" ");
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Tendances Performance</div>
+                    <div style={{ fontSize:9,fontWeight:800,color:trendColor }}>{trendLabel}</div>
+                  </div>
+
+                  {/* Metric selector */}
+                  <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                    {METRICS.map(m=>(
+                      <button key={m.key} onClick={()=>setActiveMet(m.key)}
+                        style={{ flex:1,background:activeMet===m.key?m.color+"30":"var(--bg3)",color:activeMet===m.key?m.color:"#636366",border:`1px solid ${activeMet===m.key?m.color+"60":"transparent"}`,borderRadius:8,padding:"6px 4px",fontSize:9,fontWeight:activeMet===m.key?800:400,cursor:"pointer",textAlign:"center" }}>
+                        {m.icon} {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Chart */}
+                  {points.length >= 2 ? (
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ marginBottom:8 }}>
+                      {/* Grid */}
+                      {[0,0.5,1].map(f=>(
+                        <line key={f} x1={PL} x2={W-PR} y1={PT+cH*(1-f)} y2={PT+cH*(1-f)} stroke="#2C2C2E" strokeWidth={0.5}/>
+                      ))}
+                      {/* Area */}
+                      <defs>
+                        <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={met.color} stopOpacity="0.3"/>
+                          <stop offset="100%" stopColor={met.color} stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      {points.length>=2 && (
+                        <polygon
+                          points={`${points[0].x},${PT+cH} ${polyline} ${points[points.length-1].x},${PT+cH}`}
+                          fill="url(#trendGrad)"/>
+                      )}
+                      {/* Line */}
+                      <polyline points={polyline} fill="none" stroke={met.color} strokeWidth={2} strokeLinejoin="round"/>
+                      {/* Dots */}
+                      {points.map((p,i)=>(
+                        <g key={i}>
+                          <circle cx={p.x} cy={p.y} r={3} fill={met.color}/>
+                          <text x={p.x} y={H-2} textAnchor="middle" fill="#636366" fontSize={7}>{p.w.label}</text>
+                        </g>
+                      ))}
+                      {/* Trend line (dashed) */}
+                      {trend !== null && points.length>=2 && (
+                        <line
+                          x1={points[0].x} y1={PT+cH-((vals[0]-minV)/(maxV-minV))*cH}
+                          x2={points[points.length-1].x} y2={PT+cH-((vals[vals.length-1]-minV)/(maxV-minV))*cH}
+                          stroke={trendColor} strokeWidth={1} strokeDasharray="4 3" opacity={0.7}/>
+                      )}
+                    </svg>
+                  ) : (
+                    <div style={{ textAlign:"center",color:"#636366",fontSize:10,padding:"16px 0" }}>Pas assez de données (min. 5 séances)</div>
+                  )}
+
+                  {/* Weekly values */}
+                  <div style={{ display:"flex",gap:3 }}>
+                    {weeks.map((w,i)=>{
+                      const v = w[activeMet];
+                      const isLast = i===7;
+                      return (
+                        <div key={i} style={{ flex:1,textAlign:"center" }}>
+                          <div style={{ fontSize:8,fontWeight:isLast?800:400,color:isLast?met.color:"#636366",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{v?met.fmt(v):"–"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── VMA PROGRESSION CHART ── */}
             {(() => {
               const vmaKey = `fitrace_vma_history_${profile.name}`;
