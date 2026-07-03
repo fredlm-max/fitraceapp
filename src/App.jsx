@@ -23843,6 +23843,274 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── RECOVERY PROTOCOL WIZARD ── */}
+      {(() => {
+        const KEY = `fitrace_recovery_log_${profile.name}`;
+        const [activeProto, setActiveProto] = React.useState(null);
+        const [activeStep, setActiveStep] = React.useState(0);
+        const [timerSec, setTimerSec] = React.useState(0);
+        const [running, setRunning] = React.useState(false);
+        const [log, setLog] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } });
+        const [tab, setTab] = React.useState("suggest");
+        const intervalRef = React.useRef(null);
+
+        // Compute readiness from TSB
+        const sessions = profile.sessions || [];
+        const kATL = 1 - Math.exp(-1/7), kCTL = 1 - Math.exp(-1/42);
+        let atl = 0, ctl = 0;
+        const today = new Date().toISOString().slice(0,10);
+        const sortedSess = [...sessions].sort((a,b) => a.date?.localeCompare(b.date));
+        const startD = new Date(today); startD.setDate(startD.getDate() - 42);
+        for (let i = 0; i <= 42; i++) {
+          const d = new Date(startD); d.setDate(d.getDate() + i);
+          const ds = d.toISOString().slice(0,10);
+          const trimp = sortedSess.filter(s => s.date === ds).reduce((sum,s) => sum + (s.duration && s.rpe ? s.duration*(s.rpe/10) : 0), 0);
+          atl = atl + kATL*(trimp - atl);
+          ctl = ctl + kCTL*(trimp - ctl);
+        }
+        const tsb = ctl - atl;
+        const readiness = tsb > 5 ? "high" : tsb > -10 ? "medium" : "low";
+
+        const PROTOCOLS = {
+          cold: {
+            name: "Bain froid", emoji: "🧊", duration: "15 min",
+            color: "#5AC8FA",
+            desc: "Réduction inflammatoire, accélère récupération musculaire",
+            steps: [
+              { name: "Prépare le bain", desc: "Remplis la baignoire d'eau froide (12-15°C). Ajoute des glaçons si besoin.", time: 120 },
+              { name: "Immersion membres inf.", desc: "Entre doucement jusqu'aux hanches. Respire profondément.", time: 120 },
+              { name: "Immersion complète", desc: "Descends jusqu'aux épaules. Maintiens une respiration calme et contrôlée.", time: 420 },
+              { name: "Sortie progressive", desc: "Sors lentement. Ne te sèche pas immédiatement, laisse le corps se réchauffer naturellement.", time: 60 },
+            ],
+          },
+          foam: {
+            name: "Foam Rolling", emoji: "🎯", duration: "20 min",
+            color: "#FF9F0A",
+            desc: "Libère les tensions, améliore la mobilité et la circulation",
+            steps: [
+              { name: "Mollets", desc: "Positionne le rouleau sous les mollets. 10 passes lentes par jambe, insiste sur les zones tendues.", time: 120 },
+              { name: "Ischio-jambiers", desc: "Rouleau sous les cuisses arrière. Maintiens 30s sur chaque point douloureux.", time: 120 },
+              { name: "Quadriceps", desc: "Face contre sol, rouleau sous les cuisses avant. Avance en cherchant les nœuds.", time: 120 },
+              { name: "Dorsaux & IT Band", desc: "Rouleau sur le côté de la cuisse. Un des plus intenses — respire et relâche.", time: 120 },
+              { name: "Dos thoracique", desc: "Rouleau perpendiculaire à la colonne. Ouvre la poitrine, mains derrière la tête.", time: 120 },
+            ],
+          },
+          stretch: {
+            name: "Étirements actifs", emoji: "🧘", duration: "25 min",
+            color: "#30D158",
+            desc: "Améliore la flexibilité, réduit les DOMS",
+            steps: [
+              { name: "Hip flexors", desc: "Fente basse, genou arrière au sol. Pousse les hanches en avant. 60s par côté.", time: 120 },
+              { name: "Pigeon pose", desc: "Jambe avant pliée à 90°, jambe arrière tendue. Un des étirements les plus puissants pour les hanches.", time: 120 },
+              { name: "Chaîne postérieure", desc: "Debout, penche le buste en avant. Laisse le poids t'aider. Genoux légèrement fléchis.", time: 90 },
+              { name: "Rotation thoracique", desc: "Assis en tailleur, rotation lente du buste. Garde les hanches fixes.", time: 90 },
+              { name: "Ouverture d'épaules", desc: "Bras croisés dans le dos, ouvre la poitrine. Vital pour SkiErg & Rowing.", time: 90 },
+            ],
+          },
+          sleep: {
+            name: "Sommeil optimal", emoji: "😴", duration: "Protocole soir",
+            color: "#BF5AF2",
+            desc: "Le levier de récupération #1. Prépare un sommeil de qualité maximale.",
+            steps: [
+              { name: "Coupure écrans", desc: "Éteins tous les écrans (tel, TV, PC). La lumière bleue supprime la mélatonine.", time: 0 },
+              { name: "Bain/douche tiède", desc: "15 min de bain tiède (38°C). La chute de température qui suit induit le sommeil.", time: 900 },
+              { name: "Cohérence cardiaque", desc: "5-5 breathing pendant 5 min. Active le parasympathique et prépare le sommeil.", time: 300 },
+              { name: "Position optimale", desc: "Chambre à 18-19°C, obscurité totale. Couche-toi avant minuit pour les phases de récupération musculaire.", time: 0 },
+            ],
+          },
+          nutrition: {
+            name: "Nutrition récup.", emoji: "🥗", duration: "30 min post",
+            color: "#FF6B35",
+            desc: "Fenêtre anabolique optimale pour reconstruire le muscle",
+            steps: [
+              { name: "Hydratation (0-15 min)", desc: "500ml d'eau + pincée de sel marin. Réhydrate avant toute nutrition solide.", time: 900 },
+              { name: "Glucides rapides (15 min)", desc: "1-1.2g/kg de glucides : banane, riz blanc, pain blanc. Restaure le glycogène.", time: 300 },
+              { name: "Protéines (30 min)", desc: "20-40g de protéines : poulet, œufs, whey. Déclenche la synthèse protéique.", time: 300 },
+              { name: "Anti-inflammatoires", desc: "Curcuma, gingembre, cerises acides. Réduisent l'inflammation naturellement.", time: 0 },
+            ],
+          },
+        };
+
+        // Suggest based on readiness
+        const suggestions = readiness === "low"
+          ? ["cold", "sleep", "nutrition"]
+          : readiness === "medium"
+          ? ["foam", "stretch", "nutrition"]
+          : ["stretch", "foam", "sleep"];
+
+        React.useEffect(() => {
+          if (running && timerSec > 0) {
+            intervalRef.current = setTimeout(() => setTimerSec(s => s - 1), 1000);
+          } else if (running && timerSec === 0) {
+            setRunning(false);
+          }
+          return () => clearTimeout(intervalRef.current);
+        });
+
+        const startStep = (proto, stepIdx) => {
+          setActiveProto(proto);
+          setActiveStep(stepIdx);
+          const t = PROTOCOLS[proto].steps[stepIdx].time;
+          setTimerSec(t);
+          setRunning(t > 0);
+        };
+
+        const completeProto = (protoKey) => {
+          const entry = { date: today, proto: protoKey, name: PROTOCOLS[protoKey].name };
+          const updated = [entry, ...log].slice(0, 50);
+          setLog(updated);
+          localStorage.setItem(KEY, JSON.stringify(updated));
+          setActiveProto(null);
+          setActiveStep(0);
+          setRunning(false);
+        };
+
+        const fmtTimer = (s) => `${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
+        const thisWeekLog = log.filter(e => {
+          const diff = (new Date(today) - new Date(e.date)) / 86400000;
+          return diff >= 0 && diff < 7;
+        });
+
+        return (
+          <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Protocoles de récupération</div>
+                <div style={{ fontSize:11, color:"#666", marginTop:2 }}>
+                  {thisWeekLog.length} séance{thisWeekLog.length!==1?"s":""} cette semaine
+                </div>
+              </div>
+              <div style={{ background: readiness==="high" ? "rgba(48,209,88,0.2)" : readiness==="medium" ? "rgba(255,159,10,0.2)" : "rgba(255,69,58,0.2)",
+                border: `1px solid ${readiness==="high" ? "#30D158" : readiness==="medium" ? "#FF9F0A" : "#FF453A"}44`,
+                borderRadius:10, padding:"5px 10px", textAlign:"center" }}>
+                <div style={{ fontSize:9, color:"#666" }}>TSB</div>
+                <div style={{ fontSize:13, fontWeight:700, color: readiness==="high" ? "#30D158" : readiness==="medium" ? "#FF9F0A" : "#FF453A" }}>
+                  {tsb > 0 ? "+" : ""}{tsb.toFixed(0)}
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              {["suggest","all","log"].map(t => (
+                <button key={t} onClick={() => setTab(t)}
+                  style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0",
+                    color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  {t==="suggest" ? "Recommandés" : t==="all" ? "Tous" : "Historique"}
+                </button>
+              ))}
+            </div>
+
+            {/* Active protocol runner */}
+            {activeProto && (() => {
+              const proto = PROTOCOLS[activeProto];
+              const step = proto.steps[activeStep];
+              const progress = (activeStep / proto.steps.length) * 100;
+              return (
+                <div style={{ background:proto.color+"18", border:`1px solid ${proto.color}44`, borderRadius:14, padding:16, marginBottom:14 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:proto.color }}>{proto.emoji} {proto.name}</div>
+                    <button onClick={() => { setActiveProto(null); setRunning(false); }}
+                      style={{ background:"none", border:"none", color:"#666", fontSize:18, cursor:"pointer" }}>×</button>
+                  </div>
+                  {/* Progress */}
+                  <div style={{ height:3, background:"#2C2C2E", borderRadius:2, marginBottom:12, overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${progress}%`, background:proto.color, borderRadius:2 }}/>
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", marginBottom:4 }}>
+                    Étape {activeStep+1}/{proto.steps.length} · {step.name}
+                  </div>
+                  <div style={{ fontSize:12, color:"#999", marginBottom:12, lineHeight:1.5 }}>{step.desc}</div>
+                  {step.time > 0 && (
+                    <div style={{ textAlign:"center", marginBottom:12 }}>
+                      <div style={{ fontSize:36, fontWeight:800, color:proto.color, fontVariantNumeric:"tabular-nums" }}>
+                        {fmtTimer(timerSec)}
+                      </div>
+                      <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:8 }}>
+                        <button onClick={() => setRunning(r => !r)}
+                          style={{ background:proto.color, border:"none", borderRadius:10, padding:"8px 24px", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                          {running ? "⏸ Pause" : "▶ Démarrer"}
+                        </button>
+                        <button onClick={() => { setTimerSec(step.time); setRunning(false); }}
+                          style={{ background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#888", fontSize:13, cursor:"pointer" }}>↺</button>
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ display:"flex", gap:8 }}>
+                    {activeStep < proto.steps.length - 1 ? (
+                      <button onClick={() => startStep(activeProto, activeStep + 1)}
+                        style={{ flex:1, background:proto.color, border:"none", borderRadius:10, padding:"10px 0", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                        Étape suivante →
+                      </button>
+                    ) : (
+                      <button onClick={() => completeProto(activeProto)}
+                        style={{ flex:1, background:"#30D158", border:"none", borderRadius:10, padding:"10px 0", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                        ✓ Terminer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Protocol list */}
+            {!activeProto && (tab === "suggest" || tab === "all") && (() => {
+              const keys = tab === "suggest" ? suggestions : Object.keys(PROTOCOLS);
+              return (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {tab === "suggest" && (
+                    <div style={{ fontSize:11, color:"#666", marginBottom:2 }}>
+                      Recommandés selon ton TSB actuel ({readiness === "low" ? "fatigue élevée" : readiness === "medium" ? "récupération normale" : "forme optimale"})
+                    </div>
+                  )}
+                  {keys.map(key => {
+                    const p = PROTOCOLS[key];
+                    const done = thisWeekLog.filter(l => l.proto === key).length;
+                    return (
+                      <div key={key} style={{ background:"var(--bg3)", borderRadius:14, padding:14, display:"flex", alignItems:"center", gap:12 }}>
+                        <div style={{ fontSize:26, flexShrink:0 }}>{p.emoji}</div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:p.color }}>{p.name}</div>
+                            <div style={{ fontSize:10, color:"#555" }}>{p.duration}</div>
+                          </div>
+                          <div style={{ fontSize:11, color:"#888", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.desc}</div>
+                          {done > 0 && <div style={{ fontSize:10, color:"#30D158", marginTop:2 }}>✓ {done}× cette semaine</div>}
+                        </div>
+                        <button onClick={() => startStep(key, 0)}
+                          style={{ background:p.color, border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
+                          Lancer
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {tab === "log" && (
+              <div>
+                {log.length === 0 ? (
+                  <div style={{ textAlign:"center", color:"#555", fontSize:13, padding:"20px 0" }}>Aucun protocole complété</div>
+                ) : log.slice(0, 15).map((e, i) => {
+                  const p = PROTOCOLS[e.proto];
+                  return (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:"1px solid #2C2C2E" }}>
+                      <span style={{ fontSize:18 }}>{p?.emoji || "✓"}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:"var(--white)" }}>{e.name}</div>
+                        <div style={{ fontSize:10, color:"#666" }}>{e.date}</div>
+                      </div>
+                      <div style={{ fontSize:10, color:"#30D158" }}>✓ Complété</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── MOVEMENT QUALITY CHECKLIST ── */}
       {(() => {
         const checkKey = `fitrace_movement_${profile.name}`;
