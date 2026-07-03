@@ -26722,6 +26722,98 @@ JSON: {
             );
           })()}
 
+          {/* ── HYDRATION TRACKER ── */}
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0,10);
+            const KEY = `fitrace_hydration_${profile.name}_${todayStr}`;
+            const [ml, setMl] = React.useState(() => { try { return parseInt(localStorage.getItem(KEY)) || 0; } catch { return 0; } });
+
+            const poids = profile.poids || 70;
+            // Sessions today
+            const todaySessions = (profile.sessions||[]).filter(s=>s.date===todayStr);
+            const hasTraining = todaySessions.length > 0;
+            const trainingDuration = todaySessions.reduce((s,e)=>s+(e.duration||0),0);
+
+            // Target: base 35ml/kg + 500ml per 30min training
+            const baseTarget = Math.round(poids * 35);
+            const trainingBonus = Math.round((trainingDuration / 30) * 500);
+            const target = baseTarget + trainingBonus;
+
+            const pct = Math.min(100, Math.round(ml / target * 100));
+            const glasses = Math.round(ml / 250);
+            const remaining = Math.max(0, target - ml);
+
+            const add = (amount) => {
+              const next = Math.min(target + 500, ml + amount);
+              setMl(next);
+              localStorage.setItem(KEY, String(next));
+            };
+            const reset = () => { setMl(0); localStorage.setItem(KEY, "0"); };
+
+            const statusColor = pct >= 100 ? "#30D158" : pct >= 60 ? "#FF9F0A" : "#FF453A";
+            const statusLabel = pct >= 100 ? "Hydraté ✓" : pct >= 60 ? "En cours" : "Attention";
+
+            // Wave fill visual
+            const waveH = Math.round((1 - pct/100) * 90);
+
+            return (
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>💧 Hydratation</div>
+                  <div style={{ fontSize:9,color:statusColor,fontWeight:700 }}>{statusLabel}</div>
+                </div>
+
+                <div style={{ display:"flex",gap:16,alignItems:"center",marginBottom:16 }}>
+                  {/* Bottle visual */}
+                  <div style={{ position:"relative",width:50,height:90,flexShrink:0 }}>
+                    <svg width="50" height="90" viewBox="0 0 50 90">
+                      {/* Bottle outline */}
+                      <path d="M18,8 L18,4 Q18,2 20,2 L30,2 Q32,2 32,4 L32,8 Q38,12 38,20 L38,78 Q38,86 30,86 L20,86 Q12,86 12,78 L12,20 Q12,12 18,8 Z"
+                        fill="#2C2C2E" stroke="#3A3A3C" strokeWidth="1"/>
+                      {/* Fill */}
+                      <clipPath id="bottleClip">
+                        <path d="M18,8 L18,4 Q18,2 20,2 L30,2 Q32,2 32,4 L32,8 Q38,12 38,20 L38,78 Q38,86 30,86 L20,86 Q12,86 12,78 L12,20 Q12,12 18,8 Z"/>
+                      </clipPath>
+                      <rect x="12" y={waveH} width="26" height={90-waveH}
+                        fill={statusColor} opacity="0.7" clipPath="url(#bottleClip)" style={{ transition:"y 0.5s,height 0.5s" }}/>
+                      {/* Percentage */}
+                      <text x="25" y="52" textAnchor="middle" fill="#fff" fontSize="11" fontWeight="900">{pct}%</text>
+                    </svg>
+                  </div>
+
+                  {/* Stats */}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:26,fontWeight:900,color:statusColor }}>{(ml/1000).toFixed(2)}<span style={{ fontSize:12,color:"#636366" }}>L</span></div>
+                    <div style={{ fontSize:10,color:"#8E8E93" }}>sur {(target/1000).toFixed(2)}L objectif</div>
+                    {hasTraining && <div style={{ fontSize:9,color:"var(--yellow)",marginTop:3 }}>+{(trainingBonus/1000).toFixed(1)}L pour l'entraînement</div>}
+                    <div style={{ fontSize:9,color:"#636366",marginTop:4 }}>🥃 {glasses} verres · {remaining}ml restants</div>
+                  </div>
+                </div>
+
+                {/* Quick add buttons */}
+                <div style={{ display:"flex",gap:6,marginBottom:10 }}>
+                  {[150, 250, 330, 500, 750].map(v=>(
+                    <button key={v} onClick={()=>add(v)}
+                      style={{ flex:1,background:"var(--bg3)",color:"#007AFF",border:"1px solid #007AFF30",borderRadius:10,padding:"7px 2px",fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                      +{v}<span style={{ fontSize:7,color:"#636366" }}>ml</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ height:6,background:"#2C2C2E",borderRadius:3,overflow:"hidden",marginBottom:8 }}>
+                  <div style={{ height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,#007AFF,${statusColor})`,borderRadius:3,transition:"width 0.4s" }}/>
+                </div>
+
+                {/* Hourly breakdown hint */}
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <div style={{ fontSize:9,color:"#636366" }}>Objectif: {Math.round(target/8*10)/10}ml/h (sur 8h)</div>
+                  <button onClick={reset} style={{ background:"transparent",color:"#636366",border:"none",fontSize:9,cursor:"pointer" }}>Réinitialiser</button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── PROTEIN PER MEAL TRACKER ── */}
           {(() => {
             const poids = parseFloat(profile.poids) || 70;
