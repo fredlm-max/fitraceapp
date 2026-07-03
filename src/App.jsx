@@ -6722,54 +6722,159 @@ JSON:
 
             {/* ── ENCART NUTRITION ── */}
             {(()=>{
-              const KEY_NUTRI = `fitrace_nutri_quick_${profile.name}`;
+              const KEY_QUICK = `fitrace_nutri_quick_${profile.name}`;
               const todayStr = new Date().toISOString().slice(0,10);
-              const [nutriData, setNutriData] = React.useState(()=>{
-                try { const d = JSON.parse(localStorage.getItem(KEY_NUTRI)||"{}"); return d[todayStr]||{cal:0,prot:0,eau:0}; } catch { return {cal:0,prot:0,eau:0}; }
-              });
+              const MEAL_KEY = `nutri_${profile.name}_${todayStr}`;
+
+              // Lire les repas du jour depuis le stockage partagé avec l'onglet Nutrition
+              const loadMeals = () => { try { return JSON.parse(localStorage.getItem(MEAL_KEY)||"[]"); } catch { return []; } };
+              const getMealsTotal = (meals) => meals.reduce((a,r)=>({cal:a.cal+(r.kcal||0),prot:a.prot+(r.p||0)}),{cal:0,prot:0});
+
+              const [meals, setMeals] = React.useState(loadMeals);
+              const [eau, setEau] = React.useState(()=>{ try { const d=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); return d[todayStr]?.eau||0; } catch { return 0; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [mealName, setMealName] = React.useState("");
+              const [mealCal, setMealCal] = React.useState("");
+              const [mealProt, setMealProt] = React.useState("");
+
               const target = { cal: profile.calories || 2500, prot: profile.proteines || 140, eau: 3 };
-              const save = (next) => {
-                setNutriData(next);
-                try { const all = JSON.parse(localStorage.getItem(KEY_NUTRI)||"{}"); all[todayStr] = next; localStorage.setItem(KEY_NUTRI, JSON.stringify(all)); } catch {}
+              const totals = getMealsTotal(meals);
+              const pctCal = Math.min(100, Math.round((totals.cal / target.cal) * 100));
+              const pctProt = Math.min(100, Math.round((totals.prot / target.prot) * 100));
+              const pctEau = Math.min(100, Math.round((eau / target.eau) * 100));
+
+              const saveEau = (v) => {
+                setEau(v);
+                try { const all=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); all[todayStr]={...(all[todayStr]||{}),eau:v}; localStorage.setItem(KEY_QUICK,JSON.stringify(all)); } catch {}
               };
-              const pctCal = Math.min(100, Math.round((nutriData.cal / target.cal) * 100));
-              const pctProt = Math.min(100, Math.round((nutriData.prot / target.prot) * 100));
-              const pctEau = Math.min(100, Math.round((nutriData.eau / target.eau) * 100));
+
+              const addMeal = () => {
+                const kcal = parseInt(mealCal)||0;
+                const p = parseInt(mealProt)||0;
+                if (!kcal && !p) return;
+                const entry = { id:Date.now(), nom:mealName||"Repas", kcal, p, g:0, l:0, heure:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}) };
+                const next = [...meals, entry];
+                setMeals(next);
+                try { localStorage.setItem(MEAL_KEY, JSON.stringify(next)); } catch {}
+                setMealName(""); setMealCal(""); setMealProt(""); setShowForm(false);
+              };
+
+              const removeMeal = (id) => {
+                const next = meals.filter(m=>m.id!==id);
+                setMeals(next);
+                try { localStorage.setItem(MEAL_KEY, JSON.stringify(next)); } catch {}
+              };
+
+              const PRESETS = [
+                {label:"🌅 Petit-déj", nom:"Petit-déjeuner", kcal:450, p:20},
+                {label:"☀️ Déjeuner", nom:"Déjeuner", kcal:700, p:40},
+                {label:"🌙 Dîner", nom:"Dîner", kcal:600, p:35},
+                {label:"🍎 Collation", nom:"Collation", kcal:200, p:10},
+              ];
+
               return (
                 <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
+                  {/* Header */}
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>🥗 Nutrition du jour</div>
-                    <button onClick={()=>navigateTo("nutri")} style={{ background:"none", border:"none", color:"var(--yellow)", fontSize:10, fontWeight:700, cursor:"pointer" }}>Détail →</button>
+                    <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                      <button onClick={()=>setShowForm(f=>!f)}
+                        style={{ background:showForm?"rgba(201,168,64,0.15)":"rgba(201,168,64,0.08)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:8, padding:"4px 10px", color:"var(--yellow)", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                        {showForm ? "✕ Fermer" : "+ Ajouter"}
+                      </button>
+                      <button onClick={()=>navigateTo("nutri")} style={{ background:"none", border:"none", color:"#636366", fontSize:10, fontWeight:700, cursor:"pointer" }}>Détail →</button>
+                    </div>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
+
+                  {/* Jauges : Calories / Protéines / Eau */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
                     {[
-                      { label:"Calories", val:nutriData.cal, target:target.cal, unit:"kcal", color:"#FF9F0A", pct:pctCal, step:50 },
-                      { label:"Protéines", val:nutriData.prot, target:target.prot, unit:"g", color:"#39ff80", pct:pctProt, step:5 },
-                      { label:"Eau", val:nutriData.eau, target:target.eau, unit:"L", color:"#007AFF", pct:pctEau, step:0.25 },
+                      { label:"Calories", val:totals.cal, target:target.cal, unit:"kcal", color:"#FF9F0A", pct:pctCal },
+                      { label:"Protéines", val:totals.prot, target:target.prot, unit:"g", color:"#39ff80", pct:pctProt },
+                      { label:"Eau", val:eau, target:target.eau, unit:"L", color:"#007AFF", pct:pctEau, isEau:true },
                     ].map(n=>(
                       <div key={n.label} style={{ textAlign:"center" }}>
-                        <div style={{ position:"relative", width:56, height:56, margin:"0 auto 6px" }}>
-                          <svg width="56" height="56" viewBox="0 0 56 56">
-                            <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5"/>
-                            <circle cx="28" cy="28" r="24" fill="none" stroke={n.color} strokeWidth="5"
-                              strokeDasharray={`${(n.pct/100)*150.8} 150.8`} strokeLinecap="round"
-                              transform="rotate(-90 28 28)" style={{transition:"stroke-dasharray 0.6s ease"}}/>
+                        <div style={{ position:"relative", width:52, height:52, margin:"0 auto 5px" }}>
+                          <svg width="52" height="52" viewBox="0 0 52 52">
+                            <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5"/>
+                            <circle cx="26" cy="26" r="22" fill="none" stroke={n.color} strokeWidth="5"
+                              strokeDasharray={`${(n.pct/100)*138.2} 138.2`} strokeLinecap="round"
+                              transform="rotate(-90 26 26)" style={{transition:"stroke-dasharray 0.5s ease"}}/>
                           </svg>
                           <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}>
                             <span style={{ fontSize:10,fontWeight:900,color:n.color }}>{n.pct}%</span>
                           </div>
                         </div>
-                        <div style={{ fontSize:11,fontWeight:700,color:"var(--white)",lineHeight:1 }}>{n.val}{n.unit==="L"?n.unit:""}{n.unit!=="L"?<span style={{fontSize:8,color:"#636366",marginLeft:1}}>{n.unit}</span>:null}</div>
-                        <div style={{ fontSize:8,color:"#636366",marginTop:1 }}>{n.label}</div>
-                        <div style={{ display:"flex",gap:4,justifyContent:"center",marginTop:5 }}>
-                          <button onClick={()=>save({...nutriData,[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"]:Math.max(0,+(nutriData[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"])-n.step)})}
-                            style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:5,width:22,height:22,color:"#8E8E93",fontSize:14,cursor:"pointer",lineHeight:"22px"}}>−</button>
-                          <button onClick={()=>save({...nutriData,[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"]:+(nutriData[n.label==="Calories"?"cal":n.label==="Protéines"?"prot":"eau"])+n.step})}
-                            style={{background:`${n.color}18`,border:`1px solid ${n.color}30`,borderRadius:5,width:22,height:22,color:n.color,fontSize:14,cursor:"pointer",lineHeight:"20px"}}>+</button>
+                        <div style={{ fontSize:11,fontWeight:700,color:"var(--white)",lineHeight:1 }}>
+                          {n.isEau ? eau.toFixed(1) : n.val}<span style={{fontSize:8,color:"#636366",marginLeft:1}}>{n.unit}</span>
                         </div>
+                        <div style={{ fontSize:8,color:"#636366",marginTop:1 }}>{n.label}</div>
+                        {n.isEau && (
+                          <div style={{ display:"flex",gap:3,justifyContent:"center",marginTop:4 }}>
+                            <button onClick={()=>saveEau(Math.max(0,+(eau-0.25).toFixed(2)))} style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:4,width:20,height:20,color:"#8E8E93",fontSize:13,cursor:"pointer",lineHeight:"20px"}}>−</button>
+                            <button onClick={()=>saveEau(+(eau+0.25).toFixed(2))} style={{background:"rgba(0,122,255,0.15)",border:"1px solid rgba(0,122,255,0.3)",borderRadius:4,width:20,height:20,color:"#007AFF",fontSize:13,cursor:"pointer",lineHeight:"18px"}}>+</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
+
+                  {/* Liste repas du jour */}
+                  {meals.length > 0 && (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {meals.slice(-4).map(m=>(
+                          <div key={m.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 10px", background:"rgba(255,255,255,0.03)", borderRadius:8 }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <span style={{ fontSize:12, color:"var(--white)", fontWeight:600 }}>{m.nom}</span>
+                              <span style={{ fontSize:10, color:"#636366", marginLeft:6 }}>{m.heure}</span>
+                            </div>
+                            <span style={{ fontSize:10, color:"#FF9F0A", fontWeight:700 }}>{m.kcal} kcal</span>
+                            <span style={{ fontSize:10, color:"#39ff80", fontWeight:700 }}>{m.p}g</span>
+                            <button onClick={()=>removeMeal(m.id)} style={{ background:"none",border:"none",color:"#636366",fontSize:14,cursor:"pointer",lineHeight:1,padding:"0 2px" }}>×</button>
+                          </div>
+                        ))}
+                        {meals.length > 4 && <div style={{ fontSize:9, color:"#636366", textAlign:"center" }}>+{meals.length-4} repas · voir Nutrition</div>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Formulaire ajout repas */}
+                  {showForm && (
+                    <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:12 }}>
+                      {/* Presets rapides */}
+                      <div style={{ display:"flex", gap:4, overflowX:"auto", marginBottom:10, scrollbarWidth:"none" }}>
+                        {PRESETS.map(p=>(
+                          <button key={p.nom} onClick={()=>{setMealName(p.nom);setMealCal(String(p.kcal));setMealProt(String(p.p));}}
+                            style={{ flexShrink:0, background:mealName===p.nom?"rgba(201,168,64,0.15)":"rgba(255,255,255,0.04)", border:`1px solid ${mealName===p.nom?"rgba(201,168,64,0.4)":"rgba(255,255,255,0.08)"}`, borderRadius:8, padding:"5px 10px", fontSize:11, color:mealName===p.nom?"var(--yellow)":"#8E8E93", cursor:"pointer", whiteSpace:"nowrap" }}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Inputs */}
+                      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                        <input value={mealName} onChange={e=>setMealName(e.target.value)} placeholder="Nom du repas (ex : Riz poulet)" maxLength={40}
+                          style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"8px 10px", color:"var(--white)", fontSize:13, width:"100%", boxSizing:"border-box" }}/>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          <div>
+                            <div style={{ fontSize:9, color:"#8E8E93", marginBottom:3 }}>Calories (kcal)</div>
+                            <input type="number" value={mealCal} onChange={e=>setMealCal(e.target.value)} placeholder="ex: 650"
+                              style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,154,10,0.25)", borderRadius:8, padding:"7px 10px", color:"#FF9F0A", fontSize:13, fontWeight:700, width:"100%", boxSizing:"border-box" }}/>
+                          </div>
+                          <div>
+                            <div style={{ fontSize:9, color:"#8E8E93", marginBottom:3 }}>Protéines (g)</div>
+                            <input type="number" value={mealProt} onChange={e=>setMealProt(e.target.value)} placeholder="ex: 40"
+                              style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(57,255,128,0.25)", borderRadius:8, padding:"7px 10px", color:"#39ff80", fontSize:13, fontWeight:700, width:"100%", boxSizing:"border-box" }}/>
+                          </div>
+                        </div>
+                        <button onClick={addMeal}
+                          style={{ background:"var(--yellow)", color:"#000", border:"none", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                          ✓ Ajouter ce repas
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
