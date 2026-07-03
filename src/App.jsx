@@ -7945,6 +7945,131 @@ JSON:
               );
             })()}
 
+            {/* ── ZONE DISTRIBUTION ANALYSIS (Garmin-style) ── */}
+            {(()=>{
+              const sessions = (profile.sessions || []).filter(s => {
+                const d = new Date(s.date);
+                return !isNaN(d) && (Date.now() - d) <= 28 * 86400000;
+              });
+              if (sessions.length < 3) return null;
+
+              const ZONES = [
+                { key:"Zone 2",   label:"Zone 2",    icon:"🫀", color:"#007AFF", ideal:40, tip:"Endurance aérobie — base HYROX" },
+                { key:"Qualité",  label:"Qualité",   icon:"⚡", color:"#C9A840", ideal:20, tip:"Vitesse & seuil lactique" },
+                { key:"Force",    label:"Force",     icon:"💪", color:"#a78bfa", ideal:20, tip:"Stations HYROX & puissance" },
+                { key:"Hybride",  label:"Hybride",   icon:"🔥", color:"#FF6B00", ideal:15, tip:"Combinaison course + charge" },
+                { key:"Mobilité", label:"Mobilité",  icon:"🧘", color:"#30D158", ideal:5,  tip:"Prévention blessures" },
+              ];
+
+              // Count sessions + volume per zone
+              const counts = {}, volumes = {};
+              ZONES.forEach(z => { counts[z.key] = 0; volumes[z.key] = 0; });
+              sessions.forEach(s => {
+                const key = s.type || s.titre || "";
+                const match = ZONES.find(z => key.toLowerCase().includes(z.key.toLowerCase()) || z.key.toLowerCase().includes(key.toLowerCase()));
+                const k = match?.key || null;
+                if (k) { counts[k]++; volumes[k] += (s.duree || s.duration || 0); }
+              });
+
+              const totalSess = Object.values(counts).reduce((a,b)=>a+b,0);
+              if (totalSess === 0) return null;
+              const totalVol = Object.values(volumes).reduce((a,b)=>a+b,0);
+
+              // Donut SVG
+              const R = 48, r = 28, cx = 64, cy = 64;
+              let angle = -90; // start from top
+              const slices = ZONES.map(z => {
+                const pct = totalSess > 0 ? (counts[z.key] / totalSess) : 0;
+                const start = angle;
+                angle += pct * 360;
+                return { ...z, pct, start, end: angle, count: counts[z.key], vol: volumes[z.key] };
+              }).filter(z => z.pct > 0);
+
+              const toRad = a => a * Math.PI / 180;
+              const svgArc = (cx, cy, r, a1, a2) => {
+                if (Math.abs(a2 - a1) >= 359.9) {
+                  // Full circle
+                  return `M ${cx} ${cy-r} A ${r} ${r} 0 1 1 ${cx-0.01} ${cy-r} Z`;
+                }
+                const x1 = cx + r * Math.cos(toRad(a1)), y1 = cy + r * Math.sin(toRad(a1));
+                const x2 = cx + r * Math.cos(toRad(a2)), y2 = cy + r * Math.sin(toRad(a2));
+                const large = (a2 - a1) > 180 ? 1 : 0;
+                return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+              };
+
+              // Find worst deviation from ideal
+              const deviations = ZONES.map(z => {
+                const actual = totalSess > 0 ? Math.round((counts[z.key]/totalSess)*100) : 0;
+                return { ...z, actual, dev: actual - z.ideal };
+              });
+              const mostLacking = deviations.filter(z=>counts[z.key]===0||z.dev<-5).sort((a,b)=>a.dev-b.dev)[0];
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, paddingLeft:2 }}>🎯 Répartition des zones — 4 semaines</div>
+
+                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"16px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+
+                      {/* Donut */}
+                      <svg width="128" height="128" viewBox="0 0 128 128" style={{ flexShrink:0 }}>
+                        {slices.map((z,i) => (
+                          <path key={i} d={svgArc(cx, cy, R, z.start, z.end)} fill={z.color} opacity={0.85}
+                            style={{ filter:`drop-shadow(0 0 3px ${z.color}50)` }}/>
+                        ))}
+                        {/* Inner hole */}
+                        <circle cx={cx} cy={cy} r={r} fill="var(--bg,#000)"/>
+                        {/* Center text */}
+                        <text x={cx} y={cy-4} textAnchor="middle" fill="#fff" fontSize="15" fontFamily="'Bebas Neue',sans-serif">{totalSess}</text>
+                        <text x={cx} y={cy+9} textAnchor="middle" fill="#636366" fontSize="7" fontFamily="system-ui">séances</text>
+                      </svg>
+
+                      {/* Legend + bars */}
+                      <div style={{ flex:1, display:"flex", flexDirection:"column", gap:6 }}>
+                        {deviations.map(z => {
+                          const barPct = z.actual;
+                          const over  = z.dev > 5;
+                          const under = z.dev < -5;
+                          const statusColor = over ? "#FF453A" : under ? "#FF9F0A" : "#30D158";
+                          return (
+                            <div key={z.key}>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:2 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                  <span style={{ fontSize:11 }}>{z.icon}</span>
+                                  <span style={{ fontSize:10, color: z.count>0 ? "var(--white)" : "#636366", fontWeight: z.count>0 ? 600 : 400 }}>{z.label}</span>
+                                </div>
+                                <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                                  <span style={{ fontSize:9, color:"#636366" }}>cible {z.ideal}%</span>
+                                  <span style={{ fontSize:10, fontWeight:700, color: z.count>0 ? z.color : "#636366" }}>{barPct}%</span>
+                                  {(over||under) && <span style={{ fontSize:9, color:statusColor }}>{over?"↑":"↓"}</span>}
+                                </div>
+                              </div>
+                              <div style={{ height:4, background:"rgba(255,255,255,0.06)", borderRadius:99, position:"relative" }}>
+                                {/* Ideal marker */}
+                                <div style={{ position:"absolute", top:-1, left:`${z.ideal}%`, width:1.5, height:6, background:"rgba(255,255,255,0.3)", borderRadius:1 }}/>
+                                <div style={{ height:"100%", width:`${barPct}%`, background:z.color, borderRadius:99, transition:"width 0.5s", opacity:0.8 }}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Recommendation */}
+                    {mostLacking && (
+                      <div style={{ marginTop:12, background:`${mostLacking.color}10`, border:`1px solid ${mostLacking.color}25`, borderRadius:10, padding:"8px 12px", display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:18 }}>{mostLacking.icon}</span>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:mostLacking.color }}>Priorité : +{mostLacking.label}</div>
+                          <div style={{ fontSize:10, color:"#8E8E93" }}>{mostLacking.tip} — sous-représenté ({mostLacking.actual}% vs cible {mostLacking.ideal}%)</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RECORDS & MILESTONES ── */}
             {(()=>{
               const sessions = profile.sessions || [];
