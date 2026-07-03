@@ -23580,6 +23580,124 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── HEART RATE ZONE CALCULATOR ── */}
+      {(() => {
+        const age = profile.age || 30;
+        const defaultMaxHr = 220 - age;
+        const [maxHr, setMaxHr] = React.useState(defaultMaxHr);
+        const [restHr, setRestHr] = React.useState(60);
+        const [useHrr, setUseHrr] = React.useState(false); // Karvonen (HR reserve)
+        const [activeZone, setActiveZone] = React.useState(null);
+
+        // HRR = maxHr - restHr
+        const hrr = maxHr - restHr;
+
+        const calcZone = (lo, hi) => useHrr
+          ? { lo: Math.round(restHr + hrr*lo/100), hi: Math.round(restHr + hrr*hi/100) }
+          : { lo: Math.round(maxHr*lo/100), hi: Math.round(maxHr*hi/100) };
+
+        const ZONES = [
+          { z:1, name:"Récupération",   pct:[50,60], color:"#636366", icon:"💤",
+            effort:"Très facile",
+            benefits:["Récupération active","Brûle des graisses","Améliore l'endurance de base"],
+            hyrox:"Warm-up, cool-down, sorties légères entre les blocs intensifs",
+            duration:"20-60 min",
+          },
+          { z:2, name:"Aérobie de base",pct:[60,70], color:"#30D158", icon:"🟢",
+            effort:"Facile — conversation possible",
+            benefits:["Base aérobie solide","Économie de course","Brûle graisses + glucides"],
+            hyrox:"Courses longues du dimanche, footing récupération J+1",
+            duration:"45-120 min",
+          },
+          { z:3, name:"Tempo",          pct:[70,80], color:"#FF9F0A", icon:"🟡",
+            effort:"Modéré — phrases courtes",
+            benefits:["Seuil lactique","Efficacité cardiovasculaire","Vitesse sous-maximale"],
+            hyrox:"Runs à allure HYROX cible, SkiErg / Rowing steady-state",
+            duration:"20-50 min",
+          },
+          { z:4, name:"Seuil lactique", pct:[80,90], color:"#FF6B00", icon:"🟠",
+            effort:"Difficile — mots isolés",
+            benefits:["Repousse le seuil","↑ VO₂max","Résistance à la fatigue"],
+            hyrox:"Intervalles 3-8min, stations enchaînées à haute intensité",
+            duration:"10-30 min",
+          },
+          { z:5, name:"Maximal",        pct:[90,100], color:"#FF453A", icon:"🔴",
+            effort:"Maximal — impossible de parler",
+            benefits:["VO₂max pur","Puissance neuromusculaire","Sprint final"],
+            hyrox:"Sprints < 2min, derniers mètres Sled Push, finales Wall Balls",
+            duration:"< 10 min",
+          },
+        ];
+
+        const zones = ZONES.map(z => ({ ...z, ...calcZone(z.pct[0], z.pct[1]) }));
+        const active = zones.find(z=>z.z===activeZone);
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>❤️ Zones Fréquence Cardiaque</div>
+
+            {/* Inputs */}
+            <div style={{ display:"flex",gap:6,marginBottom:10 }}>
+              <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 10px" }}>
+                <div style={{ fontSize:8,color:"#636366",marginBottom:4 }}>FC Max (bpm)</div>
+                <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                  <button onClick={()=>setMaxHr(v=>Math.max(140,v-1))} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:4,width:20,height:20,cursor:"pointer" }}>−</button>
+                  <span style={{ fontSize:16,fontWeight:900,color:"#FF453A",flex:1,textAlign:"center" }}>{maxHr}</span>
+                  <button onClick={()=>setMaxHr(v=>Math.min(220,v+1))} style={{ background:"#2C2C2E",color:"#FF453A",border:"none",borderRadius:4,width:20,height:20,cursor:"pointer" }}>+</button>
+                </div>
+                <div style={{ fontSize:7,color:"#636366",marginTop:3,textAlign:"center" }}>Auto: 220−{age}={defaultMaxHr}</div>
+              </div>
+              <div style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 10px" }}>
+                <div style={{ fontSize:8,color:"#636366",marginBottom:4 }}>FC Repos (bpm)</div>
+                <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                  <button onClick={()=>setRestHr(v=>Math.max(30,v-1))} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:4,width:20,height:20,cursor:"pointer" }}>−</button>
+                  <span style={{ fontSize:16,fontWeight:900,color:"#007AFF",flex:1,textAlign:"center" }}>{restHr}</span>
+                  <button onClick={()=>setRestHr(v=>Math.min(100,v+1))} style={{ background:"#2C2C2E",color:"#007AFF",border:"none",borderRadius:4,width:20,height:20,cursor:"pointer" }}>+</button>
+                </div>
+                <div style={{ fontSize:7,color:"#636366",marginTop:3,textAlign:"center" }}>
+                  <button onClick={()=>setUseHrr(!useHrr)} style={{ background:"transparent",border:`1px solid ${useHrr?"#007AFF":"#3A3A3C"}`,borderRadius:4,padding:"1px 4px",color:useHrr?"#007AFF":"#636366",fontSize:7,cursor:"pointer" }}>
+                    {useHrr?"✓ Karvonen":"Karvonen"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Zone bars */}
+            {zones.map(z=>(
+              <button key={z.z} onClick={()=>setActiveZone(activeZone===z.z?null:z.z)}
+                style={{ display:"block",width:"100%",marginBottom:4,background:activeZone===z.z?z.color+"20":"var(--bg3)",border:`1px solid ${activeZone===z.z?z.color:"transparent"}`,borderRadius:10,padding:"8px 10px",cursor:"pointer",textAlign:"left" }}>
+                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4 }}>
+                  <span style={{ fontSize:14 }}>{z.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                      <span style={{ fontSize:11,fontWeight:800,color:z.color }}>Z{z.z} {z.name}</span>
+                      <span style={{ fontSize:10,fontWeight:900,color:"var(--white)" }}>{z.lo}–{z.hi} bpm</span>
+                    </div>
+                    <div style={{ height:5,background:"#2C2C2E",borderRadius:3,marginTop:4,overflow:"hidden" }}>
+                      <div style={{ height:"100%",marginLeft:`${z.pct[0]}%`,width:`${z.pct[1]-z.pct[0]}%`,background:z.color,borderRadius:3 }}/>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+
+            {/* Detail panel */}
+            {active && (
+              <div style={{ background:active.color+"15",borderRadius:12,padding:12,marginTop:4,border:`1px solid ${active.color}30` }}>
+                <div style={{ fontSize:11,fontWeight:800,color:active.color,marginBottom:6 }}>{active.icon} Zone {active.z} — {active.effort}</div>
+                <div style={{ fontSize:9,color:"#8E8E93",marginBottom:8 }}>⏱ Durée recommandée: {active.duration}</div>
+                <div style={{ fontSize:9,color:"#636366",marginBottom:4,fontWeight:700 }}>Bénéfices:</div>
+                {active.benefits.map((b,i)=>(
+                  <div key={i} style={{ fontSize:10,color:"var(--white)",marginBottom:2 }}>• {b}</div>
+                ))}
+                <div style={{ fontSize:9,color:"#636366",marginTop:8,marginBottom:4,fontWeight:700 }}>Application HYROX:</div>
+                <div style={{ fontSize:10,color:active.color,fontStyle:"italic" }}>{active.hyrox}</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── CADENCE OPTIMIZER ── */}
       {(() => {
         const vma = parseFloat(profile.vma) || 14;
