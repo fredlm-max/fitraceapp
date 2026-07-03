@@ -25338,6 +25338,157 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── TRAINING PACES CALCULATOR ── */}
+      {(() => {
+        const defaultVma = parseFloat(profile.vma) || 14;
+        const [vma, setVma] = React.useState(defaultVma);
+        const [inputMode, setInputMode] = React.useState("vma"); // "vma" | "race"
+        const [raceTime, setRaceTime] = React.useState({ dist:"5", h:"0", m:"20", s:"0" });
+        const [unit, setUnit] = React.useState("km"); // "km" | "400m"
+
+        // Compute VMA from race time if mode is "race"
+        const getRaceVma = () => {
+          const dist = parseFloat(raceTime.dist) || 5;
+          const totalSec = parseInt(raceTime.h||0)*3600 + parseInt(raceTime.m||0)*60 + parseInt(raceTime.s||0);
+          if (!totalSec) return defaultVma;
+          const speedMs = (dist * 1000) / totalSec;
+          const speedKmh = speedMs * 3.6;
+          // Daniels formula: vVo2max ≈ race speed / 0.93 for 5km
+          const riegel = dist < 3 ? 0.88 : dist < 6 ? 0.93 : dist < 12 ? 0.96 : 0.99;
+          return Math.round((speedKmh / riegel) * 10) / 10;
+        };
+
+        const effectiveVma = inputMode === "race" ? getRaceVma() : vma;
+
+        // Daniels/Garmin-style zones as % of vVo2max speed
+        const ZONES = [
+          { name:"Récupération", key:"recovery", pctLo:59, pctHi:64, color:"#5AC8FA", desc:"Active recovery, technique", hrPct:"< 65%" },
+          { name:"Endurance fond.", key:"easy", pctLo:65, pctHi:74, color:"#30D158", desc:"Base aérobie, longues sorties", hrPct:"65-75%" },
+          { name:"Marathon", key:"marathon", pctLo:75, pctHi:84, color:"#FF9F0A", desc:"Tempo confortable, seuil lactate low", hrPct:"75-84%" },
+          { name:"Seuil (T)", key:"threshold", pctLo:85, pctHi:92, color:"#FF6B35", desc:"20-30min max, améliore VO₂max", hrPct:"85-92%" },
+          { name:"VO₂max (I)", key:"interval", pctLo:95, pctHi:100, color:"#FF453A", desc:"Intervalles 3-5min, élève VO₂max", hrPct:"95-100%" },
+          { name:"Neuromusculaire (R)", key:"rep", pctLo:105, pctHi:115, color:"#BF5AF2", desc:"Répétitions courtes <90s, vitesse pure", hrPct:"> 100%" },
+        ];
+
+        const fmtPace = (kmh) => {
+          if (!kmh || kmh <= 0) return "--:--";
+          const secPerKm = 3600 / kmh;
+          const m = Math.floor(secPerKm / 60);
+          const s = Math.round(secPerKm % 60);
+          return `${m}:${s.toString().padStart(2,"0")}`;
+        };
+        const fmtPace400 = (kmh) => {
+          if (!kmh || kmh <= 0) return "--:--";
+          const secPer400 = (3600 / kmh) * 0.4;
+          const m = Math.floor(secPer400 / 60);
+          const s = Math.round(secPer400 % 60);
+          return `${m > 0 ? m+":" : ""}${s.toString().padStart(2,"0")}s`;
+        };
+
+        return (
+          <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ fontSize:16, fontWeight:700, color:"var(--white)", marginBottom:14 }}>Allures d'entraînement</div>
+
+            {/* Input mode toggle */}
+            <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+              {["vma","race"].map(m => (
+                <button key={m} onClick={() => setInputMode(m)}
+                  style={{ flex:1, background: inputMode===m ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0",
+                    color: inputMode===m ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  {m === "vma" ? "Depuis VMA" : "Depuis temps course"}
+                </button>
+              ))}
+            </div>
+
+            {inputMode === "vma" ? (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                  <span style={{ fontSize:12, color:"#888" }}>VMA</span>
+                  <span style={{ fontSize:18, fontWeight:800, color:"var(--yellow)" }}>{vma} km/h</span>
+                </div>
+                <input type="range" min="8" max="22" step="0.5" value={vma} onChange={e=>setVma(parseFloat(e.target.value))}
+                  style={{ width:"100%", accentColor:"var(--yellow)" }}/>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#555" }}>
+                  <span>8 km/h</span><span>22 km/h</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:11, color:"#888", marginBottom:6 }}>Temps de référence</div>
+                <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:6 }}>
+                  <select value={raceTime.dist} onChange={e=>setRaceTime(r=>({...r,dist:e.target.value}))}
+                    style={{ background:"var(--bg3)", border:"none", borderRadius:8, padding:"6px 8px", color:"var(--white)", fontSize:12 }}>
+                    {["1","3","5","10","21.1","42.2"].map(d => <option key={d} value={d}>{d === "21.1" ? "Semi" : d === "42.2" ? "Marathon" : `${d}km`}</option>)}
+                  </select>
+                  <input type="number" value={raceTime.h} onChange={e=>setRaceTime(r=>({...r,h:e.target.value}))} min="0" max="9" placeholder="h"
+                    style={{ width:36, background:"var(--bg3)", border:"none", borderRadius:8, padding:"6px 6px", color:"var(--white)", fontSize:13, textAlign:"center" }}/>
+                  <span style={{ color:"#555" }}>h</span>
+                  <input type="number" value={raceTime.m} onChange={e=>setRaceTime(r=>({...r,m:e.target.value}))} min="0" max="59" placeholder="min"
+                    style={{ width:40, background:"var(--bg3)", border:"none", borderRadius:8, padding:"6px 6px", color:"var(--white)", fontSize:13, textAlign:"center" }}/>
+                  <span style={{ color:"#555" }}>min</span>
+                  <input type="number" value={raceTime.s} onChange={e=>setRaceTime(r=>({...r,s:e.target.value}))} min="0" max="59" placeholder="s"
+                    style={{ width:36, background:"var(--bg3)", border:"none", borderRadius:8, padding:"6px 6px", color:"var(--white)", fontSize:13, textAlign:"center" }}/>
+                  <span style={{ color:"#555" }}>s</span>
+                </div>
+                <div style={{ fontSize:11, color:"var(--yellow)" }}>VMA estimée: {effectiveVma} km/h</div>
+              </div>
+            )}
+
+            {/* Unit toggle */}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              {["km","400m"].map(u => (
+                <button key={u} onClick={() => setUnit(u)}
+                  style={{ flex:1, background: unit===u ? "var(--bg3)" : "transparent", border: `1px solid ${unit===u ? "#444" : "transparent"}`, borderRadius:8, padding:"5px 0",
+                    color: unit===u ? "var(--white)" : "#555", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                  /km {u === "400m" ? "& /400m" : ""}
+                </button>
+              ))}
+            </div>
+
+            {/* Zones table */}
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {ZONES.map(zone => {
+                const loKmh = effectiveVma * zone.pctLo / 100;
+                const hiKmh = effectiveVma * zone.pctHi / 100;
+                const loStr = unit === "km" ? fmtPace(hiKmh) : fmtPace400(hiKmh); // faster pace = higher kmh
+                const hiStr = unit === "km" ? fmtPace(loKmh) : fmtPace400(loKmh);
+                const barWidth = zone.pctLo > 100 ? 100 : zone.pctHi;
+                return (
+                  <div key={zone.key} style={{ background:"var(--bg3)", borderRadius:14, padding:"10px 14px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:zone.color }}>{zone.name}</div>
+                        <div style={{ fontSize:10, color:"#666", marginTop:1 }}>{zone.desc}</div>
+                      </div>
+                      <div style={{ textAlign:"right", flexShrink:0, marginLeft:8 }}>
+                        <div style={{ fontSize:14, fontWeight:800, color:"var(--white)" }}>
+                          {loStr}{zone.pctLo !== zone.pctHi ? ` – ${hiStr}` : ""}
+                        </div>
+                        <div style={{ fontSize:10, color:"#555" }}>
+                          {zone.pctLo}–{zone.pctHi}% VMA · FC {zone.hrPct}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ height:4, background:"#1C1C1E", borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ height:"100%", marginLeft:`${Math.min(zone.pctLo-55,45)/45*100}%`, width:`${Math.min(zone.pctHi - zone.pctLo, 30)/45*100}%`, background:zone.color, borderRadius:2 }}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* HYROX Race tip */}
+            <div style={{ background:"rgba(0,122,255,0.12)", border:"1px solid rgba(0,122,255,0.25)", borderRadius:12, padding:10, marginTop:12 }}>
+              <div style={{ fontSize:11, color:"var(--yellow)", fontWeight:700, marginBottom:3 }}>💡 HYROX Conseil</div>
+              <div style={{ fontSize:11, color:"#999", lineHeight:1.5 }}>
+                En HYROX, les runs se font à {fmtPace(effectiveVma * 0.78)} – {fmtPace(effectiveVma * 0.85)} /km (78-85% VMA).
+                Vise à rester en zone Seuil sans exploser — tu dois finir les 8km en négatif split.
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── CADENCE OPTIMIZER ── */}
       {(() => {
         const vma = parseFloat(profile.vma) || 14;
