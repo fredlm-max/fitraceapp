@@ -8413,6 +8413,157 @@ JSON:
               );
             })()}
 
+            {/* ── MENTAL PERFORMANCE TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_mental_${profile.name}`;
+              const today = new Date().toISOString().slice(0,10);
+
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+              });
+              const [saving, setSaving] = React.useState(false);
+              const [form, setForm] = React.useState({ motivation:7, stress:3, confidence:7, focus:7, notes:"" });
+
+              const todayEntry = log[today];
+
+              const METRICS = [
+                { key:"motivation", label:"Motivation", low:"😴", high:"🔥", color:"var(--yellow)" },
+                { key:"stress", label:"Stress", low:"😌", high:"😰", color:"#FF453A", invert:true },
+                { key:"confidence", label:"Confiance", low:"😟", high:"💪", color:"#30D158" },
+                { key:"focus", label:"Focus", low:"🌫️", high:"🎯", color:"#64D2FF" },
+              ];
+
+              const readinessScore = (e) => {
+                if (!e) return null;
+                const inv = (v) => 11 - v;
+                return Math.round((e.motivation + inv(e.stress) + e.confidence + e.focus) / 4 * 10);
+              };
+
+              const saveToday = () => {
+                const entry = { ...form, date: today, savedAt: new Date().toISOString() };
+                const updated = { ...log, [today]: entry };
+                setLog(updated);
+                localStorage.setItem(KEY, JSON.stringify(updated));
+                setSaving(false);
+              };
+
+              const score = readinessScore(todayEntry);
+              const scoreColor = score === null ? "#666" : score >= 70 ? "#30D158" : score >= 50 ? "var(--yellow)" : "#FF453A";
+              const scoreLabel = score === null ? "—" : score >= 70 ? "Prêt à performer" : score >= 50 ? "Entraînement modéré" : "Repos conseillé";
+
+              // Last 14 days trend
+              const last14 = Array.from({length:14}, (_,i) => {
+                const d = new Date(today); d.setDate(d.getDate()-13+i);
+                const ds = d.toISOString().slice(0,10);
+                const e = log[ds];
+                return { date:ds, score: readinessScore(e), day: d.toLocaleDateString("fr",{weekday:"short"}).slice(0,1) };
+              });
+
+              // Correlation insight
+              const sessions = profile.sessions || [];
+              const highReadDays = Object.entries(log).filter(([d,e]) => readinessScore(e) >= 70).map(([d]) => d);
+              const highReadSessions = sessions.filter(s => highReadDays.includes(s.date));
+              const allSessions = sessions.filter(s => log[s.date]);
+              const avgRpeHigh = highReadSessions.length ? (highReadSessions.reduce((s,x)=>s+(x.rpe||5),0)/highReadSessions.length).toFixed(1) : null;
+              const avgRpeAll = allSessions.length ? (allSessions.reduce((s,x)=>s+(x.rpe||5),0)/allSessions.length).toFixed(1) : null;
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>WHOOP · ÉTAT MENTAL DU JOUR</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🧠 Mental Readiness</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:28, fontWeight:900, color:scoreColor }}>{score !== null ? score : "—"}</div>
+                      <div style={{ fontSize:9, color:scoreColor, fontWeight:700 }}>{scoreLabel}</div>
+                    </div>
+                  </div>
+
+                  {/* Today already logged */}
+                  {todayEntry && !saving ? (
+                    <>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginBottom:14 }}>
+                        {METRICS.map(m => (
+                          <div key={m.key} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                              <div style={{ fontSize:11, color:"#666" }}>{m.label}</div>
+                              <div style={{ fontSize:13, fontWeight:800, color:m.color }}>{todayEntry[m.key]}/10</div>
+                            </div>
+                            <div style={{ height:6, background:"var(--bg2)", borderRadius:3 }}>
+                              <div style={{ height:"100%", width:`${todayEntry[m.key]*10}%`, background:m.color, borderRadius:3 }}/>
+                            </div>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#444", marginTop:2 }}>
+                              <span>{m.low}</span><span>{m.high}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {todayEntry.notes && <div style={{ fontSize:12, color:"#888", background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginBottom:10 }}>{todayEntry.notes}</div>}
+                      <button onClick={() => { setForm({...todayEntry}); setSaving(true); }}
+                        style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"9px 0", color:"#888", fontSize:12, cursor:"pointer" }}>
+                        ✏️ Modifier
+                      </button>
+                    </>
+                  ) : (
+                    /* Input sliders */
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:14 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#fff", marginBottom:12 }}>Comment tu te sens aujourd'hui ?</div>
+                      {METRICS.map(m => (
+                        <div key={m.key} style={{ marginBottom:12 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                            <span style={{ fontSize:11, color:"#aaa" }}>{m.label} {m.low}</span>
+                            <span style={{ fontSize:12, fontWeight:800, color:m.color }}>{form[m.key]}/10</span>
+                          </div>
+                          <input type="range" min="1" max="10" value={form[m.key]}
+                            onChange={e => setForm(f => ({...f, [m.key]:parseInt(e.target.value)}))}
+                            style={{ width:"100%", accentColor:m.color }}/>
+                          <div style={{ textAlign:"right", fontSize:9, color:"#444", marginTop:-2 }}>{m.high}</div>
+                        </div>
+                      ))}
+                      <textarea value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))}
+                        placeholder="Notes (optionnel)..." rows={2}
+                        style={{ width:"100%", background:"var(--bg2)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, resize:"none", marginBottom:10, boxSizing:"border-box" }}/>
+                      <div style={{ display:"flex", gap:8 }}>
+                        {saving && <button onClick={() => setSaving(false)} style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>}
+                        <button onClick={saveToday}
+                          style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"10px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                          Enregistrer · Score: {readinessScore(form)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 14-day trend */}
+                  {last14.some(d => d.score !== null) && (
+                    <div style={{ marginTop:14 }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>READINESS 14 JOURS</div>
+                      <div style={{ display:"flex", gap:3, alignItems:"flex-end", height:48 }}>
+                        {last14.map((d,i) => {
+                          const h = d.score ? Math.max(6, (d.score/100)*100) : 3;
+                          const c = d.score >= 70 ? "#30D158" : d.score >= 50 ? "var(--yellow)" : d.score ? "#FF453A" : "#2C2C2E";
+                          const isToday = d.date === today;
+                          return (
+                            <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                              <div style={{ background:c, width:"100%", height:`${h}%`, borderRadius:"3px 3px 0 0", border: isToday ? "1px solid #fff" : "none", minHeight:3 }}/>
+                              <div style={{ fontSize:7, color: isToday?"#fff":"#444" }}>{d.day}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Insight */}
+                  {avgRpeHigh && avgRpeAll && (
+                    <div style={{ marginTop:12, background:"var(--bg3)", borderRadius:10, padding:"8px 12px", fontSize:11, color:"#888" }}>
+                      📊 Les jours readiness élevé: RPE moy. <strong style={{ color:"#30D158" }}>{avgRpeHigh}</strong> vs <strong style={{ color:"#aaa" }}>{avgRpeAll}</strong> tous jours — {parseFloat(avgRpeHigh) > parseFloat(avgRpeAll) ? "tu pousses plus fort quand tu te sens bien ✓" : "intensité stable quelle que soit la forme"}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY GOAL PROGRESS ── */}
             {(() => {
               const sessions = profile.sessions || [];
