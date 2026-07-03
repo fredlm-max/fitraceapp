@@ -36938,6 +36938,271 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── HYROX COMPETITION LOG ── */}
+      {(() => {
+        const KEY = `fitrace_races_${profile.name}`;
+
+        const [races, setRaces] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+        });
+        const [showForm, setShowForm] = React.useState(false);
+        const [viewId, setViewId] = React.useState(null);
+
+        const STATIONS = [
+          { id:"skierg", name:"SkiErg", emoji:"⛷" },
+          { id:"sledpush", name:"Sled Push", emoji:"🛷" },
+          { id:"sledpull", name:"Sled Pull", emoji:"🔗" },
+          { id:"burpee", name:"Burpee BJ", emoji:"💥" },
+          { id:"rowing", name:"Rowing", emoji:"🚣" },
+          { id:"farmer", name:"Farmer", emoji:"🏋️" },
+          { id:"sandbag", name:"Sandbag", emoji:"🎒" },
+          { id:"wallball", name:"Wall Balls", emoji:"🏀" },
+        ];
+
+        const emptyForm = () => ({
+          date: new Date().toISOString().slice(0,10),
+          location: "",
+          category: "Open",
+          gender: (profile.sexe || "M").toUpperCase(),
+          runTotal: "",
+          stations: Object.fromEntries(STATIONS.map(s => [s.id, ""])),
+          finish: "",
+          rank: "",
+          totalParticipants: "",
+          notes: "",
+          conditions: "good",
+        });
+
+        const [form, setForm] = React.useState(emptyForm());
+
+        const parseTime = (str) => {
+          if (!str) return null;
+          const p = str.split(":").map(Number);
+          return p.length === 2 ? p[0]*60+p[1] : p.length === 3 ? p[0]*3600+p[1]*60+p[2] : null;
+        };
+
+        const fmt = (s) => {
+          if (!s && s !== 0) return "—";
+          const h = Math.floor(s/3600);
+          const m = Math.floor((s%3600)/60);
+          const sec = s%60;
+          return h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`;
+        };
+
+        const calcTotal = (f) => {
+          const runSec = parseTime(f.runTotal);
+          const stationSec = STATIONS.reduce((s,st) => s + (parseTime(f.stations[st.id])||0), 0);
+          if (runSec === null && stationSec === 0) return null;
+          return (runSec||0) + stationSec;
+        };
+
+        const saveRace = () => {
+          const total = calcTotal(form);
+          const entry = { ...form, id: Date.now(), totalSec: total };
+          const next = [entry, ...races].sort((a,b) => b.date.localeCompare(a.date));
+          setRaces(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowForm(false);
+          setForm(emptyForm());
+        };
+
+        const deleteRace = (id) => {
+          const next = races.filter(r => r.id !== id);
+          setRaces(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          if (viewId === id) setViewId(null);
+        };
+
+        const viewRace = races.find(r => r.id === viewId);
+
+        // Best time
+        const racesByTime = races.filter(r => r.totalSec).sort((a,b) => a.totalSec - b.totalSec);
+        const pbRace = racesByTime[0];
+
+        const CONDITIONS = { good:"☀️ Bonnes", average:"⛅ Moyennes", hard:"🌧️ Difficiles" };
+
+        if (showForm) {
+          const liveTotal = calcTotal(form);
+          return (
+            <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--yellow)", marginBottom:16 }}>🏁 Ajouter une course</div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Date</div>
+                  <input type="date" value={form.date} onChange={e => setForm(f=>({...f,date:e.target.value}))}
+                    style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                </div>
+                <div>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Lieu / Événement</div>
+                  <input value={form.location} onChange={e => setForm(f=>({...f,location:e.target.value}))} placeholder="ex: Paris HYROX 2025"
+                    style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                </div>
+                <div>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Catégorie</div>
+                  <select value={form.category} onChange={e => setForm(f=>({...f,category:e.target.value}))}
+                    style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}>
+                    {["Open","Pro","Doubles","Relay"].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Conditions</div>
+                  <select value={form.conditions} onChange={e => setForm(f=>({...f,conditions:e.target.value}))}
+                    style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}>
+                    {Object.entries(CONDITIONS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Splits */}
+              <div style={{ fontSize:11, fontWeight:700, color:"#aaa", marginBottom:8 }}>SPLITS (format mm:ss)</div>
+
+              <div style={{ background:"var(--bg3)", borderRadius:12, padding:12, marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <span style={{ fontSize:12, color:"#fff", fontWeight:700 }}>🏃 Total Runs (8×1km)</span>
+                  <input value={form.runTotal} onChange={e => setForm(f=>({...f,runTotal:e.target.value}))} placeholder="ex: 48:00"
+                    style={{ width:90, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"5px 8px", color:"var(--yellow)", fontSize:13, fontWeight:700, textAlign:"center" }}/>
+                </div>
+                {STATIONS.map(s => (
+                  <div key={s.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                    <span style={{ fontSize:11, color:"#aaa" }}>{s.emoji} {s.name}</span>
+                    <input value={form.stations[s.id]} onChange={e => setForm(f=>({...f,stations:{...f.stations,[s.id]:e.target.value}}))} placeholder="mm:ss"
+                      style={{ width:80, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"5px 8px", color:"#fff", fontSize:12, textAlign:"center" }}/>
+                  </div>
+                ))}
+              </div>
+
+              {liveTotal && (
+                <div style={{ textAlign:"center", background:"rgba(201,168,64,0.1)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:12, padding:"10px 0", marginBottom:10 }}>
+                  <div style={{ fontSize:26, fontWeight:900, color:"var(--yellow)" }}>{fmt(liveTotal)}</div>
+                  <div style={{ fontSize:10, color:"#888" }}>Temps total calculé</div>
+                </div>
+              )}
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Classement</div>
+                  <input type="number" value={form.rank} onChange={e => setForm(f=>({...f,rank:e.target.value}))} placeholder="ex: 42"
+                    style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                </div>
+                <div>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Participants</div>
+                  <input type="number" value={form.totalParticipants} onChange={e => setForm(f=>({...f,totalParticipants:e.target.value}))} placeholder="ex: 320"
+                    style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                </div>
+              </div>
+
+              <textarea value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))} placeholder="Notes sur la course..." rows={3}
+                style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:12, resize:"vertical", marginBottom:12, boxSizing:"border-box" }}/>
+
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => setShowForm(false)}
+                  style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                <button onClick={saveRace}
+                  style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"11px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Sauvegarder la course</button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#555" }}>HISTORIQUE DES COURSES</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🏁 Race Log</div>
+              </div>
+              <button onClick={() => setShowForm(true)}
+                style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"8px 16px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                + Course
+              </button>
+            </div>
+
+            {/* PB banner */}
+            {pbRace && (
+              <div style={{ background:"rgba(201,168,64,0.12)", border:"1px solid rgba(201,168,64,0.4)", borderRadius:14, padding:"12px 16px", marginBottom:14 }}>
+                <div style={{ fontSize:10, color:"var(--yellow)", fontWeight:700, marginBottom:4 }}>🏆 MEILLEUR TEMPS PERSONNEL</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontSize:24, fontWeight:900, color:"var(--yellow)" }}>{fmt(pbRace.totalSec)}</div>
+                    <div style={{ fontSize:11, color:"#888" }}>{pbRace.location || "Race"} · {pbRace.date} · {pbRace.category}</div>
+                  </div>
+                  {pbRace.rank && <div style={{ textAlign:"center" }}>
+                    <div style={{ fontSize:20, fontWeight:900, color:"#fff" }}>#{pbRace.rank}</div>
+                    <div style={{ fontSize:9, color:"#666" }}>/ {pbRace.totalParticipants||"?"}</div>
+                  </div>}
+                </div>
+              </div>
+            )}
+
+            {/* Improvement trend */}
+            {races.filter(r=>r.totalSec).length >= 2 && (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>PROGRESSION</div>
+                {(() => {
+                  const sorted = [...races].filter(r=>r.totalSec).sort((a,b)=>a.date.localeCompare(b.date)).slice(-6);
+                  const times = sorted.map(r=>r.totalSec);
+                  const minT = Math.min(...times)-60, maxT = Math.max(...times)+60;
+                  const W=280, H=60;
+                  const x = i => i*(W/(sorted.length-1));
+                  const y = t => H - ((t-minT)/(maxT-minT))*H;
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", height:H }}>
+                      <polyline points={sorted.map((r,i)=>`${x(i)},${y(r.totalSec)}`).join(" ")}
+                        fill="none" stroke="var(--yellow)" strokeWidth="2"/>
+                      {sorted.map((r,i) => (
+                        <g key={i}>
+                          <circle cx={x(i)} cy={y(r.totalSec)} r="4" fill="var(--yellow)"/>
+                          <text x={x(i)} y={H} fontSize="8" fill="#555" textAnchor="middle">{r.date.slice(5)}</text>
+                        </g>
+                      ))}
+                    </svg>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Race list */}
+            {races.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"24px 0", color:"#555", fontSize:13 }}>
+                Enregistre ta première course HYROX 🏁
+              </div>
+            ) : races.map(race => {
+              const isView = viewId === race.id;
+              return (
+                <div key={race.id}>
+                  <div onClick={() => setViewId(isView ? null : race.id)}
+                    style={{ background: isView ? "rgba(201,168,64,0.08)" : "var(--bg3)", border:`1px solid ${isView?"var(--yellow)":"#333"}`, borderRadius:12, padding:"12px 14px", marginBottom:6, cursor:"pointer" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{race.location || "HYROX"} <span style={{ fontSize:10, color:"#666", fontWeight:400 }}>{race.category}</span></div>
+                        <div style={{ fontSize:10, color:"#666" }}>{race.date} · {CONDITIONS[race.conditions] || "—"}</div>
+                      </div>
+                      <div style={{ textAlign:"right", display:"flex", alignItems:"center", gap:10 }}>
+                        {race.rank && <div style={{ fontSize:11, color:"#aaa" }}>#{race.rank}{race.totalParticipants?`/${race.totalParticipants}`:""}</div>}
+                        <div style={{ fontSize:18, fontWeight:900, color:"var(--yellow)" }}>{fmt(race.totalSec)}</div>
+                        <button onClick={e=>{e.stopPropagation();deleteRace(race.id);}} style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:13, cursor:"pointer" }}>✕</button>
+                      </div>
+                    </div>
+                  </div>
+                  {isView && (
+                    <div style={{ background:"var(--bg3)", borderRadius:"0 0 12px 12px", padding:"10px 14px", marginBottom:10, marginTop:-6 }}>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+                        <div style={{ fontSize:11, color:"#888" }}>🏃 Runs total: <strong style={{ color:"#fff" }}>{race.runTotal || "—"}</strong></div>
+                        {STATIONS.map(s => (
+                          <div key={s.id} style={{ fontSize:11, color:"#888" }}>{s.emoji} {s.name}: <strong style={{ color:race.stations?.[s.id]?"var(--yellow)":"#555" }}>{race.stations?.[s.id] || "—"}</strong></div>
+                        ))}
+                      </div>
+                      {race.notes && <div style={{ fontSize:11, color:"#888", marginTop:8, borderTop:"1px solid #333", paddingTop:8 }}>{race.notes}</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── LIVE RACE SPLIT TRACKER ── */}
       {(() => {
         const KEY = `fitrace_race_splits_${profile.name}`;
