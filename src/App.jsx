@@ -6221,6 +6221,94 @@ JSON:
               );
             })()}
 
+            {/* ── ACTIVITY RINGS — Apple Watch style ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const sessions = profile.sessions || [];
+              const todaySessions = sessions.filter(s => s.date?.slice(0,10) === todayStr);
+
+              // Ring 1 — Move: daily load (RPE × duree) vs target 200
+              const todayLoad = todaySessions.reduce((s,x) => s + (x.rpe||5)*(x.duree||0), 0);
+              const loadTarget = 200;
+              const loadPct = Math.min(todayLoad / loadTarget, 1);
+
+              // Ring 2 — Exercise: active minutes vs target 30
+              const todayMin = todaySessions.reduce((s,x) => s + (x.duree||0), 0);
+              const minTarget = 30;
+              const minPct = Math.min(todayMin / minTarget, 1);
+
+              // Ring 3 — Stand: sessions completed vs target 1
+              const sessionTarget = 1;
+              const sessionPct = Math.min(todaySessions.length / sessionTarget, 1);
+
+              const rings = [
+                { label:"Charge", pct:loadPct, value:todayLoad, unit:`/${loadTarget}`, color:"#FF2D55", r:56 },
+                { label:"Minutes", pct:minPct, value:todayMin, unit:`/${minTarget}min`, color:"#30D158", r:40 },
+                { label:"Séances", pct:sessionPct, value:todaySessions.length, unit:`/${sessionTarget}`, color:"#007AFF", r:24 },
+              ];
+
+              const Arc = ({ r, pct, color }) => {
+                const circumference = 2 * Math.PI * r;
+                const strokeW = 10;
+                const cx = 72, cy = 72;
+                return (
+                  <g>
+                    <circle cx={cx} cy={cy} r={r} fill="none" stroke={`${color}20`} strokeWidth={strokeW} />
+                    <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={strokeW}
+                      strokeDasharray={circumference}
+                      strokeDashoffset={circumference * (1 - pct)}
+                      strokeLinecap="round"
+                      transform={`rotate(-90 ${cx} ${cy})`}
+                      style={{ filter:`drop-shadow(0 0 6px ${color})`, transition:"stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)" }}
+                    />
+                    {pct >= 1 && (
+                      <circle cx={cx} cy={cy} r={r} fill="none" stroke={`${color}40`} strokeWidth={strokeW}
+                        strokeDasharray={circumference * 0.06} strokeDashoffset={-circumference * 0.97}
+                        strokeLinecap="round"
+                        transform={`rotate(-90 ${cx} ${cy})`}
+                      />
+                    )}
+                  </g>
+                );
+              };
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px 20px", marginBottom:12, display:"flex", alignItems:"center", gap:20 }}>
+                  {/* Rings SVG */}
+                  <div style={{ flexShrink:0 }}>
+                    <svg width="144" height="144" viewBox="0 0 144 144">
+                      {rings.map((ring,i) => <Arc key={i} r={ring.r} pct={ring.pct} color={ring.color} />)}
+                    </svg>
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:11, color:"#8E8E93", fontWeight:600, marginBottom:10, textTransform:"uppercase", letterSpacing:0.5 }}>Activité du jour</div>
+                    {rings.map((ring,i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                        <div style={{ width:10, height:10, borderRadius:"50%", background:ring.color, flexShrink:0, boxShadow:`0 0 6px ${ring.color}` }} />
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
+                            <span style={{ fontSize:11, color:"#8E8E93" }}>{ring.label}</span>
+                            <span style={{ fontSize:12, color:ring.pct>=1?ring.color:"#fff", fontWeight:700 }}>
+                              {ring.value}{ring.unit}
+                            </span>
+                          </div>
+                          <div style={{ marginTop:3, height:3, background:"rgba(255,255,255,0.08)", borderRadius:2, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${ring.pct*100}%`, background:ring.color, borderRadius:2, transition:"width 1s cubic-bezier(.4,0,.2,1)", boxShadow:`0 0 4px ${ring.color}` }} />
+                          </div>
+                        </div>
+                        {ring.pct >= 1 && <span style={{ fontSize:12 }}>✓</span>}
+                      </div>
+                    ))}
+                    {todaySessions.length === 0 && (
+                      <div style={{ fontSize:10, color:"#3A3A3C", marginTop:4 }}>Aucune séance aujourd'hui</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MORNING CHECK-IN — Poids + Énergie ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
