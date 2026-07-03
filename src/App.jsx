@@ -8227,6 +8227,174 @@ JSON:
               );
             })()}
 
+            {/* ── HRV TREND CHART (Whoop/Garmin-style) ── */}
+            {(()=>{
+              const KEY_SLP = `fitrace_sleep_unified_${profile.name}`;
+              const sleepLogs = (() => { try { return JSON.parse(localStorage.getItem(KEY_SLP)||"{}"); } catch { return {}; }})();
+
+              // Build 30-day arrays
+              const days30 = Array.from({length:30},(_,i)=>{
+                const d = new Date(); d.setDate(d.getDate()-29+i);
+                const ds = d.toISOString().slice(0,10);
+                const log = sleepLogs[ds] || {};
+                return { ds, hrv: parseFloat(log.hrv)||null, hr: parseFloat(log.restingHr)||null, quality: log.quality||null };
+              });
+
+              const hrvValues = days30.filter(d=>d.hrv).map(d=>d.hrv);
+              if (hrvValues.length < 3) return null;
+
+              // 7-day rolling average (baseline)
+              const withBaseline = days30.map((d,i)=>{
+                const window = days30.slice(Math.max(0,i-6),i).filter(x=>x.hrv).map(x=>x.hrv);
+                const baseline = window.length >= 2 ? window.reduce((a,b)=>a+b,0)/window.length : null;
+                return { ...d, baseline };
+              });
+
+              const allHrv = days30.filter(d=>d.hrv).map(d=>d.hrv);
+              const minHrv = Math.max(0, Math.min(...allHrv) - 5);
+              const maxHrv = Math.max(...allHrv) + 8;
+              const avgHrv = Math.round(allHrv.reduce((a,b)=>a+b,0)/allHrv.length);
+              const todayHrv = days30[29].hrv;
+              const todayBaseline = withBaseline[29].baseline;
+              const hrvTrend = todayHrv && todayBaseline ? (todayHrv >= todayBaseline ? "above" : "below") : null;
+
+              // SVG dimensions
+              const W=320, H=90, PAD={l:28,r:8,t:10,b:22};
+              const cW=W-PAD.l-PAD.r, cH=H-PAD.t-PAD.b;
+              const xOf = (i,total) => PAD.l + (i/(total-1))*cW;
+              const yOf = (v) => v===null ? null : PAD.t + cH - ((v-minHrv)/(maxHrv-minHrv))*cH;
+
+              const points = withBaseline
+                .map((d,i) => d.hrv ? `${xOf(i,30)},${yOf(d.hrv)}` : null)
+                .filter(Boolean).join(" ");
+              const baselinePoints = withBaseline
+                .filter(d=>d.baseline)
+                .map((d,i) => {
+                  // find the actual index
+                  const idx = withBaseline.indexOf(d);
+                  return `${xOf(idx,30)},${yOf(d.baseline)}`;
+                }).join(" ");
+
+              // Correct baseline points with actual indices
+              const bPoints = withBaseline
+                .map((d,i) => d.baseline ? `${xOf(i,30)},${yOf(d.baseline)}` : null)
+                .filter(Boolean).join(" ");
+
+              // Month markers
+              const monthMarks = [];
+              days30.forEach((d,i)=>{
+                if (i>0 && d.ds.slice(8)==="01") monthMarks.push({ i, label: new Date(d.ds+"T12:00:00").toLocaleDateString("fr-FR",{month:"short"}) });
+              });
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, paddingLeft:2 }}>💓 VFC — Tendance 30 jours</div>
+
+                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"14px 16px" }}>
+
+                    {/* Stats header */}
+                    <div style={{ display:"flex", gap:10, marginBottom:12 }}>
+                      <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 4px" }}>
+                        <div className="bebas" style={{ fontSize:22, color: todayHrv ? (hrvTrend==="above" ? "#30D158" : "#FF9F0A") : "#636366", lineHeight:1 }}>
+                          {todayHrv ? `${todayHrv}ms` : "—"}
+                        </div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:2 }}>VFC aujourd'hui</div>
+                        {hrvTrend && <div style={{ fontSize:9, color: hrvTrend==="above" ? "#30D158" : "#FF9F0A", fontWeight:700 }}>
+                          {hrvTrend==="above" ? "↑ Au-dessus baseline" : "↓ Sous baseline"}
+                        </div>}
+                      </div>
+                      <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 4px" }}>
+                        <div className="bebas" style={{ fontSize:22, color:"#8E8E93", lineHeight:1 }}>{avgHrv}ms</div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:2 }}>Moyenne 30j</div>
+                        <div style={{ fontSize:9, color:"#8E8E93" }}>{hrvValues.length} mesures</div>
+                      </div>
+                      <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 4px" }}>
+                        <div className="bebas" style={{ fontSize:22, color:"#C9A840", lineHeight:1 }}>{Math.round(Math.max(...allHrv))}ms</div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:2 }}>Pic 30j</div>
+                        <div className="bebas" style={{ fontSize:14, color:"#636366" }}>{Math.round(Math.min(...allHrv))}ms min</div>
+                      </div>
+                    </div>
+
+                    {/* Chart */}
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display:"block" }}>
+                      {/* Grid */}
+                      {[minHrv, avgHrv, maxHrv-5].map((v,i)=>(
+                        <g key={i}>
+                          <line x1={PAD.l} y1={yOf(v)} x2={W-PAD.r} y2={yOf(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+                          <text x={PAD.l-3} y={yOf(v)+3} textAnchor="end" fill="#636366" fontSize="7" fontFamily="system-ui">{Math.round(v)}</text>
+                        </g>
+                      ))}
+
+                      {/* Area fill under HRV line */}
+                      {points && (() => {
+                        const firstPt = withBaseline.findIndex(d=>d.hrv);
+                        const lastPt  = [...withBaseline].reverse().findIndex(d=>d.hrv);
+                        const lastIdx = 29-lastPt;
+                        const bottomY = PAD.t+cH;
+                        return (
+                          <polygon
+                            points={`${xOf(firstPt,30)},${bottomY} ${points} ${xOf(lastIdx,30)},${bottomY}`}
+                            fill="url(#hrvGrad)" opacity="0.3"/>
+                        );
+                      })()}
+
+                      {/* Gradient def */}
+                      <defs>
+                        <linearGradient id="hrvGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#30D158" stopOpacity="0.6"/>
+                          <stop offset="100%" stopColor="#30D158" stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+
+                      {/* Baseline (7-day MA) */}
+                      {bPoints && <polyline points={bPoints} fill="none" stroke="#C9A840" strokeWidth="1.5" strokeDasharray="4,3" opacity="0.7"/>}
+
+                      {/* HRV line */}
+                      {points && <polyline points={points} fill="none" stroke="#30D158" strokeWidth="2" strokeLinejoin="round"/>}
+
+                      {/* Dots for each HRV point */}
+                      {withBaseline.map((d,i) => {
+                        if (!d.hrv) return null;
+                        const above = d.baseline ? d.hrv >= d.baseline : true;
+                        return <circle key={i} cx={xOf(i,30)} cy={yOf(d.hrv)} r="2.5" fill={above?"#30D158":"#FF9F0A"} stroke="rgba(0,0,0,0.5)" strokeWidth="0.5"/>;
+                      })}
+
+                      {/* Today marker */}
+                      {withBaseline[29].hrv && (
+                        <circle cx={xOf(29,30)} cy={yOf(withBaseline[29].hrv)} r="4" fill={hrvTrend==="above"?"#30D158":"#FF9F0A"} stroke="#000" strokeWidth="1.5"/>
+                      )}
+
+                      {/* Month marks */}
+                      {monthMarks.map((m,i)=>(
+                        <g key={i}>
+                          <line x1={xOf(m.i,30)} y1={PAD.t} x2={xOf(m.i,30)} y2={PAD.t+cH} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="2,3"/>
+                          <text x={xOf(m.i,30)} y={H-4} textAnchor="middle" fill="#636366" fontSize="7" fontFamily="system-ui">{m.label}</text>
+                        </g>
+                      ))}
+                      {/* "Auj" label */}
+                      <text x={xOf(29,30)} y={H-4} textAnchor="middle" fill="#C9A840" fontSize="7" fontFamily="system-ui" fontWeight="bold">Auj</text>
+                    </svg>
+
+                    {/* Legend */}
+                    <div style={{ display:"flex", gap:14, marginTop:6 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:9, color:"#636366" }}>
+                        <div style={{ width:16, height:2, background:"#30D158", borderRadius:1 }}/> VFC
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:9, color:"#636366" }}>
+                        <div style={{ width:16, height:1, background:"#C9A840", borderTop:"1px dashed #C9A840" }}/> Baseline 7j
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:9, color:"#636366" }}>
+                        <div style={{ width:8, height:8, borderRadius:"50%", background:"#30D158" }}/> Au-dessus
+                      </div>
+                      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:9, color:"#636366" }}>
+                        <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF9F0A" }}/> En-dessous
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ZONE DISTRIBUTION ANALYSIS (Garmin-style) ── */}
             {(()=>{
               const sessions = (profile.sessions || []).filter(s => {
