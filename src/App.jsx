@@ -13600,6 +13600,130 @@ JSON:
               );
             })()}
 
+            {/* ── ANNUAL TRAINING HEATMAP ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const now = new Date();
+              // Build 26-week grid (6 months)
+              const WEEKS = 26;
+              const startDate = new Date(now);
+              startDate.setDate(startDate.getDate() - WEEKS * 7 + 1);
+
+              // Map: date string → TRIMP
+              const dayMap = {};
+              sessions.forEach(s => {
+                const trimp = (s.duration || 30) * ((s.rpe || 5) / 10);
+                dayMap[s.date] = (dayMap[s.date] || 0) + trimp;
+              });
+
+              const maxTrimp = Math.max(...Object.values(dayMap), 1);
+
+              // Build weeks array: each week = 7 days
+              const weeks = [];
+              for (let w = 0; w < WEEKS; w++) {
+                const week = [];
+                for (let d = 0; d < 7; d++) {
+                  const dt = new Date(startDate);
+                  dt.setDate(dt.getDate() + w * 7 + d);
+                  const str = dt.toISOString().slice(0, 10);
+                  week.push({ date: str, trimp: dayMap[str] || 0, future: dt > now });
+                }
+                weeks.push(week);
+              }
+
+              const [tooltip, setTooltip] = React.useState(null);
+              const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+
+              // Month labels: find first week of each month
+              const monthLabels = [];
+              weeks.forEach((week, wi) => {
+                const firstDay = new Date(week[0].date);
+                if (wi === 0 || firstDay.getDate() <= 7) {
+                  if (!monthLabels.find(m => m.month === firstDay.getMonth())) {
+                    monthLabels.push({ wi, month: firstDay.getMonth() });
+                  }
+                }
+              });
+
+              const getCellColor = (trimp, future) => {
+                if (future) return "transparent";
+                if (trimp === 0) return "#2C2C2E";
+                const intensity = trimp / maxTrimp;
+                if (intensity < 0.25) return "#1C3A24";
+                if (intensity < 0.5) return "#30D15860";
+                if (intensity < 0.75) return "#30D158";
+                return "#007AFF";
+              };
+
+              const totalDays = Object.keys(dayMap).length;
+              const totalTrimp = Math.round(Object.values(dayMap).reduce((s, v) => s + v, 0));
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+                    <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Heatmap d'Entraînement</div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>{totalDays} jours · {totalTrimp} TRIMP total</div>
+                  </div>
+
+                  {/* Month labels */}
+                  <div style={{ display:"flex",marginBottom:2,paddingLeft:12 }}>
+                    {weeks.map((_, wi) => {
+                      const ml = monthLabels.find(m => m.wi === wi);
+                      return (
+                        <div key={wi} style={{ flex:1,fontSize:7,color:"#636366",textAlign:"center" }}>
+                          {ml ? MONTHS[ml.month] : ""}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Day labels + grid */}
+                  <div style={{ display:"flex",gap:1 }}>
+                    {/* Day labels */}
+                    <div style={{ display:"flex",flexDirection:"column",gap:1,marginRight:2 }}>
+                      {["L","M","M","J","V","S","D"].map((d,i) => (
+                        <div key={i} style={{ height:9,fontSize:6,color:"#636366",lineHeight:"9px" }}>{i%2===0?d:""}</div>
+                      ))}
+                    </div>
+                    {/* Weeks */}
+                    {weeks.map((week, wi) => (
+                      <div key={wi} style={{ flex:1,display:"flex",flexDirection:"column",gap:1 }}>
+                        {week.map((day, di) => (
+                          <div key={di}
+                            onClick={() => !day.future && day.trimp > 0 && setTooltip(tooltip?.date===day.date ? null : day)}
+                            style={{ height:9,borderRadius:1,background:getCellColor(day.trimp, day.future),cursor:day.trimp>0?"pointer":"default",transition:"opacity 0.15s" }}
+                            title={day.trimp > 0 ? `${day.date}: ${Math.round(day.trimp)} TRIMP` : ""}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tooltip */}
+                  {tooltip && (
+                    <div style={{ background:"var(--bg3)",borderRadius:10,padding:"8px 12px",marginTop:10,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontSize:10,fontWeight:700,color:"var(--white)" }}>{tooltip.date}</div>
+                        <div style={{ fontSize:9,color:"#636366" }}>TRIMP: <span style={{ color:"#30D158",fontWeight:700 }}>{Math.round(tooltip.trimp)}</span></div>
+                      </div>
+                      <button onClick={()=>setTooltip(null)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+                    </div>
+                  )}
+
+                  {/* Legend */}
+                  <div style={{ display:"flex",alignItems:"center",gap:4,marginTop:8,justifyContent:"flex-end" }}>
+                    <div style={{ fontSize:8,color:"#636366" }}>Moins</div>
+                    {["#2C2C2E","#1C3A24","#30D15860","#30D158","#007AFF"].map((c,i) => (
+                      <div key={i} style={{ width:9,height:9,borderRadius:2,background:c }}/>
+                    ))}
+                    <div style={{ fontSize:8,color:"#636366" }}>Plus</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MONTHLY STATS SUMMARY ── */}
             {(() => {
 const sessions = profile.sessions || [];
