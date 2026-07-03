@@ -29989,6 +29989,222 @@ JSON: {
             );
           })()}
 
+          {/* ── HYROX RACE DAY FUEL CALCULATOR ── */}
+          {(() => {
+            const bw = parseFloat(profile.poids) || 70;
+            const [targetH, setTargetH] = React.useState(1);
+            const [targetM, setTargetM] = React.useState(30);
+            const [carbRate, setCarbRate] = React.useState(60); // g/h
+            const [sweatRate, setSweatRate] = React.useState("moderate");
+            const [tab, setTab] = React.useState("plan");
+
+            const totalMin = targetH * 60 + targetM;
+            const totalH = totalMin / 60;
+
+            // Carb & fluid needs
+            const totalCarbs = Math.round(carbRate * totalH);
+            const sweatMl = sweatRate === "low" ? 700 : sweatRate === "moderate" ? 1000 : 1400; // ml/h
+            const totalFluid = Math.round(sweatMl * totalH);
+            const sodiumMg = Math.round(totalFluid * 0.7); // ~700mg/L
+
+            // Timeline (hours before/after race)
+            const TIMELINE = [
+              {
+                time: "J-1 soir",
+                emoji: "🌙",
+                color: "#5AC8FA",
+                title: "Charge glycogène",
+                items: [
+                  `Pâtes/riz: ${Math.round(bw * 8)}g glucides`,
+                  "Protéines maigres: poulet/poisson",
+                  "Évite fibres et graisses en excès",
+                  "Hydratation: 2-3L eau + électrolytes",
+                ],
+              },
+              {
+                time: "H-3",
+                emoji: "🌅",
+                color: "#FF9F0A",
+                title: "Repas pré-course",
+                items: [
+                  `Glucides: ${Math.round(bw * 2.5)}g (riz, pain blanc, banane)`,
+                  `Protéines: ${Math.round(bw * 0.3)}g`,
+                  "Peu de graisses et fibres",
+                  `Eau: 500-700ml`,
+                ],
+              },
+              {
+                time: "H-1",
+                emoji: "⚡",
+                color: "#FF6B35",
+                title: "Activation pré-course",
+                items: [
+                  "Café (3-6mg/kg caféine) si habitude",
+                  `Gel ou banane: 30-45g glucides`,
+                  `Eau: 300-400ml`,
+                  "Électrolytes si chaleur",
+                ],
+              },
+              {
+                time: "H-0:15",
+                emoji: "🏁",
+                color: "#FF453A",
+                title: "Juste avant le départ",
+                items: [
+                  "Gel rapide (25g glucides) si > 90min",
+                  "150-200ml eau",
+                  "Pas de nouveaux aliments",
+                ],
+              },
+              {
+                time: "Pendant",
+                emoji: "🏃",
+                color: "var(--yellow)",
+                title: `Pendant la course (${totalMin}min)`,
+                items: [
+                  `Total glucides: ${totalCarbs}g (${carbRate}g/h)`,
+                  totalMin > 60 ? `Gel toutes les 30-45min (${Math.ceil(totalH*2)} gels)` : "Gel à mi-course si >60min",
+                  `Eau: ${totalFluid}ml (${Math.round(totalFluid/totalMin*10)}ml/min)`,
+                  `Sodium: ${sodiumMg}mg (isotonique recommandé)`,
+                  "Pas d'aliments solides pendant les stations",
+                ],
+              },
+              {
+                time: "H+0:30",
+                emoji: "🥗",
+                color: "#30D158",
+                title: "Fenêtre de récupération",
+                items: [
+                  `Glucides: ${Math.round(bw * 1.2)}g (fenêtre 30min)`,
+                  `Protéines: ${Math.round(bw * 0.4)}g (whey ou œufs)`,
+                  `Réhydratation: ${Math.round(totalFluid * 1.5)}ml`,
+                  `Sodium: sel marin + bouillon`,
+                ],
+              },
+            ];
+
+            // Product suggestions
+            const PRODUCTS = [
+              { name: "Gel énergétique", carbs:"22-27g", timing:"Toutes 30-45min", emoji:"💊" },
+              { name: "Boisson isotonique", carbs:"30g/500ml", timing:"Continue", emoji:"💧" },
+              { name: "Banane", carbs:"25g", timing:"H-1", emoji:"🍌" },
+              { name: "Barre de céréales", carbs:"30-45g", timing:"H-3 repas", emoji:"🍫" },
+              { name: "Pain de riz + miel", carbs:"40g", timing:"H-3 repas", emoji:"🍚" },
+            ];
+
+            return (
+              <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                <div style={{ fontSize:16, fontWeight:700, color:"var(--white)", marginBottom:14 }}>
+                  Plan nutrition HYROX
+                </div>
+
+                {/* Inputs */}
+                <div style={{ background:"var(--bg3)", borderRadius:14, padding:14, marginBottom:14 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:4 }}>Temps cible</div>
+                      <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+                        <input type="number" value={targetH} onChange={e=>setTargetH(parseInt(e.target.value)||1)} min="0" max="3"
+                          style={{ width:40, background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"6px 6px", color:"var(--white)", fontSize:14, textAlign:"center" }}/>
+                        <span style={{ color:"#555", fontSize:12 }}>h</span>
+                        <input type="number" value={targetM} onChange={e=>setTargetM(parseInt(e.target.value)||0)} min="0" max="59"
+                          style={{ width:40, background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"6px 6px", color:"var(--white)", fontSize:14, textAlign:"center" }}/>
+                        <span style={{ color:"#555", fontSize:12 }}>min</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:4 }}>Sudation</div>
+                      <select value={sweatRate} onChange={e=>setSweatRate(e.target.value)}
+                        style={{ width:"100%", background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"6px 8px", color:"var(--white)", fontSize:12 }}>
+                        <option value="low">Faible (700ml/h)</option>
+                        <option value="moderate">Modérée (1L/h)</option>
+                        <option value="high">Élevée (1.4L/h)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                      <span style={{ fontSize:11, color:"#666" }}>Apport glucides</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:"var(--yellow)" }}>{carbRate}g/h</span>
+                    </div>
+                    <input type="range" min="30" max="90" step="5" value={carbRate} onChange={e=>setCarbRate(parseInt(e.target.value))}
+                      style={{ width:"100%", accentColor:"var(--yellow)" }}/>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#555" }}>
+                      <span>30g/h (novice)</span><span>60g/h (standard)</span><span>90g/h (entraîné)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary pills */}
+                <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                  {[
+                    { label:"Glucides totaux", val:`${totalCarbs}g`, color:"var(--yellow)" },
+                    { label:"Fluides", val:`${totalFluid}ml`, color:"#5AC8FA" },
+                    { label:"Sodium", val:`${sodiumMg}mg`, color:"#FF9F0A" },
+                    { label:"Durée", val:`${totalMin}min`, color:"#888" },
+                  ].map(s => (
+                    <div key={s.label} style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px" }}>
+                      <div style={{ fontSize:9, color:"#555" }}>{s.label}</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:s.color }}>{s.val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tabs */}
+                <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+                  {["plan","products"].map(t => (
+                    <button key={t} onClick={() => setTab(t)}
+                      style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0",
+                        color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      {t === "plan" ? "Timeline" : "Produits"}
+                    </button>
+                  ))}
+                </div>
+
+                {tab === "plan" && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {TIMELINE.map((slot, i) => (
+                      <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 }}>
+                          <div style={{ fontSize:18 }}>{slot.emoji}</div>
+                          {i < TIMELINE.length-1 && <div style={{ width:2, height:20, background:"#2C2C2E", margin:"4px 0" }}/>}
+                        </div>
+                        <div style={{ flex:1, background:`${slot.color}12`, border:`1px solid ${slot.color}33`, borderRadius:12, padding:"10px 12px" }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:slot.color }}>{slot.title}</div>
+                            <div style={{ fontSize:10, color:"#555", background:"var(--bg3)", borderRadius:6, padding:"2px 8px" }}>{slot.time}</div>
+                          </div>
+                          {slot.items.map((item, j) => (
+                            <div key={j} style={{ fontSize:11, color:"#999", marginBottom:2 }}>• {item}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {tab === "products" && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {PRODUCTS.map((p,i) => (
+                      <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:22, flexShrink:0 }}>{p.emoji}</span>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"var(--white)" }}>{p.name}</div>
+                          <div style={{ fontSize:11, color:"#666", marginTop:2 }}>
+                            {p.carbs} glucides · {p.timing}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ fontSize:10, color:"#555", marginTop:4 }}>
+                      💡 Teste toujours ta nutrition à l'entraînement. Jamais rien de nouveau le jour J.
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ── MACRO HISTORY CHART ── */}
           {(() => {
             const poids = profile.poids || 70;
