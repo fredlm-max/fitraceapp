@@ -10977,6 +10977,113 @@ JSON:
               );
             })()}
 
+            {/* ── SESSION HISTORY DETAIL ── */}
+            {(() => {
+              const sessions = [...(profile.sessions || [])].sort((a,b)=>b.date>a.date?1:-1).slice(0,30);
+              if (sessions.length === 0) return null;
+
+              const [selected, setSelected] = React.useState(null);
+              const [filter, setFilter] = React.useState("all");
+
+              const TYPES = ["all","Course","Vélo","Natation","Force","HYROX","Rameur","Autre"];
+              const filtered = filter==="all" ? sessions : sessions.filter(s=>s.type===filter);
+
+              const TYPE_ICONS = { Course:"🏃",Vélo:"🚴",Natation:"🏊",Force:"🏋️",HYROX:"🏁",Rameur:"🚣",Autre:"⚡" };
+
+              const getRpeColor = (rpe) => rpe>=8?"#FF453A":rpe>=6?"#FF9F0A":rpe>=4?"#30D158":"#007AFF";
+              const getIntensityLabel = (rpe) => rpe>=9?"MAX":rpe>=7?"INTENSE":rpe>=5?"MODÉRÉ":rpe>=3?"FACILE":"RÉCUP";
+
+              const sel = sessions.find(s=>s.id===selected||s.date+s.type===selected);
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Historique Séances</div>
+
+                  {/* Type filter */}
+                  <div style={{ display:"flex",gap:4,overflowX:"auto",paddingBottom:4,marginBottom:12 }}>
+                    {TYPES.map(t=>(
+                      <button key={t} onClick={()=>setFilter(t)}
+                        style={{ flexShrink:0,background:filter===t?"var(--yellow)":"var(--bg3)",color:filter===t?"#000":"#8E8E93",border:"none",borderRadius:8,padding:"5px 10px",fontSize:9,fontWeight:filter===t?800:400,cursor:"pointer" }}>
+                        {t==="all"?"Tout":t}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Session list */}
+                  {filtered.slice(0,10).map((s,i)=>{
+                    const key = s.id||(s.date+s.type+i);
+                    const isOpen = selected===key;
+                    const trimp = Math.round((s.duration||30)*((s.rpe||5)/10));
+                    const rpeColor = getRpeColor(s.rpe||5);
+                    return (
+                      <div key={key} style={{ marginBottom:4 }}>
+                        <button onClick={()=>setSelected(isOpen?null:key)}
+                          style={{ width:"100%",display:"flex",alignItems:"center",gap:10,background:isOpen?"#1C2A3A":"var(--bg3)",border:`1px solid ${isOpen?"#007AFF30":"transparent"}`,borderRadius:isOpen?"12px 12px 0 0":12,padding:"10px 12px",cursor:"pointer",textAlign:"left" }}>
+                          <span style={{ fontSize:20,flexShrink:0 }}>{TYPE_ICONS[s.type]||"⚡"}</span>
+                          <div style={{ flex:1,minWidth:0 }}>
+                            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                              <div style={{ fontSize:12,fontWeight:800,color:"var(--white)" }}>{s.type||"Entraînement"}</div>
+                              <div style={{ fontSize:10,fontWeight:700,color:rpeColor }}>{getIntensityLabel(s.rpe||5)}</div>
+                            </div>
+                            <div style={{ fontSize:9,color:"#636366" }}>{s.date} · {s.duration||30}min · {(s.km||0).toFixed(1)}km</div>
+                          </div>
+                          <div style={{ textAlign:"right",flexShrink:0 }}>
+                            <div style={{ fontSize:11,fontWeight:900,color:"var(--yellow)" }}>{trimp}</div>
+                            <div style={{ fontSize:7,color:"#636366" }}>TRIMP</div>
+                          </div>
+                          <span style={{ fontSize:10,color:"#636366" }}>{isOpen?"▲":"▼"}</span>
+                        </button>
+
+                        {isOpen && (
+                          <div style={{ background:"#1C2A3A",borderRadius:"0 0 12px 12px",padding:"0 12px 12px",borderTop:"1px solid #2C3C4A" }}>
+                            <div style={{ display:"flex",gap:8,paddingTop:12,marginBottom:10 }}>
+                              {[
+                                { label:"Durée",    val:`${s.duration||30}min`,    icon:"⏱️" },
+                                { label:"Distance", val:`${(s.km||0).toFixed(2)}km`, icon:"📏" },
+                                { label:"RPE",      val:`${s.rpe||5}/10`,         icon:"💥", color:rpeColor },
+                                { label:"TRIMP",    val:trimp,                    icon:"⚡", color:"var(--yellow)" },
+                              ].map(m=>(
+                                <div key={m.label} style={{ flex:1,background:"#152030",borderRadius:8,padding:"8px 4px",textAlign:"center" }}>
+                                  <div style={{ fontSize:9 }}>{m.icon}</div>
+                                  <div style={{ fontSize:13,fontWeight:900,color:m.color||"var(--white)" }}>{m.val}</div>
+                                  <div style={{ fontSize:7,color:"#636366" }}>{m.label}</div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* RPE bar */}
+                            <div style={{ marginBottom:8 }}>
+                              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:3 }}>
+                                <span style={{ fontSize:8,color:"#636366" }}>Intensité</span>
+                                <span style={{ fontSize:8,color:rpeColor,fontWeight:700 }}>RPE {s.rpe||5}</span>
+                              </div>
+                              <div style={{ height:5,background:"#0A1520",borderRadius:3,overflow:"hidden" }}>
+                                <div style={{ height:"100%",width:`${((s.rpe||5)/10)*100}%`,background:`linear-gradient(90deg,#30D158,${rpeColor})`,borderRadius:3 }}/>
+                              </div>
+                            </div>
+
+                            {s.notes && (
+                              <div style={{ background:"#0A1520",borderRadius:8,padding:"8px 10px" }}>
+                                <div style={{ fontSize:8,color:"#636366",marginBottom:2 }}>Notes</div>
+                                <div style={{ fontSize:10,color:"#8E8E93",lineHeight:1.4 }}>{s.notes}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {filtered.length === 0 && (
+                    <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"12px 0" }}>Aucune séance pour ce filtre</div>
+                  )}
+                  {filtered.length > 10 && (
+                    <div style={{ textAlign:"center",fontSize:9,color:"#636366",marginTop:6 }}>+{filtered.length-10} autres séances</div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── WELLNESS HISTORY CHART ── */}
             {(() => {
               const wellKey = `fitrace_wellness_${profile.name}`;
