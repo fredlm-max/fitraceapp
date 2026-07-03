@@ -3249,6 +3249,188 @@ function PaceCalcWidget({ profile }) {
   );
 }
 
+// ── LIVE SESSION TIMER ──────────────────────────────────────────────────
+function LiveTimerModal({ sessionType, setShowLiveTimer, showToast, haptic, profile, onUpdateProfile }) {
+  const SESSION_TYPES = [
+    { key: "running_zone2",    label: "Zone 2",   icon: "🏃", color: "#30D158", sub: "Endurance fondamentale" },
+    { key: "running_qualite",  label: "Qualité",  icon: "⚡", color: "#FF9F0A", sub: "Fractionné / VMA" },
+    { key: "force_stations",   label: "Force",    icon: "🏋️", color: "#C9A840", sub: "Stations HYROX" },
+    { key: "hybride_compromis",label: "Hybride",  icon: "🔀", color: "#BF5AF2", sub: "Run + stations" },
+    { key: "mobilite",         label: "Mobilité", icon: "🧘", color: "#30D158", sub: "Récup active" },
+    { key: "repos",            label: "Repos",    icon: "😴", color: "#636366", sub: "Jour off" },
+  ];
+
+  const chosen = SESSION_TYPES.find(s => s.key === sessionType) || SESSION_TYPES[0];
+  const [elapsed, setElapsed] = React.useState(0);    // seconds
+  const [running, setRunning] = React.useState(true);
+  const [phase, setPhase] = React.useState("timer");  // "timer" | "rpe"
+  const [rpe, setRpe] = React.useState(7);
+  const [note, setNote] = React.useState("");
+  const [saved, setSaved] = React.useState(false);
+  const startRef = React.useRef(Date.now() - 0);
+  const pausedAtRef = React.useRef(0);
+  const intervalRef = React.useRef(null);
+
+  React.useEffect(() => {
+    startRef.current = Date.now();
+    intervalRef.current = setInterval(() => {
+      if (running) setElapsed(e => e + 1);
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  React.useEffect(() => {
+    clearInterval(intervalRef.current);
+    if (running) {
+      intervalRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
+    }
+  }, [running]);
+
+  const fmt = (s) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`
+      : `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+  };
+
+  const handleStop = () => {
+    setRunning(false);
+    haptic([10, 20, 30]);
+    setPhase("rpe");
+  };
+
+  const handleSave = () => {
+    if (saved) return;
+    setSaved(true);
+    haptic([10, 30, 10]);
+    const dureeMin = Math.max(1, Math.round(elapsed / 60));
+    const today = new Date().toISOString().slice(0, 10);
+    const newSess = {
+      id: Date.now(),
+      date: today,
+      type: sessionType,
+      titre: chosen.label,
+      duree: dureeMin,
+      rpe,
+      difficulty: rpe,
+      note,
+      source: "live_timer",
+    };
+    const sessions = [...(profile.sessions || []), newSess];
+    onUpdateProfile({ sessions });
+    showToast(`✅ ${chosen.label} — ${dureeMin} min enregistrée`, "success", 2500);
+    setTimeout(() => setShowLiveTimer(false), 800);
+  };
+
+  const ringColor = chosen.color;
+  const circumference = 2 * Math.PI * 90;
+  const maxSecs = Math.max(elapsed, 1);
+  const progress = Math.min(elapsed / (90 * 60), 1); // normalize to 90 min
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#000", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      {/* top bar */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "max(env(safe-area-inset-top,20px),20px) 20px 12px" }}>
+        <button onClick={() => { setShowLiveTimer(false); haptic([4]); }}
+          style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 20, padding: "6px 14px", color: "#aaa", fontSize: 12, cursor: "pointer" }}>
+          Annuler
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#fff", fontWeight: 600 }}>
+          <span style={{ fontSize: 18 }}>{chosen.icon}</span>
+          {chosen.label}
+        </div>
+        <div style={{ width: 70 }} />
+      </div>
+
+      {phase === "timer" ? (
+        <>
+          {/* Ring + Timer */}
+          <div style={{ position: "relative", width: 220, height: 220, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="220" height="220" style={{ position: "absolute", transform: "rotate(-90deg)" }}>
+              <circle cx="110" cy="110" r="90" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+              <circle cx="110" cy="110" r="90" fill="none"
+                stroke={ringColor} strokeWidth="6"
+                strokeDasharray={circumference}
+                strokeDashoffset={circumference * (1 - progress)}
+                strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 8px ${ringColor})`, transition: "stroke-dashoffset 1s linear" }}
+              />
+            </svg>
+            {/* Pulsing dot */}
+            {running && (
+              <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", width: 8, height: 8, borderRadius: "50%", background: ringColor, boxShadow: `0 0 12px ${ringColor}`, animation: "pulse 1.2s ease infinite" }} />
+            )}
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Bebas Neue, Impact, sans-serif", fontSize: elapsed >= 3600 ? 44 : 58, color: "#fff", lineHeight: 1, letterSpacing: 2 }}>
+                {fmt(elapsed)}
+              </div>
+              <div style={{ fontSize: 10, color: "#666", marginTop: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+                {running ? "en cours" : "pause"}
+              </div>
+            </div>
+          </div>
+
+          {/* sub text */}
+          <div style={{ marginTop: 16, fontSize: 12, color: "#555", textAlign: "center" }}>
+            {chosen.sub}
+          </div>
+
+          {/* Controls */}
+          <div style={{ display: "flex", gap: 20, marginTop: 48, alignItems: "center" }}>
+            {/* Pause / Resume */}
+            <button onClick={() => { setRunning(r => !r); haptic([8]); }}
+              style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+              {running ? "⏸" : "▶"}
+            </button>
+
+            {/* Stop */}
+            <button onClick={handleStop}
+              style={{ width: 72, height: 72, borderRadius: "50%", background: "#FF453A", border: "none", cursor: "pointer", fontSize: 26, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(255,69,58,0.5)" }}>
+              ⏹
+            </button>
+
+            {/* Lap placeholder */}
+            <button style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", color: "#555" }}>
+              🔁
+            </button>
+          </div>
+        </>
+      ) : (
+        /* ── RPE + Save panel ── */
+        <div style={{ width: "100%", maxWidth: 380, padding: "0 24px", textAlign: "center", animation: "slideUp 0.35s var(--spring) both" }}>
+          {/* Time summary */}
+          <div style={{ fontFamily: "Bebas Neue, Impact, sans-serif", fontSize: 52, color: "#fff", letterSpacing: 2 }}>{fmt(elapsed)}</div>
+          <div style={{ fontSize: 12, color: "#555", marginBottom: 32 }}>{Math.max(1, Math.round(elapsed/60))} min · {chosen.icon} {chosen.label}</div>
+
+          {/* RPE */}
+          <div style={{ fontSize: 12, color: "#8E8E93", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>Effort perçu (RPE)</div>
+          <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 24 }}>
+            {[1,2,3,4,5,6,7,8,9,10].map(v => (
+              <button key={v} onClick={() => { setRpe(v); haptic([4]); }}
+                style={{ width: 26, height: 30, borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, background: v === rpe ? ringColor : "rgba(255,255,255,0.08)", color: v === rpe ? "#000" : "#666", transition: "all 0.15s" }}>
+                {v}
+              </button>
+            ))}
+          </div>
+
+          {/* Note */}
+          <textarea value={note} onChange={e => setNote(e.target.value)}
+            placeholder="Note optionnelle..."
+            style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#fff", resize: "none", height: 64, fontFamily: "inherit", marginBottom: 20, boxSizing: "border-box" }} />
+
+          {/* Save */}
+          <button onClick={handleSave}
+            style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: ringColor, border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: chosen.key === "running_qualite" || chosen.key === "force_stations" ? "#000" : "#000", boxShadow: `0 4px 20px ${ringColor}60`, transition: "all 0.2s" }}>
+            Enregistrer la séance ✓
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, haptic, profile, onUpdateProfile }) {
   const SESSION_TYPES = [
     { key: "running_zone2",    label: "Zone 2",   icon: "🏃", color: "#007AFF", sub: "Endurance fondamentale" },
@@ -3413,6 +3595,8 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [tab, setTab] = useState("home");
   const [tabDir, setTabDir] = useState(1);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showLiveTimer, setShowLiveTimer] = useState(false);
+  const [liveTimerType, setLiveTimerType] = useState("running_zone2");
   const [showAllHome, setShowAllHome] = useState(false);
   const [showAllProgress, setShowAllProgress] = useState(false);
 
@@ -6022,9 +6206,14 @@ JSON:
                       </div>
                     )}
                     {!rec.done && (
-                      <div onClick={()=>{ haptic([4]); setShowQuickLog(true); }}
-                        style={{ background:`${rec.color}20`, border:`1px solid ${rec.color}40`, borderRadius:20, padding:"3px 10px", fontSize:9, color:rec.color, fontWeight:700, cursor:"pointer", marginLeft:"auto" }}>
-                        ▶ Logger cette séance →
+                      <div onClick={()=>{
+                        haptic([8,20,8]);
+                        const typeMap = {"Zone 2":"running_zone2","Qualité":"running_qualite","Force":"force_stations","Hybride":"hybride_compromis","Mobilité":"mobilite","Repos":"repos","Activation":"running_zone2","Récupération":"mobilite","Repos actif":"mobilite","Reprise recommandée":"hybride_compromis","Zone 2 du jour":"running_zone2","Priorité : Zone 2":"running_zone2","Priorité : Qualité":"running_qualite","Priorité : Force":"force_stations","Priorité : Hybride":"hybride_compromis"};
+                        setLiveTimerType(typeMap[rec.type] || typeMap[rec.title] || "running_zone2");
+                        setShowLiveTimer(true);
+                      }}
+                        style={{ background:`${rec.color}22`, border:`1px solid ${rec.color}50`, borderRadius:20, padding:"4px 12px", fontSize:9, color:rec.color, fontWeight:700, cursor:"pointer", marginLeft:"auto", display:"flex", alignItems:"center", gap:4 }}>
+                        ▶ Démarrer le timer
                       </div>
                     )}
                   </div>
@@ -24351,6 +24540,9 @@ const sessions = profile.sessions || [];
 
       {/* Quick Log Modal */}
       {showQuickLog && <QuickLogModal dailyData={dailyData} setDailyData={setDailyData} setShowQuickLog={setShowQuickLog} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
+
+      {/* Live Session Timer */}
+      {showLiveTimer && <LiveTimerModal sessionType={liveTimerType} setShowLiveTimer={setShowLiveTimer} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
 
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
