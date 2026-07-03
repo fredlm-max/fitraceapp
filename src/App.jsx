@@ -11158,12 +11158,12 @@ JSON:
                         <button onClick={()=>setSelected(isOpen?null:key)}
                           style={{ width:"100%",display:"flex",alignItems:"center",gap:10,background:isOpen?"#1C2A3A":"var(--bg3)",border:`1px solid ${isOpen?"#007AFF30":"transparent"}`,borderRadius:isOpen?"12px 12px 0 0":12,padding:"10px 12px",cursor:"pointer",textAlign:"left" }}>
                           <span style={{ fontSize:20,flexShrink:0 }}>{TYPE_ICONS[s.type]||"⚡"}</span>
-                          <div style={{ flex:1,minWidth:0 }}>
-                            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                              <div style={{ fontSize:12,fontWeight:800,color:"var(--white)" }}>{s.type||"Entraînement"}</div>
-                              <div style={{ fontSize:10,fontWeight:700,color:rpeColor }}>{getIntensityLabel(s.rpe||5)}</div>
+                          <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
+                            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:4 }}>
+                              <div style={{ fontSize:12,fontWeight:800,color:"var(--white)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1 }}>{s.type||"Entraînement"}</div>
+                              <div style={{ fontSize:9,fontWeight:700,color:rpeColor,flexShrink:0 }}>{getIntensityLabel(s.rpe||5)}</div>
                             </div>
-                            <div style={{ fontSize:9,color:"#636366" }}>{s.date} · {s.duration||30}min · {(s.km||0).toFixed(1)}km</div>
+                            <div style={{ fontSize:9,color:"#636366",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{s.date} · {s.duration||30}min · {(s.km||0).toFixed(1)}km</div>
                           </div>
                           <div style={{ textAlign:"right",flexShrink:0 }}>
                             <div style={{ fontSize:11,fontWeight:900,color:"var(--yellow)" }}>{trimp}</div>
@@ -11181,9 +11181,9 @@ JSON:
                                 { label:"RPE",      val:`${s.rpe||5}/10`,         icon:"💥", color:rpeColor },
                                 { label:"TRIMP",    val:trimp,                    icon:"⚡", color:"var(--yellow)" },
                               ].map(m=>(
-                                <div key={m.label} style={{ flex:1,background:"#152030",borderRadius:8,padding:"8px 4px",textAlign:"center" }}>
+                                <div key={m.label} style={{ flex:1,background:"#152030",borderRadius:8,padding:"8px 4px",textAlign:"center",overflow:"hidden" }}>
                                   <div style={{ fontSize:9 }}>{m.icon}</div>
-                                  <div style={{ fontSize:13,fontWeight:900,color:m.color||"var(--white)" }}>{m.val}</div>
+                                  <div style={{ fontSize:11,fontWeight:900,color:m.color||"var(--white)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{m.val}</div>
                                   <div style={{ fontSize:7,color:"#636366" }}>{m.label}</div>
                                 </div>
                               ))}
