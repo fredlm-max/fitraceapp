@@ -5754,6 +5754,178 @@ JSON:
               );
             })()}
 
+            {/* ── SLEEP & RECOVERY TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_sleep_${profile.name}`;
+              const today = new Date().toISOString().slice(0,10);
+
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({
+                date: today,
+                bedtime: "23:00",
+                wake: "07:00",
+                quality: 7,
+                hrv: "",
+                restingHr: "",
+                notes: ""
+              });
+
+              const calcDur = (bed, wake) => {
+                if (!bed || !wake) return 0;
+                const [bh,bm] = bed.split(":").map(Number);
+                const [wh,wm] = wake.split(":").map(Number);
+                let mins = (wh*60+wm) - (bh*60+bm);
+                if (mins < 0) mins += 24*60;
+                return mins/60;
+              };
+
+              const dur = calcDur(form.bedtime, form.wake);
+
+              const recoveryScore = (entry) => {
+                const d = entry.dur || 0;
+                const q = entry.quality || 5;
+                const hrv = entry.hrv ? Math.min(100, entry.hrv/2) : 50;
+                const sleepScore = Math.min(100, (d / 8) * 60 + (q / 10) * 40);
+                return Math.round((sleepScore * 0.6 + hrv * 0.4));
+              };
+
+              const saveEntry = () => {
+                const entry = { ...form, dur: parseFloat(calcDur(form.bedtime, form.wake).toFixed(1)), id: Date.now() };
+                const filtered = log.filter(e => e.date !== form.date);
+                const next = [entry, ...filtered].sort((a,b) => b.date.localeCompare(a.date)).slice(0,90);
+                setLog(next);
+                localStorage.setItem(KEY, JSON.stringify(next));
+                setShowForm(false);
+              };
+
+              const last7 = log.slice(0, 7);
+              const avgDur = last7.length ? (last7.reduce((s,e) => s+(e.dur||0),0)/last7.length).toFixed(1) : 0;
+              const todayEntry = log.find(e => e.date === today);
+              const score = todayEntry ? recoveryScore(todayEntry) : null;
+
+              const scoreColor = score === null ? "#666" : score >= 70 ? "#30D158" : score >= 40 ? "#FF9F0A" : "#FF453A";
+              const scoreLabel = score === null ? "—" : score >= 70 ? "Récupéré" : score >= 40 ? "Modéré" : "Fatigué";
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>WHOOP · SOMMEIL & RÉCUPÉRATION</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>😴 Sleep Tracker</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:28, fontWeight:900, color: scoreColor }}>{score !== null ? score : "—"}</div>
+                      <div style={{ fontSize:10, color: scoreColor, fontWeight:700 }}>{scoreLabel}</div>
+                    </div>
+                  </div>
+
+                  {/* Score ring + stats */}
+                  {todayEntry && (
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+                      {[
+                        { label:"Durée", val:`${todayEntry.dur}h`, icon:"🌙" },
+                        { label:"Qualité", val:`${todayEntry.quality}/10`, icon:"⭐" },
+                        { label:"FC repos", val: todayEntry.restingHr ? `${todayEntry.restingHr} bpm` : "—", icon:"❤️" },
+                      ].map((s,i) => (
+                        <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                          <div style={{ fontSize:18 }}>{s.icon}</div>
+                          <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>{s.val}</div>
+                          <div style={{ fontSize:10, color:"#666" }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 7-day sleep chart */}
+                  {last7.length > 0 && (
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>7 DERNIÈRES NUITS</div>
+                      <div style={{ display:"flex", gap:4, alignItems:"flex-end", height:60 }}>
+                        {[...last7].reverse().map((e,i) => {
+                          const h = Math.min(100, (e.dur/10)*100);
+                          const c = e.dur >= 7.5 ? "#30D158" : e.dur >= 6 ? "#FF9F0A" : "#FF453A";
+                          return (
+                            <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                              <div style={{ background:c, width:"100%", height:`${h}%`, borderRadius:"4px 4px 0 0", minHeight:4 }}
+                                title={`${e.date}: ${e.dur}h Q${e.quality}`}/>
+                              <div style={{ fontSize:8, color:"#555" }}>{e.date.slice(8)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginTop:6, fontSize:11 }}>
+                        <span style={{ color:"#666" }}>Moy. 7j: <strong style={{ color:"#fff" }}>{avgDur}h</strong></span>
+                        <span style={{ color: parseFloat(avgDur) >= 7.5 ? "#30D158" : "#FF9F0A" }}>
+                          {parseFloat(avgDur) >= 7.5 ? "✓ Optimal" : parseFloat(avgDur) >= 6 ? "⚠ Insuffisant" : "⛔ Déficit"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Form */}
+                  {showForm ? (
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:16 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:12 }}>Enregistrer la nuit</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Date</div>
+                          <input type="date" value={form.date} onChange={e => setForm(f => ({...f, date:e.target.value}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:11, boxSizing:"border-box" }}/>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Coucher</div>
+                          <input type="time" value={form.bedtime} onChange={e => setForm(f => ({...f, bedtime:e.target.value}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:11, boxSizing:"border-box" }}/>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Réveil</div>
+                          <input type="time" value={form.wake} onChange={e => setForm(f => ({...f, wake:e.target.value}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:11, boxSizing:"border-box" }}/>
+                        </div>
+                      </div>
+                      {dur > 0 && <div style={{ fontSize:11, color:"var(--yellow)", marginBottom:10, textAlign:"center" }}>⏱ {dur.toFixed(1)}h de sommeil</div>}
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#555", marginBottom:4 }}>
+                          <span>Qualité du sommeil</span><span style={{ color:"var(--yellow)", fontWeight:700 }}>{form.quality}/10</span>
+                        </div>
+                        <input type="range" min="1" max="10" value={form.quality} onChange={e => setForm(f => ({...f, quality:parseInt(e.target.value)}))}
+                          style={{ width:"100%", accentColor:"var(--yellow)" }}/>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>VRC (ms, optionnel)</div>
+                          <input type="number" min="20" max="200" value={form.hrv} onChange={e => setForm(f => ({...f, hrv:e.target.value}))}
+                            placeholder="ex: 65"
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>FC repos (bpm)</div>
+                          <input type="number" min="30" max="100" value={form.restingHr} onChange={e => setForm(f => ({...f, restingHr:e.target.value}))}
+                            placeholder="ex: 52"
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={() => setShowForm(false)}
+                          style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                        <button onClick={saveEntry}
+                          style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"10px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Enregistrer</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowForm(true)}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px dashed #444", borderRadius:12, padding:"12px 0", color:"#888", fontSize:13, cursor:"pointer" }}>
+                      {todayEntry ? "✏️ Modifier la nuit" : "+ Enregistrer cette nuit"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── FATIGUE STATUS BANNER ── */}
             {(() => {
               const sessions = profile.sessions || [];
