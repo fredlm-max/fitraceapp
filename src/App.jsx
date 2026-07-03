@@ -21296,6 +21296,203 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── CUSTOM WORKOUT CREATOR ── */}
+      {(() => {
+        const KEY = `fitrace_custom_workouts_${profile.name}`;
+        const [workouts, setWorkouts] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [mode, setMode] = React.useState("list"); // list | create | run
+        const [form, setForm] = React.useState({ name:"", exercises:[] });
+        const [runState, setRunState] = React.useState(null); // { workout, exIdx, setIdx, phase, tick }
+
+        const EXERCISE_PRESETS = [
+          "SkiErg","Rowing","Burpees","Wall Balls","Sled Push","Sled Pull","Farmer Carry","Sandbag Lunges",
+          "Squats","Fentes","Pompes","Tractions","Gainage","Kettlebell Swing","Box Jump","Mountain Climbers",
+          "Course 400m","Course 1km","Rameur 500m",
+        ];
+
+        const addExercise = () => {
+          setForm(f=>({ ...f, exercises:[...f.exercises, { name:"", sets:3, reps:10, workSec:40, restSec:20, type:"reps" }] }));
+        };
+
+        const updateEx = (i, key, val) => {
+          setForm(f=>{ const ex=[...f.exercises]; ex[i]={...ex[i],[key]:val}; return {...f,exercises:ex}; });
+        };
+
+        const removeEx = (i) => {
+          setForm(f=>({ ...f, exercises:f.exercises.filter((_,idx)=>idx!==i) }));
+        };
+
+        const saveWorkout = () => {
+          if (!form.name || form.exercises.length===0) return;
+          const next = [{ id:Date.now(), ...form }, ...workouts];
+          setWorkouts(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setMode("list");
+          setForm({ name:"", exercises:[] });
+        };
+
+        const deleteWorkout = (id) => {
+          const next = workouts.filter(w=>w.id!==id);
+          setWorkouts(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        // Run mode
+        const startWorkout = (workout) => {
+          setRunState({ workout, exIdx:0, setIdx:0, phase:"work", tick:0, done:false });
+          setMode("run");
+        };
+
+        React.useEffect(() => {
+          if (mode!=="run" || !runState || runState.done) return;
+          const ex = runState.workout.exercises[runState.exIdx];
+          if (!ex) return;
+          const phaseDur = runState.phase==="work" ? (ex.type==="time"?ex.workSec:ex.workSec) : ex.restSec;
+          if (runState.tick >= phaseDur) {
+            if (runState.phase==="work") {
+              setRunState(s=>({ ...s, phase:"rest", tick:0 }));
+            } else {
+              const nextSet = runState.setIdx + 1;
+              if (nextSet >= ex.sets) {
+                const nextEx = runState.exIdx + 1;
+                if (nextEx >= runState.workout.exercises.length) {
+                  setRunState(s=>({ ...s, done:true }));
+                } else {
+                  setRunState(s=>({ ...s, exIdx:nextEx, setIdx:0, phase:"work", tick:0 }));
+                }
+              } else {
+                setRunState(s=>({ ...s, setIdx:nextSet, phase:"work", tick:0 }));
+              }
+            }
+            return;
+          }
+          const id = setTimeout(() => setRunState(s=>s?({ ...s, tick:s.tick+1 }):s), 1000);
+          return () => clearTimeout(id);
+        }, [mode, runState]);
+
+        const totalMinutes = (w) => Math.round(w.exercises.reduce((s,e)=>{
+          return s + e.sets*(e.workSec + e.restSec);
+        }, 0) / 60);
+
+        if (mode==="run" && runState) {
+          const { workout, exIdx, setIdx, phase, tick, done } = runState;
+          const ex = done ? null : workout.exercises[exIdx];
+          const phaseDur = ex ? (phase==="work" ? ex.workSec : ex.restSec) : 1;
+          const pct = ex ? (tick/phaseDur)*100 : 100;
+          const isWork = phase==="work";
+
+          return (
+            <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:12 }}>
+                <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>{workout.name}</div>
+                <button onClick={()=>{ setMode("list"); setRunState(null); }} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,cursor:"pointer" }}>✕ Stop</button>
+              </div>
+              {done ? (
+                <div style={{ textAlign:"center",padding:"20px 0" }}>
+                  <div style={{ fontSize:36,marginBottom:8 }}>🎉</div>
+                  <div style={{ fontSize:16,fontWeight:900,color:"#30D158" }}>Workout terminé !</div>
+                  <button onClick={()=>{ setMode("list"); setRunState(null); }} style={{ marginTop:12,background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:"8px 24px",fontSize:12,fontWeight:800,cursor:"pointer" }}>Retour</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ textAlign:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:11,color:isWork?"var(--yellow)":"#30D158",fontWeight:800,marginBottom:4 }}>{isWork?"💪 TRAVAIL":"😮‍💨 REPOS"}</div>
+                    <div style={{ fontSize:28,fontWeight:900,color:"var(--white)",marginBottom:2 }}>{ex.name||"Exercice"}</div>
+                    <div style={{ fontSize:12,color:"#8E8E93" }}>Série {setIdx+1}/{ex.sets}{ex.type==="reps"?` · ${ex.reps} reps`:""}</div>
+                    <div style={{ fontSize:48,fontWeight:900,color:isWork?"var(--yellow)":"#30D158",margin:"12px 0" }}>{phaseDur-tick}</div>
+                    <div style={{ height:8,background:"#2C2C2E",borderRadius:4,overflow:"hidden",maxWidth:240,margin:"0 auto" }}>
+                      <div style={{ height:"100%",width:`${pct}%`,background:isWork?"var(--yellow)":"#30D158",borderRadius:4,transition:"width 1s linear" }}/>
+                    </div>
+                  </div>
+                  {exIdx+1 < workout.exercises.length && (
+                    <div style={{ textAlign:"center",fontSize:9,color:"#636366",marginTop:8 }}>
+                      Suivant: {workout.exercises[exIdx+1].name}
+                    </div>
+                  )}
+                  <div style={{ display:"flex",gap:4,marginTop:10,justifyContent:"center" }}>
+                    {workout.exercises.map((_,i)=>(
+                      <div key={i} style={{ width:8,height:8,borderRadius:"50%",background:i<exIdx?"#30D158":i===exIdx?"var(--yellow)":"#2C2C2E" }}/>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        }
+
+        if (mode==="create") return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Nouveau Workout</div>
+              <button onClick={()=>setMode("list")} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,cursor:"pointer" }}>Annuler</button>
+            </div>
+            <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nom du workout (ex: HYROX Circuit)"
+              style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:10,padding:"10px 12px",color:"var(--white)",fontSize:13,fontWeight:700,marginBottom:12,boxSizing:"border-box" }}/>
+            {form.exercises.map((ex,i)=>(
+              <div key={i} style={{ background:"var(--bg3)",borderRadius:12,padding:10,marginBottom:8 }}>
+                <div style={{ display:"flex",gap:6,marginBottom:6 }}>
+                  <select value={ex.name} onChange={e=>updateEx(i,"name",e.target.value)}
+                    style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 8px",color:ex.name?"var(--white)":"#636366",fontSize:11 }}>
+                    <option value="">Choisir exercice...</option>
+                    {EXERCISE_PRESETS.map(p=><option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <select value={ex.type} onChange={e=>updateEx(i,"type",e.target.value)}
+                    style={{ flex:1,background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 8px",color:"var(--white)",fontSize:11 }}>
+                    <option value="reps">Reps</option>
+                    <option value="time">Temps</option>
+                  </select>
+                  <button onClick={()=>removeEx(i)} style={{ background:"#3A1C1C",color:"#FF453A",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12 }}>✕</button>
+                </div>
+                <div style={{ display:"flex",gap:6 }}>
+                  {[
+                    { label:"Séries", key:"sets", min:1, max:10 },
+                    ex.type==="reps" ? { label:"Reps", key:"reps", min:1, max:100 } : { label:"Travail (s)", key:"workSec", min:5, max:300 },
+                    { label:"Repos (s)", key:"restSec", min:0, max:120 },
+                  ].map(f=>(
+                    <div key={f.key} style={{ flex:1,background:"#2C2C2E",borderRadius:8,padding:"6px 4px",textAlign:"center" }}>
+                      <div style={{ fontSize:7,color:"#636366",marginBottom:3 }}>{f.label}</div>
+                      <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:3 }}>
+                        <button onClick={()=>updateEx(i,f.key,Math.max(f.min,ex[f.key]-1))} style={{ background:"#1C1C1E",color:"#8E8E93",border:"none",borderRadius:4,width:16,height:16,fontSize:11,cursor:"pointer",lineHeight:1 }}>−</button>
+                        <span style={{ fontSize:12,fontWeight:900,color:"var(--yellow)",minWidth:24,textAlign:"center" }}>{ex[f.key]}</span>
+                        <button onClick={()=>updateEx(i,f.key,Math.min(f.max,ex[f.key]+1))} style={{ background:"#1C1C1E",color:"var(--yellow)",border:"none",borderRadius:4,width:16,height:16,fontSize:11,cursor:"pointer",lineHeight:1 }}>+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <button onClick={addExercise} style={{ width:"100%",background:"#2C2C2E",color:"#8E8E93",border:"1px dashed #3A3A3C",borderRadius:10,padding:8,fontSize:11,cursor:"pointer",marginBottom:10 }}>+ Ajouter un exercice</button>
+            <button onClick={saveWorkout} disabled={!form.name||form.exercises.length===0}
+              style={{ width:"100%",background:form.name&&form.exercises.length>0?"var(--yellow)":"#2C2C2E",color:form.name&&form.exercises.length>0?"#000":"#636366",border:"none",borderRadius:10,padding:9,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+              Sauvegarder le workout
+            </button>
+          </div>
+        );
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🏋️ Mes Workouts</div>
+              <button onClick={()=>{ setForm({ name:"", exercises:[] }); setMode("create"); }}
+                style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"5px 14px",fontSize:10,fontWeight:800,cursor:"pointer" }}>+ Créer</button>
+            </div>
+            {workouts.length===0 && (
+              <div style={{ textAlign:"center",color:"#636366",fontSize:11,padding:"16px 0" }}>Crée ton premier workout personnalisé →</div>
+            )}
+            {workouts.map(w=>(
+              <div key={w.id} style={{ background:"var(--bg3)",borderRadius:12,padding:"10px 12px",marginBottom:6,display:"flex",alignItems:"center",gap:10 }}>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <div style={{ fontSize:12,fontWeight:800,color:"var(--white)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{w.name}</div>
+                  <div style={{ fontSize:9,color:"#636366",marginTop:2 }}>{w.exercises.length} exercices · ~{totalMinutes(w)} min</div>
+                </div>
+                <button onClick={()=>startWorkout(w)} style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"6px 14px",fontSize:10,fontWeight:800,cursor:"pointer",flexShrink:0 }}>▶ Start</button>
+                <button onClick={()=>deleteWorkout(w.id)} style={{ background:"transparent",color:"#636366",border:"none",fontSize:14,cursor:"pointer" }}>✕</button>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* ── WORKOUT TEMPLATE LIBRARY ── */}
       {(() => {
         const [selTpl, setSelTpl] = React.useState(null);
