@@ -23711,6 +23711,7 @@ const sessions = profile.sessions || [];
               const [editingStation, setEditingStation] = React.useState(null);
               const [editMin, setEditMin] = React.useState("");
               const [editSec, setEditSec] = React.useState("");
+              const [prCelebration, setPrCelebration] = React.useState(null); // { stationLabel, newTime, delta }
 
               React.useEffect(() => {
                 storage.get(benchKey).then(b => { if (b) setBenchmarks(b); });
@@ -23720,17 +23721,26 @@ const sessions = profile.sessions || [];
                 const timeStr = `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
                 const today = new Date().toISOString().split("T")[0];
                 const prev = benchmarks[id] || {};
+                const toSecs = t => { const [m,s]=t.split(":").map(Number); return m*60+(s||0); };
+                const newSecs = toSecs(timeStr);
                 // Migrate old format (no history) to new
                 const prevHistory = prev.history || (prev.time ? [{ time: prev.time, date: prev.date || today }] : []);
                 const newEntry = { time: timeStr, date: today };
                 const history = [...prevHistory, newEntry];
                 // PR = best (lowest) time ever
-                const toSecs = t => { const [m,s]=t.split(":").map(Number); return m*60+(s||0); };
                 const prEntry = history.reduce((best,e) => toSecs(e.time) < toSecs(best.time) ? e : best, history[0]);
                 const updated = { ...benchmarks, [id]: { time: prEntry.time, date: prEntry.date, history } };
                 setBenchmarks(updated);
                 await storage.set(benchKey, updated);
                 setEditingStation(null);
+                // PR celebration: did we beat the previous best?
+                const stInfo = BENCH_STATIONS.find(s => s.id === id);
+                if (prev.time && newSecs < toSecs(prev.time)) {
+                  const deltaSec = toSecs(prev.time) - newSecs;
+                  setPrCelebration({ stationLabel: stInfo?.label || id, newTime: timeStr, prevTime: prev.time, delta: deltaSec });
+                  haptic([10, 30, 10, 30, 20]);
+                  setTimeout(() => setPrCelebration(null), 4000);
+                }
               };
 
               const timeToSecs = (t) => {
@@ -23745,6 +23755,27 @@ const sessions = profile.sessions || [];
 
               return (
                 <div style={{ marginBottom: 16 }}>
+
+                  {/* ── PR CELEBRATION OVERLAY ── */}
+                  {prCelebration && (
+                    <div style={{ position:"fixed", inset:0, zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+                      {/* Backdrop flash */}
+                      <div style={{ position:"absolute", inset:0, background:"rgba(201,168,64,0.15)", backdropFilter:"blur(4px)", animation:"fadeIn 0.2s ease" }} />
+                      {/* Card */}
+                      <div style={{ position:"relative", background:"#1C1C1E", border:"2px solid #C9A840", borderRadius:24, padding:"28px 32px", textAlign:"center", animation:"slideUp 0.35s cubic-bezier(.34,1.56,.64,1) both", boxShadow:"0 0 60px rgba(201,168,64,0.4), 0 20px 60px rgba(0,0,0,0.6)" }}>
+                        <div style={{ fontSize:48, marginBottom:8 }}>🏆</div>
+                        <div style={{ fontSize:11, color:"#C9A840", fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:4 }}>Nouveau Record Personnel</div>
+                        <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:36, color:"#fff", letterSpacing:2, lineHeight:1, marginBottom:4 }}>{prCelebration.newTime}</div>
+                        <div style={{ fontSize:13, color:"#8E8E93", marginBottom:8 }}>{prCelebration.stationLabel}</div>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#30D158" }}>↓ −{prCelebration.delta}s vs ancien PR ({prCelebration.prevTime})</div>
+                        {/* Confetti dots */}
+                        {[...Array(12)].map((_,i) => (
+                          <div key={i} style={{ position:"absolute", width:6, height:6, borderRadius:"50%", background:["#C9A840","#30D158","#007AFF","#FF9F0A","#BF5AF2"][i%5], top:`${10+Math.sin(i/12*Math.PI*2)*40}%`, left:`${50+Math.cos(i/12*Math.PI*2)*45}%`, animation:`pulse ${0.5+i*0.1}s ease infinite`, opacity:0.9 }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🏁 Benchmarks Stations</div>
                     <div style={{ fontSize: 9, color: "#8E8E93" }}>{Object.keys(benchmarks).length}/8 renseignés</div>
