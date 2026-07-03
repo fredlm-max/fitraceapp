@@ -15838,6 +15838,133 @@ JSON:
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
 
+            {/* ── ACHIEVEMENT BADGES ── Nike Training Club style ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const today = new Date().toISOString().slice(0,10);
+
+              // Streak
+              let streak = 0;
+              for (let i = 0; i < 365; i++) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const k = d.toISOString().slice(0,10);
+                if (sessions.some(s => s.date && s.date.slice(0,10) === k)) streak++;
+                else if (i > 0) break;
+              }
+
+              // Benchmark count
+              const pbKey = `fitrace_station_pb_${profile.name}`;
+              const benchmarks = (() => { try { return JSON.parse(localStorage.getItem(pbKey) || "{}"); } catch { return {}; } })();
+              const benchCount = Object.keys(benchmarks).length;
+
+              // Weekly consistency (weeks with ≥3 sessions in last 12 weeks)
+              let consistentWeeks = 0;
+              for (let w = 0; w < 12; w++) {
+                const wStart = new Date(); wStart.setDate(wStart.getDate() - w*7 - 6);
+                const wEnd = new Date(); wEnd.setDate(wEnd.getDate() - w*7);
+                const cnt = sessions.filter(s => {
+                  if (!s.date) return false;
+                  const d = new Date(s.date);
+                  return d >= wStart && d <= wEnd;
+                }).length;
+                if (cnt >= 3) consistentWeeks++;
+              }
+
+              const total = sessions.length;
+              const hasHyrox = sessions.some(s => s.type && (s.type.includes("hybride") || s.type.includes("race")));
+              const hasForce = sessions.some(s => s.type && s.type.includes("force"));
+              const totalDuration = sessions.reduce((a,s) => a + (s.duree || s.duration || 0), 0);
+
+              const BADGES = [
+                // Session milestones
+                { id:"s1",   icon:"🌱", label:"Première séance",  cat:"Séances",      color:"#30D158", unlocked: total >= 1,   hint:"Logge ta première séance" },
+                { id:"s10",  icon:"⚡", label:"10 séances",        cat:"Séances",      color:"#30D158", unlocked: total >= 10,  hint:"Logge 10 séances" },
+                { id:"s25",  icon:"🔥", label:"25 séances",        cat:"Séances",      color:"#FF9F0A", unlocked: total >= 25,  hint:"Logge 25 séances" },
+                { id:"s50",  icon:"💪", label:"50 séances",        cat:"Séances",      color:"#FF9F0A", unlocked: total >= 50,  hint:"Logge 50 séances" },
+                { id:"s100", icon:"🏅", label:"Centurion",         cat:"Séances",      color:"#C9A840", unlocked: total >= 100, hint:"Logge 100 séances" },
+                // Streak
+                { id:"str7",  icon:"🗓️", label:"7j de feu",       cat:"Régularité",   color:"#FF9F0A", unlocked: streak >= 7,  hint:"7 jours consécutifs" },
+                { id:"str14", icon:"🔆", label:"2 semaines",       cat:"Régularité",   color:"#FF9F0A", unlocked: streak >= 14, hint:"14 jours consécutifs" },
+                { id:"str30", icon:"💫", label:"30 jours",         cat:"Régularité",   color:"#BF5AF2", unlocked: streak >= 30, hint:"30 jours consécutifs" },
+                { id:"cw4",   icon:"📅", label:"4 sem. actives",   cat:"Régularité",   color:"#30D158", unlocked: consistentWeeks >= 4,  hint:"4 semaines avec ≥3 séances" },
+                { id:"cw8",   icon:"🗝️", label:"8 sem. actives",  cat:"Régularité",   color:"#C9A840", unlocked: consistentWeeks >= 8,  hint:"8 semaines avec ≥3 séances" },
+                // HYROX specific
+                { id:"hyrox1", icon:"🎿", label:"Premier HYROX",  cat:"HYROX",        color:"#C9A840", unlocked: hasHyrox,     hint:"Logge une sim. HYROX" },
+                { id:"force1", icon:"🏋️", label:"Power Athlete",  cat:"HYROX",        color:"#a78bfa", unlocked: hasForce,     hint:"Logge une séance de force" },
+                { id:"b3",    icon:"📊", label:"3 benchmarks",    cat:"HYROX",        color:"#007AFF", unlocked: benchCount >= 3, hint:"Enregistre 3 stations" },
+                { id:"b8",    icon:"🎯", label:"HYROX Complete",  cat:"HYROX",        color:"#C9A840", unlocked: benchCount >= 8, hint:"Enregistre les 8 stations" },
+                // Volume
+                { id:"h10",  icon:"⏱️", label:"10h d'effort",    cat:"Volume",       color:"#38bdf8", unlocked: totalDuration >= 600,  hint:"Cumule 10h d'entraînement" },
+                { id:"h50",  icon:"🕰️", label:"50h d'effort",    cat:"Volume",       color:"#38bdf8", unlocked: totalDuration >= 3000, hint:"Cumule 50h d'entraînement" },
+                { id:"h100", icon:"⌚", label:"100h d'effort",   cat:"Volume",       color:"#C9A840", unlocked: totalDuration >= 6000, hint:"Cumule 100h d'entraînement" },
+              ];
+
+              const unlocked = BADGES.filter(b => b.unlocked);
+              const locked = BADGES.filter(b => !b.unlocked);
+              const [showAll, setShowAll] = React.useState(false);
+              const [selected, setSelected] = React.useState(null);
+
+              const displayed = showAll ? BADGES : [...unlocked, ...locked.slice(0, Math.max(0, 6 - unlocked.length))];
+
+              return (
+                <div style={{ background:"rgba(28,28,30,0.6)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"14px 16px", marginBottom:14 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1 }}>ACHIEVEMENTS</div>
+                      <div style={{ fontSize:10, color:"#636366" }}>{unlocked.length}/{BADGES.length} débloqués</div>
+                    </div>
+                    {/* Progress bar */}
+                    <div style={{ width:80 }}>
+                      <div style={{ height:4, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
+                        <div style={{ width:`${(unlocked.length/BADGES.length)*100}%`, height:"100%", background:"#C9A840", borderRadius:99, boxShadow:"0 0 6px #C9A840" }} />
+                      </div>
+                      <div style={{ fontSize:9, color:"#555", textAlign:"right", marginTop:2 }}>{Math.round(unlocked.length/BADGES.length*100)}%</div>
+                    </div>
+                  </div>
+
+                  {/* Badge grid */}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+                    {displayed.map(b => (
+                      <button key={b.id} onClick={() => { setSelected(selected?.id === b.id ? null : b); }}
+                        style={{ position:"relative", width:60, height:70, borderRadius:14, border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, transition:"all 0.2s",
+                          background: b.unlocked ? `${b.color}18` : "rgba(255,255,255,0.03)",
+                          border: b.unlocked ? `1px solid ${b.color}40` : "1px solid rgba(255,255,255,0.05)",
+                          boxShadow: b.unlocked ? `0 4px 16px ${b.color}25` : "none",
+                          transform: selected?.id === b.id ? "scale(1.08)" : "scale(1)",
+                        }}>
+                        <div style={{ fontSize:22, filter: b.unlocked ? "none" : "grayscale(1) opacity(0.2)" }}>{b.icon}</div>
+                        <div style={{ fontSize:8, color: b.unlocked ? b.color : "#3A3A3C", fontWeight:700, textAlign:"center", lineHeight:1.2, padding:"0 2px" }}>{b.label}</div>
+                        {b.unlocked && (
+                          <div style={{ position:"absolute", top:4, right:4, width:8, height:8, borderRadius:"50%", background:b.color, boxShadow:`0 0 4px ${b.color}` }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Selected badge detail */}
+                  {selected && (
+                    <div style={{ background:`${selected.color}12`, borderRadius:12, padding:"10px 12px", marginBottom:10, border:`1px solid ${selected.color}30`, display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ fontSize:28 }}>{selected.icon}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:800, color:"var(--white)", marginBottom:2 }}>{selected.label}</div>
+                        <div style={{ fontSize:10, color:"#8E8E93" }}>{selected.cat} · {selected.unlocked ? "✓ Débloqué !" : selected.hint}</div>
+                      </div>
+                      {selected.unlocked ? (
+                        <div style={{ fontSize:20 }}>🏅</div>
+                      ) : (
+                        <div style={{ fontSize:10, color:"#555" }}>🔒</div>
+                      )}
+                    </div>
+                  )}
+
+                  <button onClick={() => setShowAll(s => !s)}
+                    style={{ background:"none", border:"none", color:"#555", fontSize:10, cursor:"pointer", padding:0 }}>
+                    {showAll ? "▲ Réduire" : `▼ Voir tous les ${BADGES.length} achievements`}
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* ── ACTIVITY HEATMAP ── */}
             {(() => {
               const sessions = profile.sessions || [];
