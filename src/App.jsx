@@ -29101,6 +29101,297 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── HYROX TRAINING PLAN GENERATOR ── */}
+      {(() => {
+        const KEY = `fitrace_plan_gen_${profile.name}`;
+
+        const [saved, setSaved] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; }
+        });
+        const [showConfig, setShowConfig] = React.useState(!saved);
+        const [cfg, setCfg] = React.useState(() => {
+          if (saved) return saved.cfg;
+          const race = new Date(); race.setDate(race.getDate() + 70);
+          return { raceDate: race.toISOString().slice(0,10), level:"intermediate", goal:"sub-1h20", daysPerWeek:4 };
+        });
+
+        const sessions = profile.sessions || [];
+        const today = new Date().toISOString().slice(0,10);
+
+        const kCTL = 1 - Math.exp(-1/42);
+        let ctl = 0;
+        const start42 = new Date(today); start42.setDate(start42.getDate()-42);
+        for (let i=0; i<=42; i++) {
+          const d = new Date(start42); d.setDate(d.getDate()+i);
+          const ds = d.toISOString().slice(0,10);
+          const t = sessions.filter(s=>s.date===ds).reduce((s,x)=>s+(x.duration&&x.rpe?x.duration*(x.rpe/10):0),0);
+          ctl = ctl+kCTL*(t-ctl);
+        }
+        const autoLevel = ctl > 45 ? "advanced" : ctl > 22 ? "intermediate" : "beginner";
+
+        const GOALS = [
+          { id:"finisher", label:"Finisher", desc:"Terminer la course" },
+          { id:"sub-1h30", label:"Sub-1h30", desc:"Pour débutants" },
+          { id:"sub-1h20", label:"Sub-1h20", desc:"Niveau intermédiaire" },
+          { id:"sub-1h10", label:"Sub-1h10", desc:"Niveau avancé" },
+          { id:"sub-1h", label:"Sub-1h", desc:"Élite" },
+        ];
+
+        // Generate weeks based on config
+        const generatePlan = (c) => {
+          const raceD = new Date(c.raceDate);
+          const todayD = new Date(today);
+          const weeksLeft = Math.max(1, Math.round((raceD - todayD) / (7*24*3600*1000)));
+          const weeks = Math.min(16, weeksLeft);
+
+          const PHASES = weeks <= 4
+            ? [{ name:"Affûtage", from:0, to:1, emoji:"🎯", color:"#30D158" }]
+            : weeks <= 8
+            ? [
+                { name:"Fondation", from:0, to:Math.ceil(weeks*0.4)-1, emoji:"🏗️", color:"#64D2FF" },
+                { name:"Construction", from:Math.ceil(weeks*0.4), to:weeks-2, emoji:"🔨", color:"var(--yellow)" },
+                { name:"Affûtage", from:weeks-1, to:weeks-1, emoji:"🎯", color:"#30D158" },
+              ]
+            : [
+                { name:"Fondation", from:0, to:Math.ceil(weeks*0.3)-1, emoji:"🏗️", color:"#64D2FF" },
+                { name:"Construction", from:Math.ceil(weeks*0.3), to:Math.ceil(weeks*0.65)-1, emoji:"🔨", color:"var(--yellow)" },
+                { name:"Intensification", from:Math.ceil(weeks*0.65), to:weeks-2, emoji:"⚡", color:"#FF9F0A" },
+                { name:"Affûtage", from:weeks-1, to:weeks-1, emoji:"🎯", color:"#30D158" },
+              ];
+
+          const dpw = parseInt(c.daysPerWeek) || 4;
+
+          const SESSION_TYPES = {
+            beginner: [
+              { type:"Run facile", dur:30, rpe:4, icon:"🏃" },
+              { type:"HYROX initiation", dur:45, rpe:6, icon:"🏋️" },
+              { type:"Run modéré", dur:40, rpe:6, icon:"🏃" },
+              { type:"Renforcement", dur:35, rpe:5, icon:"💪" },
+              { type:"Long run", dur:50, rpe:5, icon:"🛤️" },
+            ],
+            intermediate: [
+              { type:"Run Z2", dur:45, rpe:5, icon:"🏃" },
+              { type:"HYROX complet", dur:60, rpe:8, icon:"🏋️" },
+              { type:"Intervals 5×4'", dur:50, rpe:9, icon:"⚡" },
+              { type:"Force fonctionnelle", dur:50, rpe:7, icon:"💪" },
+              { type:"Long run soutenu", dur:70, rpe:6, icon:"🛤️" },
+              { type:"Tempo run", dur:40, rpe:7, icon:"🎯" },
+            ],
+            advanced: [
+              { type:"Run polarisé Z2", dur:60, rpe:5, icon:"🏃" },
+              { type:"HYROX race pace", dur:70, rpe:9, icon:"🏋️" },
+              { type:"VO₂max 6×4'", dur:60, rpe:10, icon:"⚡" },
+              { type:"Force explosive", dur:55, rpe:8, icon:"💪" },
+              { type:"Long run 15km", dur:90, rpe:6, icon:"🛤️" },
+              { type:"Fartlek stations", dur:65, rpe:8, icon:"🎯" },
+              { type:"Double séance", dur:50, rpe:7, icon:"🔥" },
+            ],
+          };
+
+          const pool = SESSION_TYPES[c.level] || SESSION_TYPES.intermediate;
+
+          const plan = [];
+          for (let w = 0; w < weeks; w++) {
+            const phase = PHASES.find(p => w >= p.from && w <= p.to) || PHASES[0];
+            const isDeload = (w+1) % 4 === 0 && w < weeks-1;
+            const isTaper = w === weeks-1;
+            const loadFactor = isTaper ? 0.5 : isDeload ? 0.7 : 1;
+
+            const weekSessions = [];
+            const count = isTaper ? Math.min(dpw, 3) : isDeload ? Math.max(dpw-1,2) : dpw;
+            for (let d = 0; d < count; d++) {
+              const sess = pool[(w*3+d) % pool.length];
+              weekSessions.push({
+                ...sess,
+                dur: Math.round(sess.dur * loadFactor),
+                rpe: isTaper ? Math.max(4, sess.rpe-2) : sess.rpe,
+              });
+            }
+
+            const wStart = new Date(todayD);
+            wStart.setDate(wStart.getDate() + w*7 - wStart.getDay() + 1);
+
+            plan.push({
+              week: w+1,
+              weekOf: wStart.toISOString().slice(0,10),
+              phase: phase.name,
+              phaseEmoji: phase.emoji,
+              phaseColor: phase.color,
+              isDeload,
+              isTaper,
+              sessions: weekSessions,
+              totalDur: weekSessions.reduce((s,x)=>s+x.dur,0),
+              avgRpe: weekSessions.length ? (weekSessions.reduce((s,x)=>s+x.rpe,0)/weekSessions.length).toFixed(1) : 0,
+            });
+          }
+          return { plan, weeks, cfg: c };
+        };
+
+        const activePlan = saved || (showConfig ? null : generatePlan(cfg));
+
+        const applyPlan = () => {
+          const p = generatePlan(cfg);
+          setSaved(p);
+          localStorage.setItem(KEY, JSON.stringify(p));
+          setShowConfig(false);
+        };
+
+        const resetPlan = () => {
+          setSaved(null);
+          localStorage.removeItem(KEY);
+          setShowConfig(true);
+        };
+
+        const [viewWeek, setViewWeek] = React.useState(0);
+
+        // Find current week in plan
+        const currentWeekIdx = activePlan
+          ? activePlan.plan.findIndex((w,i) => {
+              const wEnd = new Date(w.weekOf); wEnd.setDate(wEnd.getDate()+6);
+              return today >= w.weekOf && today <= wEnd.toISOString().slice(0,10);
+            })
+          : -1;
+
+        const displayWeek = activePlan ? viewWeek : 0;
+        const week = activePlan ? activePlan.plan[displayWeek] : null;
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#555" }}>TRAININGPEAKS · PLAN PERSONNALISÉ</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>📋 Plan Generator</div>
+              </div>
+              {activePlan && !showConfig && (
+                <div style={{ display:"flex", gap:6 }}>
+                  <button onClick={() => setShowConfig(true)} style={{ background:"var(--bg3)", border:"none", borderRadius:8, padding:"6px 12px", color:"#888", fontSize:11, cursor:"pointer" }}>⚙️</button>
+                  <button onClick={resetPlan} style={{ background:"var(--bg3)", border:"none", borderRadius:8, padding:"6px 12px", color:"#FF453A", fontSize:11, cursor:"pointer" }}>↺</button>
+                </div>
+              )}
+            </div>
+
+            {showConfig ? (
+              <div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+                  <div>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Date de course</div>
+                    <input type="date" value={cfg.raceDate} min={today}
+                      onChange={e => setCfg(c => ({...c, raceDate:e.target.value}))}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>Séances/semaine</div>
+                    <select value={cfg.daysPerWeek} onChange={e => setCfg(c => ({...c, daysPerWeek:parseInt(e.target.value)}))}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}>
+                      {[3,4,5,6].map(n => <option key={n} value={n}>{n} séances</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom:10 }}>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>Niveau <span style={{ color:"var(--yellow)" }}>(Auto-détecté: {autoLevel})</span></div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    {["beginner","intermediate","advanced"].map(l => (
+                      <button key={l} onClick={() => setCfg(c => ({...c, level:l}))}
+                        style={{ flex:1, background: cfg.level===l ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"8px 0", color: cfg.level===l ? "#000":"#888", fontSize:11, fontWeight: cfg.level===l?700:400, cursor:"pointer" }}>
+                        {l==="beginner"?"Débutant":l==="intermediate"?"Inter.":"Avancé"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>Objectif</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                    {GOALS.map(g => (
+                      <button key={g.id} onClick={() => setCfg(c => ({...c, goal:g.id}))}
+                        style={{ background: cfg.goal===g.id ? "rgba(201,168,64,0.15)" : "var(--bg3)", border:`1px solid ${cfg.goal===g.id?"var(--yellow)":"#333"}`, borderRadius:10, padding:"9px 14px", color:"#fff", textAlign:"left", cursor:"pointer", display:"flex", justifyContent:"space-between" }}>
+                        <span style={{ fontSize:13, fontWeight: cfg.goal===g.id?700:400, color: cfg.goal===g.id?"var(--yellow)":"#fff" }}>{g.label}</span>
+                        <span style={{ fontSize:11, color:"#666" }}>{g.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={applyPlan}
+                  style={{ width:"100%", background:"var(--yellow)", border:"none", borderRadius:12, padding:"13px 0", color:"#000", fontSize:14, fontWeight:800, cursor:"pointer" }}>
+                  🚀 Générer mon plan
+                </button>
+              </div>
+            ) : activePlan && (
+              <>
+                {/* Plan summary */}
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+                  {[
+                    { label:"Semaines", val:activePlan.weeks, icon:"📅" },
+                    { label:"Objectif", val:GOALS.find(g=>g.id===activePlan.cfg.goal)?.label||"—", icon:"🎯" },
+                    { label:"Séances/sem", val:activePlan.cfg.daysPerWeek, icon:"💪" },
+                  ].map((s,i) => (
+                    <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                      <div style={{ fontSize:18 }}>{s.icon}</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"var(--yellow)" }}>{s.val}</div>
+                      <div style={{ fontSize:10, color:"#666" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Phase timeline */}
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ display:"flex", height:10, borderRadius:5, overflow:"hidden", marginBottom:6 }}>
+                    {activePlan.plan.map((w,i) => (
+                      <div key={i} onClick={() => setViewWeek(i)}
+                        style={{ flex:1, background: i===currentWeekIdx ? "#fff" : w.phaseColor, opacity: i===displayWeek?1:0.5, cursor:"pointer", borderRight:"1px solid var(--bg2)" }}/>
+                    ))}
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#555" }}>
+                    <span>S1</span>
+                    <span>S{Math.ceil(activePlan.weeks/2)}</span>
+                    <span>S{activePlan.weeks} 🏁</span>
+                  </div>
+                </div>
+
+                {/* Week navigation */}
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                  <button onClick={() => setViewWeek(w => Math.max(0,w-1))} disabled={displayWeek===0}
+                    style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:32, height:32, color: displayWeek===0?"#333":"#888", cursor:"pointer", fontSize:16 }}>‹</button>
+                  <div style={{ textAlign:"center" }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:week?.phaseColor }}>{week?.phaseEmoji} Semaine {displayWeek+1} — {week?.phase}</div>
+                    <div style={{ fontSize:10, color:"#666" }}>{week?.weekOf} {week?.isDeload ? "· 🔄 Décharge" : week?.isTaper ? "· 🎯 Affûtage" : ""}</div>
+                  </div>
+                  <button onClick={() => setViewWeek(w => Math.min(activePlan.plan.length-1,w+1))} disabled={displayWeek===activePlan.plan.length-1}
+                    style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:32, height:32, color: displayWeek===activePlan.plan.length-1?"#333":"#888", cursor:"pointer", fontSize:16 }}>›</button>
+                </div>
+
+                {/* Week stats */}
+                <div style={{ display:"flex", gap:12, marginBottom:12, fontSize:11, color:"#666" }}>
+                  <span>⏱ {week?.totalDur}min total</span>
+                  <span>📊 RPE moy: {week?.avgRpe}</span>
+                  <span>💪 {week?.sessions.length} séances</span>
+                </div>
+
+                {/* Sessions */}
+                {week?.sessions.map((s,i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--bg3)", borderRadius:10, padding:"10px 14px", marginBottom:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:20 }}>{s.icon}</span>
+                      <div>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#fff" }}>{s.type}</div>
+                        <div style={{ fontSize:10, color:"#666" }}>RPE {s.rpe}/10</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:"var(--yellow)" }}>{s.dur}min</div>
+                      <div style={{ display:"flex", gap:2, justifyContent:"flex-end" }}>
+                        {Array.from({length:10},(_,j)=>j<s.rpe).map((filled,j) => (
+                          <div key={j} style={{ width:5, height:5, borderRadius:2, background: filled ? (s.rpe>=8?"#FF453A":s.rpe>=6?"#FF9F0A":"#30D158") : "#333" }}/>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── SEASON GOAL TRACKER ── */}
       {(() => {
         const KEY = `fitrace_goals_${profile.name}`;
