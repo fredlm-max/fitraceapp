@@ -3486,6 +3486,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [checkedExercices, setCheckedExercices] = useState({});
   const [showFeedback, setShowFeedback] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [guidedIdx, setGuidedIdx] = useState(-1);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [feedbackData, setFeedbackData] = useState({
     ressenti: "bien",
@@ -5317,6 +5318,122 @@ JSON:
                 </button>
               </div>
               <div style={{ textAlign: "center", fontSize: 11, color: "#8E8E93", marginTop: 12 }}>{tourStep + 1} / {STEPS.length}</div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── MODE GUIDÉ SÉANCE (fullscreen overlay) ── */}
+      {guidedIdx >= 0 && session && (() => {
+        const exercices = (session.exercices || []).filter(ex => ex?.nom);
+        const ex = exercices[guidedIdx];
+        if (!ex) { setGuidedIdx(-1); return null; }
+        const isLast = guidedIdx >= exercices.length - 1;
+        const R = 44; const C2 = 2 * Math.PI * R;
+        const pct = (guidedIdx + 1) / exercices.length;
+        return (
+          <div style={{ position:"fixed", inset:0, background:"#000", zIndex:600, display:"flex", flexDirection:"column" }}>
+            {/* Header barre progrès */}
+            <div style={{ padding:"16px 20px 14px", display:"flex", alignItems:"center", gap:14, borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+              <button onClick={() => { setGuidedIdx(-1); setShowSessionModal(true); }} style={{ background:"rgba(255,255,255,0.06)", border:"none", borderRadius:10, padding:"7px 12px", color:"#8E8E93", fontSize:12, cursor:"pointer", fontWeight:600, flexShrink:0 }}>← Quitter</button>
+              <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.07)", borderRadius:99, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${pct*100}%`, background:"var(--yellow)", borderRadius:99, transition:"width 0.4s var(--ease-out)" }} />
+              </div>
+              <div style={{ fontSize:12, color:"#636366", fontWeight:700, flexShrink:0 }}>{guidedIdx+1}/{exercices.length}</div>
+            </div>
+
+            {/* Contenu exercice */}
+            <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 28px", textAlign:"center" }}>
+              {/* Ring progrès */}
+              <div style={{ position:"relative", marginBottom:28 }}>
+                <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform:"rotate(-90deg)" }}>
+                  <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
+                  <circle cx="50" cy="50" r={R} fill="none" stroke="var(--yellow)" strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={C2} strokeDashoffset={C2*(1-pct)}
+                    style={{ transition:"stroke-dashoffset 0.5s var(--ease-out)", filter:"drop-shadow(0 0 6px rgba(201,168,64,0.5))" }}/>
+                </svg>
+                <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                  <div className="bebas" style={{ fontSize:22, color:"var(--yellow)", lineHeight:1 }}>{guidedIdx+1}</div>
+                  <div style={{ fontSize:8, color:"#636366" }}>/{exercices.length}</div>
+                </div>
+              </div>
+
+              {/* Nom exercice */}
+              <div style={{ fontSize:10, color:"#636366", textTransform:"uppercase", letterSpacing:"0.2em", marginBottom:10 }}>Exercice</div>
+              <div className="bebas number-pop" style={{ fontSize:44, color:"var(--white)", lineHeight:1.05, letterSpacing:1, marginBottom:20 }}>
+                {ex.nom}
+              </div>
+
+              {/* Métriques */}
+              <div style={{ display:"flex", gap:24, marginBottom:28, justifyContent:"center" }}>
+                {ex.series && (
+                  <div style={{ textAlign:"center" }}>
+                    <div className="bebas" style={{ fontSize:52, color:"var(--yellow)", lineHeight:1 }}>{ex.series}</div>
+                    <div style={{ fontSize:10, color:"#636366", textTransform:"uppercase", letterSpacing:"0.12em" }}>Séries</div>
+                  </div>
+                )}
+                {ex.reps && (
+                  <div style={{ textAlign:"center" }}>
+                    <div className="bebas" style={{ fontSize:52, color:"var(--white)", lineHeight:1 }}>{ex.reps}</div>
+                    <div style={{ fontSize:10, color:"#636366", textTransform:"uppercase", letterSpacing:"0.12em" }}>Reps</div>
+                  </div>
+                )}
+                {ex.duree && !ex.reps && (
+                  <div style={{ textAlign:"center" }}>
+                    <div className="bebas" style={{ fontSize:52, color:"var(--green)", lineHeight:1 }}>{ex.duree}</div>
+                    <div style={{ fontSize:10, color:"#636366", textTransform:"uppercase", letterSpacing:"0.12em" }}>Durée</div>
+                  </div>
+                )}
+                {ex.charge && (
+                  <div style={{ textAlign:"center" }}>
+                    <div className="bebas" style={{ fontSize:52, color:"#636366", lineHeight:1 }}>{ex.charge}</div>
+                    <div style={{ fontSize:10, color:"#636366", textTransform:"uppercase", letterSpacing:"0.12em" }}>Charge</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Conseil technique */}
+              {ex.conseil && (
+                <div style={{ fontSize:13, color:"#8E8E93", lineHeight:1.7, maxWidth:300, marginBottom:20, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"12px 16px" }}>
+                  {ex.conseil}
+                </div>
+              )}
+
+              {/* Bouton principal FAIT */}
+              <button onClick={() => {
+                setCheckedExercices(c => ({ ...c, [guidedIdx]: true }));
+                haptic([10, 30, 10]);
+                if (isLast) {
+                  setGuidedIdx(-1);
+                  setShowSessionModal(true);
+                } else {
+                  setGuidedIdx(i => i + 1);
+                }
+              }} style={{ width:"100%", maxWidth:340, padding:"20px", background:"var(--yellow)", border:"none", borderRadius:20, cursor:"pointer", boxShadow:"0 6px 28px rgba(201,168,64,0.4)" }}>
+                <div className="bebas" style={{ fontSize:22, color:"#000", letterSpacing:3 }}>
+                  {isLast ? "SÉANCE TERMINÉE ✓" : "FAIT ✓ — SUIVANT →"}
+                </div>
+              </button>
+            </div>
+
+            {/* Bas : prev / aperçu suivant */}
+            <div style={{ padding:"16px 20px 32px", borderTop:"1px solid rgba(255,255,255,0.05)", display:"flex", alignItems:"center", gap:10 }}>
+              <button onClick={() => setGuidedIdx(i => Math.max(0, i-1))} disabled={guidedIdx === 0}
+                style={{ flex:1, padding:"12px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, color: guidedIdx===0 ? "#333" : "#8E8E93", fontSize:13, cursor:"pointer", opacity: guidedIdx===0 ? 0.4 : 1 }}>
+                ← Précédent
+              </button>
+              {!isLast && (
+                <div style={{ flex:2, padding:"10px 14px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, textAlign:"center" }}>
+                  <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", letterSpacing:"0.1em" }}>Suivant</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#8E8E93", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {exercices[guidedIdx+1]?.nom}
+                  </div>
+                </div>
+              )}
+              <button onClick={() => { if (!isLast) setGuidedIdx(i => i+1); else { setGuidedIdx(-1); setShowSessionModal(true); } }}
+                style={{ flex:1, padding:"12px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, color:"#8E8E93", fontSize:13, cursor:"pointer" }}>
+                Passer →
+              </button>
             </div>
           </div>
         );
@@ -11542,6 +11659,16 @@ JSON:
                     </div>
                   );
                 })()}
+
+                {/* ── BOUTON MODE GUIDÉ ── */}
+                {(session.exercices||[]).filter(ex=>ex?.nom).length > 0 && (
+                  <button onClick={() => { setGuidedIdx(0); setShowSessionModal(false); haptic([10,20,10]); }}
+                    style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg,#1a1200,#0a0800)", border:"1.5px solid rgba(201,168,64,0.35)", borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", gap:10, cursor:"pointer", marginBottom:14, boxShadow:"0 4px 20px rgba(201,168,64,0.15)" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A840" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span className="bebas" style={{ fontSize:18, color:"var(--yellow)", letterSpacing:2 }}>MODE GUIDÉ</span>
+                    <span style={{ fontSize:11, color:"#636366" }}>exercice par exercice</span>
+                  </button>
+                )}
 
                 {/* Échauffement interactif */}
                 <WarmupWidget session={session} />
