@@ -6221,6 +6221,96 @@ JSON:
               );
             })()}
 
+            {/* ── GARMIN TRAINING STATUS ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              // PMC EMA
+              const kCTL = 1 - Math.exp(-1/42);
+              const kATL = 1 - Math.exp(-1/7);
+              let ctl = 0, atl = 0;
+              const today = new Date(); today.setHours(0,0,0,0);
+              const origin = new Date(today); origin.setDate(origin.getDate() - 56);
+              for (let i = 0; i <= 56; i++) {
+                const d = new Date(origin); d.setDate(d.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const load = sessions.filter(s=>s.date?.slice(0,10)===ds).reduce((a,s)=>a+(s.rpe||5)*(s.duree||30),0);
+                ctl = ctl + kCTL*(load - ctl);
+                atl = atl + kATL*(load - atl);
+              }
+              const tsb = Math.round(ctl - atl);
+              const ctlR = Math.round(ctl);
+              const atlR = Math.round(atl);
+
+              // Weekly load (this week vs prev week)
+              const monday = new Date(today); monday.setDate(today.getDate() - today.getDay() + (today.getDay()===0?-6:1));
+              const prevMonday = new Date(monday); prevMonday.setDate(monday.getDate()-7);
+              const thisWeekLoad = sessions.filter(s=>{const d=new Date(s.date);return d>=monday&&d<=today;}).reduce((a,s)=>a+(s.rpe||5)*(s.duree||30),0);
+              const prevWeekLoad = sessions.filter(s=>{const d=new Date(s.date);return d>=prevMonday&&d<monday;}).reduce((a,s)=>a+(s.rpe||5)*(s.duree||30),0);
+              const weekTrend = prevWeekLoad>0 ? Math.round((thisWeekLoad-prevWeekLoad)/prevWeekLoad*100) : null;
+              const thisWeekSess = sessions.filter(s=>{const d=new Date(s.date);return d>=monday&&d<=today;}).length;
+
+              // Training Status logic (Garmin-inspired)
+              const STATUSES = [
+                { key:"peak",         label:"Pic de forme",   color:"#C9A840", bg:"rgba(201,168,64,0.12)", icon:"🏆", desc:"Tu es à ton meilleur niveau. Compétition idéale.", when: () => tsb > 15 && ctlR > 30 },
+                { key:"productive",   label:"Productif",      color:"#30D158", bg:"rgba(48,209,88,0.12)",  icon:"📈", desc:"Charge bien tolérée. Continue sur cette lancée.",  when: () => tsb > -10 && tsb <= 15 && ctlR > atlR },
+                { key:"overreaching", label:"Sur-entraînement", color:"#FF453A", bg:"rgba(255,69,58,0.12)", icon:"⚠️", desc:"Charge trop élevée. Risque de blessure. Récupère.", when: () => tsb < -25 },
+                { key:"recovery",     label:"Récupération",   color:"#007AFF", bg:"rgba(0,122,255,0.12)",  icon:"💤", desc:"Phase de repos. La forme reviendra bientôt.",      when: () => tsb > 10 && ctlR < 20 },
+                { key:"detraining",   label:"Désentraînement", color:"#FF9F0A", bg:"rgba(255,159,10,0.12)", icon:"📉", desc:"Inactivité trop longue. Reprends progressivement.", when: () => ctlR < 10 && atlR < 5 },
+                { key:"maintaining",  label:"Maintien",       color:"#8E8E93", bg:"rgba(142,142,147,0.12)", icon:"⚖️", desc:"Charge stable. Augmente pour progresser.",          when: () => true },
+              ];
+              const status = STATUSES.find(s => s.when()) || STATUSES[STATUSES.length-1];
+
+              return (
+                <div style={{ borderRadius:18, overflow:"hidden", marginBottom:12, border:`1px solid ${status.color}30` }}>
+                  {/* Header strip */}
+                  <div style={{ background:status.bg, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:22 }}>{status.icon}</span>
+                      <div>
+                        <div style={{ fontSize:11, color:"#666", textTransform:"uppercase", letterSpacing:0.8 }}>Statut d'entraînement</div>
+                        <div style={{ fontSize:16, fontWeight:800, color:status.color, lineHeight:1.2 }}>{status.label}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:10, color:"#666" }}>TSB</div>
+                      <div style={{ fontSize:22, fontFamily:"Bebas Neue, Impact, sans-serif", color: tsb > 0 ? "#30D158" : tsb > -15 ? "#C9A840" : "#FF453A", lineHeight:1 }}>
+                        {tsb > 0 ? "+" : ""}{tsb}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Metrics row */}
+                  <div style={{ background:"#1C1C1E", padding:"10px 16px", display:"flex", gap:0 }}>
+                    {[
+                      { label:"Forme (CTL)", value:ctlR, color:"#007AFF" },
+                      { label:"Fatigue (ATL)", value:atlR, color:"#FF453A" },
+                      { label:"Cette semaine", value:`${thisWeekSess} séance${thisWeekSess!==1?"s":""}`, color:"#C9A840" },
+                    ].map((m,i) => (
+                      <div key={i} style={{ flex:1, textAlign:"center", borderLeft: i>0?"1px solid rgba(255,255,255,0.06)":"none", padding:"0 8px" }}>
+                        <div style={{ fontSize:16, fontWeight:800, color:m.color }}>{m.value}</div>
+                        <div style={{ fontSize:9, color:"#555", marginTop:2, textTransform:"uppercase", letterSpacing:0.5 }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Insight + trend */}
+                  <div style={{ background:"#161616", padding:"8px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div style={{ fontSize:11, color:"#8E8E93", flex:1 }}>{status.desc}</div>
+                    {weekTrend !== null && (
+                      <div style={{ display:"flex", alignItems:"center", gap:4, marginLeft:12, flexShrink:0 }}>
+                        <span style={{ fontSize:11, color: weekTrend >= 0 ? "#30D158" : "#FF453A", fontWeight:700 }}>
+                          {weekTrend >= 0 ? "▲" : "▼"} {Math.abs(weekTrend)}%
+                        </span>
+                        <span style={{ fontSize:9, color:"#555" }}>vs S−1</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ACTIVITY RINGS — Apple Watch style ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
