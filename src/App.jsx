@@ -4625,7 +4625,7 @@ JSON:
     { id: "today", label: "Séance", icon: "⚡", badge: coachSession && !session },
     { id: "planning", label: "Planning", icon: "📅" },
     { id: "progress", label: "Stats", icon: "📈" },
-    { id: "forme", label: "Forme", icon: "◎" },
+    { id: "forme", label: "Forme", icon: "♡" },
   ];
 
   // ── Swipe gesture state — useRef pour éviter les re-renders sur chaque toucher ──
@@ -5321,7 +5321,7 @@ JSON:
         );
       })()}
 
-      {/* Header sticky premium */}
+      {/* Header APEX Premium */}
       {(() => {
         const tabMeta = {
           home: { label: "Accueil", color: "var(--yellow)" },
@@ -5340,31 +5340,25 @@ JSON:
         const dayLabel = now.toLocaleDateString("fr-FR", { weekday: "long" });
         const dateLabel = now.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
         return (
-          <div style={{ background: "rgba(0,0,0,0.85)", padding: "10px 16px 8px", borderBottom: "1px solid rgba(255,255,255,0.07)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(40px) saturate(1.8)" }}>
+          <div style={{ background: "rgba(0,0,0,0.92)", padding: "12px 20px 10px", borderBottom: "1px solid rgba(201,168,64,0.08)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(40px) saturate(1.8)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div className="bebas" style={{ fontSize: 20, color: "var(--yellow)", letterSpacing: 2 }}>FIT<span style={{ color: "var(--white)" }}>RACE</span></div>
-                <div style={{ width: 1, height: 14, background: "rgba(255,255,255,0.1)" }} />
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <div className="bebas" style={{ fontSize: 14, color: meta.color, letterSpacing: 1, lineHeight: 1 }}>{meta.label.toUpperCase()}</div>
-                  <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "capitalize", lineHeight: 1.2, marginTop: 1 }}>{dayLabel} {dateLabel}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 4, lineHeight: 1 }}>APEX</div>
+                <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.08)" }} />
+                <div>
+                  <div className="bebas" style={{ fontSize: 13, color: meta.color, letterSpacing: 2, lineHeight: 1 }}>{meta.label.toUpperCase()}</div>
+                  <div style={{ fontSize: 9, color: "#636366", textTransform: "capitalize", lineHeight: 1.3, marginTop: 2 }}>{dayLabel} {dateLabel}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {streak > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px" }}>
-                    <span className="bebas" style={{ fontSize: 13, color: "#AEAEB2" }}>{streak}j</span>
-                  </div>
-                )}
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {days !== null && tab !== "race" && (
-                  <div onClick={() => setTab("race")} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 10, padding: "3px 9px", textAlign: "center", cursor: "pointer" }}>
-                    <div className="bebas" style={{ fontSize: 18, color: "var(--white)", lineHeight: 1 }}>{days}</div>
-                    <div style={{ fontSize: 7, color: "#8E8E93", letterSpacing: "0.06em" }}>jours</div>
+                  <div onClick={() => setTab("race")} style={{ background: "rgba(201,168,64,0.08)", border: "1px solid rgba(201,168,64,0.15)", borderRadius: 10, padding: "4px 10px", textAlign: "center", cursor: "pointer" }}>
+                    <div className="bebas" style={{ fontSize: 16, color: "var(--yellow)", lineHeight: 1 }}>{days}j</div>
+                    <div style={{ fontSize: 7, color: "#636366", letterSpacing: "0.08em", textTransform: "uppercase" }}>course</div>
                   </div>
                 )}
-                {/* Bouton Profil haut droite */}
-                <button onClick={() => navigateTo("profil")} style={{ width: 34, height: 34, borderRadius: "50%", background: tab === "profil" ? "var(--yellow)" : "rgba(255,255,255,0.08)", border: tab === "profil" ? "none" : "1px solid rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tab === "profil" ? "#000" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <button onClick={() => navigateTo("profil")} style={{ width: 32, height: 32, borderRadius: "50%", background: tab === "profil" ? "var(--yellow)" : "rgba(255,255,255,0.06)", border: tab === "profil" ? "none" : "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={tab === "profil" ? "#000" : "#888"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
@@ -5381,53 +5375,89 @@ JSON:
         {/* HOME — toujours rendu, caché si inactif (fix hooks) */}
         <div style={{display: tab === "home" ? "block" : "none"}}>
 
-            {/* ── GREETING PREMIUM ── */}
+            {/* ── APEX SCORE HERO ── */}
             {(() => {
               const h = new Date().getHours();
               const greet = h < 6 ? "Bonne nuit" : h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
               const firstName = profile.name?.split(" ")[0] || profile.name;
               const sc = calcFitnessScore(profile);
               const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+              // APEX Readiness Score — Sommeil + Fatigue + VFC + Hydration + Fitness
+              const sleepScore = Math.min(100, Math.round(((dailyData.sleepHours || 7) / 9) * 100));
+              const fatigueScore = Math.round(((5 - (dailyData.fatigue || 3)) / 4) * 100);
+              const hrvRaw = parseInt(dailyData.hrv) || 0;
+              const hrvScore = hrvRaw >= 80 ? 100 : hrvRaw >= 60 ? 80 : hrvRaw >= 40 ? 60 : hrvRaw > 0 ? 40 : 60;
+              const hydraScore = Math.min(100, Math.round((dailyData.hydration || 0) / 3 * 100));
+              const apexScore = Math.max(0, Math.min(100,
+                Math.round(sleepScore * 0.25 + fatigueScore * 0.30 + hrvScore * 0.20 + hydraScore * 0.10 + sc.global * 0.15)
+              ));
+
+              const tier = apexScore >= 85
+                ? { label: "Prêt à tout donner", color: "#30D158", emoji: "🟢" }
+                : apexScore >= 60
+                ? { label: "Prêt avec modération", color: "#C9A840", emoji: "🟡" }
+                : apexScore >= 40
+                ? { label: "Méfie-toi", color: "#FF9F0A", emoji: "🟠" }
+                : { label: "Récupère d'abord", color: "#FF453A", emoji: "🔴" };
+
+              const R = 56; const C = 2 * Math.PI * R;
+              const dash = (apexScore / 100) * C;
+
               return (
-                <div style={{ paddingBottom: 14, borderBottom: "1px solid rgba(201,168,64,0.12)", marginBottom: 16 }}>
-                  {/* ── APEX Brand Header ── */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    {/* Logo + Name */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <svg width="36" height="36" viewBox="0 0 100 100" style={{ filter: "drop-shadow(0 0 8px rgba(201,168,64,0.5))", flexShrink: 0 }}>
-                        <defs>
-                          <linearGradient id="goldGradHome" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#F5D080"/>
-                            <stop offset="40%" stopColor="#C9A840"/>
-                            <stop offset="100%" stopColor="#8A6A10"/>
-                          </linearGradient>
-                        </defs>
-                        <polygon points="50,8 90,85 10,85" fill="none" stroke="url(#goldGradHome)" strokeWidth="8" strokeLinejoin="round"/>
-                        <line x1="28" y1="62" x2="72" y2="62" stroke="url(#goldGradHome)" strokeWidth="6" strokeLinecap="round"/>
-                        <polygon points="66,55 74,62 66,69" fill="url(#goldGradHome)"/>
-                      </svg>
-                      <div>
-                        <div className="bebas" style={{ fontSize: 22, lineHeight: 1, letterSpacing: 3, background: "linear-gradient(135deg,#F5D080,#C9A840,#8A6A10)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>APEX</div>
-                        <div style={{ fontSize: 8, color: "#8A6A10", letterSpacing: 4, textTransform: "uppercase", fontWeight: 700, marginTop: -1 }}>PERFORMANCE</div>
+                <div style={{ textAlign: "center", paddingBottom: 28, borderBottom: "1px solid rgba(201,168,64,0.08)", marginBottom: 20 }}>
+                  {/* Date */}
+                  <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 20 }}>
+                    {today.charAt(0).toUpperCase() + today.slice(1)}
+                  </div>
+
+                  {/* Score Ring */}
+                  <div style={{ position: "relative", width: 190, height: 190, margin: "0 auto 20px" }}>
+                    <svg width="190" height="190" viewBox="0 0 190 190" style={{ transform: "rotate(-90deg)" }}>
+                      {/* Track */}
+                      <circle cx="95" cy="95" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="12" strokeLinecap="round"/>
+                      {/* Progress */}
+                      <circle cx="95" cy="95" r={R} fill="none" stroke={tier.color} strokeWidth="12" strokeLinecap="round"
+                        strokeDasharray={C} strokeDashoffset={C - dash}
+                        style={{ transition: "stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter: `drop-shadow(0 0 10px ${tier.color}50)` }}/>
+                    </svg>
+                    {/* Center */}
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <div className="bebas number-pop" style={{ fontSize: 68, color: "var(--white)", lineHeight: 1, letterSpacing: -2 }}>{apexScore}</div>
+                      <div style={{ fontSize: 9, color: "#4A4A4E", textTransform: "uppercase", letterSpacing: "0.2em", marginTop: 2 }}>/ 100</div>
+                    </div>
+                  </div>
+
+                  {/* Label */}
+                  <div style={{ fontSize: 9, color: "#4A4A4E", textTransform: "uppercase", letterSpacing: "0.24em", marginBottom: 8 }}>SCORE APEX</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: tier.color, marginBottom: 16, letterSpacing: "0.02em" }}>
+                    {tier.emoji} {tier.label}
+                  </div>
+
+                  {/* Tagline */}
+                  <div style={{ fontSize: 9, color: "#4A4A4E", letterSpacing: "0.14em", textTransform: "uppercase", lineHeight: 1.8, marginBottom: 16 }}>
+                    TON CORPS CHANGE CHAQUE JOUR.<br/>TON ENTRAÎNEMENT AUSSI.
+                  </div>
+
+                  {/* Greeting */}
+                  <div style={{ fontSize: 13, color: "#8E8E93" }}>
+                    {greet}, <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{firstName}</span>
+                    {streak > 0 && <span style={{ marginLeft: 10, fontSize: 11, color: "#FF9F0A", fontWeight: 600 }}>🔥 {streak}j</span>}
+                  </div>
+
+                  {/* 4 sub-factors */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginTop: 20 }}>
+                    {[
+                      { label: "Sommeil", val: sleepScore, color: "#30D158" },
+                      { label: "Fatigue", val: fatigueScore, color: "#FF9F0A" },
+                      { label: "VFC", val: hrvScore, color: "#C9A840" },
+                      { label: "Fitness", val: sc.global, color: "#BF5AF2" },
+                    ].map((f, i) => (
+                      <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 10, padding: "10px 6px", textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: f.color, lineHeight: 1 }}>{f.val}</div>
+                        <div style={{ fontSize: 8, color: "#4A4A4E", textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 3 }}>{f.label}</div>
                       </div>
-                    </div>
-                    {/* Mini fitness score badge */}
-                    <div style={{ textAlign: "center", background: "rgba(201,168,64,0.08)", border: "1px solid rgba(201,168,64,0.2)", borderRadius: 14, padding: "8px 14px" }}>
-                      <div className="bebas number-pop" style={{ fontSize: 32, background: "linear-gradient(135deg,#F5D080,#C9A840)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>{sc.global}</div>
-                      <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em" }}>Score</div>
-                    </div>
-                  </div>
-                  {/* ── Greeting + Status ── */}
-                  <div style={{ fontSize: 12, color: "#636366", marginBottom: 2 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "var(--white)", lineHeight: 1.2 }}>
-                    {greet}, <span style={{ color: "#C9A840" }}>{firstName}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 3 }}>
-                    {(profile.sessions||[]).length === 0
-                      ? "Bienvenue sur APEX — commence ta première séance !"
-                      : streak >= 7 ? `🔥 ${streak} jours de streak — keep pushing !`
-                      : streak >= 3 ? `${streak} jours consécutifs — belle régularité`
-                      : `${(profile.sessions||[]).length} séances au total`}
+                    ))}
                   </div>
                 </div>
               );
@@ -21361,6 +21391,7 @@ const sessions = profile.sessions || [];
               today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
               planning: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
               progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
               profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             };
             return tabs.map(t => {
