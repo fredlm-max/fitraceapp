@@ -22867,6 +22867,202 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── 1RM STRENGTH TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_strength_${profile.name}`;
+        const [entries, setEntries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+        const [inputs, setInputs] = React.useState({});
+        const [tab, setTab] = React.useState("log");
+        const bodyweight = parseFloat(profile.poids) || 70;
+        const sex = profile.sexe === "F" ? "F" : "M";
+
+        const LIFTS = [
+          { key:"squat",    name:"Back Squat",     emoji:"🦵", hyroxRelevance:"Sled push, lunges, squatting power" },
+          { key:"deadlift", name:"Deadlift",       emoji:"⬆️", hyroxRelevance:"Farmer carry, sled pull, general strength" },
+          { key:"bench",    name:"Bench Press",    emoji:"💪", hyroxRelevance:"Upper body push, wall balls" },
+          { key:"row",      name:"Barbell Row",    emoji:"🚣", hyroxRelevance:"SkiErg & rowing pull mechanics" },
+          { key:"ohp",      name:"Overhead Press", emoji:"🏋️", hyroxRelevance:"SkiErg, wall balls overhead" },
+          { key:"kb_swing", name:"KB Swing",       emoji:"🔔", hyroxRelevance:"Hip hinge, HYROX power transfer" },
+        ];
+
+        // HYROX strength standards as ratio to bodyweight
+        const STANDARDS = {
+          M: { squat:{beginner:0.75,intermediate:1.25,advanced:1.75,elite:2.0},
+               deadlift:{beginner:1.0,intermediate:1.5,advanced:2.0,elite:2.5},
+               bench:{beginner:0.5,intermediate:0.75,advanced:1.25,elite:1.5},
+               row:{beginner:0.5,intermediate:0.75,advanced:1.0,elite:1.25},
+               ohp:{beginner:0.35,intermediate:0.55,advanced:0.8,elite:1.0},
+               kb_swing:{beginner:0.2,intermediate:0.35,advanced:0.5,elite:0.6} },
+          F: { squat:{beginner:0.5,intermediate:0.85,advanced:1.25,elite:1.5},
+               deadlift:{beginner:0.75,intermediate:1.0,advanced:1.5,elite:1.75},
+               bench:{beginner:0.35,intermediate:0.55,advanced:0.85,elite:1.0},
+               row:{beginner:0.35,intermediate:0.55,advanced:0.75,elite:0.9},
+               ohp:{beginner:0.2,intermediate:0.35,advanced:0.55,elite:0.7},
+               kb_swing:{beginner:0.15,intermediate:0.25,advanced:0.35,elite:0.45} },
+        };
+
+        // Epley formula: 1RM = weight × (1 + reps/30)
+        const epley = (w, r) => Math.round(w * (1 + r/30));
+
+        const save = (e) => { setEntries(e); localStorage.setItem(KEY, JSON.stringify(e)); };
+
+        const addSet = (liftKey) => {
+          const inp = inputs[liftKey] || { weight:"", reps:"" };
+          const w = parseFloat(inp.weight), r = parseInt(inp.reps);
+          if (!w || !r || r < 1 || r > 30) return;
+          const rm = epley(w, r);
+          const today = new Date().toISOString().slice(0,10);
+          const prev = entries[liftKey] || [];
+          const updated = { ...entries, [liftKey]: [...prev, { date:today, weight:w, reps:r, rm }] };
+          save(updated);
+          setInputs(i => ({ ...i, [liftKey]: { weight:"", reps:"" } }));
+        };
+
+        const getLabel = (liftKey, rm) => {
+          const std = STANDARDS[sex][liftKey];
+          const ratio = rm / bodyweight;
+          if (ratio >= std.elite) return { label:"Elite", color:"#FFD700" };
+          if (ratio >= std.advanced) return { label:"Avancé", color:"#BF5AF2" };
+          if (ratio >= std.intermediate) return { label:"Intermédiaire", color:"#30D158" };
+          if (ratio >= std.beginner) return { label:"Débutant", color:"#FF9F0A" };
+          return { label:"Novice", color:"#888" };
+        };
+
+        // Overall strength score (0-100)
+        const scores = LIFTS.map(l => {
+          const hist = entries[l.key] || [];
+          if (!hist.length) return null;
+          const best = Math.max(...hist.map(e => e.rm));
+          const std = STANDARDS[sex][l.key];
+          const ratio = best / bodyweight;
+          if (ratio >= std.elite) return 100;
+          if (ratio >= std.advanced) return 75 + 25*(ratio-std.advanced)/(std.elite-std.advanced);
+          if (ratio >= std.intermediate) return 50 + 25*(ratio-std.intermediate)/(std.advanced-std.intermediate);
+          if (ratio >= std.beginner) return 25 + 25*(ratio-std.beginner)/(std.intermediate-std.beginner);
+          return Math.max(0, 25*ratio/std.beginner);
+        }).filter(s => s !== null);
+        const overallScore = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+
+        return (
+          <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Force & 1RM</div>
+                <div style={{ fontSize:11, color:"#666", marginTop:2 }}>Standards HYROX · BW {bodyweight}kg</div>
+              </div>
+              {overallScore !== null && (
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ fontSize:24, fontWeight:800, color: overallScore>=75?"#FFD700":overallScore>=50?"#BF5AF2":overallScore>=25?"#30D158":"#FF9F0A" }}>{overallScore}</div>
+                  <div style={{ fontSize:10, color:"#666" }}>Score force</div>
+                </div>
+              )}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              {["log","standards"].map(t => (
+                <button key={t} onClick={() => setTab(t)}
+                  style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0",
+                    color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  {t === "log" ? "Logger une série" : "Standards"}
+                </button>
+              ))}
+            </div>
+
+            {tab === "log" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                {LIFTS.map(lift => {
+                  const hist = entries[lift.key] || [];
+                  const bestRm = hist.length ? Math.max(...hist.map(e => e.rm)) : null;
+                  const lbl = bestRm ? getLabel(lift.key, bestRm) : null;
+                  const std = STANDARDS[sex][lift.key];
+                  const pct = bestRm ? Math.min(100, (bestRm/bodyweight) / std.elite * 100) : 0;
+                  const inp = inputs[lift.key] || { weight:"", reps:"" };
+
+                  return (
+                    <div key={lift.key} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <span style={{ fontSize:18 }}>{lift.emoji}</span>
+                          <div>
+                            <div style={{ fontSize:13, fontWeight:700, color:"var(--white)" }}>{lift.name}</div>
+                            <div style={{ fontSize:10, color:"#555" }}>{lift.hyroxRelevance}</div>
+                          </div>
+                        </div>
+                        {bestRm && (
+                          <div style={{ textAlign:"right" }}>
+                            <div style={{ fontSize:16, fontWeight:800, color:"var(--yellow)" }}>{bestRm}kg</div>
+                            <div style={{ fontSize:10, color:lbl?.color }}>{lbl?.label} · {(bestRm/bodyweight).toFixed(2)}× BW</div>
+                          </div>
+                        )}
+                      </div>
+                      {bestRm && (
+                        <div style={{ height:4, background:"#1C1C1E", borderRadius:2, overflow:"hidden", marginBottom:8 }}>
+                          <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg,#888,${lbl?.color})`, borderRadius:2 }}/>
+                        </div>
+                      )}
+                      {/* Input */}
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <input type="number" value={inp.weight} onChange={e=>setInputs(i=>({...i,[lift.key]:{...inp,weight:e.target.value}}))}
+                          placeholder="kg" step="2.5" min="0"
+                          style={{ flex:2, background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"6px 8px", color:"var(--white)", fontSize:13, textAlign:"center" }}/>
+                        <span style={{ color:"#555", fontSize:12 }}>×</span>
+                        <input type="number" value={inp.reps} onChange={e=>setInputs(i=>({...i,[lift.key]:{...inp,reps:e.target.value}}))}
+                          placeholder="reps" min="1" max="30"
+                          style={{ flex:1, background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"6px 8px", color:"var(--white)", fontSize:13, textAlign:"center" }}/>
+                        <button onClick={() => addSet(lift.key)}
+                          style={{ flex:1, background:"var(--yellow)", border:"none", borderRadius:8, padding:"6px 0", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                          {inp.weight && inp.reps ? `= ${epley(parseFloat(inp.weight)||0, parseInt(inp.reps)||1)}kg` : "OK"}
+                        </button>
+                      </div>
+                      {hist.length > 0 && (
+                        <div style={{ fontSize:10, color:"#555", marginTop:6 }}>
+                          Dernier: {hist[hist.length-1].date} · {hist[hist.length-1].weight}kg×{hist[hist.length-1].reps}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {tab === "standards" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontSize:11, color:"#666", marginBottom:4 }}>Ratio poids soulevé / poids de corps ({sex === "M" ? "Homme" : "Femme"})</div>
+                {LIFTS.map(lift => {
+                  const std = STANDARDS[sex][lift.key];
+                  const hist = entries[lift.key] || [];
+                  const best = hist.length ? Math.max(...hist.map(e => e.rm)) : null;
+                  return (
+                    <div key={lift.key} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 14px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"var(--white)" }}>{lift.emoji} {lift.name}</div>
+                        {best && <div style={{ fontSize:11, color:"var(--yellow)", fontWeight:700 }}>Ton 1RM: {best}kg</div>}
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:4 }}>
+                        {["beginner","intermediate","advanced","elite"].map((lvl,i) => {
+                          const labels = ["Débutant","Interméd.","Avancé","Elite"];
+                          const colors = ["#888","#30D158","#BF5AF2","#FFD700"];
+                          const kg = Math.round(std[lvl] * bodyweight);
+                          const reached = best && best >= kg;
+                          return (
+                            <div key={lvl} style={{ background: reached ? colors[i]+"22" : "var(--bg2)", border:`1px solid ${reached ? colors[i]+"66" : "#2C2C2E"}`, borderRadius:8, padding:"6px 4px", textAlign:"center" }}>
+                              <div style={{ fontSize:9, color:reached ? colors[i] : "#555" }}>{labels[i]}</div>
+                              <div style={{ fontSize:12, fontWeight:700, color:reached ? colors[i] : "#666" }}>{kg}kg</div>
+                              <div style={{ fontSize:9, color:"#555" }}>{std[lvl]}×BW</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── WORKOUT TEMPLATE LIBRARY ── */}
       {(() => {
         const [selTpl, setSelTpl] = React.useState(null);
