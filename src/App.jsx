@@ -7916,6 +7916,155 @@ JSON:
               );
             })()}
 
+            {/* ── COURBE POIDS & ÉNERGIE 30 JOURS ── */}
+            {(()=>{
+              const KEY_CIN = `fitrace_checkin_${profile.name}`;
+              const allCin = (() => { try { return JSON.parse(localStorage.getItem(KEY_CIN)||"{}"); } catch { return {}; } })();
+              // Construire série 30 jours
+              const pts = Array.from({length:30},(_,i)=>{
+                const d = new Date(); d.setDate(d.getDate()-(29-i));
+                const k = d.toISOString().slice(0,10);
+                return { date:k, label: i%7===0?d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"}):"", weight:allCin[k]?.weight||null, energy:allCin[k]?.energy||null };
+              });
+              const withWeight = pts.filter(p=>p.weight);
+              if (withWeight.length < 3) return null;
+
+              // Calculs stats
+              const weights = withWeight.map(p=>p.weight);
+              const minW = Math.min(...weights); const maxW = Math.max(...weights);
+              const avgW = (weights.reduce((a,b)=>a+b,0)/weights.length).toFixed(1);
+              const firstW = withWeight[0].weight; const lastW = withWeight[withWeight.length-1].weight;
+              const trendDelta = (lastW - firstW).toFixed(1);
+              const goalWeight = parseFloat(profile.poidsObjectif)||null;
+
+              // SVG dimensions
+              const W=320, H=80, PAD=10;
+              const range = Math.max(2, maxW - minW);
+              const yOf = (w) => H - PAD - ((w-minW)/range)*(H-PAD*2);
+              const xOf = (i) => PAD + (i/(pts.length-1))*(W-PAD*2);
+
+              // Ligne poids (avec gaps pour valeurs nulles)
+              const segments = [];
+              let cur = [];
+              pts.forEach((p,i) => {
+                if (p.weight) { cur.push([xOf(i), yOf(p.weight)]); }
+                else { if (cur.length>1) segments.push(cur); cur=[]; }
+              });
+              if (cur.length>1) segments.push(cur);
+              const toPath = (seg) => seg.map((pt,i)=>`${i===0?"M":"L"}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join(" ");
+
+              // Ligne objectif
+              const goalY = goalWeight && goalWeight>=minW && goalWeight<=maxW+2 ? yOf(Math.max(minW, Math.min(maxW, goalWeight))) : null;
+
+              // Moyenne mobile 7j
+              const maLine = pts.map((p,i) => {
+                const slice = pts.slice(Math.max(0,i-3), i+4).filter(x=>x.weight);
+                if (slice.length<2) return null;
+                const ma = slice.reduce((a,x)=>a+x.weight,0)/slice.length;
+                return [xOf(i), yOf(ma)];
+              }).filter(Boolean);
+              const maPath = maLine.map((pt,i)=>`${i===0?"M":"L"}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join(" ");
+
+              return (
+                <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>⚖️ Courbe poids · 30 jours</div>
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      <div style={{ fontSize:10, color:parseFloat(trendDelta)<=0?"#30D158":"#FF9F0A", fontWeight:700 }}>
+                        {parseFloat(trendDelta)>0?"+":""}{trendDelta} kg
+                      </div>
+                      <div style={{ fontSize:10, color:"#636366" }}>moy. {avgW} kg</div>
+                    </div>
+                  </div>
+
+                  {/* SVG Chart */}
+                  <div style={{ overflow:"hidden", borderRadius:8 }}>
+                    <svg width="100%" viewBox={`0 0 ${W} ${H+20}`} style={{ display:"block" }}>
+                      {/* Grid lines */}
+                      {[0,0.25,0.5,0.75,1].map(f=>(
+                        <line key={f} x1={PAD} y1={yOf(minW+f*range)} x2={W-PAD} y2={yOf(minW+f*range)}
+                          stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
+                      ))}
+
+                      {/* Goal line */}
+                      {goalY && (
+                        <>
+                          <line x1={PAD} y1={goalY} x2={W-PAD} y2={goalY} stroke="#30D158" strokeWidth="1" strokeDasharray="4 3" opacity="0.5"/>
+                          <text x={W-PAD-2} y={goalY-3} fill="#30D158" fontSize="7" textAnchor="end" opacity="0.7">objectif {goalWeight}kg</text>
+                        </>
+                      )}
+
+                      {/* Area fill sous la courbe principale */}
+                      {segments.map((seg,si) => {
+                        const areaPath = toPath(seg) + ` L${seg[seg.length-1][0]},${H-PAD} L${seg[0][0]},${H-PAD} Z`;
+                        return <path key={si} d={areaPath} fill="url(#wGrad)" opacity="0.25"/>;
+                      })}
+
+                      {/* Gradient def */}
+                      <defs>
+                        <linearGradient id="wGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#007AFF" stopOpacity="0.8"/>
+                          <stop offset="100%" stopColor="#007AFF" stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+
+                      {/* Moyenne mobile (pointillé gris) */}
+                      {maLine.length>1 && <path d={maPath} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" strokeDasharray="3 2"/>}
+
+                      {/* Courbe principale */}
+                      {segments.map((seg,si) => (
+                        <path key={si} d={toPath(seg)} fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      ))}
+
+                      {/* Points avec données + énergie couleur */}
+                      {pts.map((p,i) => p.weight ? (
+                        <circle key={i} cx={xOf(i)} cy={yOf(p.weight)} r={p.energy ? 3 : 2}
+                          fill={p.energy ? (p.energy>=4?"#30D158":p.energy>=3?"#FF9F0A":"#FF453A") : "#007AFF"}
+                          stroke="rgba(0,0,0,0.5)" strokeWidth="0.5"/>
+                      ) : null)}
+
+                      {/* Dernier point mis en valeur */}
+                      {withWeight.length>0 && (() => {
+                        const lp = withWeight[withWeight.length-1];
+                        const li = pts.findIndex(p=>p.date===lp.date);
+                        return <>
+                          <circle cx={xOf(li)} cy={yOf(lp.weight)} r={5} fill="#007AFF" stroke="#000" strokeWidth="1.5"/>
+                          <text x={xOf(li)} y={yOf(lp.weight)-8} fill="#007AFF" fontSize="9" textAnchor="middle" fontWeight="bold">{lp.weight}</text>
+                        </>;
+                      })()}
+
+                      {/* Labels X (tous les 7j) */}
+                      {pts.filter(p=>p.label).map((p,i) => {
+                        const idx = pts.indexOf(p);
+                        return <text key={i} x={xOf(idx)} y={H+14} fill="#636366" fontSize="8" textAnchor="middle">{p.label}</text>;
+                      })}
+                    </svg>
+                  </div>
+
+                  {/* Légende */}
+                  <div style={{ display:"flex", gap:12, marginTop:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#636366" }}>
+                      <div style={{ width:12, height:2, background:"#007AFF", borderRadius:1 }}/>
+                      Poids
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#636366" }}>
+                      <div style={{ width:12, height:2, background:"rgba(255,255,255,0.25)", borderRadius:1, borderTop:"1px dashed rgba(255,255,255,0.3)" }}/>
+                      Moy. mobile 7j
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#636366" }}>
+                      <div style={{ width:8, height:8, borderRadius:"50%", background:"#30D158" }}/>
+                      Énergie haute
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:"#636366" }}>
+                      <div style={{ width:8, height:8, borderRadius:"50%", background:"#FF453A" }}/>
+                      Fatigue
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── APEX PERFORMANCE SCORE ── */}
             {(() => {
               const sessions = profile.sessions || [];
