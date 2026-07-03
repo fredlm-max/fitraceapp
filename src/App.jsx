@@ -7599,6 +7599,114 @@ JSON:
               );
             })()}
 
+            {/* ── DAILY READINESS SCORE ── */}
+            {(() => {
+              const todayStr = new Date().toISOString().slice(0,10);
+              const sessions = profile.sessions || [];
+
+              // 1. Sleep score (from sleep tracker)
+              const sleepLog = (() => { try { const logs = JSON.parse(localStorage.getItem(`fitrace_sleep2_${profile.name}`) || "{}"); return logs[todayStr] || logs[new Date(Date.now()-86400000).toISOString().slice(0,10)] || null; } catch { return null; } })();
+              const sleepScore = sleepLog ? Math.min(100, Math.round(((sleepLog.h+(sleepLog.m||0)/60)/8)*60 + (sleepLog.quality/5)*40)) : 60;
+
+              // 2. TSB (training stress balance) — simplified
+              let ctl = 0, atl = 0;
+              const kCTL = 1 - Math.exp(-1/42), kATL = 1 - Math.exp(-1/7);
+              [...sessions].sort((a,b)=>a.date<b.date?-1:1).forEach(s => {
+                const trimp = (s.duration||30)*((s.rpe||5)/10);
+                ctl = ctl + kCTL*(trimp - ctl);
+                atl = atl + kATL*(trimp - atl);
+              });
+              const tsb = ctl - atl; // positive = fresh, negative = fatigued
+              const tsbScore = Math.min(100, Math.max(0, Math.round(50 + tsb * 2)));
+
+              // 3. Wellness score (from wellness log today or yesterday)
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const wellScore = (() => {
+                try {
+                  const logs = JSON.parse(localStorage.getItem(wellKey) || "[]");
+                  const entry = logs.find(e=>e.date===todayStr) || logs.find(e=>e.date===new Date(Date.now()-86400000).toISOString().slice(0,10));
+                  if (!entry) return 60;
+                  const avg = ((entry.sleep||3)+(entry.mood||3)+(entry.energy||3)+(5-(entry.stress||3)))/4;
+                  return Math.round(avg/5*100);
+                } catch { return 60; }
+              })();
+
+              // 4. Recent load (last 3 days vs normal)
+              const last3 = sessions.filter(s=>s.date>=new Date(Date.now()-3*86400000).toISOString().slice(0,10));
+              const recentTrimp = last3.reduce((s,e)=>s+(e.duration||30)*((e.rpe||5)/10),0);
+              const loadScore = recentTrimp > 150 ? 30 : recentTrimp > 80 ? 55 : recentTrimp > 30 ? 80 : 90;
+
+              // Composite score (weighted)
+              const readiness = Math.round(sleepScore*0.35 + tsbScore*0.30 + wellScore*0.20 + loadScore*0.15);
+
+              const color = readiness >= 75 ? "#30D158" : readiness >= 50 ? "#FF9F0A" : "#FF453A";
+              const label = readiness >= 80 ? "Optimal" : readiness >= 65 ? "Bon" : readiness >= 50 ? "Modéré" : "Récupération";
+
+              const RECO = readiness >= 80
+                ? { icon:"🔥", text:"Journée idéale pour une séance intense — intervalles ou simulation HYROX", type:"INTENSE" }
+                : readiness >= 65
+                ? { icon:"💪", text:"Bonne forme — séance modérée à tempo, force ou technique", type:"MODÉRÉ" }
+                : readiness >= 50
+                ? { icon:"🚶", text:"Travail léger uniquement — mobilité, technique, marche active", type:"LÉGER" }
+                : { icon:"🛌", text:"Repos prioritaire — récupération active ou journée off complète", type:"REPOS" };
+
+              const FACTORS = [
+                { label:"Sommeil", score:sleepScore, icon:"🌙" },
+                { label:"Fraîcheur", score:tsbScore, icon:"⚡" },
+                { label:"Bien-être", score:wellScore, icon:"🧠" },
+                { label:"Charge rée.", score:loadScore, icon:"📊" },
+              ];
+
+              // SVG ring
+              const R=50, CIRC=2*Math.PI*R;
+              const dash = (readiness/100)*CIRC;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:14 }}>Readiness du Jour</div>
+
+                  <div style={{ display:"flex",gap:16,alignItems:"center",marginBottom:14 }}>
+                    {/* Ring gauge */}
+                    <div style={{ position:"relative",width:110,height:110,flexShrink:0 }}>
+                      <svg width="110" height="110" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r={R} fill="none" stroke="#2C2C2E" strokeWidth="10"/>
+                        <circle cx="60" cy="60" r={R} fill="none" stroke={color} strokeWidth="10"
+                          strokeDasharray={`${dash} ${CIRC}`} strokeLinecap="round"
+                          transform="rotate(-90 60 60)" style={{ transition:"stroke-dasharray 0.6s ease" }}/>
+                        <text x="60" y="55" textAnchor="middle" fill={color} fontSize="24" fontWeight="900">{readiness}</text>
+                        <text x="60" y="70" textAnchor="middle" fill="#636366" fontSize="9">{label}</text>
+                      </svg>
+                    </div>
+
+                    {/* Recommendation */}
+                    <div style={{ flex:1 }}>
+                      <div style={{ background:color+"15",borderRadius:12,padding:"10px 12px",border:`1px solid ${color}30`,marginBottom:8 }}>
+                        <div style={{ fontSize:11,fontWeight:800,color,marginBottom:4 }}>{RECO.icon} {RECO.type}</div>
+                        <div style={{ fontSize:10,color:"#8E8E93",lineHeight:1.4 }}>{RECO.text}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Factor breakdown */}
+                  <div style={{ display:"flex",gap:6 }}>
+                    {FACTORS.map(f=>{
+                      const fc = f.score>=75?"#30D158":f.score>=50?"#FF9F0A":"#FF453A";
+                      return (
+                        <div key={f.label} style={{ flex:1,background:"var(--bg3)",borderRadius:10,padding:"8px 4px",textAlign:"center" }}>
+                          <div style={{ fontSize:11 }}>{f.icon}</div>
+                          <div style={{ fontSize:13,fontWeight:900,color:fc }}>{f.score}</div>
+                          <div style={{ fontSize:7,color:"#636366",marginTop:1 }}>{f.label}</div>
+                          <div style={{ height:3,background:"#2C2C2E",borderRadius:2,marginTop:4,overflow:"hidden" }}>
+                            <div style={{ height:"100%",width:`${f.score}%`,background:fc,borderRadius:2 }}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY GOAL PROGRESS ── */}
             {(() => {
               const sessions = profile.sessions || [];
