@@ -12189,6 +12189,273 @@ JSON:
               );
             })()}
 
+            {/* ── BODY COMPOSITION TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_body_${profile.name}`;
+              const [entries, setEntries] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+              });
+              const [weight, setWeight] = React.useState("");
+              const [bodyFat, setBodyFat] = React.useState("");
+              const [muscleMass, setMuscleMass] = React.useState("");
+              const [targetW, setTargetW] = React.useState(() => parseFloat(profile.poids) || 70);
+              const [tab, setTab] = React.useState("chart");
+
+              const save = (arr) => { setEntries(arr); localStorage.setItem(KEY, JSON.stringify(arr)); };
+
+              const addEntry = () => {
+                if (!weight) return;
+                const entry = {
+                  date: new Date().toISOString().slice(0,10),
+                  weight: parseFloat(weight),
+                  bodyFat: bodyFat ? parseFloat(bodyFat) : null,
+                  muscleMass: muscleMass ? parseFloat(muscleMass) : null,
+                };
+                const updated = [...entries.filter(e => e.date !== entry.date), entry].sort((a,b) => a.date.localeCompare(b.date));
+                save(updated);
+                setWeight(""); setBodyFat(""); setMuscleMass("");
+              };
+
+              const last30 = entries.slice(-30);
+              const latest = entries[entries.length - 1];
+              const first = entries[0];
+              const totalChange = latest && first && entries.length > 1 ? (latest.weight - first.weight).toFixed(1) : null;
+
+              // Height from profile
+              const heightCm = parseFloat(profile.taille) || 175;
+              const bmi = latest ? (latest.weight / ((heightCm/100)**2)).toFixed(1) : null;
+              const bmiLabel = bmi ? (bmi < 18.5 ? "Insuffisant" : bmi < 25 ? "Normal" : bmi < 30 ? "Surpoids" : "Obésité") : null;
+              const bmiColor = bmi ? (bmi < 18.5 ? "#FF9F0A" : bmi < 25 ? "#30D158" : bmi < 30 ? "#FF9F0A" : "#FF453A") : "#888";
+
+              // SVG weight chart
+              const W = 320, H = 130, PAD = {t:12,r:12,b:28,l:40};
+              const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+              let weightPath = "", fatPath = "", targetLine = null;
+              if (last30.length >= 2) {
+                const wVals = last30.map(e => e.weight);
+                const wMin = Math.min(...wVals, targetW) - 1;
+                const wMax = Math.max(...wVals, targetW) + 1;
+                const xS = (i) => PAD.l + (i/(last30.length-1))*cW;
+                const yS = (v) => PAD.t + cH - ((v-wMin)/(wMax-wMin))*cH;
+                weightPath = last30.map((e,i) => `${i===0?"M":"L"}${xS(i)},${yS(e.weight)}`).join(" ");
+                // target dashed line
+                const ty = yS(targetW);
+                targetLine = { y: ty };
+                // body fat if available
+                const fatEntries = last30.filter(e => e.bodyFat !== null);
+                if (fatEntries.length >= 2) {
+                  const fIdxs = fatEntries.map(e => last30.indexOf(e));
+                  const fVals = fatEntries.map(e => e.bodyFat);
+                  const fMin = Math.min(...fVals) - 1, fMax = Math.max(...fVals) + 1;
+                  const fyS = (v) => PAD.t + cH - ((v-fMin)/(fMax-fMin))*cH;
+                  fatPath = fIdxs.map((idx,i) => `${i===0?"M":"L"}${xS(idx)},${fyS(fatEntries[i].bodyFat)}`).join(" ");
+                }
+              }
+
+              const tabs = ["chart","log","goal"];
+              const tabLabels = {chart:"Courbe", log:"Entrées", goal:"Objectif"};
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Composition corporelle</div>
+                    {latest && (
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:22, fontWeight:800, color:"var(--yellow)" }}>{latest.weight} kg</div>
+                        {bmi && <div style={{ fontSize:11, color:bmiColor }}>IMC {bmi} · {bmiLabel}</div>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Add */}
+                  <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                    <input type="number" value={weight} onChange={e=>setWeight(e.target.value)}
+                      placeholder="Poids (kg)" step="0.1"
+                      style={{ flex:2, minWidth:90, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:14 }} />
+                    <input type="number" value={bodyFat} onChange={e=>setBodyFat(e.target.value)}
+                      placeholder="% graisse" step="0.1"
+                      style={{ flex:1, minWidth:70, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:14 }} />
+                    <input type="number" value={muscleMass} onChange={e=>setMuscleMass(e.target.value)}
+                      placeholder="Muscle (kg)" step="0.1"
+                      style={{ flex:1, minWidth:70, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:14 }} />
+                    <button onClick={addEntry}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"8px 16px", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>+</button>
+                  </div>
+
+                  {/* Stat pills */}
+                  {latest && (
+                    <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                      {totalChange !== null && (
+                        <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color: parseFloat(totalChange) < 0 ? "#30D158" : parseFloat(totalChange) > 0 ? "#FF453A" : "#888" }}>
+                          {parseFloat(totalChange) > 0 ? "+" : ""}{totalChange} kg total
+                        </div>
+                      )}
+                      {latest.bodyFat && (
+                        <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color:"#BF5AF2" }}>
+                          {latest.bodyFat}% masse grasse
+                        </div>
+                      )}
+                      {latest.muscleMass && (
+                        <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color:"#30D158" }}>
+                          {latest.muscleMass} kg muscle
+                        </div>
+                      )}
+                      <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color:"var(--yellow)" }}>
+                        {Math.abs(latest.weight - targetW).toFixed(1)} kg de l'objectif
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tabs */}
+                  <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+                    {tabs.map(t => (
+                      <button key={t} onClick={() => setTab(t)}
+                        style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0", color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                        {tabLabels[t]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {tab === "chart" && (
+                    entries.length < 2 ? (
+                      <div style={{ textAlign:"center", color:"#555", fontSize:13, padding:"30px 0" }}>
+                        Ajoute au moins 2 pesées pour voir le graphique
+                      </div>
+                    ) : (
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W }}>
+                        {/* Grid */}
+                        {[0,0.5,1].map(f => (
+                          <line key={f} x1={PAD.l} x2={W-PAD.r} y1={PAD.t + f*cH} y2={PAD.t + f*cH} stroke="#2C2C2E" strokeWidth="1"/>
+                        ))}
+                        {/* Target line */}
+                        {targetLine && (
+                          <line x1={PAD.l} x2={W-PAD.r} y1={targetLine.y} y2={targetLine.y} stroke="#30D158" strokeWidth="1.5" strokeDasharray="5,4"/>
+                        )}
+                        {/* Weight gradient fill */}
+                        {last30.length >= 2 && (() => {
+                          const wVals = last30.map(e => e.weight);
+                          const wMin = Math.min(...wVals, targetW) - 1;
+                          const wMax = Math.max(...wVals, targetW) + 1;
+                          const xS = (i) => PAD.l + (i/(last30.length-1))*cW;
+                          const yS = (v) => PAD.t + cH - ((v-wMin)/(wMax-wMin))*cH;
+                          const fillPath = weightPath + ` L${xS(last30.length-1)},${PAD.t+cH} L${PAD.l},${PAD.t+cH} Z`;
+                          return (
+                            <>
+                              <defs>
+                                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="var(--yellow)" stopOpacity="0.35"/>
+                                  <stop offset="100%" stopColor="var(--yellow)" stopOpacity="0"/>
+                                </linearGradient>
+                              </defs>
+                              <path d={fillPath} fill="url(#bodyGrad)"/>
+                              <path d={weightPath} fill="none" stroke="var(--yellow)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              {/* Dots for last 5 */}
+                              {last30.slice(-5).map((e,i) => {
+                                const idx = last30.length - 5 + i;
+                                return <circle key={i} cx={xS(idx)} cy={yS(e.weight)} r="3" fill="var(--yellow)"/>;
+                              })}
+                              {/* Y labels */}
+                              {[wMin+1, (wMin+wMax)/2, wMax-1].map((v,i) => (
+                                <text key={i} x={PAD.l-4} y={yS(v)+4} textAnchor="end" fontSize="9" fill="#888">{v.toFixed(0)}</text>
+                              ))}
+                            </>
+                          );
+                        })()}
+                        {/* Fat % line */}
+                        {fatPath && <path d={fatPath} fill="none" stroke="#BF5AF2" strokeWidth="1.5" strokeDasharray="4,3"/>}
+                        {/* X labels */}
+                        {last30.length > 0 && [0, Math.floor(last30.length/2), last30.length-1].map(i => (
+                          <text key={i} x={PAD.l + (i/(last30.length-1))*cW} y={H-6} textAnchor="middle" fontSize="9" fill="#666">
+                            {last30[i]?.date.slice(5)}
+                          </text>
+                        ))}
+                        {/* Legend */}
+                        <circle cx={PAD.l+6} cy={PAD.t+4} r="3" fill="var(--yellow)"/>
+                        <text x={PAD.l+12} y={PAD.t+8} fontSize="8" fill="#888">Poids</text>
+                        <line x1={PAD.l+44} x2={PAD.l+58} y1={PAD.t+4} y2={PAD.t+4} stroke="#30D158" strokeWidth="1.5" strokeDasharray="4,3"/>
+                        <text x={PAD.l+62} y={PAD.t+8} fontSize="8" fill="#888">Objectif</text>
+                        {fatPath && <>
+                          <line x1={PAD.l+98} x2={PAD.l+112} y1={PAD.t+4} y2={PAD.t+4} stroke="#BF5AF2" strokeWidth="1.5" strokeDasharray="3,3"/>
+                          <text x={PAD.l+116} y={PAD.t+8} fontSize="8" fill="#888">% graisse</text>
+                        </>}
+                      </svg>
+                    )
+                  )}
+
+                  {tab === "log" && (
+                    <div style={{ maxHeight:200, overflowY:"auto" }}>
+                      {entries.length === 0 ? (
+                        <div style={{ textAlign:"center", color:"#555", fontSize:13, padding:"20px 0" }}>Aucune entrée</div>
+                      ) : [...entries].reverse().slice(0,20).map((e, i) => (
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid #2C2C2E" }}>
+                          <div style={{ fontSize:12, color:"#888" }}>{e.date}</div>
+                          <div style={{ display:"flex", gap:10 }}>
+                            <span style={{ fontSize:14, fontWeight:700, color:"var(--white)" }}>{e.weight} kg</span>
+                            {e.bodyFat && <span style={{ fontSize:12, color:"#BF5AF2" }}>{e.bodyFat}%</span>}
+                            {e.muscleMass && <span style={{ fontSize:12, color:"#30D158" }}>{e.muscleMass} kg 💪</span>}
+                          </div>
+                          <button onClick={() => save(entries.filter((_,j) => entries.length-1-j !== i))}
+                            style={{ background:"none", border:"none", color:"#FF453A", fontSize:14, cursor:"pointer" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {tab === "goal" && (
+                    <div>
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:12, color:"#888", marginBottom:6 }}>Poids cible (kg)</div>
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <input type="number" value={targetW} onChange={e=>setTargetW(parseFloat(e.target.value)||70)} step="0.5"
+                            style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:16, fontWeight:700 }}/>
+                        </div>
+                      </div>
+                      {latest && (
+                        <>
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:8 }}>
+                            {[
+                              { label:"Poids actuel", val:`${latest.weight} kg`, color:"var(--yellow)" },
+                              { label:"Objectif", val:`${targetW} kg`, color:"#30D158" },
+                              { label:"Différence", val:`${(latest.weight - targetW > 0 ? "+" : "")}${(latest.weight - targetW).toFixed(1)} kg`, color: latest.weight > targetW ? "#FF453A" : "#30D158" },
+                              { label:"IMC actuel", val:`${bmi} (${bmiLabel})`, color:bmiColor },
+                            ].map(s => (
+                              <div key={s.label} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                                <div style={{ fontSize:10, color:"#666" }}>{s.label}</div>
+                                <div style={{ fontSize:14, fontWeight:700, color:s.color, marginTop:3 }}>{s.val}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {entries.length >= 2 && (() => {
+                            // Estimate weeks to goal based on last 4-week trend
+                            const recent = entries.slice(-8);
+                            if (recent.length >= 2) {
+                              const trend = (recent[recent.length-1].weight - recent[0].weight) / (recent.length - 1);
+                              const diff = targetW - latest.weight;
+                              if (Math.abs(trend) > 0.01 && Math.sign(trend) === Math.sign(diff)) {
+                                const weeks = Math.ceil(Math.abs(diff / trend / 7));
+                                return (
+                                  <div style={{ background:"rgba(0,122,255,0.15)", border:"1px solid rgba(0,122,255,0.3)", borderRadius:12, padding:12, marginTop:10 }}>
+                                    <div style={{ fontSize:12, color:"var(--yellow)", fontWeight:700 }}>Projection au rythme actuel</div>
+                                    <div style={{ fontSize:13, color:"var(--white)", marginTop:4 }}>
+                                      ~{weeks} semaine{weeks>1?"s":""} pour atteindre {targetW} kg
+                                    </div>
+                                    <div style={{ fontSize:11, color:"#888", marginTop:2 }}>
+                                      Tendance: {trend > 0 ? "+" : ""}{(trend*7).toFixed(2)} kg/semaine
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── SWEAT RATE CALCULATOR ── */}
             {(() => {
               const poids = parseFloat(profile.poids) || 70;
