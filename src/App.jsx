@@ -7707,6 +7707,173 @@ JSON:
               );
             })()}
 
+            {/* ── WORKOUT OF THE DAY ── */}
+            {(() => {
+              const today = new Date().toISOString().slice(0,10);
+              const KEY = `fitrace_wod_done_${profile.name}_${today}`;
+              const [done, setDone] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "false"); } catch { return false; }
+              });
+              const [expanded, setExpanded] = React.useState(false);
+
+              // Compute readiness from TSB
+              const sessions = profile.sessions || [];
+              const kATL = 1 - Math.exp(-1/7), kCTL = 1 - Math.exp(-1/42);
+              let atl = 0, ctl = 0;
+              const startD = new Date(today); startD.setDate(startD.getDate() - 42);
+              for (let i = 0; i <= 42; i++) {
+                const d = new Date(startD); d.setDate(d.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = sessions.filter(s => s.date === ds).reduce((sum,s) => sum + (s.duration && s.rpe ? s.duration*(s.rpe/10) : 0), 0);
+                atl = atl + kATL*(trimp - atl); ctl = ctl + kCTL*(trimp - ctl);
+              }
+              const tsb = ctl - atl;
+              const level = tsb > 5 ? "intense" : tsb > -10 ? "moderate" : "recovery";
+
+              // Deterministic daily seed based on date
+              const seed = today.split("").reduce((acc,c) => acc + c.charCodeAt(0), 0);
+              const pick = (arr) => arr[seed % arr.length];
+              const pick2 = (arr) => arr[(seed * 7) % arr.length];
+
+              const WODS = {
+                intense: [
+                  {
+                    name: "HYROX Blitz", tag: "Force + Cardio", color: "#FF453A", emoji: "🔥",
+                    duration: "45-55 min", category: "HYROX Spécifique",
+                    exercises: [
+                      { name: "SkiErg", detail: "4 × 250m", rest: "90s", focus: "Engagement dos & core" },
+                      { name: "Sled Push", detail: "4 × 20m @ 80% BW", rest: "2min", focus: "Drive des jambes" },
+                      { name: "Burpee Broad Jump", detail: "3 × 15 reps", rest: "90s", focus: "Explosivité" },
+                      { name: "Rowing", detail: "3 × 500m", rest: "2min", focus: "Puissance par tirade" },
+                      { name: "Wall Balls", detail: "4 × 20 reps @ 6kg", rest: "90s", focus: "Rythme constant" },
+                    ],
+                    tip: "Niveau d'énergie optimal. Pousse fort aujourd'hui — ton corps est prêt.",
+                  },
+                  {
+                    name: "Power Endurance", tag: "Force-endurance", color: "#FF453A", emoji: "⚡",
+                    duration: "50-60 min", category: "Endurance de Force",
+                    exercises: [
+                      { name: "Farmer Carry", detail: "5 × 25m @ BW/2 par main", rest: "2min", focus: "Grip & stabilité" },
+                      { name: "Sandbag Lunges", detail: "4 × 20 reps @ 10kg", rest: "90s", focus: "Contrôle genoux" },
+                      { name: "Box Jump", detail: "5 × 8 reps", rest: "90s", focus: "Atterrissage amorti" },
+                      { name: "Kettlebell Swing", detail: "4 × 20 reps @ 24kg", rest: "60s", focus: "Hip hinge explosif" },
+                      { name: "Run Pace", detail: "3 × 1km @ race pace", rest: "3min", focus: "Maintenir l'allure" },
+                    ],
+                    tip: "Superbe forme aujourd'hui. Travaille ta faiblesse — ne joue pas la sécurité.",
+                  },
+                ],
+                moderate: [
+                  {
+                    name: "Technique & Volume", tag: "Technique", color: "#FF9F0A", emoji: "🎯",
+                    duration: "40-50 min", category: "Technique HYROX",
+                    exercises: [
+                      { name: "SkiErg Technique", detail: "6 × 1min @ 70% effort", rest: "60s", focus: "Amplitude complète des bras" },
+                      { name: "Sled Pull", detail: "4 × 20m @ 60% BW", rest: "90s", focus: "Inclinaison du corps" },
+                      { name: "Rowing Technique", detail: "20min @ 70% HR", rest: "—", focus: "Drive jambes en premier" },
+                      { name: "Wall Balls", detail: "5 × 15 reps @ cible", rest: "60s", focus: "Hanches sous la balle" },
+                    ],
+                    tip: "Bonne journée pour affiner ta technique. Qualité > quantité.",
+                  },
+                  {
+                    name: "Cardio Base", tag: "Aérobie", color: "#FF9F0A", emoji: "🏃",
+                    duration: "35-45 min", category: "Base aérobie",
+                    exercises: [
+                      { name: "Easy Run", detail: "25-30min @ Z2 (conversation)", rest: "—", focus: "Ne jamais être essoufflé" },
+                      { name: "Core circuit", detail: "3 × (planche 45s + hollow hold 30s)", rest: "60s", focus: "Respiration abdominale" },
+                      { name: "Hip mobility", detail: "10min stretching dynamique", rest: "—", focus: "Rotation externe hanches" },
+                    ],
+                    tip: "Construis ta base aérobie. Les champions gagnent les courses lentes.",
+                  },
+                ],
+                recovery: [
+                  {
+                    name: "Active Recovery", tag: "Récupération", color: "#30D158", emoji: "🧘",
+                    duration: "20-30 min", category: "Récupération Active",
+                    exercises: [
+                      { name: "Marche légère", detail: "15-20min @ Z1", rest: "—", focus: "Stimule la circulation" },
+                      { name: "Foam Rolling", detail: "Mollets, IT band, dorsaux", rest: "—", focus: "2min par zone" },
+                      { name: "Mobilité hanches", detail: "Pigeon pose 90s/côté", rest: "—", focus: "Relâchement profond" },
+                      { name: "Respiration", detail: "Box breathing 5×5min", rest: "—", focus: "Active le parasympathique" },
+                    ],
+                    tip: "La récupération C'EST l'entraînement. Ton prochain PB se construit aujourd'hui.",
+                  },
+                ],
+              };
+
+              const wodList = WODS[level];
+              const wod = wodList[seed % wodList.length];
+              const dayName = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"][new Date().getDay()];
+
+              const markDone = () => {
+                localStorage.setItem(KEY, "true");
+                setDone(true);
+              };
+
+              return (
+                <div style={{ background: done ? "var(--bg2)" : `linear-gradient(135deg, ${wod.color}18, var(--bg2))`,
+                  border:`1px solid ${done ? "#2C2C2E" : wod.color+"44"}`, borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:2 }}>WOD · {dayName} {today.slice(5).replace("-","/")} · {wod.category}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:24 }}>{wod.emoji}</span>
+                        <div>
+                          <div style={{ fontSize:18, fontWeight:800, color: done ? "#555" : wod.color }}>{wod.name}</div>
+                          <div style={{ fontSize:12, color:"#888" }}>{wod.tag} · {wod.duration}</div>
+                        </div>
+                      </div>
+                    </div>
+                    {done ? (
+                      <div style={{ background:"rgba(48,209,88,0.2)", border:"1px solid #30D15844", borderRadius:10, padding:"5px 10px" }}>
+                        <div style={{ fontSize:12, color:"#30D158", fontWeight:700 }}>✓ Fait !</div>
+                      </div>
+                    ) : (
+                      <div style={{ background:`${wod.color}22`, border:`1px solid ${wod.color}44`, borderRadius:10, padding:"5px 10px" }}>
+                        <div style={{ fontSize:10, color:wod.color }}>TSB {tsb > 0 ? "+" : ""}{tsb.toFixed(0)}</div>
+                        <div style={{ fontSize:11, fontWeight:700, color:wod.color }}>{level === "intense" ? "Intense" : level === "moderate" ? "Modéré" : "Récup."}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tip */}
+                  <div style={{ background:"var(--bg3)", borderRadius:10, padding:"9px 12px", marginBottom:12, fontStyle:"italic", fontSize:12, color:"#999" }}>
+                    💡 {wod.tip}
+                  </div>
+
+                  {/* Exercises */}
+                  <button onClick={() => setExpanded(e => !e)}
+                    style={{ background:"none", border:"none", color:"var(--yellow)", fontSize:12, fontWeight:700, cursor:"pointer", padding:0, marginBottom: expanded ? 10 : 0 }}>
+                    {expanded ? "▲ Masquer les exercices" : `▼ Voir les ${wod.exercises.length} exercices`}
+                  </button>
+
+                  {expanded && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:12 }}>
+                      {wod.exercises.map((ex, i) => (
+                        <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"flex-start" }}>
+                          <div style={{ width:24, height:24, borderRadius:"50%", background:wod.color+"22", border:`1px solid ${wod.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:wod.color, flexShrink:0, marginTop:1 }}>{i+1}</div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:4 }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ex.name}</div>
+                              <div style={{ fontSize:12, color:wod.color, fontWeight:700, flexShrink:0 }}>{ex.detail}</div>
+                            </div>
+                            <div style={{ fontSize:11, color:"#666", marginTop:2 }}>🎯 {ex.focus}{ex.rest && ex.rest !== "—" ? ` · Repos: ${ex.rest}` : ""}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!done && (
+                    <button onClick={markDone}
+                      style={{ width:"100%", background:wod.color, border:"none", borderRadius:12, padding:"11px 0", color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", marginTop:4 }}>
+                      ✓ WOD Complété !
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── WEEKLY GOAL PROGRESS ── */}
             {(() => {
               const sessions = profile.sessions || [];
