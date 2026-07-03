@@ -14597,6 +14597,181 @@ JSON:
               );
             })()}
 
+            {/* ── HEART RATE ZONE TRAINER ── */}
+            {(() => {
+              const HRZ_KEY = `fitrace_hr_zones_${profile.name}`;
+              const HRZ_LOG_KEY = `fitrace_hr_log_${profile.name}`;
+
+              const [hrData, setHrData] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(HRZ_KEY) || "{}"); } catch { return {}; }
+              });
+              const [hrLog, setHrLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(HRZ_LOG_KEY) || "[]"); } catch { return []; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [period, setPeriod] = React.useState(30);
+              const [form, setForm] = React.useState({ date: new Date().toISOString().slice(0,10), duration:30, z1:0, z2:0, z3:0, z4:0, z5:0, label:"" });
+
+              const age = profile.age ? parseInt(profile.age) : 30;
+              const hrMax = hrData.hrMax ? parseInt(hrData.hrMax) : 220 - age;
+
+              const zones = [
+                { n:"Z1", name:"Récupération", pct:[50,60], color:"#30D158" },
+                { n:"Z2", name:"Endurance", pct:[60,70], color:"#64D2FF" },
+                { n:"Z3", name:"Aérobie", pct:[70,80], color:"var(--yellow)" },
+                { n:"Z4", name:"Seuil", pct:[80,90], color:"#FF9F0A" },
+                { n:"Z5", name:"VO₂max", pct:[90,100], color:"#FF453A" },
+              ];
+
+              const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - period);
+              const cutoffStr = cutoff.toISOString().slice(0,10);
+              const recent = hrLog.filter(e => e.date >= cutoffStr);
+
+              const totals = zones.map((_,i) => recent.reduce((s,e) => s + (e[`z${i+1}`]||0), 0));
+              const totalMin = totals.reduce((a,b) => a+b, 0);
+
+              const saveLog = (entry) => {
+                const next = [entry, ...hrLog].slice(0, 200);
+                setHrLog(next);
+                localStorage.setItem(HRZ_LOG_KEY, JSON.stringify(next));
+                setShowForm(false);
+                setForm({ date: new Date().toISOString().slice(0,10), duration:30, z1:0, z2:0, z3:0, z4:0, z5:0, label:"" });
+              };
+
+              const saveHrMax = (val) => {
+                const next = { ...hrData, hrMax: val };
+                setHrData(next);
+                localStorage.setItem(HRZ_KEY, JSON.stringify(next));
+              };
+
+              const fmtMin = (m) => m >= 60 ? `${Math.floor(m/60)}h${String(m%60).padStart(2,"0")}` : `${m}min`;
+
+              // Garmin-style horizontal bars
+              const barW = 220;
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>ZONES DE FRÉQUENCE CARDIAQUE</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>❤️ Entraîneur FC</div>
+                    </div>
+                    <div style={{ display:"flex", gap:6 }}>
+                      {[7,30,90].map(p => (
+                        <button key={p} onClick={() => setPeriod(p)}
+                          style={{ background: period===p ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:8, padding:"4px 10px", color: period===p ? "#000" : "#888", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          {p}j
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* FC Max setting */}
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, background:"var(--bg3)", borderRadius:12, padding:"10px 14px" }}>
+                    <span style={{ fontSize:20 }}>💓</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:11, color:"#555" }}>FC Max estimée</div>
+                      <div style={{ fontSize:15, fontWeight:700, color:"#FF453A" }}>{hrMax} bpm</div>
+                    </div>
+                    <div>
+                      <input type="number" min="140" max="220" defaultValue={hrMax}
+                        onBlur={e => saveHrMax(e.target.value)}
+                        style={{ width:60, background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:8, padding:"4px 8px", color:"#fff", fontSize:13, textAlign:"center" }}
+                        placeholder="FCmax"/>
+                    </div>
+                  </div>
+
+                  {/* Zone definitions */}
+                  <div style={{ marginBottom:16 }}>
+                    {zones.map((z,i) => {
+                      const lo = Math.round(hrMax * z.pct[0] / 100);
+                      const hi = Math.round(hrMax * z.pct[1] / 100);
+                      const mins = totals[i];
+                      const pct = totalMin > 0 ? Math.round(mins/totalMin*100) : 0;
+                      return (
+                        <div key={z.n} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                          <div style={{ width:28, textAlign:"center", fontSize:11, fontWeight:800, color:z.color }}>{z.n}</div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                              <span style={{ fontSize:10, color:"#666" }}>{z.name} · {lo}–{hi} bpm</span>
+                              <span style={{ fontSize:10, color:z.color, fontWeight:700 }}>{fmtMin(mins)} ({pct}%)</span>
+                            </div>
+                            <div style={{ height:8, background:"var(--bg3)", borderRadius:4, overflow:"hidden" }}>
+                              <div style={{ height:"100%", width:`${pct}%`, background:z.color, borderRadius:4, transition:"width 0.4s" }}/>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Total */}
+                  {totalMin > 0 && (
+                    <div style={{ display:"flex", justifyContent:"space-between", background:"var(--bg3)", borderRadius:10, padding:"8px 14px", marginBottom:14 }}>
+                      <span style={{ fontSize:12, color:"#666" }}>Total {period}j</span>
+                      <span style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{fmtMin(totalMin)}</span>
+                    </div>
+                  )}
+
+                  {/* Log form */}
+                  {showForm ? (
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:16, marginBottom:14 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:12 }}>Ajouter une séance</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                        <input type="date" value={form.date} onChange={e => setForm(f => ({...f, date:e.target.value}))}
+                          style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:12 }}/>
+                        <input type="text" value={form.label} onChange={e => setForm(f => ({...f, label:e.target.value}))}
+                          placeholder="Libellé (optionnel)"
+                          style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:12 }}/>
+                      </div>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:8 }}>Minutes par zone</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6, marginBottom:12 }}>
+                        {zones.map((z,i) => (
+                          <div key={z.n} style={{ textAlign:"center" }}>
+                            <div style={{ fontSize:10, color:z.color, fontWeight:700, marginBottom:4 }}>{z.n}</div>
+                            <input type="number" min="0" max="300" value={form[`z${i+1}`]}
+                              onChange={e => setForm(f => ({...f, [`z${i+1}`]: parseInt(e.target.value)||0}))}
+                              style={{ width:"100%", background:"var(--bg2)", border:`1px solid ${z.color}44`, borderRadius:8, padding:"6px 4px", color:"#fff", fontSize:13, textAlign:"center" }}/>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={() => setShowForm(false)}
+                          style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                        <button onClick={() => saveLog({...form, id: Date.now()})}
+                          style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"10px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Enregistrer</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowForm(true)}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px dashed #444", borderRadius:12, padding:"12px 0", color:"#888", fontSize:13, cursor:"pointer", marginBottom:hrLog.length>0?14:0 }}>
+                      + Ajouter une séance FC
+                    </button>
+                  )}
+
+                  {/* Recent log */}
+                  {hrLog.slice(0,5).map((e,i) => {
+                    const total = [e.z1,e.z2,e.z3,e.z4,e.z5].reduce((a,b)=>a+(b||0),0);
+                    return (
+                      <div key={i} style={{ background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginBottom:6, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#fff" }}>{e.label || "Séance FC"}</div>
+                          <div style={{ fontSize:10, color:"#666" }}>{e.date} · {fmtMin(total)}</div>
+                        </div>
+                        <div style={{ display:"flex", gap:2 }}>
+                          {zones.map((z,zi) => e[`z${zi+1}`] > 0 && (
+                            <div key={zi} style={{ background:z.color+"33", border:`1px solid ${z.color}66`, borderRadius:6, padding:"2px 5px", fontSize:10, color:z.color, fontWeight:700 }}>
+                              {z.n}:{e[`z${zi+1}`]}'
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── RPE DISTRIBUTION CHART ── */}
             {(() => {
               const sessions = profile.sessions || [];
