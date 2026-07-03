@@ -6732,10 +6732,10 @@ JSON:
 
               const [meals, setMeals] = React.useState(loadMeals);
               const [eau, setEau] = React.useState(()=>{ try { const d=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); return d[todayStr]?.eau||0; } catch { return 0; } });
-              const [showForm, setShowForm] = React.useState(false);
-              const [mealName, setMealName] = React.useState("");
-              const [mealCal, setMealCal] = React.useState("");
-              const [mealProt, setMealProt] = React.useState("");
+              const openNutriAdd = () => {
+                localStorage.setItem("fitrace_open_nutri_add", "1");
+                navigateTo("nutri");
+              };
 
               const target = { cal: profile.calories || 2500, prot: profile.proteines || 140, eau: 3 };
               const totals = getMealsTotal(meals);
@@ -6748,29 +6748,11 @@ JSON:
                 try { const all=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); all[todayStr]={...(all[todayStr]||{}),eau:v}; localStorage.setItem(KEY_QUICK,JSON.stringify(all)); } catch {}
               };
 
-              const addMeal = () => {
-                const kcal = parseInt(mealCal)||0;
-                const p = parseInt(mealProt)||0;
-                if (!kcal && !p) return;
-                const entry = { id:Date.now(), nom:mealName||"Repas", kcal, p, g:0, l:0, heure:new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}) };
-                const next = [...meals, entry];
-                setMeals(next);
-                try { localStorage.setItem(MEAL_KEY, JSON.stringify(next)); } catch {}
-                setMealName(""); setMealCal(""); setMealProt(""); setShowForm(false);
-              };
-
               const removeMeal = (id) => {
                 const next = meals.filter(m=>m.id!==id);
                 setMeals(next);
                 try { localStorage.setItem(MEAL_KEY, JSON.stringify(next)); } catch {}
               };
-
-              const PRESETS = [
-                {label:"🌅 Petit-déj", nom:"Petit-déjeuner", kcal:450, p:20},
-                {label:"☀️ Déjeuner", nom:"Déjeuner", kcal:700, p:40},
-                {label:"🌙 Dîner", nom:"Dîner", kcal:600, p:35},
-                {label:"🍎 Collation", nom:"Collation", kcal:200, p:10},
-              ];
 
               return (
                 <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
@@ -6778,9 +6760,9 @@ JSON:
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>🥗 Nutrition du jour</div>
                     <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                      <button onClick={()=>setShowForm(f=>!f)}
-                        style={{ background:showForm?"rgba(201,168,64,0.15)":"rgba(201,168,64,0.08)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:8, padding:"4px 10px", color:"var(--yellow)", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                        {showForm ? "✕ Fermer" : "+ Ajouter"}
+                      <button onClick={openNutriAdd}
+                        style={{ background:"rgba(201,168,64,0.08)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:8, padding:"4px 10px", color:"var(--yellow)", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                        + Ajouter
                       </button>
                       <button onClick={()=>navigateTo("nutri")} style={{ background:"none", border:"none", color:"#636366", fontSize:10, fontWeight:700, cursor:"pointer" }}>Détail →</button>
                     </div>
@@ -6839,42 +6821,6 @@ JSON:
                     </div>
                   )}
 
-                  {/* Formulaire ajout repas */}
-                  {showForm && (
-                    <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:12 }}>
-                      {/* Presets rapides */}
-                      <div style={{ display:"flex", gap:4, overflowX:"auto", marginBottom:10, scrollbarWidth:"none" }}>
-                        {PRESETS.map(p=>(
-                          <button key={p.nom} onClick={()=>{setMealName(p.nom);setMealCal(String(p.kcal));setMealProt(String(p.p));}}
-                            style={{ flexShrink:0, background:mealName===p.nom?"rgba(201,168,64,0.15)":"rgba(255,255,255,0.04)", border:`1px solid ${mealName===p.nom?"rgba(201,168,64,0.4)":"rgba(255,255,255,0.08)"}`, borderRadius:8, padding:"5px 10px", fontSize:11, color:mealName===p.nom?"var(--yellow)":"#8E8E93", cursor:"pointer", whiteSpace:"nowrap" }}>
-                            {p.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Inputs */}
-                      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                        <input value={mealName} onChange={e=>setMealName(e.target.value)} placeholder="Nom du repas (ex : Riz poulet)" maxLength={40}
-                          style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"8px 10px", color:"var(--white)", fontSize:13, width:"100%", boxSizing:"border-box" }}/>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                          <div>
-                            <div style={{ fontSize:9, color:"#8E8E93", marginBottom:3 }}>Calories (kcal)</div>
-                            <input type="number" value={mealCal} onChange={e=>setMealCal(e.target.value)} placeholder="ex: 650"
-                              style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,154,10,0.25)", borderRadius:8, padding:"7px 10px", color:"#FF9F0A", fontSize:13, fontWeight:700, width:"100%", boxSizing:"border-box" }}/>
-                          </div>
-                          <div>
-                            <div style={{ fontSize:9, color:"#8E8E93", marginBottom:3 }}>Protéines (g)</div>
-                            <input type="number" value={mealProt} onChange={e=>setMealProt(e.target.value)} placeholder="ex: 40"
-                              style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(57,255,128,0.25)", borderRadius:8, padding:"7px 10px", color:"#39ff80", fontSize:13, fontWeight:700, width:"100%", boxSizing:"border-box" }}/>
-                          </div>
-                        </div>
-                        <button onClick={addMeal}
-                          style={{ background:"var(--yellow)", color:"#000", border:"none", borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:800, cursor:"pointer" }}>
-                          ✓ Ajouter ce repas
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })()}
@@ -33319,6 +33265,11 @@ function NutritionTab({ profile }) {
   useEffect(() => {
     storage.get(storageKey).then(d => { if (d) setRepasJour(d); });
     storage.get(bilanKey).then(d => { if (d) setBilanIA(d); });
+    // Ouverture automatique du modal depuis l'accueil
+    if (localStorage.getItem("fitrace_open_nutri_add") === "1") {
+      localStorage.removeItem("fitrace_open_nutri_add");
+      setTimeout(() => setShowAdd(true), 80);
+    }
   }, []);
 
   const totaux = repasJour.reduce((acc, r) => ({
