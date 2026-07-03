@@ -13094,6 +13094,165 @@ JSON:
               );
             })()}
 
+            {/* ── PERFORMANCE MANAGEMENT CHART ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              // Build daily TRIMP map
+              const trimpMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                const t = s.duration && s.rpe ? s.duration * (s.rpe / 10) : 0;
+                trimpMap[s.date] = (trimpMap[s.date] || 0) + t;
+              });
+
+              // Compute ATL/CTL/TSB for 84 days (12 weeks) + 14 days forecast
+              const kATL = 1 - Math.exp(-1/7);
+              const kCTL = 1 - Math.exp(-1/42);
+              const today = new Date().toISOString().slice(0,10);
+
+              // Start 84 days ago
+              const startDate = new Date(today);
+              startDate.setDate(startDate.getDate() - 83);
+
+              let atl = 0, ctl = 0;
+              const history = [];
+              for (let i = 0; i < 84 + 14; i++) {
+                const d = new Date(startDate);
+                d.setDate(d.getDate() + i);
+                const dStr = d.toISOString().slice(0,10);
+                const trimp = trimpMap[dStr] || 0;
+                atl = atl + kATL * (trimp - atl);
+                ctl = ctl + kCTL * (trimp - ctl);
+                const tsb = ctl - atl;
+                history.push({ date: dStr, trimp, atl, ctl, tsb, future: dStr > today });
+              }
+
+              const W = 340, H = 160, PAD = {t:14,r:14,b:28,l:38};
+              const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+              const N = history.length;
+              const atlVals = history.map(h => h.atl);
+              const ctlVals = history.map(h => h.ctl);
+              const tsbVals = history.map(h => h.tsb);
+              const allVals = [...atlVals, ...ctlVals, ...tsbVals];
+              const minV = Math.min(...allVals) - 2;
+              const maxV = Math.max(...allVals) + 2;
+              const xS = (i) => PAD.l + (i/(N-1))*cW;
+              const yS = (v) => PAD.t + cH - ((v-minV)/(maxV-minV))*cH;
+              const y0 = yS(0);
+
+              const makePath = (vals) => vals.map((v,i) => `${i===0?"M":"L"}${xS(i)},${yS(v)}`).join(" ");
+              const ctlPath = makePath(ctlVals);
+              const atlPath = makePath(atlVals);
+              const tsbPath = makePath(tsbVals);
+
+              // Split TSB into positive (green) and negative (red) fill
+              const tsbPosFill = history.map((h,i) => ({x:xS(i), y:yS(Math.max(h.tsb,0))}));
+              const tsbNegFill = history.map((h,i) => ({x:xS(i), y:yS(Math.min(h.tsb,0))}));
+
+              const latest = history[83]; // today's values
+              const tsbColor = latest.tsb > 5 ? "#30D158" : latest.tsb > -10 ? "#FF9F0A" : "#FF453A";
+              const tsbLabel = latest.tsb > 5 ? "Forme" : latest.tsb > -10 ? "Neutre" : "Fatigue";
+
+              // Week labels (every 2 weeks)
+              const weekLabels = [];
+              for (let i = 0; i < N; i += 14) {
+                weekLabels.push({ i, label: history[i]?.date.slice(5) });
+              }
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Performance Management</div>
+                      <div style={{ fontSize:11, color:"#666", marginTop:2 }}>ATL · CTL · TSB — 12 semaines</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:22, fontWeight:800, color:tsbColor }}>{latest.tsb > 0 ? "+" : ""}{latest.tsb.toFixed(0)}</div>
+                      <div style={{ fontSize:11, color:tsbColor }}>{tsbLabel}</div>
+                    </div>
+                  </div>
+
+                  {/* Stat pills */}
+                  <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
+                    {[
+                      { label:"Forme (CTL)", val:latest.ctl.toFixed(0), color:"var(--yellow)" },
+                      { label:"Fatigue (ATL)", val:latest.atl.toFixed(0), color:"#FF6B35" },
+                      { label:"Fraîcheur (TSB)", val:(latest.tsb > 0 ? "+" : "") + latest.tsb.toFixed(0), color:tsbColor },
+                    ].map(s => (
+                      <div key={s.label} style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px" }}>
+                        <div style={{ fontSize:9, color:"#666" }}>{s.label}</div>
+                        <div style={{ fontSize:15, fontWeight:700, color:s.color }}>{s.val}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W }}>
+                    <defs>
+                      <linearGradient id="ctlGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--yellow)" stopOpacity="0.3"/>
+                        <stop offset="100%" stopColor="var(--yellow)" stopOpacity="0"/>
+                      </linearGradient>
+                    </defs>
+
+                    {/* Future zone */}
+                    <rect x={xS(83)} y={PAD.t} width={xS(N-1)-xS(83)} height={cH} fill="#FFFFFF08"/>
+                    <line x1={xS(83)} x2={xS(83)} y1={PAD.t} y2={PAD.t+cH} stroke="#555" strokeWidth="1" strokeDasharray="4,3"/>
+                    <text x={xS(83)+3} y={PAD.t+10} fontSize="8" fill="#555">Auj.</text>
+
+                    {/* Zero line */}
+                    <line x1={PAD.l} x2={W-PAD.r} y1={y0} y2={y0} stroke="#333" strokeWidth="1"/>
+
+                    {/* Grid lines */}
+                    {[-20, 0, 20, 40].map(v => (
+                      <line key={v} x1={PAD.l} x2={W-PAD.r} y1={yS(v)} y2={yS(v)} stroke="#1C1C1E" strokeWidth="0.5"/>
+                    ))}
+
+                    {/* TSB positive fill (green) */}
+                    <path d={`M${xS(0)},${y0} ` + tsbPosFill.map(p => `L${p.x},${p.y}`).join(" ") + ` L${xS(N-1)},${y0} Z`}
+                      fill="#30D15830"/>
+                    {/* TSB negative fill (red) */}
+                    <path d={`M${xS(0)},${y0} ` + tsbNegFill.map(p => `L${p.x},${p.y}`).join(" ") + ` L${xS(N-1)},${y0} Z`}
+                      fill="#FF453A30"/>
+
+                    {/* CTL fill */}
+                    <path d={ctlPath + ` L${xS(N-1)},${PAD.t+cH} L${PAD.l},${PAD.t+cH} Z`} fill="url(#ctlGrad)"/>
+
+                    {/* Lines */}
+                    <path d={ctlPath} fill="none" stroke="var(--yellow)" strokeWidth="2" strokeLinecap="round"/>
+                    <path d={atlPath} fill="none" stroke="#FF6B35" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d={tsbPath} fill="none" stroke="#30D158" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4,3"/>
+
+                    {/* Today dots */}
+                    <circle cx={xS(83)} cy={yS(latest.ctl)} r="3.5" fill="var(--yellow)"/>
+                    <circle cx={xS(83)} cy={yS(latest.atl)} r="3" fill="#FF6B35"/>
+                    <circle cx={xS(83)} cy={yS(latest.tsb)} r="3" fill="#30D158"/>
+
+                    {/* Y labels */}
+                    {[-20, 0, 20, 40].map(v => (
+                      <text key={v} x={PAD.l-4} y={yS(v)+3} textAnchor="end" fontSize="8" fill="#666">{v}</text>
+                    ))}
+
+                    {/* X labels */}
+                    {weekLabels.map(wl => (
+                      <text key={wl.i} x={xS(wl.i)} y={H-6} textAnchor="middle" fontSize="8" fill="#555">{wl.label}</text>
+                    ))}
+
+                    {/* Legend */}
+                    <line x1={PAD.l} x2={PAD.l+16} y1={PAD.t+5} y2={PAD.t+5} stroke="var(--yellow)" strokeWidth="2"/>
+                    <text x={PAD.l+20} y={PAD.t+9} fontSize="8" fill="#888">CTL</text>
+                    <line x1={PAD.l+40} x2={PAD.l+56} y1={PAD.t+5} y2={PAD.t+5} stroke="#FF6B35" strokeWidth="1.5"/>
+                    <text x={PAD.l+60} y={PAD.t+9} fontSize="8" fill="#888">ATL</text>
+                    <line x1={PAD.l+78} x2={PAD.l+94} y1={PAD.t+5} y2={PAD.t+5} stroke="#30D158" strokeWidth="1.5" strokeDasharray="3,3"/>
+                    <text x={PAD.l+98} y={PAD.t+9} fontSize="8" fill="#888">TSB</text>
+                  </svg>
+
+                  <div style={{ fontSize:10, color:"#555", marginTop:8, lineHeight:1.5 }}>
+                    <span style={{ color:"var(--yellow)" }}>CTL</span> Charge chronique (forme) · <span style={{ color:"#FF6B35" }}>ATL</span> Charge aiguë (fatigue) · <span style={{ color:"#30D158" }}>TSB</span> &gt;5 = forme optimale
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── VMA PROGRESSION CHART ── */}
             {(() => {
               const vmaKey = `fitrace_vma_history_${profile.name}`;
