@@ -5681,6 +5681,103 @@ JSON:
               );
             })()}
 
+            {/* ── RACE COUNTDOWN + PHASE ENTRAÎNEMENT ── */}
+            {(() => {
+              if (!profile.raceDate) return null;
+              const now = new Date();
+              const race = new Date(profile.raceDate);
+              const daysToRace = Math.ceil((race - now) / 86400000);
+              if (daysToRace < 0) return null;
+
+              // Phases d'entraînement HYROX
+              const totalWeeks = Math.ceil(daysToRace / 7);
+              const phases = [
+                { name: "Fondation",    icon: "🏗️", weeks: Math.max(1, Math.floor(totalWeeks * 0.30)), color: "#007AFF", tip: "Base aérobie · Zone 2 + Force générale" },
+                { name: "Construction", icon: "⚡", weeks: Math.max(1, Math.floor(totalWeeks * 0.35)), color: "#C9A840", tip: "Volume ↑ · Stations HYROX + Endurance spécifique" },
+                { name: "Spécifique",   icon: "🎯", weeks: Math.max(1, Math.floor(totalWeeks * 0.25)), color: "#FF9F0A", tip: "Intensité race-pace · Simulations complètes" },
+                { name: "Affûtage",     icon: "🏁", weeks: Math.max(1, Math.ceil(totalWeeks * 0.10)), color: "#30D158", tip: "Volume ↓ 40% · Activation · Visualisation" },
+              ];
+
+              // Trouver la phase courante
+              let weeksElapsed = Math.floor((totalWeeks - Math.ceil(daysToRace / 7)));
+              // Since we're counting down, weeks elapsed = total_planned - remaining
+              // Better: determine phase by weeks remaining
+              const weeksLeft = Math.ceil(daysToRace / 7);
+              let phaseIdx = 0;
+              const phaseLast = phases[3].weeks;
+              const phaseSpec = phases[2].weeks + phaseLast;
+              const phaseConst = phases[1].weeks + phaseSpec;
+              if (weeksLeft <= phaseLast) phaseIdx = 3;
+              else if (weeksLeft <= phaseSpec) phaseIdx = 2;
+              else if (weeksLeft <= phaseConst) phaseIdx = 1;
+              else phaseIdx = 0;
+
+              const currentPhase = phases[phaseIdx];
+
+              // Sessions cette semaine
+              const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+              const sessionsCW = (profile.sessions||[]).filter(s => new Date(s.date) >= weekAgo).length;
+              const targetCW = profile.seancesParSemaine || 4;
+              const sessionsPct = Math.min(100, Math.round((sessionsCW / targetCW) * 100));
+
+              // Urgence couleur
+              const urgColor = daysToRace <= 7 ? "#FF453A" : daysToRace <= 21 ? "#FF9F0A" : daysToRace <= 42 ? "#C9A840" : "#8E8E93";
+
+              return (
+                <div style={{ marginBottom: 14, background: "linear-gradient(135deg, #0a0a0a 0%, #111 100%)", border: `1px solid ${currentPhase.color}30`, borderRadius: 20, padding: "16px 16px 14px", position: "relative", overflow: "hidden" }}>
+                  {/* Glow fond */}
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${currentPhase.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: `${currentPhase.color}18`, border: `1px solid ${currentPhase.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{currentPhase.icon}</div>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em" }}>Phase en cours</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: currentPhase.color }}>{currentPhase.name}</div>
+                      </div>
+                    </div>
+                    {/* Countdown */}
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 32, color: urgColor, lineHeight: 1, letterSpacing: -1 }}>J-{daysToRace}</div>
+                      <div style={{ fontSize: 8, color: "#636366", textTransform: "uppercase", letterSpacing: "0.1em" }}>avant la course</div>
+                    </div>
+                  </div>
+
+                  {/* Phase timeline pills */}
+                  <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+                    {phases.map((ph, i) => (
+                      <div key={ph.name} style={{ flex: ph.weeks, height: 4, borderRadius: 99, background: i < phaseIdx ? `${ph.color}80` : i === phaseIdx ? ph.color : "rgba(255,255,255,0.08)", transition: "all 0.3s", boxShadow: i === phaseIdx ? `0 0 8px ${ph.color}60` : "none" }} />
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+                    {phases.map((ph, i) => (
+                      <div key={ph.name} style={{ flex: ph.weeks, fontSize: 8, color: i === phaseIdx ? ph.color : "#4A4A4E", fontWeight: i === phaseIdx ? 700 : 400, textAlign: i === 0 ? "left" : i === phases.length-1 ? "right" : "center" }}>{ph.name}</div>
+                    ))}
+                  </div>
+
+                  {/* Conseil phase + sessions */}
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <div style={{ flex: 1, fontSize: 11, color: "#8E8E93", lineHeight: 1.5, fontStyle: "italic" }}>{currentPhase.tip}</div>
+                    <div style={{ flexShrink: 0, textAlign: "center" }}>
+                      <div style={{ position: "relative", width: 44, height: 44, margin: "0 auto 2px" }}>
+                        <svg width="44" height="44" viewBox="0 0 44 44" style={{ transform: "rotate(-90deg)" }}>
+                          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4"/>
+                          <circle cx="22" cy="22" r="18" fill="none" stroke={currentPhase.color} strokeWidth="4"
+                            strokeDasharray={`${(sessionsPct/100)*113} 113`} strokeLinecap="round"
+                            style={{ transition: "stroke-dasharray 0.6s ease" }}/>
+                        </svg>
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span className="bebas" style={{ fontSize: 13, color: currentPhase.color, lineHeight: 1 }}>{sessionsCW}/{targetCW}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 8, color: "#636366" }}>séances</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── SOMMEIL — formulaire unique ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
