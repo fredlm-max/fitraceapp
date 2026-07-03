@@ -27161,6 +27161,116 @@ JSON: {
             );
           })()}
 
+          {/* ── MACRO HISTORY CHART ── */}
+          {(() => {
+            const poids = profile.poids || 70;
+            const tgtP = Math.round(poids*1.8), tgtC = Math.round(poids*4), tgtF = Math.round(poids*1);
+            const tgtKcal = tgtP*4 + tgtC*4 + tgtF*9;
+
+            // Collect last 14 days of macro data
+            const days14 = Array.from({length:14},(_,i)=>{
+              const dt = new Date(Date.now()-(13-i)*86400000);
+              const dateStr = dt.toISOString().slice(0,10);
+              const key = `fitrace_macros_${profile.name}_${dateStr}`;
+              try {
+                const saved = JSON.parse(localStorage.getItem(key));
+                if (saved) return { date:dateStr, day:dt.getDate(), p:saved.p||0, c:saved.c||0, f:saved.f||0, kcal:saved.kcal||0 };
+              } catch {}
+              return { date:dateStr, day:dt.getDate(), p:0, c:0, f:0, kcal:0 };
+            });
+
+            const daysWithData = days14.filter(d=>d.kcal>0);
+            if (daysWithData.length < 2) return null;
+
+            const avgP = Math.round(daysWithData.reduce((s,d)=>s+d.p,0)/daysWithData.length);
+            const avgC = Math.round(daysWithData.reduce((s,d)=>s+d.c,0)/daysWithData.length);
+            const avgF = Math.round(daysWithData.reduce((s,d)=>s+d.f,0)/daysWithData.length);
+            const avgKcal = Math.round(daysWithData.reduce((s,d)=>s+d.kcal,0)/daysWithData.length);
+
+            const adherence = Math.min(100, Math.round(
+              (Math.min(avgP/tgtP,1)*0.4 + Math.min(avgC/tgtC,1)*0.35 + Math.min(avgF/tgtF,1)*0.25)*100
+            ));
+
+            const maxKcal = Math.max(...days14.map(d=>d.kcal), tgtKcal) || 1;
+
+            const W=300, H=80, PAD={t:4,b:18,l:4,r:4};
+            const chartW=W-PAD.l-PAD.r;
+            const chartH=H-PAD.t-PAD.b;
+            const barW=Math.floor(chartW/14)-2;
+
+            const adherenceColor = adherence>=80?"#30D158":adherence>=60?"#FF9F0A":"#FF453A";
+
+            return (
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+                  <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Historique Macros</div>
+                  <div style={{ fontSize:10,fontWeight:800,color:adherenceColor }}>Adhérence {adherence}%</div>
+                </div>
+
+                {/* Averages */}
+                <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                  {[
+                    { label:"Moy. kcal", val:avgKcal, tgt:tgtKcal, color:"var(--yellow)" },
+                    { label:"Prot.",     val:`${avgP}g`, tgt:`${tgtP}g`, color:"#BF5AF2" },
+                    { label:"Gluc.",     val:`${avgC}g`, tgt:`${tgtC}g`, color:"#FF9F0A" },
+                    { label:"Lip.",      val:`${avgF}g`, tgt:`${tgtF}g`, color:"#FF453A" },
+                  ].map(m=>(
+                    <div key={m.label} style={{ flex:1,background:"var(--bg3)",borderRadius:8,padding:"6px 4px",textAlign:"center" }}>
+                      <div style={{ fontSize:10,fontWeight:900,color:m.color }}>{m.val}</div>
+                      <div style={{ fontSize:7,color:"#636366" }}>{m.label}</div>
+                      <div style={{ fontSize:7,color:"#3A3A3C" }}>/{m.tgt}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Stacked bar chart */}
+                <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible" }}>
+                  {/* Target line */}
+                  <line x1={PAD.l} x2={W-PAD.r}
+                    y1={PAD.t + chartH - (tgtKcal/maxKcal)*chartH}
+                    y2={PAD.t + chartH - (tgtKcal/maxKcal)*chartH}
+                    stroke="var(--yellow)" strokeWidth={0.8} strokeDasharray="3 2" opacity={0.6}/>
+
+                  {days14.map((d,i)=>{
+                    if (!d.kcal) return (
+                      <rect key={i} x={PAD.l+i*(chartW/14)+1} y={PAD.t+chartH-3} width={barW} height={3}
+                        rx={1} fill="#2C2C2E"/>
+                    );
+                    const totalH = Math.min(chartH, Math.round((d.kcal/maxKcal)*chartH));
+                    const pH = Math.round((d.p*4/d.kcal)*totalH);
+                    const cH = Math.round((d.c*4/d.kcal)*totalH);
+                    const fH = totalH - pH - cH;
+                    const x = PAD.l + i*(chartW/14)+1;
+                    const y0 = PAD.t + chartH;
+                    return (
+                      <g key={i}>
+                        <rect x={x} y={y0-pH} width={barW} height={pH} fill="#BF5AF2" opacity={0.8}/>
+                        <rect x={x} y={y0-pH-cH} width={barW} height={cH} fill="#FF9F0A" opacity={0.8}/>
+                        <rect x={x} y={y0-pH-cH-fH} width={barW} height={fH} fill="#FF453A" opacity={0.8}/>
+                        <rect x={x} y={y0-pH-cH-fH} width={barW} height={totalH} rx={2} fill="transparent"/>
+                        {i%2===0 && <text x={x+barW/2} y={H-2} textAnchor="middle" fill="#636366" fontSize={6}>{d.day}</text>}
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                {/* Legend */}
+                <div style={{ display:"flex",gap:10,marginTop:6,justifyContent:"center" }}>
+                  {[["#BF5AF2","Protéines"],["#FF9F0A","Glucides"],["#FF453A","Lipides"]].map(([c,l])=>(
+                    <div key={l} style={{ display:"flex",alignItems:"center",gap:3,fontSize:8,color:"#8E8E93" }}>
+                      <div style={{ width:8,height:8,borderRadius:2,background:c }}/>
+                      {l}
+                    </div>
+                  ))}
+                  <div style={{ display:"flex",alignItems:"center",gap:3,fontSize:8,color:"#8E8E93" }}>
+                    <div style={{ width:12,height:1,background:"var(--yellow)",opacity:0.8 }}/>
+                    Objectif
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── DAILY MEAL PLANNER ── */}
           {(() => {
             const todayStr = new Date().toISOString().slice(0,10);
