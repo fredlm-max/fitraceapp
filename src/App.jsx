@@ -6720,6 +6720,95 @@ JSON:
               );
             })()}
 
+            {/* ── BILAN SEMAINE ── */}
+            {(()=>{
+              const sessions = profile.sessions || [];
+              if (sessions.length < 2) return null;
+              const now2 = new Date();
+              const dayOfWeek = now2.getDay() === 0 ? 6 : now2.getDay() - 1; // 0=lun
+              const startThisWeek = new Date(now2); startThisWeek.setDate(now2.getDate() - dayOfWeek); startThisWeek.setHours(0,0,0,0);
+              const startLastWeek = new Date(startThisWeek); startLastWeek.setDate(startThisWeek.getDate() - 7);
+              const endLastWeek = new Date(startThisWeek);
+
+              const thisWeekSessions = sessions.filter(s => s.date && new Date(s.date) >= startThisWeek);
+              const lastWeekSessions = sessions.filter(s => s.date && new Date(s.date) >= startLastWeek && new Date(s.date) < endLastWeek);
+              if (thisWeekSessions.length === 0 && lastWeekSessions.length === 0) return null;
+
+              const calcStats = (arr) => ({
+                count: arr.length,
+                vol: arr.reduce((a,s) => a + (s.duree||s.duration||0), 0),
+                rpe: arr.length ? Math.round(arr.reduce((a,s) => a + (s.rpe||s.difficulty||5), 0) / arr.length * 10) / 10 : 0,
+                load: arr.reduce((a,s) => a + ((s.duree||s.duration||0) * (s.rpe||s.difficulty||5)), 0),
+              });
+              const cur = calcStats(thisWeekSessions);
+              const prv = calcStats(lastWeekSessions);
+
+              const delta = (c, p) => p === 0 ? null : Math.round((c - p) / p * 100);
+              const dCount = delta(cur.count, prv.count);
+              const dVol = delta(cur.vol, prv.vol);
+              const dLoad = delta(cur.load, prv.load);
+
+              const Arrow = ({val}) => {
+                if (val === null) return <span style={{color:"#636366",fontSize:10}}>—</span>;
+                const up = val >= 0;
+                return <span style={{color:up?"#30D158":"#FF453A",fontSize:10,fontWeight:700}}>{up?"↑":"↓"}{Math.abs(val)}%</span>;
+              };
+
+              const dayLabels = ["L","M","M","J","V","S","D"];
+              const dayBars = dayLabels.map((d, i) => {
+                const dayStart = new Date(startThisWeek); dayStart.setDate(startThisWeek.getDate() + i);
+                const dayEnd = new Date(dayStart); dayEnd.setDate(dayStart.getDate() + 1);
+                const daySess = thisWeekSessions.filter(s => { const sd = new Date(s.date); return sd >= dayStart && sd < dayEnd; });
+                const load = daySess.reduce((a,s) => a + ((s.duree||0)*(s.rpe||5)), 0);
+                const isToday = i === dayOfWeek;
+                return { label: d, load, isToday, hasSess: daySess.length > 0 };
+              });
+              const maxLoad = Math.max(...dayBars.map(d=>d.load), 1);
+
+              return (
+                <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>📊 Cette semaine</div>
+                    {prv.count > 0 && <div style={{ fontSize:9, color:"#636366" }}>vs semaine passée</div>}
+                  </div>
+
+                  {/* Barres par jour */}
+                  <div style={{ display:"flex", gap:4, alignItems:"flex-end", height:48, marginBottom:10 }}>
+                    {dayBars.map((d,i) => (
+                      <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                        <div style={{ width:"100%", position:"relative", height:40, display:"flex", alignItems:"flex-end" }}>
+                          <div style={{
+                            width:"100%",
+                            height: d.load > 0 ? `${Math.max(4, Math.round(d.load / maxLoad * 38))}px` : "3px",
+                            background: d.isToday ? "var(--yellow)" : d.hasSess ? "rgba(0,122,255,0.5)" : "rgba(255,255,255,0.06)",
+                            borderRadius:"3px 3px 0 0",
+                            transition:"height 0.4s ease",
+                          }}/>
+                          {d.isToday && <div style={{ position:"absolute", top:-6, left:"50%", transform:"translateX(-50%)", width:4, height:4, borderRadius:"50%", background:"var(--yellow)" }}/>}
+                        </div>
+                        <div style={{ fontSize:9, color: d.isToday ? "var(--yellow)" : "#636366", fontWeight: d.isToday ? 800 : 400 }}>{d.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Métriques */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6 }}>
+                    {[
+                      { label:"Séances", cur:cur.count, arrow:<Arrow val={dCount}/>, unit:"" },
+                      { label:"Volume", cur:cur.vol ? `${Math.round(cur.vol/60)}h${cur.vol%60>0?String(cur.vol%60).padStart(2,"0"):""}` : "—", arrow:<Arrow val={dVol}/>, unit:"" },
+                      { label:"Charge", cur:cur.load ? Math.round(cur.load) : "—", arrow:<Arrow val={dLoad}/>, unit:"" },
+                    ].map(m=>(
+                      <div key={m.label} style={{ background:"rgba(255,255,255,0.03)", borderRadius:10, padding:"8px 6px", textAlign:"center" }}>
+                        <div style={{ fontSize:14, fontWeight:900, color:"var(--white)", lineHeight:1 }}>{m.cur}{m.unit}</div>
+                        <div style={{ fontSize:9, color:"#636366", marginTop:2 }}>{m.label}</div>
+                        <div style={{ marginTop:3 }}>{m.arrow}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ENCART NUTRITION ── */}
             {(()=>{
               const KEY_QUICK = `fitrace_nutri_quick_${profile.name}`;
