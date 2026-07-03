@@ -23741,6 +23741,265 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── INTERVAL TRAINING BUILDER ── */}
+      {(() => {
+        const KEY = `fitrace_intervals_${profile.name}`;
+        const PRESETS_KEY = `fitrace_interval_presets_${profile.name}`;
+
+        const [plans, setPlans] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+        });
+        const [presets, setPresets] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(PRESETS_KEY) || "[]"); } catch { return []; }
+        });
+        const [building, setBuilding] = React.useState(false);
+        const [selectedPlan, setSelectedPlan] = React.useState(null);
+        const [planName, setPlanName] = React.useState("");
+        const [steps, setSteps] = React.useState([
+          { type:"warmup", dur:10, label:"Échauffement", rpe:3, color:"#30D158" },
+          { type:"interval", dur:4, label:"Effort", rpe:9, color:"#FF453A" },
+          { type:"rest", dur:2, label:"Récupération", rpe:3, color:"#64D2FF" },
+          { type:"interval", dur:4, label:"Effort", rpe:9, color:"#FF453A" },
+          { type:"rest", dur:2, label:"Récupération", rpe:3, color:"#64D2FF" },
+          { type:"cooldown", dur:8, label:"Récupération finale", rpe:2, color:"#30D158" },
+        ]);
+
+        const STEP_TYPES = [
+          { type:"warmup", label:"Échauffement", color:"#30D158", defaultDur:10, defaultRpe:3 },
+          { type:"interval", label:"Effort", color:"#FF453A", defaultDur:4, defaultRpe:9 },
+          { type:"rest", label:"Récupération", color:"#64D2FF", defaultDur:2, defaultRpe:3 },
+          { type:"tempo", label:"Tempo", color:"#FF9F0A", defaultDur:5, defaultRpe:7 },
+          { type:"cooldown", label:"Cooldown", color:"#BF5AF2", defaultDur:8, defaultRpe:2 },
+        ];
+
+        const QUICK_PRESETS = [
+          {
+            name:"5×4' VO₂max", emoji:"⚡",
+            steps:[
+              {type:"warmup",dur:15,label:"Échauffement",rpe:3,color:"#30D158"},
+              {type:"interval",dur:4,label:"VO₂max Z5",rpe:9,color:"#FF453A"},
+              {type:"rest",dur:3,label:"Récup active",rpe:3,color:"#64D2FF"},
+              {type:"interval",dur:4,label:"VO₂max Z5",rpe:9,color:"#FF453A"},
+              {type:"rest",dur:3,label:"Récup active",rpe:3,color:"#64D2FF"},
+              {type:"interval",dur:4,label:"VO₂max Z5",rpe:9,color:"#FF453A"},
+              {type:"rest",dur:3,label:"Récup active",rpe:3,color:"#64D2FF"},
+              {type:"interval",dur:4,label:"VO₂max Z5",rpe:9,color:"#FF453A"},
+              {type:"rest",dur:3,label:"Récup active",rpe:3,color:"#64D2FF"},
+              {type:"interval",dur:4,label:"VO₂max Z5",rpe:9,color:"#FF453A"},
+              {type:"cooldown",dur:10,label:"Cooldown",rpe:2,color:"#BF5AF2"},
+            ]
+          },
+          {
+            name:"30/30 Fartlek", emoji:"🔀",
+            steps:[
+              {type:"warmup",dur:10,label:"Warm-up",rpe:3,color:"#30D158"},
+              ...Array.from({length:8}, (_,i) => i%2===0
+                ? {type:"interval",dur:0.5,label:"Sprint 30s",rpe:10,color:"#FF453A"}
+                : {type:"rest",dur:0.5,label:"Récup 30s",rpe:3,color:"#64D2FF"}
+              ),
+              {type:"cooldown",dur:8,label:"Cooldown",rpe:2,color:"#BF5AF2"},
+            ]
+          },
+          {
+            name:"HYROX Prep", emoji:"🏋️",
+            steps:[
+              {type:"warmup",dur:10,label:"Mobilité",rpe:2,color:"#30D158"},
+              {type:"interval",dur:5,label:"Run 1km soutenu",rpe:8,color:"#FF453A"},
+              {type:"tempo",dur:3,label:"SkiErg 500m",rpe:7,color:"#FF9F0A"},
+              {type:"rest",dur:2,label:"Transition",rpe:2,color:"#64D2FF"},
+              {type:"interval",dur:4,label:"Run 1km",rpe:8,color:"#FF453A"},
+              {type:"tempo",dur:3,label:"Sled Push",rpe:8,color:"#FF9F0A"},
+              {type:"rest",dur:2,label:"Transition",rpe:2,color:"#64D2FF"},
+              {type:"cooldown",dur:8,label:"Étirements",rpe:1,color:"#BF5AF2"},
+            ]
+          },
+        ];
+
+        const totalDur = steps.reduce((s,x) => s+(x.dur||0), 0);
+        const avgRpe = steps.length ? (steps.reduce((s,x) => s+(x.rpe||5), 0) / steps.length).toFixed(1) : 0;
+
+        const addStep = (t) => {
+          const def = STEP_TYPES.find(x => x.type === t) || STEP_TYPES[1];
+          setSteps(prev => [...prev, { type:def.type, dur:def.defaultDur, label:def.label, rpe:def.defaultRpe, color:def.color }]);
+        };
+
+        const removeStep = (i) => setSteps(prev => prev.filter((_,j) => j!==i));
+        const updateStep = (i, field, val) => setSteps(prev => prev.map((s,j) => j===i ? {...s, [field]:val} : s));
+
+        const savePlan = () => {
+          if (!planName.trim() || steps.length < 2) return;
+          const plan = { id: Date.now(), name: planName.trim(), steps: [...steps], createdAt: new Date().toISOString().slice(0,10) };
+          const next = [plan, ...plans].slice(0, 20);
+          setPlans(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setBuilding(false);
+          setPlanName("");
+          setSelectedPlan(plan.id);
+        };
+
+        const loadPreset = (preset) => {
+          setSteps(preset.steps.map(s => ({...s})));
+          setPlanName(preset.name);
+          setBuilding(true);
+        };
+
+        const deletePlan = (id) => {
+          const next = plans.filter(p => p.id !== id);
+          setPlans(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          if (selectedPlan === id) setSelectedPlan(null);
+        };
+
+        const viewPlan = plans.find(p => p.id === selectedPlan);
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#555" }}>GARMIN / TRAININGPEAKS</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>⏱ Interval Builder</div>
+              </div>
+              {!building && (
+                <button onClick={() => { setBuilding(true); setSelectedPlan(null); }}
+                  style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"8px 16px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  + Créer
+                </button>
+              )}
+            </div>
+
+            {!building ? (
+              <>
+                {/* Quick presets */}
+                <div style={{ fontSize:11, color:"#555", marginBottom:8 }}>PROGRAMMES RAPIDES</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                  {QUICK_PRESETS.map((p,i) => {
+                    const dur = p.steps.reduce((s,x) => s+(x.dur||0), 0);
+                    return (
+                      <button key={i} onClick={() => loadPreset(p)}
+                        style={{ background:"var(--bg3)", border:"1px solid #333", borderRadius:12, padding:"10px 14px", color:"#fff", textAlign:"left", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <span style={{ fontSize:16, marginRight:8 }}>{p.emoji}</span>
+                          <span style={{ fontSize:13, fontWeight:700 }}>{p.name}</span>
+                        </div>
+                        <span style={{ fontSize:11, color:"#666" }}>{Math.round(dur)}min · {p.steps.length} étapes</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Saved plans */}
+                {plans.length > 0 && (
+                  <>
+                    <div style={{ fontSize:11, color:"#555", marginBottom:8 }}>MES PLANS</div>
+                    {plans.map(plan => {
+                      const dur = plan.steps.reduce((s,x) => s+(x.dur||0), 0);
+                      const isSelected = selectedPlan === plan.id;
+                      return (
+                        <div key={plan.id}>
+                          <div onClick={() => setSelectedPlan(isSelected ? null : plan.id)}
+                            style={{ background: isSelected ? "rgba(201,168,64,0.1)" : "var(--bg3)", border:`1px solid ${isSelected ? "var(--yellow)" : "#333"}`, borderRadius:12, padding:"10px 14px", marginBottom:6, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{plan.name}</div>
+                              <div style={{ fontSize:10, color:"#666" }}>{plan.createdAt} · {Math.round(dur)}min · {plan.steps.length} étapes</div>
+                            </div>
+                            <div style={{ display:"flex", gap:6 }}>
+                              <button onClick={e => { e.stopPropagation(); loadPreset(plan); }} style={{ background:"var(--bg2)", border:"none", borderRadius:8, padding:"4px 8px", color:"#888", fontSize:11, cursor:"pointer" }}>✏️</button>
+                              <button onClick={e => { e.stopPropagation(); deletePlan(plan.id); }} style={{ background:"var(--bg2)", border:"none", borderRadius:8, padding:"4px 8px", color:"#FF453A", fontSize:11, cursor:"pointer" }}>✕</button>
+                            </div>
+                          </div>
+                          {isSelected && plan && (
+                            <div style={{ marginBottom:10 }}>
+                              {/* Visual timeline */}
+                              <div style={{ display:"flex", height:18, borderRadius:8, overflow:"hidden", marginBottom:8 }}>
+                                {plan.steps.map((s,i) => (
+                                  <div key={i} style={{ flex:s.dur, background:s.color, opacity:0.85, minWidth:2 }}
+                                    title={`${s.label}: ${s.dur}min RPE${s.rpe}`}/>
+                                ))}
+                              </div>
+                              <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                                {plan.steps.map((s,i) => (
+                                  <div key={i} style={{ background:`${s.color}22`, border:`1px solid ${s.color}44`, borderRadius:8, padding:"3px 8px", fontSize:10, color:s.color }}>
+                                    {s.label} {s.dur < 1 ? `${Math.round(s.dur*60)}s` : `${s.dur}'`} R{s.rpe}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Builder */}
+                <div style={{ marginBottom:12 }}>
+                  <input value={planName} onChange={e => setPlanName(e.target.value)} placeholder="Nom du plan (ex: 10×400m)"
+                    style={{ width:"100%", background:"var(--bg3)", border:"1px solid #444", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:14, fontWeight:600, boxSizing:"border-box" }}/>
+                </div>
+
+                {/* Visual preview */}
+                <div style={{ display:"flex", height:14, borderRadius:6, overflow:"hidden", marginBottom:12 }}>
+                  {steps.map((s,i) => (
+                    <div key={i} style={{ flex:Math.max(s.dur||1, 0.5), background:s.color, opacity:0.8, minWidth:2 }}/>
+                  ))}
+                </div>
+
+                <div style={{ display:"flex", gap:16, marginBottom:12, fontSize:11, color:"#666" }}>
+                  <span>⏱ Total: <strong style={{ color:"#fff" }}>{totalDur < 1 ? `${Math.round(totalDur*60)}s` : `${totalDur}min`}</strong></span>
+                  <span>📊 RPE moy: <strong style={{ color:"var(--yellow)" }}>{avgRpe}</strong></span>
+                  <span>📋 {steps.length} étapes</span>
+                </div>
+
+                {/* Steps list */}
+                <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12, maxHeight:280, overflowY:"auto" }}>
+                  {steps.map((s,i) => (
+                    <div key={i} style={{ background:"var(--bg3)", borderLeft:`3px solid ${s.color}`, borderRadius:"0 10px 10px 0", padding:"8px 12px", display:"flex", gap:8, alignItems:"center" }}>
+                      <div style={{ flex:1 }}>
+                        <input value={s.label} onChange={e => updateStep(i,"label",e.target.value)}
+                          style={{ background:"transparent", border:"none", color:"#fff", fontSize:12, fontWeight:700, width:"100%", marginBottom:4 }}/>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <label style={{ fontSize:10, color:"#666" }}>Dur(min)
+                            <input type="number" min="0.5" max="120" step="0.5" value={s.dur} onChange={e => updateStep(i,"dur",parseFloat(e.target.value)||1)}
+                              style={{ width:45, marginLeft:4, background:"var(--bg2)", border:"none", borderRadius:6, padding:"2px 6px", color:"#fff", fontSize:11 }}/>
+                          </label>
+                          <label style={{ fontSize:10, color:"#666" }}>RPE
+                            <input type="number" min="1" max="10" value={s.rpe} onChange={e => updateStep(i,"rpe",parseInt(e.target.value)||5)}
+                              style={{ width:36, marginLeft:4, background:"var(--bg2)", border:"none", borderRadius:6, padding:"2px 6px", color:"#fff", fontSize:11 }}/>
+                          </label>
+                        </div>
+                      </div>
+                      <button onClick={() => removeStep(i)}
+                        style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:16, cursor:"pointer", padding:"0 4px" }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add step buttons */}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                  {STEP_TYPES.map(t => (
+                    <button key={t.type} onClick={() => addStep(t.type)}
+                      style={{ background:`${t.color}22`, border:`1px solid ${t.color}44`, borderRadius:8, padding:"5px 10px", color:t.color, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                      + {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={() => setBuilding(false)}
+                    style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:12, padding:"12px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                  <button onClick={savePlan} disabled={!planName.trim() || steps.length < 2}
+                    style={{ flex:2, background: planName.trim() && steps.length>=2 ? "var(--yellow)" : "#333", border:"none", borderRadius:12, padding:"12px 0", color: planName.trim() && steps.length>=2 ? "#000" : "#666", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                    Sauvegarder le plan
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── WORKOUT TEMPLATE LIBRARY ── */}
       {(() => {
         const [selTpl, setSelTpl] = React.useState(null);
