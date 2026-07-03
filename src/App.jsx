@@ -20556,8 +20556,9 @@ const sessions = profile.sessions || [];
           </div>
         )}
 
-        {/* FORME TAB */}
-        {tab === "forme" && (()=>{
+        {/* FORME TAB — toujours rendu pour respecter les Rules of Hooks */}
+        <div style={{ display: tab === "forme" ? "block" : "none" }}>
+        {(()=>{
           const recovery = calcRecoveryScore(dailyData, profile);
           const recov = recoveryLabel(recovery);
           const hrv = parseInt(dailyData.hrv)||0;
@@ -21515,6 +21516,7 @@ const sessions = profile.sessions || [];
             </div>
           );
         })()}
+        </div>
 
         {/* PROFIL */}
         {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} appTheme={appTheme} setAppTheme={setAppTheme} />}
