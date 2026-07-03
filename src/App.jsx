@@ -14447,6 +14447,170 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING LOAD FORECASTER ── */}
+            {(() => {
+              const PLAN_KEY = `fitrace_planned_${profile.name}`;
+              const CFG_KEY = `fitrace_forecast_cfg_${profile.name}`;
+
+              const [cfg, setCfg] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); } catch { return {}; }
+              });
+              const [horizon, setHorizon] = React.useState(28);
+
+              const sessions = profile.sessions || [];
+              const plannedSessions = (() => { try { return JSON.parse(localStorage.getItem(PLAN_KEY) || "{}"); } catch { return {}; }})();
+              const today = new Date().toISOString().slice(0,10);
+
+              const kATL = 1 - Math.exp(-1/7);
+              const kCTL = 1 - Math.exp(-1/42);
+
+              // Bootstrap from 84 days of history
+              let atl = 0, ctl = 0;
+              const histStart = new Date(today); histStart.setDate(histStart.getDate()-84);
+              for (let i=0; i<=84; i++) {
+                const d = new Date(histStart); d.setDate(d.getDate()+i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = sessions.filter(s=>s.date===ds).reduce((s,x)=>s+(x.duration&&x.rpe?x.duration*(x.rpe/10):0),0);
+                atl = atl + kATL*(trimp-atl);
+                ctl = ctl + kCTL*(trimp-ctl);
+              }
+
+              // Planned TRIMP from calendar planner
+              const getPlannedTrimp = (ds) => {
+                const ps = plannedSessions[ds];
+                if (!ps) return cfg.defaultLoad || 0;
+                const arr = Array.isArray(ps) ? ps : [ps];
+                return arr.reduce((s,p) => s + (p.duration && p.rpe ? p.duration*(p.rpe/10) : (p.duration || 0)*0.5), 0);
+              };
+
+              // Forecast
+              const forecast = [];
+              let fAtl = atl, fCtl = ctl;
+              for (let i=1; i<=horizon; i++) {
+                const d = new Date(today); d.setDate(d.getDate()+i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = getPlannedTrimp(ds);
+                fAtl = fAtl + kATL*(trimp-fAtl);
+                fCtl = fCtl + kCTL*(trimp-fCtl);
+                const tsb = fCtl - fAtl;
+                forecast.push({ date:ds, day:i, atl:Math.round(fAtl*10)/10, ctl:Math.round(fCtl*10)/10, tsb:Math.round(tsb*10)/10, trimp });
+              }
+
+              // Find optimal peak (highest TSB while CTL still growing or stable)
+              const peakDay = forecast.reduce((best, f, i) => {
+                if (f.tsb > (forecast[best]?.tsb||0) && f.tsb > -5) return i;
+                return best;
+              }, 0);
+
+              // Chart
+              const W = 300, H = 90;
+              const allVals = [...forecast.map(f=>f.ctl), ...forecast.map(f=>f.atl), ...forecast.map(f=>f.tsb)];
+              const minV = Math.min(...allVals)-5, maxV = Math.max(...allVals)+5;
+              const toX = i => (i/(horizon-1))*W;
+              const toY = v => H - ((v-minV)/(maxV-minV))*H;
+
+              const peakForecast = forecast[peakDay];
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#555" }}>TRAININGPEAKS · PRÉDICTION DE FORME</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🔭 Load Forecaster</div>
+                    </div>
+                    <div style={{ display:"flex", gap:6 }}>
+                      {[14,28,42].map(h => (
+                        <button key={h} onClick={() => setHorizon(h)}
+                          style={{ background:horizon===h?"var(--yellow)":"var(--bg3)", border:"none", borderRadius:8, padding:"4px 10px", color:horizon===h?"#000":"#888", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          {h}j
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Current state */}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+                    {[
+                      { label:"CTL actuel", val:Math.round(ctl), color:"#64D2FF", desc:"Forme" },
+                      { label:"ATL actuel", val:Math.round(atl), color:"#FF9F0A", desc:"Fatigue" },
+                      { label:"TSB actuel", val:Math.round(ctl-atl), color: (ctl-atl)>=0?"#30D158":"#FF453A", desc:"Fraîcheur" },
+                    ].map((s,i) => (
+                      <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                        <div style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.val > 0 ? "+" : ""}{s.val}</div>
+                        <div style={{ fontSize:10, color:"#aaa", fontWeight:600 }}>{s.label}</div>
+                        <div style={{ fontSize:9, color:"#555" }}>{s.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Forecast chart */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>PRÉVISION {horizon} JOURS</div>
+                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", height:H, overflow:"visible" }}>
+                      {/* TSB zero line */}
+                      <line x1="0" y1={toY(0)} x2={W} y2={toY(0)} stroke="#333" strokeWidth="0.5" strokeDasharray="3,3"/>
+
+                      {/* CTL line */}
+                      <polyline points={forecast.map((f,i)=>`${toX(i)},${toY(f.ctl)}`).join(" ")}
+                        fill="none" stroke="#64D2FF" strokeWidth="1.5" strokeLinejoin="round"/>
+                      {/* ATL line */}
+                      <polyline points={forecast.map((f,i)=>`${toX(i)},${toY(f.atl)}`).join(" ")}
+                        fill="none" stroke="#FF9F0A" strokeWidth="1.5" strokeLinejoin="round"/>
+                      {/* TSB line */}
+                      <polyline points={forecast.map((f,i)=>`${toX(i)},${toY(f.tsb)}`).join(" ")}
+                        fill="none" stroke="#30D158" strokeWidth="2" strokeLinejoin="round"/>
+
+                      {/* Peak marker */}
+                      {peakForecast && (
+                        <g>
+                          <line x1={toX(peakDay)} y1={0} x2={toX(peakDay)} y2={H} stroke="var(--yellow)" strokeWidth="1" strokeDasharray="3,3"/>
+                          <circle cx={toX(peakDay)} cy={toY(peakForecast.tsb)} r="4" fill="var(--yellow)"/>
+                        </g>
+                      )}
+                    </svg>
+                    <div style={{ display:"flex", gap:12, marginTop:4, fontSize:9, color:"#666" }}>
+                      <span style={{ color:"#64D2FF" }}>── CTL Forme</span>
+                      <span style={{ color:"#FF9F0A" }}>── ATL Fatigue</span>
+                      <span style={{ color:"#30D158" }}>── TSB Fraîcheur</span>
+                    </div>
+                  </div>
+
+                  {/* Peak window */}
+                  {peakForecast && (
+                    <div style={{ background:"rgba(201,168,64,0.12)", border:"1px solid rgba(201,168,64,0.4)", borderRadius:12, padding:"10px 14px", marginBottom:12 }}>
+                      <div style={{ fontSize:10, color:"var(--yellow)", fontWeight:700, marginBottom:4 }}>🏆 FENÊTRE DE PERFORMANCE OPTIMALE</div>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>{peakForecast.date}</div>
+                          <div style={{ fontSize:11, color:"#888" }}>J+{peakForecast.day} · TSB: <strong style={{ color:"#30D158" }}>+{peakForecast.tsb}</strong></div>
+                        </div>
+                        <div style={{ fontSize:11, color:"#888", textAlign:"right" }}>
+                          <div>CTL: {peakForecast.ctl}</div>
+                          <div>ATL: {peakForecast.atl}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Daily load input */}
+                  <div style={{ background:"var(--bg3)", borderRadius:10, padding:"10px 14px" }}>
+                    <div style={{ fontSize:10, color:"#555", marginBottom:4 }}>CHARGE QUOTIDIENNE PAR DÉFAUT (si pas de séance planifiée)</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <input type="range" min="0" max="100" value={cfg.defaultLoad||0}
+                        onChange={e => {
+                          const next = { ...cfg, defaultLoad:parseInt(e.target.value) };
+                          setCfg(next);
+                          localStorage.setItem(CFG_KEY, JSON.stringify(next));
+                        }}
+                        style={{ flex:1, accentColor:"var(--yellow)" }}/>
+                      <span style={{ fontSize:13, fontWeight:700, color:"var(--yellow)", minWidth:40, textAlign:"right" }}>{cfg.defaultLoad||0} TRIMP</span>
+                    </div>
+                    <div style={{ fontSize:10, color:"#555", marginTop:4 }}>Utilise le Planificateur pour définir des séances précises → le forecaster les prend en compte automatiquement</div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PERFORMANCE MANAGEMENT CHART ── */}
             {(() => {
               const sessions = profile.sessions || [];
