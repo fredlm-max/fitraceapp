@@ -12772,6 +12772,104 @@ JSON:
               );
             })()}
 
+            {/* ── RÉPARTITION ENTRAÎNEMENTS HYROX ── */}
+            {(profile.sessions||[]).length >= 2 && (() => {
+              const sessions = profile.sessions || [];
+              const now = Date.now();
+              const recent = sessions.filter(s => s.date && (now - new Date(s.date)) < 28 * 86400000);
+              if (!recent.length) return null;
+
+              // Compte par type
+              const typeDef = [
+                { key: "running_zone2",    label: "Zone 2",  icon: "🏃", color: "#007AFF", ideal: 40, desc: "Base aérobie, fondation HYROX" },
+                { key: "force_stations",   label: "Force",   icon: "🏋️", color: "#C9A840", ideal: 25, desc: "Stations HYROX + force fonctionnelle" },
+                { key: "running_qualite",  label: "Qualité", icon: "⚡", color: "#FF9F0A", ideal: 20, desc: "Intervalles, seuil, tempo" },
+                { key: "hybride_compromis",label: "Hybride", icon: "🔀", color: "#BF5AF2", ideal: 15, desc: "Entraînement HYROX complet" },
+              ];
+              const otherTypes = ["coach", "perso", "mobilite"];
+              const total = recent.length;
+              const counts = typeDef.map(t => ({ ...t, count: recent.filter(s => s.type === t.key).length }));
+              const otherCount = recent.filter(s => !typeDef.find(t => t.key === s.type)).length;
+              const actualPcts = counts.map(t => Math.round((t.count / total) * 100));
+
+              // Donut SVG params
+              const R = 44, CX = 56, CY = 56, THICK = 12;
+              const circ = 2 * Math.PI * R;
+              let cumPct = 0;
+              const segments = counts.map((t, i) => {
+                const pct = t.count / total;
+                const dashLen = pct * circ;
+                const offset = circ * (1 - cumPct);
+                cumPct += pct;
+                return { ...t, dashLen, offset, pct: actualPcts[i] };
+              });
+
+              // Écart vs idéal
+              const zone2Pct = actualPcts[0];
+              let insight = null;
+              if (zone2Pct < 30) insight = { icon: "⚠️", color: "#FF9F0A", text: "Ajoute du Zone 2 — c'est la base du moteur HYROX (cible : 40%)" };
+              else if (actualPcts[1] > 40) insight = { icon: "💡", color: "#007AFF", text: "Trop de force — intègre plus de running Zone 2 pour l'endurance HYROX" };
+              else if (zone2Pct >= 35 && actualPcts[1] >= 20) insight = { icon: "✅", color: "#30D158", text: "Bonne répartition pour HYROX. Continue sur cette lancée !" };
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>RÉPARTITION 28J</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>{total} séances · Idéal HYROX comparé</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 12 }}>
+                    {/* Donut */}
+                    <div style={{ flexShrink: 0 }}>
+                      <svg width="112" height="112" viewBox="0 0 112 112" style={{ transform: "rotate(-90deg)" }}>
+                        <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={THICK} />
+                        {segments.filter(s => s.dashLen > 0).map((seg, i) => (
+                          <circle key={i} cx={CX} cy={CY} r={R} fill="none" stroke={seg.color}
+                            strokeWidth={THICK} strokeLinecap="butt"
+                            strokeDasharray={`${seg.dashLen - 1.5} ${circ - seg.dashLen + 1.5}`}
+                            strokeDashoffset={seg.offset}
+                            style={{ transition: "stroke-dasharray 0.6s ease, stroke-dashoffset 0.6s ease" }} />
+                        ))}
+                      </svg>
+                    </div>
+
+                    {/* Legend + ideal bars */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
+                      {counts.map((t, i) => (
+                        <div key={t.key}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              <span style={{ fontSize: 11 }}>{t.icon}</span>
+                              <span style={{ fontSize: 10, color: "#AEAEB2" }}>{t.label}</span>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <span style={{ fontSize: 9, color: "#636366" }}>↗{t.ideal}%</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: t.color }}>{actualPcts[i]}%</span>
+                            </div>
+                          </div>
+                          <div style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", position: "relative" }}>
+                            {/* Ideal marker */}
+                            <div style={{ position: "absolute", left: `${t.ideal}%`, top: 0, bottom: 0, width: 1, background: "rgba(255,255,255,0.15)" }} />
+                            <div style={{ width: `${actualPcts[i]}%`, height: "100%", background: t.color, borderRadius: 99, transition: "width 0.6s ease", opacity: 0.85 }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Insight */}
+                  {insight && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: `${insight.color}10`, border: `1px solid ${insight.color}25`, borderRadius: 10, padding: "8px 10px" }}>
+                      <span style={{ fontSize: 14 }}>{insight.icon}</span>
+                      <span style={{ fontSize: 11, color: "#AEAEB2", lineHeight: 1.5 }}>{insight.text}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── VO2MAX PROGRESSION ── */}
             {profile.vmaKmh && (() => {
               // Read VMA history from localStorage (saved on each profile update)
