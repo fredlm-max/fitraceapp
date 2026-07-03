@@ -33756,6 +33756,229 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── HYROX STATION PB TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_station_pb_${profile.name}`;
+        const [pbs, setPbs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } });
+        const [editing, setEditing] = React.useState(null);
+        const [editVal, setEditVal] = React.useState({ m:"", s:"" });
+        const [tab, setTab] = React.useState("list");
+        const sex = profile.sexe === "F" ? "F" : "M";
+
+        const STATIONS = [
+          { key:"skierg",   name:"SkiErg",          dist:"1 000m", emoji:"⛷️",
+            bench: { M:{ world:170, pro:230, open:280 }, F:{ world:210, pro:270, open:330 } } },
+          { key:"sled_push",name:"Sled Push",        dist:"50m @ 102/152kg", emoji:"🛷",
+            bench: { M:{ world:95, pro:140, open:200 }, F:{ world:120, pro:170, open:240 } } },
+          { key:"sled_pull",name:"Sled Pull",        dist:"50m @ 78/102kg", emoji:"🔗",
+            bench: { M:{ world:100, pro:145, open:200 }, F:{ world:125, pro:175, open:240 } } },
+          { key:"burpee",   name:"Burpee Broad Jump",dist:"80m", emoji:"💥",
+            bench: { M:{ world:160, pro:210, open:280 }, F:{ world:200, pro:260, open:340 } } },
+          { key:"rowing",   name:"Rowing",           dist:"1 000m", emoji:"🚣",
+            bench: { M:{ world:185, pro:240, open:300 }, F:{ world:225, pro:285, open:360 } } },
+          { key:"farmer",   name:"Farmer Carry",     dist:"200m", emoji:"🏋️",
+            bench: { M:{ world:90, pro:130, open:180 }, F:{ world:115, pro:155, open:210 } } },
+          { key:"sandbag",  name:"Sandbag Lunges",   dist:"100m @ 10/20kg", emoji:"🎒",
+            bench: { M:{ world:250, pro:330, open:420 }, F:{ world:300, pro:390, open:490 } } },
+          { key:"wallballs",name:"Wall Balls",       dist:"100 reps @ 4/6kg", emoji:"🏀",
+            bench: { M:{ world:210, pro:290, open:380 }, F:{ world:260, pro:345, open:440 } } },
+        ];
+
+        const fmtSec = (s) => {
+          if (!s) return "--:--";
+          const m = Math.floor(s/60), sec = s%60;
+          return `${m}:${sec.toString().padStart(2,"0")}`;
+        };
+        const parseSec = (m, s) => parseInt(m||0)*60 + parseInt(s||0);
+
+        const getPctile = (station, sec) => {
+          const b = station.bench[sex];
+          if (!sec) return null;
+          if (sec <= b.world) return 100;
+          if (sec <= b.pro) return 70 + 30 * (b.pro - sec) / (b.pro - b.world);
+          if (sec <= b.open) return 30 + 40 * (b.open - sec) / (b.open - b.pro);
+          return Math.max(0, 30 * (b.open * 1.5 - sec) / (b.open * 0.5));
+        };
+        const getLabel = (pct) => {
+          if (pct === null) return { label:"—", color:"#555" };
+          if (pct >= 95) return { label:"World Class", color:"#FFD700" };
+          if (pct >= 70) return { label:"Pro", color:"#BF5AF2" };
+          if (pct >= 30) return { label:"Open", color:"#FF9F0A" };
+          return { label:"Débutant", color:"#888" };
+        };
+
+        const saveEdit = () => {
+          const sec = parseSec(editVal.m, editVal.s);
+          if (!sec) return;
+          const next = { ...pbs, [editing]: sec };
+          setPbs(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setEditing(null);
+        };
+
+        // Radar chart
+        const filledStations = STATIONS.filter(s => pbs[s.key]);
+        const W = 260, H = 260, CX = 130, CY = 130, R = 100;
+        const N = STATIONS.length;
+        const angles = STATIONS.map((_,i) => (i / N) * Math.PI * 2 - Math.PI / 2);
+        const pctiles = STATIONS.map(s => {
+          const p = getPctile(s, pbs[s.key]);
+          return p === null ? 0 : Math.max(0, Math.min(100, p));
+        });
+        const radarPoints = angles.map((a, i) => ({
+          x: CX + (pctiles[i]/100) * R * Math.cos(a),
+          y: CY + (pctiles[i]/100) * R * Math.sin(a),
+        }));
+        const gridLevels = [25, 50, 75, 100];
+
+        return (
+          <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Station PBs</div>
+                <div style={{ fontSize:11, color:"#666", marginTop:2 }}>{filledStations.length}/8 stations renseignées</div>
+              </div>
+              {filledStations.length > 0 && (
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:20, fontWeight:800, color:"var(--yellow)" }}>
+                    {Math.round(pctiles.filter(p=>p>0).reduce((a,b)=>a+b,0) / Math.max(filledStations.length,1))}%
+                  </div>
+                  <div style={{ fontSize:10, color:"#666" }}>Score global</div>
+                </div>
+              )}
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              {["list","radar"].map(t => (
+                <button key={t} onClick={() => setTab(t)}
+                  style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0",
+                    color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  {t === "list" ? "Détail stations" : "Radar chart"}
+                </button>
+              ))}
+            </div>
+
+            {tab === "list" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {STATIONS.map(station => {
+                  const sec = pbs[station.key];
+                  const pct = getPctile(station, sec);
+                  const lbl = getLabel(pct);
+                  const bench = station.bench[sex];
+                  const isEditing = editing === station.key;
+                  return (
+                    <div key={station.key} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: isEditing ? 10 : sec ? 8 : 0 }}>
+                        <span style={{ fontSize:20, flexShrink:0 }}>{station.emoji}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{station.name}</div>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                              {sec && <div style={{ fontSize:14, fontWeight:800, color:"var(--yellow)" }}>{fmtSec(sec)}</div>}
+                              {sec && <div style={{ background:lbl.color+"22", border:`1px solid ${lbl.color}44`, borderRadius:6, padding:"2px 7px", fontSize:10, color:lbl.color }}>{lbl.label}</div>}
+                              <button onClick={() => { setEditing(isEditing ? null : station.key); setEditVal(sec ? { m:Math.floor(sec/60).toString(), s:(sec%60).toString().padStart(2,"0") } : {m:"",s:""}); }}
+                                style={{ background:"none", border:"none", color:"#555", fontSize:14, cursor:"pointer", padding:0 }}>✎</button>
+                            </div>
+                          </div>
+                          <div style={{ fontSize:10, color:"#555" }}>{station.dist}</div>
+                        </div>
+                      </div>
+
+                      {isEditing && (
+                        <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:8 }}>
+                          <input type="number" value={editVal.m} onChange={e=>setEditVal(v=>({...v,m:e.target.value}))}
+                            placeholder="Min" min="0" max="99"
+                            style={{ flex:1, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 10px", color:"var(--white)", fontSize:15, textAlign:"center" }}/>
+                          <span style={{ color:"#666", fontSize:16 }}>:</span>
+                          <input type="number" value={editVal.s} onChange={e=>setEditVal(v=>({...v,s:e.target.value}))}
+                            placeholder="Sec" min="0" max="59"
+                            style={{ flex:1, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 10px", color:"var(--white)", fontSize:15, textAlign:"center" }}/>
+                          <button onClick={saveEdit}
+                            style={{ background:"var(--yellow)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>OK</button>
+                        </div>
+                      )}
+
+                      {sec && !isEditing && (
+                        <>
+                          {/* Progress bar vs benchmarks */}
+                          <div style={{ position:"relative", height:6, background:"#1C1C1E", borderRadius:3, overflow:"visible", marginBottom:4 }}>
+                            <div style={{ position:"absolute", left:0, top:0, height:"100%", width:`${Math.min(pct||0,100)}%`, background:`linear-gradient(90deg,#888,${lbl.color})`, borderRadius:3 }}/>
+                            {/* Benchmark markers */}
+                            {[
+                              { pct: 70, color:"#BF5AF2", label:"Pro" },
+                              { pct: 95, color:"#FFD700", label:"World" },
+                            ].map(mk => (
+                              <div key={mk.label} style={{ position:"absolute", top:-2, left:`${mk.pct}%`, width:2, height:10, background:mk.color, borderRadius:1 }}/>
+                            ))}
+                          </div>
+                          <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#555" }}>
+                            <span>Objectif Open: {fmtSec(bench.open)}</span>
+                            <span>Pro: {fmtSec(bench.pro)}</span>
+                            <span>Elite: {fmtSec(bench.world)}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {!sec && !isEditing && (
+                        <div style={{ fontSize:11, color:"#555", marginTop:4 }}>Tap ✎ pour entrer ton PB</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {tab === "radar" && (
+              filledStations.length < 3 ? (
+                <div style={{ textAlign:"center", color:"#555", fontSize:13, padding:"30px 0" }}>
+                  Renseigne au moins 3 stations pour voir le radar
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W }}>
+                    {/* Grid */}
+                    {gridLevels.map(lvl => (
+                      <polygon key={lvl} points={angles.map(a => `${CX+lvl/100*R*Math.cos(a)},${CY+lvl/100*R*Math.sin(a)}`).join(" ")}
+                        fill="none" stroke="#2C2C2E" strokeWidth="1"/>
+                    ))}
+                    {/* Axes */}
+                    {angles.map((a,i) => (
+                      <line key={i} x1={CX} y1={CY} x2={CX+R*Math.cos(a)} y2={CY+R*Math.sin(a)} stroke="#2C2C2E" strokeWidth="1"/>
+                    ))}
+                    {/* Data polygon */}
+                    <polygon points={radarPoints.map(p=>`${p.x},${p.y}`).join(" ")} fill="rgba(0,122,255,0.25)" stroke="var(--yellow)" strokeWidth="2"/>
+                    {/* Data dots */}
+                    {radarPoints.map((p,i) => pctiles[i] > 0 && (
+                      <circle key={i} cx={p.x} cy={p.y} r="4" fill="var(--yellow)" stroke="var(--bg2)" strokeWidth="1.5"/>
+                    ))}
+                    {/* Labels */}
+                    {angles.map((a,i) => {
+                      const lx = CX + (R+18)*Math.cos(a), ly = CY + (R+18)*Math.sin(a);
+                      return (
+                        <text key={i} x={lx} y={ly+3} textAnchor="middle" fontSize="9" fill="#888">{STATIONS[i].emoji}</text>
+                      );
+                    })}
+                    {/* Pct labels on points */}
+                    {radarPoints.map((p,i) => pctiles[i] > 0 && (
+                      <text key={i} x={p.x} y={p.y-7} textAnchor="middle" fontSize="8" fill="var(--yellow)" fontWeight="700">
+                        {Math.round(pctiles[i])}%
+                      </text>
+                    ))}
+                  </svg>
+                  {/* Station legend */}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center", marginTop:4 }}>
+                    {STATIONS.map(s => (
+                      <div key={s.key} style={{ fontSize:10, color:"#666" }}>{s.emoji} {s.name.split(" ")[0]}</div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX LEADERBOARD COMPARISON ── */}
       {(() => {
         const sex = profile.sexe === "F" ? "F" : "H";
