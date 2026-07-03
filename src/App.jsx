@@ -6221,6 +6221,139 @@ JSON:
               );
             })()}
 
+            {/* ── AI COACH WEEKLY SUMMARY — TrainingPeaks style ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const [expanded, setExpanded] = React.useState(false);
+
+              const today = new Date(); today.setHours(0,0,0,0);
+              const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+              const monday = new Date(today); monday.setDate(today.getDate() - dayOfWeek + 1);
+              const prevMonday = new Date(monday); prevMonday.setDate(monday.getDate() - 7);
+
+              const thisWeek = sessions.filter(s => { const d = new Date(s.date); d.setHours(0,0,0,0); return d >= monday && d <= today; });
+              const prevWeek = sessions.filter(s => { const d = new Date(s.date); d.setHours(0,0,0,0); return d >= prevMonday && d < monday; });
+              const last28 = sessions.filter(s => (Date.now() - new Date(s.date)) <= 28 * 86400000);
+
+              // Metrics
+              const thisLoad = thisWeek.reduce((a,s) => a+(s.rpe||5)*(s.duree||30), 0);
+              const prevLoad = prevWeek.reduce((a,s) => a+(s.rpe||5)*(s.duree||30), 0);
+              const loadTrend = prevLoad > 0 ? Math.round((thisLoad - prevLoad) / prevLoad * 100) : null;
+              const thisMin = thisWeek.reduce((a,s) => a+(s.duree||0), 0);
+              const avgRpe = thisWeek.filter(s=>s.rpe).length > 0
+                ? (thisWeek.filter(s=>s.rpe).reduce((a,s)=>a+s.rpe,0)/thisWeek.filter(s=>s.rpe).length).toFixed(1)
+                : null;
+
+              // CTL/ATL/TSB
+              const kCTL = 1 - Math.exp(-1/42), kATL = 1 - Math.exp(-1/7);
+              let ctl = 0, atl = 0;
+              const orig = new Date(today); orig.setDate(orig.getDate() - 56);
+              for (let i = 0; i <= 56; i++) {
+                const d = new Date(orig); d.setDate(d.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const load = sessions.filter(s=>s.date?.slice(0,10)===ds).reduce((a,s)=>a+(s.rpe||5)*(s.duree||30),0);
+                ctl = ctl + kCTL*(load - ctl); atl = atl + kATL*(load - atl);
+              }
+              const tsb = Math.round(ctl - atl);
+
+              // Zone balance
+              const ZONE_KEYS = { running_zone2:"Zone 2", running_qualite:"Qualité", force_stations:"Force", hybride_compromis:"Hybride", mobilite:"Mobilité" };
+              const zoneCounts = {};
+              last28.forEach(s => { const k = ZONE_KEYS[s.type]; if(k) zoneCounts[k] = (zoneCounts[k]||0)+1; });
+              const topZone = Object.entries(zoneCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+              const missingZones = Object.values(ZONE_KEYS).filter(z => !zoneCounts[z]);
+
+              // Streak
+              const sorted = [...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date));
+              let streak = 0;
+              for (let i = 0; i < sorted.length; i++) {
+                const diff = Math.round((Date.now() - new Date(sorted[i].date)) / 86400000);
+                if (diff <= streak + 1) streak++;
+                else break;
+              }
+
+              // ── Generate coaching text ──
+              const paragraphs = [];
+              const weekNum = Math.ceil((today - new Date(today.getFullYear(), 0, 1)) / 604800000);
+
+              // Sentence 1: week overview
+              if (thisWeek.length === 0) {
+                paragraphs.push(`Semaine ${weekNum} : Aucune séance enregistrée cette semaine. Reprends progressivement — même 20 min font la différence sur la durée.`);
+              } else {
+                paragraphs.push(`Semaine ${weekNum} : ${thisWeek.length} séance${thisWeek.length>1?"s":""} pour ${thisMin} min d'entraînement${avgRpe?`, RPE moyen ${avgRpe}/10`:""}.`);
+              }
+
+              // Sentence 2: load trend
+              if (loadTrend !== null) {
+                if (loadTrend > 20) paragraphs.push(`⚠️ Charge en forte hausse (+${loadTrend}% vs semaine précédente) — vérifie tes signaux de récupération (sommeil, HRV, énergie).`);
+                else if (loadTrend > 5) paragraphs.push(`📈 Bonne progression de la charge (+${loadTrend}%). Continue sur cette dynamique.`);
+                else if (loadTrend < -20) paragraphs.push(`📉 Charge en baisse (${loadTrend}%). Si c'est voulu (récupération), c'est parfait. Sinon, reprends le rythme.`);
+                else paragraphs.push(`⚖️ Charge stable vs semaine précédente (${loadTrend > 0 ? "+" : ""}${loadTrend}%) — phase de maintien.`);
+              }
+
+              // Sentence 3: TSB / freshness
+              if (tsb > 15) paragraphs.push(`💡 TSB +${tsb} : tu es très frais. C'est le moment idéal pour une séance intensive ou une compétition.`);
+              else if (tsb > 0) paragraphs.push(`✅ TSB +${tsb} : forme légèrement supérieure à la fatigue. Bonne fenêtre pour les séances de qualité.`);
+              else if (tsb > -15) paragraphs.push(`🎯 TSB ${tsb} : tu es en zone d'entraînement optimal — juste assez de fatigue pour progresser.`);
+              else paragraphs.push(`😴 TSB ${tsb} : fatigue accumulée. Intègre une séance de mobilité ou un jour de repos cette semaine.`);
+
+              // Sentence 4: zone recommendation
+              if (missingZones.length > 0) {
+                paragraphs.push(`🔧 Priorité : ajoute une séance de ${missingZones[0]} — absente ces 28 derniers jours.`);
+              } else if (topZone) {
+                paragraphs.push(`💪 Point fort : tu maîtrises bien les séances ${topZone}. Veille à équilibrer avec les autres zones.`);
+              }
+
+              // Sentence 5: streak motivation
+              if (streak >= 14) paragraphs.push(`🔥 Série de ${streak} jours actifs consécutifs — exceptionnel, protège cette régularité.`);
+              else if (streak >= 7) paragraphs.push(`🔥 ${streak} jours de suite — ta régularité est ta plus grande force en ce moment.`);
+
+              const coachText = paragraphs.join(" ");
+              const shortPreview = paragraphs[0];
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"14px 16px", marginBottom:12, border:"1px solid rgba(201,168,64,0.2)" }}
+                  onClick={() => setExpanded(e => !e)}>
+                  {/* Header */}
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: expanded ? 12 : 0 }}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:"rgba(201,168,64,0.15)", border:"1px solid rgba(201,168,64,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🤖</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1 }}>Coach IA · Semaine {weekNum}</div>
+                      {!expanded && <div style={{ fontSize:12, color:"#8E8E93", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{shortPreview}</div>}
+                    </div>
+                    <div style={{ fontSize:14, color:"#555", flexShrink:0, transition:"transform 0.2s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</div>
+                  </div>
+
+                  {/* Expanded coaching text */}
+                  {expanded && (
+                    <div style={{ animation:"fadeIn 0.2s ease" }}>
+                      {paragraphs.map((p, i) => (
+                        <div key={i} style={{ fontSize:12, color: i===0 ? "#fff" : "#AEAEB2", lineHeight:1.65, marginBottom:8, paddingLeft:8, borderLeft: i===0 ? "2px solid #C9A840" : "2px solid rgba(255,255,255,0.06)" }}>
+                          {p}
+                        </div>
+                      ))}
+                      {/* Key metrics strip */}
+                      <div style={{ display:"flex", gap:6, marginTop:10, flexWrap:"wrap" }}>
+                        {[
+                          { label:"Séances", value:thisWeek.length, color:"#007AFF" },
+                          { label:"TSB", value: tsb > 0 ? `+${tsb}` : String(tsb), color: tsb > 0 ? "#30D158" : tsb > -15 ? "#C9A840" : "#FF453A" },
+                          { label:"Charge", value: thisLoad > 0 ? `${Math.round(thisLoad/10)/10}k` : "—", color:"#8E8E93" },
+                          ...(loadTrend !== null ? [{ label:"Tendance", value:`${loadTrend>0?"+":""}${loadTrend}%`, color: loadTrend > 10 ? "#FF9F0A" : loadTrend > 0 ? "#30D158" : "#8E8E93" }] : []),
+                        ].map((m,i) => (
+                          <div key={i} style={{ background:`${m.color}12`, border:`1px solid ${m.color}25`, borderRadius:8, padding:"4px 8px", textAlign:"center" }}>
+                            <div style={{ fontSize:11, fontWeight:700, color:m.color }}>{m.value}</div>
+                            <div style={{ fontSize:8, color:"#555" }}>{m.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── GARMIN TRAINING STATUS ── */}
             {(() => {
               const sessions = profile.sessions || [];
