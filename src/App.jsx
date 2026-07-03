@@ -36487,6 +36487,197 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── HYROX RACE PREDICTOR ── */}
+      {(() => {
+        const PB_KEY = `fitrace_station_pb_${profile.name}`;
+        const PRED_KEY = `fitrace_predictor_${profile.name}`;
+
+        const [config, setConfig] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(PRED_KEY) || "{}"); } catch { return {}; }
+        });
+        const [expanded, setExpanded] = React.useState(false);
+
+        const stationPbs = (() => { try { return JSON.parse(localStorage.getItem(PB_KEY) || "{}"); } catch { return {}; } })();
+
+        const sessions = profile.sessions || [];
+        const today = new Date().toISOString().slice(0,10);
+
+        // Compute CTL for fitness level
+        const kCTL = 1 - Math.exp(-1/42);
+        let ctl = 0;
+        const start42 = new Date(today); start42.setDate(start42.getDate()-42);
+        for (let i = 0; i <= 42; i++) {
+          const d = new Date(start42); d.setDate(d.getDate()+i);
+          const ds = d.toISOString().slice(0,10);
+          const t = sessions.filter(s=>s.date===ds).reduce((s,x)=>s+(x.duration&&x.rpe?x.duration*(x.rpe/10):0),0);
+          ctl = ctl + kCTL*(t-ctl);
+        }
+
+        // Best run pace from sessions
+        const runSessions = sessions.filter(s => s.type && s.type.toLowerCase().includes("run") && s.distance && s.duration);
+        const bestPaceSec = runSessions.length
+          ? Math.min(...runSessions.map(s => (s.duration*60) / parseFloat(s.distance)))
+          : (config.runPaceSec || 330); // default 5:30/km
+
+        const vma = parseFloat(profile.vma) || Math.round(3600 / bestPaceSec * 10) / 10;
+
+        // Run pace for HYROX (8×1km) — estimate at ~85% VMA
+        const runPaceSec = config.runPaceSec || Math.round(3600 / (vma * 0.85));
+        const totalRunSec = runPaceSec * 8;
+
+        // Station times (use PB or fallback averages by sex)
+        const sex = (profile.sexe || "M").toUpperCase();
+        const STATION_DEFAULTS = {
+          skierg:    sex==="F" ? 270 : 240,
+          sledpush:  sex==="F" ? 300 : 240,
+          sledpull:  sex==="F" ? 240 : 210,
+          burpee:    sex==="F" ? 300 : 270,
+          rowing:    sex==="F" ? 270 : 240,
+          farmer:    sex==="F" ? 120 : 105,
+          sandbag:   sex==="F" ? 270 : 240,
+          wallball:  sex==="F" ? 300 : 270,
+        };
+
+        const STATIONS = [
+          { id:"skierg", name:"SkiErg 1000m", emoji:"⛷" },
+          { id:"sledpush", name:"Sled Push 50m", emoji:"🛷" },
+          { id:"sledpull", name:"Sled Pull 50m", emoji:"🔗" },
+          { id:"burpee", name:"Burpee BJ 80m", emoji:"💥" },
+          { id:"rowing", name:"Rowing 1000m", emoji:"🚣" },
+          { id:"farmer", name:"Farmer Carry 200m", emoji:"🏋️" },
+          { id:"sandbag", name:"Sandbag Lunges 100m", emoji:"🎒" },
+          { id:"wallball", name:"Wall Balls 100 reps", emoji:"🏀" },
+        ];
+
+        const parseTime = (str) => {
+          if (!str) return null;
+          const parts = str.split(":").map(Number);
+          return parts.length === 2 ? parts[0]*60+parts[1] : null;
+        };
+
+        const stationTimes = STATIONS.map(s => {
+          const pb = stationPbs[s.id];
+          const pbSec = pb ? parseTime(pb.time) : null;
+          return { ...s, sec: pbSec || STATION_DEFAULTS[s.id], hasPb: !!pbSec };
+        });
+
+        const totalStationSec = stationTimes.reduce((s,x) => s+x.sec, 0);
+        const transitionSec = (config.transitionSec || 25) * 8; // 8 transitions
+        const totalSec = totalRunSec + totalStationSec + transitionSec;
+
+        const fmt = (s) => {
+          const h = Math.floor(s/3600);
+          const m = Math.floor((s%3600)/60);
+          const sec = s%60;
+          return h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`;
+        };
+
+        const fmtPace = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}/km`;
+
+        // Category targets
+        const TARGETS = sex === "F"
+          ? [{ label:"Sub-1h", sec:3600 }, { label:"Sub-1h15", sec:4500 }, { label:"Sub-1h30", sec:5400 }]
+          : [{ label:"Sub-1h", sec:3600 }, { label:"Sub-1h10", sec:4200 }, { label:"Sub-1h20", sec:4800 }];
+
+        const saveConfig = (updates) => {
+          const next = { ...config, ...updates };
+          setConfig(next);
+          localStorage.setItem(PRED_KEY, JSON.stringify(next));
+        };
+
+        const improvement = (target) => {
+          const diff = totalSec - target.sec;
+          if (diff <= 0) return { met: true, diff: 0 };
+          return { met: false, diff };
+        };
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#555" }}>TRAININGPEAKS · SIMULATION DE COURSE</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🔮 Race Predictor</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:28, fontWeight:900, color:"var(--yellow)" }}>{fmt(totalSec)}</div>
+                <div style={{ fontSize:10, color:"#666" }}>Temps prédit</div>
+              </div>
+            </div>
+
+            {/* Time breakdown */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+              {[
+                { label:"Runs (8×1km)", val:fmt(totalRunSec), sub:fmtPace(runPaceSec), color:"var(--yellow)" },
+                { label:"8 stations", val:fmt(totalStationSec), sub:"PB ou estimation", color:"#FF9F0A" },
+                { label:"Transitions", val:fmt(transitionSec), sub:`${config.transitionSec||25}s × 8`, color:"#64D2FF" },
+              ].map((s,i) => (
+                <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:s.color }}>{s.val}</div>
+                  <div style={{ fontSize:10, color:"#aaa", fontWeight:600 }}>{s.label}</div>
+                  <div style={{ fontSize:9, color:"#555" }}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Visual breakdown bar */}
+            <div style={{ display:"flex", height:12, borderRadius:6, overflow:"hidden", marginBottom:10 }}>
+              <div style={{ flex:totalRunSec, background:"var(--yellow)", opacity:0.8 }}/>
+              <div style={{ flex:totalStationSec, background:"#FF9F0A", opacity:0.8 }}/>
+              <div style={{ flex:transitionSec, background:"#64D2FF", opacity:0.8 }}/>
+            </div>
+            <div style={{ display:"flex", gap:12, fontSize:10, color:"#666", marginBottom:16 }}>
+              <span>🟡 Runs {Math.round(totalRunSec/totalSec*100)}%</span>
+              <span>🟠 Stations {Math.round(totalStationSec/totalSec*100)}%</span>
+              <span>🔵 Transitions {Math.round(transitionSec/totalSec*100)}%</span>
+            </div>
+
+            {/* Targets */}
+            <div style={{ fontSize:10, color:"#555", marginBottom:8 }}>OBJECTIFS</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+              {TARGETS.map((t,i) => {
+                const { met, diff } = improvement(t);
+                return (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background: met ? "rgba(48,209,88,0.1)" : "var(--bg3)", border:`1px solid ${met?"#30D15844":"#333"}`, borderRadius:10, padding:"8px 14px" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color: met?"#30D158":"#fff" }}>{t.label} {met ? "✓" : ""}</div>
+                    <div style={{ fontSize:11, color: met?"#30D158":"#FF453A", fontWeight:600 }}>
+                      {met ? "Objectif atteint !" : `−${fmt(diff)} requis`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Stations detail */}
+            <button onClick={() => setExpanded(e => !e)}
+              style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:12, cursor:"pointer", marginBottom: expanded?12:0 }}>
+              {expanded ? "▲ Masquer" : "▼ Détail par station"} {stationTimes.filter(s=>s.hasPb).length}/{STATIONS.length} PB renseignés
+            </button>
+
+            {expanded && stationTimes.map((s,i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginBottom:4 }}>
+                <div>
+                  <span style={{ marginRight:8 }}>{s.emoji}</span>
+                  <span style={{ fontSize:12, color:"#fff" }}>{s.name}</span>
+                  {!s.hasPb && <span style={{ fontSize:9, color:"#555", marginLeft:6 }}>(estimation)</span>}
+                </div>
+                <span style={{ fontSize:13, fontWeight:700, color: s.hasPb ? "var(--yellow)" : "#666" }}>{fmt(s.sec)}</span>
+              </div>
+            ))}
+
+            {/* Run pace config */}
+            <div style={{ marginTop:12, background:"var(--bg3)", borderRadius:10, padding:"10px 14px" }}>
+              <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>ALLURE DE COURSE HYROX (actuelle: {fmtPace(runPaceSec)})</div>
+              <input type="range" min="240" max="420" step="5" value={runPaceSec}
+                onChange={e => saveConfig({ runPaceSec: parseInt(e.target.value) })}
+                style={{ width:"100%", accentColor:"var(--yellow)" }}/>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#555" }}>
+                <span>4:00/km</span><span>5:00/km</span><span>6:00/km</span><span>7:00/km</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── HYROX LEADERBOARD COMPARISON ── */}
       {(() => {
         const sex = profile.sexe === "F" ? "F" : "H";
