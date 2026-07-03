@@ -6913,6 +6913,115 @@ JSON:
               );
             })()}
 
+            {/* ── COACH INSIGHTS ── */}
+            {(()=>{
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+              const now3 = new Date();
+              const msDay = 86400000;
+
+              // Données des 28 derniers jours
+              const last28 = sessions.filter(s => s.date && (now3 - new Date(s.date)) < 28 * msDay);
+              const last7  = sessions.filter(s => s.date && (now3 - new Date(s.date)) < 7  * msDay);
+              const last14 = sessions.filter(s => s.date && (now3 - new Date(s.date)) < 14 * msDay && (now3 - new Date(s.date)) >= 7 * msDay);
+
+              // Dernière séance
+              const lastSess = sessions.slice().sort((a,b) => new Date(b.date)-new Date(a.date))[0];
+              const daysSinceLast = lastSess ? Math.floor((now3 - new Date(lastSess.date)) / msDay) : 99;
+
+              // Types des 7 derniers jours
+              const types7 = last7.map(s => s.type || s.sessionType || "");
+              const hasZone2 = types7.some(t => t.includes("zone2") || t.includes("endurance"));
+              const hasForce = types7.some(t => t.includes("force") || t.includes("station"));
+              const hasQualite = types7.some(t => t.includes("qualite") || t.includes("qualité") || t.includes("fractionne"));
+              const hasHybride = types7.some(t => t.includes("hybride") || t.includes("compromis"));
+
+              // Charge & RPE moyens
+              const avgRpe7 = last7.length ? last7.reduce((a,s) => a + (s.rpe||s.difficulty||5), 0) / last7.length : 0;
+              const load7 = last7.reduce((a,s) => a + ((s.duree||s.duration||0) * (s.rpe||s.difficulty||5)), 0);
+              const load14 = last14.reduce((a,s) => a + ((s.duree||s.duration||0) * (s.rpe||s.difficulty||5)), 0);
+              const loadRatio = load14 > 0 ? load7 / load14 : 1;
+
+              // Construit les insights
+              const insights = [];
+
+              // Insight 1 — Récupération / repos
+              if (daysSinceLast === 0) {
+                insights.push({ icon: "✅", color: "#30D158", title: "Séance logged aujourd'hui", body: "Bonne progression. Pense à la récupération post-séance : hydratation + protéines." });
+              } else if (daysSinceLast >= 3) {
+                insights.push({ icon: "⚡", color: "#FF9F0A", title: `${daysSinceLast} jours sans séance`, body: "Ton corps est probablement reposé. C'est le bon moment pour une séance de qualité." });
+              } else if (daysSinceLast === 1 && (lastSess?.rpe || 0) >= 8) {
+                insights.push({ icon: "😴", color: "#BF5AF2", title: "RPE élevé hier", body: "Séance intense hier. Priorise Zone 2 ou mobilité aujourd'hui pour optimiser la récupération." });
+              }
+
+              // Insight 2 — Distribution des types
+              if (last7.length >= 3) {
+                if (!hasZone2 && !hasHybride) {
+                  insights.push({ icon: "🏃", color: "#007AFF", title: "Zone 2 manquante cette semaine", body: "Le travail aérobie de base booste l'endurance race. Ajoute 45min Zone 2 avant dimanche." });
+                } else if (!hasForce) {
+                  insights.push({ icon: "🏋️", color: "#C9A840", title: "Force absente cette semaine", body: "Les stations HYROX demandent de la force fonctionnelle. Programme une session force cette semaine." });
+                } else if (!hasQualite && last7.length >= 4) {
+                  insights.push({ icon: "⚡", color: "#FF9F0A", title: "Pas de qualité cette semaine", body: "Un fractionné ou une session VMA améliore ta vitesse de course entre stations." });
+                } else if (hasZone2 && hasForce && hasQualite) {
+                  insights.push({ icon: "🎯", color: "#30D158", title: "Distribution parfaite", body: "Tu combines Zone 2, Force et Qualité. C'est exactement le mix HYROX optimal !" });
+                }
+              }
+
+              // Insight 3 — Charge aiguë/chronique
+              if (loadRatio > 1.3) {
+                insights.push({ icon: "⚠️", color: "#FF453A", title: "Charge en hausse +30%", body: "Ta charge cette semaine dépasse largement les 2 semaines précédentes. Risque de surentraînement — considère une journée de repos." });
+              } else if (loadRatio < 0.5 && load14 > 0) {
+                insights.push({ icon: "📉", color: "#636366", title: "Semaine légère", body: "Volume réduit vs les 2 dernières semaines. C'est ok si tu es en affûtage — sinon, reprends progressivement." });
+              } else if (avgRpe7 >= 8) {
+                insights.push({ icon: "🔴", color: "#FF453A", title: `RPE moyen élevé: ${avgRpe7.toFixed(1)}/10`, body: "Tes séances sont très intenses en moyenne. Intègre plus de séances douces pour progresser sans te blesser." });
+              } else if (last7.length >= 4 && avgRpe7 >= 5 && avgRpe7 <= 7.5) {
+                insights.push({ icon: "💪", color: "#30D158", title: "Zone d'intensité idéale", body: `RPE moyen de ${avgRpe7.toFixed(1)}/10 — charge bien dosée. Continue sur cette lancée.` });
+              }
+
+              // Race countdown insight
+              if (profile.raceDate) {
+                const daysToRace = Math.ceil((new Date(profile.raceDate) - now3) / msDay);
+                if (daysToRace > 0 && daysToRace <= 14) {
+                  insights.push({ icon: "🏁", color: "#C9A840", title: `J-${daysToRace} · Phase affûtage`, body: "Réduis le volume de 30-40%, maintiens l'intensité. Pas de nouvelle contrainte physique dans les 5 derniers jours." });
+                } else if (daysToRace > 0 && daysToRace <= 42 && last7.length < 3) {
+                  insights.push({ icon: "📅", color: "#FF9F0A", title: `J-${daysToRace} · Bloc critique`, body: "Il te reste moins de 6 semaines. Ce bloc est décisif pour ta performance race day." });
+                }
+              }
+
+              if (insights.length === 0) return null;
+              const shown = insights.slice(0, 3);
+
+              const [expanded, setExpanded] = React.useState(false);
+              const displayedInsights = expanded ? shown : shown.slice(0, 1);
+
+              return (
+                <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                      <div style={{ width:24, height:24, borderRadius:8, background:"rgba(0,122,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>🤖</div>
+                      <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>Analyse Coach IA</div>
+                    </div>
+                    {shown.length > 1 && (
+                      <button onClick={()=>setExpanded(e=>!e)} style={{ background:"none", border:"none", color:"#636366", fontSize:10, cursor:"pointer", fontWeight:700 }}>
+                        {expanded ? "Réduire ↑" : `+${shown.length-1} insight${shown.length>2?"s":""} ↓`}
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {displayedInsights.map((ins,i) => (
+                      <div key={i} style={{ display:"flex", gap:10, padding:"10px 12px", background:`${ins.color}0d`, border:`1px solid ${ins.color}25`, borderRadius:12, borderLeft:`3px solid ${ins.color}` }}>
+                        <div style={{ fontSize:18, lineHeight:1, flexShrink:0, marginTop:1 }}>{ins.icon}</div>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:ins.color, lineHeight:1.2, marginBottom:3 }}>{ins.title}</div>
+                          <div style={{ fontSize:11, color:"#8E8E93", lineHeight:1.5 }}>{ins.body}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ENCART NUTRITION ── */}
             {(()=>{
               const KEY_QUICK = `fitrace_nutri_quick_${profile.name}`;
