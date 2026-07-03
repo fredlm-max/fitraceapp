@@ -28331,6 +28331,233 @@ function TechniqueTab({ profile = {} }) {
         );
       })()}
 
+      {/* ── MOBILITY & WARM-UP ROUTINES ── */}
+      {(() => {
+        const KEY = `fitrace_mobility_${profile.name}`;
+
+        const ROUTINES = [
+          {
+            id:"hyrox_warmup",
+            name:"HYROX Warm-up",
+            emoji:"🔥",
+            duration:12,
+            focus:"Full body · pré-course",
+            exercises:[
+              { name:"Leg Swing Latéral", sets:"10/côté", cue:"Maintiens le bassin stable", emoji:"🦵" },
+              { name:"Hip Circle 90/90", sets:"5/côté", cue:"Respire dans chaque position", emoji:"🔄" },
+              { name:"World's Greatest Stretch", sets:"5/côté", cue:"Rotation thoracique complète", emoji:"🌍" },
+              { name:"Squat profond", sets:"10 reps", cue:"Talons au sol, genoux vers l'extérieur", emoji:"⬇️" },
+              { name:"Inchworm", sets:"5 reps", cue:"Contrôle le gainage", emoji:"🐛" },
+              { name:"Jumping Jack", sets:"30s", cue:"Prépare le système cardiovasculaire", emoji:"⭐" },
+            ]
+          },
+          {
+            id:"post_run",
+            name:"Récup Post-Run",
+            emoji:"🧘",
+            duration:10,
+            focus:"Membres inférieurs · post-course",
+            exercises:[
+              { name:"Étirement mollet debout", sets:"45s/côté", cue:"Pied arrière plat au sol", emoji:"🦶" },
+              { name:"Fente ischio debout", sets:"45s/côté", cue:"Bassin vers l'avant", emoji:"🏃" },
+              { name:"Pigeon yoga", sets:"60s/côté", cue:"Relâche progressivement", emoji:"🕊️" },
+              { name:"Étirement quadriceps", sets:"45s/côté", cue:"Genoux joints", emoji:"🦵" },
+              { name:"Supine twist", sets:"30s/côté", cue:"Épaules au sol", emoji:"🌀" },
+            ]
+          },
+          {
+            id:"shoulder_prep",
+            name:"SkiErg Activation",
+            emoji:"⛷️",
+            duration:8,
+            focus:"Épaules & dos · pré-SkiErg/Rowing",
+            exercises:[
+              { name:"Band Pull Apart", sets:"15 reps", cue:"Omoplate vers la colonne", emoji:"🎯" },
+              { name:"Face Pull", sets:"15 reps", cue:"Coudes en ligne avec les épaules", emoji:"💪" },
+              { name:"Thread the Needle", sets:"8/côté", cue:"Rotation thoracique douce", emoji:"🧵" },
+              { name:"Arm Circle", sets:"10/sens", cue:"Cercles progressifs", emoji:"⭕" },
+              { name:"Lat stretch accroupi", sets:"30s/côté", cue:"Relâche l'épaule vers le bas", emoji:"🙆" },
+            ]
+          },
+          {
+            id:"hip_mobility",
+            name:"Hip Mobility",
+            emoji:"🔧",
+            duration:10,
+            focus:"Hanches · pré-sled/sandbag",
+            exercises:[
+              { name:"90/90 Hip Switch", sets:"5/côté", cue:"Bassin neutre tout le long", emoji:"🔄" },
+              { name:"Cossack Squat", sets:"8/côté", cue:"Pied plat côté fléchi", emoji:"⬇️" },
+              { name:"Hip Flexor Kneeling", sets:"45s/côté", cue:"Bascule légère du bassin", emoji:"🧎" },
+              { name:"Frog Stretch", sets:"60s", cue:"Genoux écartés, talons alignés", emoji:"🐸" },
+              { name:"Glute Bridge", sets:"15 reps", cue:"Pousse par les talons", emoji:"🌉" },
+            ]
+          },
+          {
+            id:"full_body",
+            name:"Full Body 5min",
+            emoji:"⚡",
+            duration:5,
+            focus:"Rapide · avant n'importe quelle séance",
+            exercises:[
+              { name:"Jumping Jack", sets:"30s", cue:"Monte la FC progressivement", emoji:"⭐" },
+              { name:"Hip Circle debout", sets:"10/sens", cue:"Amplitude maximale", emoji:"⭕" },
+              { name:"Squat à bras levés", sets:"10 reps", cue:"Chest up, genoux ext.", emoji:"🏋️" },
+              { name:"Mountain Climber lent", sets:"10/jambe", cue:"Core engagé", emoji:"🏔️" },
+              { name:"High Knees", sets:"20s", cue:"Genoux au niveau de la hanche", emoji:"🏃" },
+            ]
+          },
+        ];
+
+        const [activeRoutine, setActiveRoutine] = React.useState(null);
+        const [activeExIdx, setActiveExIdx] = React.useState(0);
+        const [timer, setTimer] = React.useState(0);
+        const [running, setRunning] = React.useState(false);
+        const [done, setDone] = React.useState({});
+        const [log, setLog] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+        });
+
+        React.useEffect(() => {
+          if (!running) return;
+          const id = setInterval(() => setTimer(t => t+1), 1000);
+          return () => clearInterval(id);
+        }, [running]);
+
+        const routine = ROUTINES.find(r => r.id === activeRoutine);
+
+        const markDone = (idx) => {
+          const next = { ...done, [idx]: true };
+          setDone(next);
+          if (idx < (routine?.exercises.length||0)-1) {
+            setActiveExIdx(idx+1);
+          } else {
+            // Completed!
+            setRunning(false);
+            const entry = { routineId: activeRoutine, name: routine.name, date: new Date().toISOString().slice(0,10), durationSec: timer };
+            const nextLog = [entry, ...log].slice(0,50);
+            setLog(nextLog);
+            localStorage.setItem(KEY, JSON.stringify(nextLog));
+          }
+        };
+
+        const startRoutine = (id) => {
+          setActiveRoutine(id);
+          setActiveExIdx(0);
+          setTimer(0);
+          setRunning(true);
+          setDone({});
+        };
+
+        const exitRoutine = () => {
+          setActiveRoutine(null);
+          setRunning(false);
+          setTimer(0);
+          setDone({});
+        };
+
+        const fmtTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+        const completedToday = log.filter(e => e.date === new Date().toISOString().slice(0,10)).map(e => e.routineId);
+
+        if (activeRoutine && routine) {
+          const ex = routine.exercises[activeExIdx];
+          const allDone = Object.keys(done).length >= routine.exercises.length;
+          return (
+            <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                <div>
+                  <div style={{ fontSize:11, color:"#555" }}>{routine.emoji} {routine.name.toUpperCase()}</div>
+                  <div style={{ fontSize:15, fontWeight:800, color:"var(--yellow)" }}>{allDone ? "✅ Terminé !" : ex.name}</div>
+                </div>
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ fontSize:22, fontWeight:900, color:"var(--yellow)" }}>{fmtTime(timer)}</div>
+                  <button onClick={() => setRunning(r => !r)}
+                    style={{ fontSize:10, color:"#888", background:"transparent", border:"none", cursor:"pointer" }}>
+                    {running ? "⏸" : "▶"} {running?"Pause":"Reprendre"}
+                  </button>
+                </div>
+              </div>
+
+              {!allDone && (
+                <div style={{ background:"var(--bg3)", borderRadius:16, padding:18, marginBottom:16, textAlign:"center" }}>
+                  <div style={{ fontSize:40, marginBottom:8 }}>{ex.emoji}</div>
+                  <div style={{ fontSize:18, fontWeight:900, color:"#fff", marginBottom:4 }}>{ex.name}</div>
+                  <div style={{ fontSize:14, color:"var(--yellow)", fontWeight:700, marginBottom:8 }}>{ex.sets}</div>
+                  <div style={{ fontSize:12, color:"#888", fontStyle:"italic" }}>💡 {ex.cue}</div>
+                </div>
+              )}
+
+              {/* Exercise list */}
+              <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:14 }}>
+                {routine.exercises.map((e,i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:8, background: i===activeExIdx && !allDone ? "rgba(201,168,64,0.1)" : "var(--bg3)", border:`1px solid ${i===activeExIdx && !allDone ? "var(--yellow)" : "transparent"}`, borderRadius:10, padding:"7px 12px" }}>
+                    <div style={{ width:22, height:22, borderRadius:"50%", background: done[i] ? "#30D158" : i===activeExIdx && !allDone ? "var(--yellow)" : "var(--bg2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color: done[i]||i===activeExIdx?"#000":"#555", flexShrink:0 }}>
+                      {done[i] ? "✓" : i+1}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, color: done[i] ? "#555" : "#fff", textDecoration: done[i] ? "line-through" : "none" }}>{e.name}</div>
+                      <div style={{ fontSize:10, color:"#555" }}>{e.sets}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={exitRoutine}
+                  style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:12, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>
+                  {allDone ? "Fermer" : "Quitter"}
+                </button>
+                {!allDone && (
+                  <button onClick={() => markDone(activeExIdx)}
+                    style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:12, padding:"11px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                    ✓ Exercice suivant
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:11, color:"#555" }}>NIKE TRAINING · ROUTINES GUIDÉES</div>
+              <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🧘 Mobility & Warm-up</div>
+            </div>
+
+            {log.length > 0 && (
+              <div style={{ background:"var(--bg3)", borderRadius:10, padding:"8px 14px", marginBottom:14, fontSize:11, color:"#666" }}>
+                Dernière routine: <strong style={{ color:"#fff" }}>{log[0].name}</strong> · {log[0].date} · {fmtTime(log[0].durationSec)}
+              </div>
+            )}
+
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {ROUTINES.map(r => {
+                const isDoneToday = completedToday.includes(r.id);
+                return (
+                  <div key={r.id} style={{ background:"var(--bg3)", border:`1px solid ${isDoneToday ? "#30D15844" : "#333"}`, borderRadius:14, padding:"12px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                      <div style={{ width:42, height:42, background: isDoneToday ? "rgba(48,209,88,0.15)" : "rgba(201,168,64,0.1)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
+                        {r.emoji}
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{r.name} {isDoneToday ? <span style={{ fontSize:10, color:"#30D158" }}>✓ Fait</span> : ""}</div>
+                        <div style={{ fontSize:10, color:"#666" }}>{r.duration}min · {r.exercises.length} exercices · {r.focus}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => startRoutine(r.id)}
+                      style={{ background: isDoneToday ? "var(--bg2)" : "var(--yellow)", border:"none", borderRadius:10, padding:"8px 14px", color: isDoneToday ? "#666" : "#000", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
+                      {isDoneToday ? "Refaire" : "▶ Start"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── CADENCE OPTIMIZER ── */}
       {(() => {
         const vma = parseFloat(profile.vma) || 14;
