@@ -7778,6 +7778,144 @@ JSON:
               );
             })()}
 
+            {/* ── RECORDS & MILESTONES ── */}
+            {(()=>{
+              const sessions = profile.sessions || [];
+              if (sessions.length < 2) return null;
+              const now = Date.now();
+              const msDay = 86400000;
+
+              // ── Calculs records ──
+              const sessWithDuree = sessions.filter(s => s.duree > 0);
+              const sessWithRpe   = sessions.filter(s => (s.rpe||s.difficulty||0) > 0);
+
+              const bestDuree = sessWithDuree.length ? sessWithDuree.reduce((b,s) => s.duree > b.duree ? s : b) : null;
+              const bestLoad  = sessWithRpe.length   ? sessWithRpe.reduce((b,s) => {
+                const l = (s.duree||0)*(s.rpe||s.difficulty||0);
+                const bl = (b.duree||0)*(b.rpe||b.difficulty||0);
+                return l > bl ? s : b;
+              }) : null;
+
+              // Meilleure semaine (volume)
+              let bestWeekVol = 0, bestWeekDate = null;
+              sessions.forEach(s => {
+                if (!s.date) return;
+                const start = new Date(s.date);
+                start.setHours(0,0,0,0);
+                const dayOfW = start.getDay() === 0 ? 6 : start.getDay() - 1;
+                start.setDate(start.getDate() - dayOfW);
+                const end = new Date(start); end.setDate(start.getDate()+7);
+                const weekVol = sessions.filter(x => x.date && new Date(x.date)>=start && new Date(x.date)<end)
+                  .reduce((a,x)=>a+(x.duree||0), 0);
+                if (weekVol > bestWeekVol) { bestWeekVol = weekVol; bestWeekDate = start; }
+              });
+
+              // Streak actuel et meilleur
+              const sorted = sessions.filter(s=>s.date).sort((a,b)=>new Date(b.date)-new Date(a.date));
+              let curStreak = 0, bestStreak = 0, tempStreak = 0, prevDay = null;
+              sorted.forEach(s => {
+                const day = new Date(s.date).toISOString().slice(0,10);
+                if (!prevDay) { tempStreak = 1; prevDay = day; }
+                else {
+                  const diff = Math.round((new Date(prevDay) - new Date(day)) / msDay);
+                  if (diff <= 2) tempStreak++; // 1-2 jours = streak valide (repos permis)
+                  else tempStreak = 1;
+                  prevDay = day;
+                }
+                if (tempStreak > bestStreak) bestStreak = tempStreak;
+              });
+              // curStreak = consécutif depuis aujourd'hui
+              if (sorted.length > 0) {
+                const lastDay = new Date(sorted[0].date).toISOString().slice(0,10);
+                const todayStr = new Date().toISOString().slice(0,10);
+                const diff = Math.round((new Date(todayStr) - new Date(lastDay)) / msDay);
+                if (diff <= 2) curStreak = Math.max(1, sorted.slice(0,5).length);
+              }
+
+              // Totaux de carrière
+              const totalSess = sessions.length;
+              const totalMin  = sessions.reduce((a,s)=>a+(s.duree||0),0);
+              const totalH    = Math.floor(totalMin/60);
+              const totalLoad = Math.round(sessions.reduce((a,s)=>a+((s.duree||0)*(s.rpe||s.difficulty||5)),0));
+
+              // Dates formatées
+              const fmtDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "—";
+              const fmtWeek = (d) => {
+                if (!d) return "—";
+                const end = new Date(d); end.setDate(d.getDate()+6);
+                return `${fmtDate(d)} → ${fmtDate(end)}`;
+              };
+
+              const RECORDS = [
+                { icon:"⏱️", color:"#007AFF", label:"Séance la plus longue", value: bestDuree ? `${bestDuree.duree} min` : "—", sub: bestDuree ? fmtDate(bestDuree.date) : null },
+                { icon:"🔥", color:"#FF9F0A", label:"Meilleure charge séance", value: bestLoad ? `${Math.round((bestLoad.duree||0)*(bestLoad.rpe||bestLoad.difficulty||0))}` : "—", sub: bestLoad ? `RPE ${bestLoad.rpe||bestLoad.difficulty||0} · ${fmtDate(bestLoad.date)}` : null },
+                { icon:"📅", color:"#C9A840", label:"Meilleure semaine", value: bestWeekVol > 0 ? `${Math.floor(bestWeekVol/60)}h${bestWeekVol%60>0?(bestWeekVol%60)+"min":""}` : "—", sub: bestWeekDate ? fmtWeek(bestWeekDate) : null },
+                { icon:"🔥", color:"#BF5AF2", label:"Meilleur streak", value: `${bestStreak} séances`, sub: `Actuel : ${curStreak} séances actives` },
+              ];
+
+              const TOTALS = [
+                { icon:"🏋️", label:"Séances", value: totalSess, unit:"" },
+                { icon:"⏰", label:"Volume total", value: totalH > 0 ? `${totalH}h${totalMin%60>0?(totalMin%60)+"":""}`:`${totalMin}min`, unit:"" },
+                { icon:"⚡", label:"Charge totale", value: totalLoad.toLocaleString("fr-FR"), unit:"" },
+              ];
+
+              // Badges mérités
+              const badges = [];
+              if (totalSess >= 10)  badges.push({ icon:"🥉", label:"10 séances" });
+              if (totalSess >= 50)  badges.push({ icon:"🥈", label:"50 séances" });
+              if (totalSess >= 100) badges.push({ icon:"🥇", label:"100 séances" });
+              if (totalH >= 10)     badges.push({ icon:"⏱️", label:"10h d'entraînement" });
+              if (totalH >= 50)     badges.push({ icon:"💪", label:"50h d'entraînement" });
+              if (bestStreak >= 5)  badges.push({ icon:"🔥", label:"Streak 5+" });
+              if (bestStreak >= 10) badges.push({ icon:"🌟", label:"Streak 10+" });
+              if (profile.raceDate && new Date(profile.raceDate) > new Date()) badges.push({ icon:"🏁", label:"Race inscrit" });
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  {/* Header */}
+                  <div style={{ fontSize:10, color:"#636366", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, paddingLeft:2 }}>🏅 Records &amp; Milestones</div>
+
+                  {/* Records */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                    {RECORDS.map(r=>(
+                      <div key={r.label} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"12px", borderTop:`3px solid ${r.color}` }}>
+                        <div style={{ fontSize:18, marginBottom:5 }}>{r.icon}</div>
+                        <div style={{ fontSize:18, fontWeight:900, color:"var(--white)", lineHeight:1, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:0.5 }}>{r.value}</div>
+                        <div style={{ fontSize:9, color:"#636366", marginTop:3, textTransform:"uppercase", fontWeight:700, letterSpacing:"0.06em" }}>{r.label}</div>
+                        {r.sub && <div style={{ fontSize:9, color:r.color, marginTop:3 }}>{r.sub}</div>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Totaux carrière */}
+                  <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+                    {TOTALS.map(t=>(
+                      <div key={t.label} style={{ flex:1, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, padding:"10px 8px", textAlign:"center" }}>
+                        <div style={{ fontSize:15, marginBottom:4 }}>{t.icon}</div>
+                        <div style={{ fontSize:15, fontWeight:900, color:"var(--white)", fontFamily:"'Bebas Neue',sans-serif", lineHeight:1 }}>{t.value}</div>
+                        <div style={{ fontSize:8, color:"#636366", marginTop:3, textTransform:"uppercase", fontWeight:700 }}>{t.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Badges */}
+                  {badges.length > 0 && (
+                    <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)", borderRadius:14, padding:"10px 14px" }}>
+                      <div style={{ fontSize:9, color:"#636366", textTransform:"uppercase", fontWeight:700, letterSpacing:"0.1em", marginBottom:8 }}>Badges débloqués</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        {badges.map(b=>(
+                          <div key={b.label} style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(201,168,64,0.08)", border:"1px solid rgba(201,168,64,0.2)", borderRadius:20, padding:"4px 10px" }}>
+                            <span style={{ fontSize:13 }}>{b.icon}</span>
+                            <span style={{ fontSize:10, color:"var(--yellow)", fontWeight:700 }}>{b.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── APEX PERFORMANCE SCORE ── */}
             {(() => {
               const sessions = profile.sessions || [];
