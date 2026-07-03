@@ -20849,12 +20849,15 @@ const sessions = profile.sessions || [];
                   const fcM = profile.fcMax || estimateFCmax(profile.age, profile.sexe);
                   const fcR = profile.fcMin || null;
                   const zonesCalc = calcFCZones(fcM, fcR, profile.age, profile.sexe);
+                  // expandedZones géré ici (pas dans le .map pour respecter les Rules of Hooks)
+                  const [expandedZones, setExpandedZones] = React.useState({});
                   return (zonesCalc || ZONES).map((z, idx) => {
                     const midPct = (z.pct[0] + z.pct[1]) / 2;
                     const pace = paceFromVMA(profile.vmaKmh, (z.vma[0] + z.vma[1]) / 2);
                     const col = z.color;
                     const barWidth = z.pct[1] - z.pct[0];
-                    const [expanded, setExpanded] = React.useState(false);
+                    const expanded = expandedZones[z.z] || false;
+                    const setExpanded = (val) => setExpandedZones(prev => ({ ...prev, [z.z]: typeof val === "function" ? val(prev[z.z] || false) : val }));
                     return (
                       <div key={z.z} onClick={() => setExpanded(e => !e)} style={{ background: `${col}06`, border: `1.5px solid ${col}22`, borderLeft: `4px solid ${col}`, borderRadius: 16, padding: "14px 14px", marginBottom: 8, cursor: "pointer", transition: "all 0.2s" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
