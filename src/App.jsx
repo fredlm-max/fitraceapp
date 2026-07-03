@@ -27233,6 +27233,219 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── TRAINING CALENDAR PLANNER ── */}
+      {(() => {
+        const KEY = `fitrace_planned_${profile.name}`;
+        const [planned, setPlanned] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+        const today = new Date();
+        const [viewYear, setViewYear] = React.useState(today.getFullYear());
+        const [viewMonth, setViewMonth] = React.useState(today.getMonth());
+        const [selectedDay, setSelectedDay] = React.useState(null);
+        const [form, setForm] = React.useState({ type:"Course", duration:60, distance:"", rpe:7, notes:"" });
+        const [showForm, setShowForm] = React.useState(false);
+
+        const savePlanned = (p) => { setPlanned(p); localStorage.setItem(KEY, JSON.stringify(p)); };
+        const todayStr = today.toISOString().slice(0,10);
+
+        const monthNames = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+        const dayNames = ["L","M","M","J","V","S","D"];
+
+        // Sessions réalisées
+        const sessions = profile.sessions || [];
+        const sessMap = {};
+        sessions.forEach(s => { if (!sessMap[s.date]) sessMap[s.date] = []; sessMap[s.date].push(s); });
+
+        // Calendar grid
+        const firstDay = new Date(viewYear, viewMonth, 1);
+        const lastDay = new Date(viewYear, viewMonth + 1, 0);
+        // Start from Monday
+        let startOffset = firstDay.getDay() - 1;
+        if (startOffset < 0) startOffset = 6;
+        const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
+
+        const days = [];
+        for (let i = 0; i < totalCells; i++) {
+          const dayNum = i - startOffset + 1;
+          if (dayNum < 1 || dayNum > lastDay.getDate()) { days.push(null); continue; }
+          const d = new Date(viewYear, viewMonth, dayNum);
+          const ds = d.toISOString().slice(0,10);
+          days.push({ dayNum, ds, isToday: ds === todayStr, isFuture: ds > todayStr, isPast: ds < todayStr });
+        }
+
+        const typeColors = {
+          "Course":"var(--yellow)","HYROX":"#FF453A","Vélo":"#30D158","Natation":"#5AC8FA",
+          "Musculation":"#BF5AF2","Repos actif":"#888","HIIT":"#FF9F0A","Autre":"#666",
+        };
+
+        const addPlan = () => {
+          if (!selectedDay) return;
+          const next = { ...planned, [selectedDay]: [...(planned[selectedDay]||[]), { ...form, id: Date.now() }] };
+          savePlanned(next);
+          setShowForm(false);
+          setForm({ type:"Course", duration:60, distance:"", rpe:7, notes:"" });
+        };
+
+        const removePlan = (ds, id) => {
+          const next = { ...planned, [ds]: (planned[ds]||[]).filter(p => p.id !== id) };
+          if (!next[ds]?.length) delete next[ds];
+          savePlanned(next);
+        };
+
+        const selectedPlans = selectedDay ? (planned[selectedDay] || []) : [];
+        const selectedSessions = selectedDay ? (sessMap[selectedDay] || []) : [];
+        const typeOptions = ["Course","HYROX","Vélo","Natation","Musculation","Repos actif","HIIT","Autre"];
+
+        // Monthly stats
+        const monthPlanned = Object.entries(planned).filter(([d]) => d.startsWith(`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`)).reduce((sum,[,arr]) => sum + arr.length, 0);
+        const monthDone = Object.entries(sessMap).filter(([d]) => d.startsWith(`${viewYear}-${String(viewMonth+1).padStart(2,"0")}`)).reduce((sum,[,arr]) => sum + arr.length, 0);
+
+        return (
+          <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+            {/* Header */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Calendrier d'entraînement</div>
+                <div style={{ fontSize:11, color:"#666", marginTop:2 }}>
+                  {monthDone} réalisée{monthDone!==1?"s":""} · {monthPlanned} planifiée{monthPlanned!==1?"s":""}
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y=>y-1); } else setViewMonth(m=>m-1); }}
+                  style={{ background:"var(--bg3)", border:"none", borderRadius:8, padding:"5px 10px", color:"var(--white)", cursor:"pointer", fontSize:14 }}>‹</button>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", minWidth:90, textAlign:"center" }}>
+                  {monthNames[viewMonth].slice(0,3)} {viewYear}
+                </div>
+                <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y=>y+1); } else setViewMonth(m=>m+1); }}
+                  style={{ background:"var(--bg3)", border:"none", borderRadius:8, padding:"5px 10px", color:"var(--white)", cursor:"pointer", fontSize:14 }}>›</button>
+              </div>
+            </div>
+
+            {/* Day names */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:4 }}>
+              {dayNames.map((d,i) => (
+                <div key={i} style={{ textAlign:"center", fontSize:10, color:"#555", fontWeight:700, padding:"3px 0" }}>{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:14 }}>
+              {days.map((day, i) => {
+                if (!day) return <div key={i}/>;
+                const plans = planned[day.ds] || [];
+                const done = sessMap[day.ds] || [];
+                const isSelected = selectedDay === day.ds;
+                const hasPlan = plans.length > 0;
+                const hasDone = done.length > 0;
+                const planColor = plans[0] ? (typeColors[plans[0].type] || "#888") : null;
+                return (
+                  <button key={i} onClick={() => { setSelectedDay(isSelected ? null : day.ds); setShowForm(false); }}
+                    style={{
+                      background: isSelected ? "var(--yellow)" : day.isToday ? "rgba(0,122,255,0.2)" : "var(--bg3)",
+                      border: day.isToday ? "1px solid var(--yellow)" : isSelected ? "none" : "1px solid transparent",
+                      borderRadius:8, padding:"5px 2px", cursor:"pointer", minHeight:44,
+                      display:"flex", flexDirection:"column", alignItems:"center", gap:2,
+                      opacity: day.isPast && !hasDone && !hasPlan ? 0.4 : 1,
+                    }}>
+                    <div style={{ fontSize:12, fontWeight: day.isToday ? 800 : 600, color: isSelected ? "#fff" : day.isToday ? "var(--yellow)" : "var(--white)" }}>
+                      {day.dayNum}
+                    </div>
+                    <div style={{ display:"flex", gap:2, flexWrap:"wrap", justifyContent:"center" }}>
+                      {hasDone && <div style={{ width:5, height:5, borderRadius:"50%", background: isSelected ? "#fff" : "#30D158" }}/>}
+                      {hasPlan && !hasDone && <div style={{ width:5, height:5, borderRadius:"50%", background: isSelected ? "#fff" : (planColor || "var(--yellow)"), opacity:0.7 }}/>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display:"flex", gap:12, marginBottom:14, fontSize:10, color:"#666" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:4 }}><div style={{ width:8, height:8, borderRadius:"50%", background:"#30D158" }}/> Réalisée</div>
+              <div style={{ display:"flex", alignItems:"center", gap:4 }}><div style={{ width:8, height:8, borderRadius:"50%", background:"var(--yellow)", opacity:0.7 }}/> Planifiée</div>
+            </div>
+
+            {/* Selected day panel */}
+            {selectedDay && (
+              <div style={{ background:"var(--bg3)", borderRadius:14, padding:14 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--white)" }}>
+                    {new Date(selectedDay+"T12:00:00").toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" })}
+                  </div>
+                  {selectedDay >= todayStr && (
+                    <button onClick={() => setShowForm(f => !f)}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      {showForm ? "Annuler" : "+ Planifier"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Completed sessions */}
+                {selectedSessions.map((s,i) => (
+                  <div key={i} style={{ background:"rgba(48,209,88,0.12)", border:"1px solid #30D15844", borderRadius:10, padding:"8px 12px", marginBottom:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#30D158" }}>✓ {s.type || "Séance"}</div>
+                      <div style={{ fontSize:11, color:"#888" }}>{s.duration ? `${s.duration}min` : ""} {s.distance ? `· ${s.distance}km` : ""}</div>
+                    </div>
+                    {s.rpe && <div style={{ fontSize:10, color:"#666", marginTop:2 }}>RPE {s.rpe}/10</div>}
+                  </div>
+                ))}
+
+                {/* Planned sessions */}
+                {selectedPlans.map((p) => (
+                  <div key={p.id} style={{ background:(typeColors[p.type]||"#888")+"18", border:`1px solid ${(typeColors[p.type]||"#888")}44`, borderRadius:10, padding:"8px 12px", marginBottom:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:typeColors[p.type]||"#888" }}>📅 {p.type}</div>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <div style={{ fontSize:11, color:"#888" }}>{p.duration}min {p.distance ? `· ${p.distance}km` : ""}</div>
+                        <button onClick={() => removePlan(selectedDay, p.id)}
+                          style={{ background:"none", border:"none", color:"#FF453A", fontSize:14, cursor:"pointer", padding:0 }}>×</button>
+                      </div>
+                    </div>
+                    {p.notes && <div style={{ fontSize:10, color:"#666", marginTop:2, fontStyle:"italic" }}>{p.notes}</div>}
+                  </div>
+                ))}
+
+                {selectedSessions.length === 0 && selectedPlans.length === 0 && !showForm && (
+                  <div style={{ textAlign:"center", color:"#555", fontSize:12, padding:"10px 0" }}>
+                    {selectedDay >= todayStr ? "Aucune séance planifiée" : "Aucune séance réalisée"}
+                  </div>
+                )}
+
+                {/* Add form */}
+                {showForm && (
+                  <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:8 }}>
+                    <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}
+                      style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"var(--white)", fontSize:13 }}>
+                      {typeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <input type="number" value={form.duration} onChange={e=>setForm(f=>({...f,duration:parseInt(e.target.value)||60}))}
+                        placeholder="Durée (min)" min="10" max="360"
+                        style={{ flex:1, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"var(--white)", fontSize:13 }}/>
+                      <input type="number" value={form.distance} onChange={e=>setForm(f=>({...f,distance:e.target.value}))}
+                        placeholder="Distance (km)" step="0.5"
+                        style={{ flex:1, background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"var(--white)", fontSize:13 }}/>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:12, color:"#888", flexShrink:0 }}>RPE cible: {form.rpe}</span>
+                      <input type="range" min="1" max="10" value={form.rpe} onChange={e=>setForm(f=>({...f,rpe:parseInt(e.target.value)}))}
+                        style={{ flex:1, accentColor:"var(--yellow)" }}/>
+                    </div>
+                    <input type="text" value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}
+                      placeholder="Notes (objectif, intervalles...)"
+                      style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"var(--white)", fontSize:13 }}/>
+                    <button onClick={addPlan}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"10px 0", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+                      Ajouter au planning
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── SEASON GOAL TRACKER ── */}
       {(() => {
         const KEY = `fitrace_goals_${profile.name}`;
