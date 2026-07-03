@@ -21484,7 +21484,16 @@ const sessions = profile.sessions || [];
 
               const saveBench = async (id, min, sec) => {
                 const timeStr = `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
-                const updated = { ...benchmarks, [id]: { time: timeStr, date: new Date().toISOString().split("T")[0] } };
+                const today = new Date().toISOString().split("T")[0];
+                const prev = benchmarks[id] || {};
+                // Migrate old format (no history) to new
+                const prevHistory = prev.history || (prev.time ? [{ time: prev.time, date: prev.date || today }] : []);
+                const newEntry = { time: timeStr, date: today };
+                const history = [...prevHistory, newEntry];
+                // PR = best (lowest) time ever
+                const toSecs = t => { const [m,s]=t.split(":").map(Number); return m*60+(s||0); };
+                const prEntry = history.reduce((best,e) => toSecs(e.time) < toSecs(best.time) ? e : best, history[0]);
+                const updated = { ...benchmarks, [id]: { time: prEntry.time, date: prEntry.date, history } };
                 setBenchmarks(updated);
                 await storage.set(benchKey, updated);
                 setEditingStation(null);
@@ -21546,6 +21555,43 @@ const sessions = profile.sessions || [];
                                 style={{ width: "100%", padding: 16, background: editMin ? st.color : "rgba(255,255,255,0.08)", border: "none", borderRadius: 14, fontSize: 16, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: 1.5, color: editMin ? "#000" : "#333", cursor: editMin ? "pointer" : "default" }}>
                                 💾 ENREGISTRER MON TEMPS
                               </button>
+                              {/* Historique des essais précédents */}
+                              {(() => {
+                                const b = benchmarks[editingStation];
+                                const hist = b?.history || (b?.time ? [{ time: b.time, date: b.date }] : []);
+                                if (hist.length === 0) return null;
+                                const toSecs = t => { const [m,s]=t.split(":").map(Number); return m*60+(s||0); };
+                                const prSecs = Math.min(...hist.map(e=>toSecs(e.time)));
+                                return (
+                                  <div style={{ marginTop: 16 }}>
+                                    <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing:"0.1em", fontWeight:700, marginBottom:8 }}>Historique ({hist.length} test{hist.length>1?"s":""})</div>
+                                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                      {[...hist].reverse().map((e,i) => {
+                                        const s = toSecs(e.time);
+                                        const isPR = s === prSecs;
+                                        const prevEntry = i < hist.length-1 ? hist[hist.length-2-i] : null;
+                                        const delta = prevEntry ? toSecs(prevEntry.time) - s : null;
+                                        return (
+                                          <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", background: isPR ? `${st.color}15` : "rgba(255,255,255,0.04)", borderRadius:10, border: isPR ? `1px solid ${st.color}30` : "1px solid transparent" }}>
+                                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                              {isPR && <span style={{ fontSize:10 }}>🏆</span>}
+                                              <div>
+                                                <div className="bebas" style={{ fontSize:18, color: isPR ? st.color : "#AEAEB2", lineHeight:1 }}>{e.time}</div>
+                                                <div style={{ fontSize:8, color:"#636366" }}>{e.date ? new Date(e.date).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"2-digit"}) : "—"}</div>
+                                              </div>
+                                            </div>
+                                            {delta !== null && (
+                                              <div style={{ fontSize:11, fontWeight:700, color: delta > 0 ? "#30D158" : delta < 0 ? "#FF453A" : "#636366" }}>
+                                                {delta > 0 ? `↓ −${delta}s` : delta < 0 ? `↑ +${Math.abs(delta)}s` : "="}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </>
                           );
                         })()}
@@ -21562,52 +21608,80 @@ const sessions = profile.sessions || [];
                       const eliteSecs = timeToSecs(st.refEliteH);
                       const diffVsRef = mySecs !== null && refSecs ? refSecs - mySecs : null; // positive = better than ref
                       const pctOfElite = mySecs !== null && eliteSecs ? Math.round((eliteSecs / mySecs) * 100) : null;
-                      return (
-                        <div key={st.id} onClick={() => { haptic([6]); setEditingStation(st.id); if (bench) { const [m,s] = bench.time.split(":"); setEditMin(m); setEditSec(s); } else { setEditMin(""); setEditSec(""); } }}
-                          style={{ background: bench ? `${st.color}07` : "rgba(255,255,255,0.04)", border: `1px solid ${bench ? st.color + "30" : "rgba(255,255,255,0.08)"}`, borderLeft: `3px solid ${bench ? st.color : "rgba(255,255,255,0.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.18s" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <span style={{ fontSize: 20, flexShrink: 0 }}>{st.icon}</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <div>
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{st.label}</div>
-                                  <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 1 }}>{st.dist}</div>
-                                </div>
-                                <div style={{ textAlign: "right" }}>
-                                  {bench ? (
-                                    <>
-                                      <div className="bebas" style={{ fontSize: 22, color: st.color, lineHeight: 1 }}>{bench.time}</div>
-                                      {diffVsRef !== null && (
-                                        <div style={{ fontSize: 9, color: diffVsRef > 0 ? "var(--green)" : diffVsRef < -5 ? "var(--red)" : "var(--orange)", fontWeight: 700 }}>
-                                          {diffVsRef > 0 ? `−${diffVsRef}s vs ref` : `+${Math.abs(diffVsRef)}s vs ref`}
-                                        </div>
+                      return (() => {
+                          const history = bench?.history || (bench?.time ? [{ time: bench.time, date: bench.date }] : []);
+                          const firstSecs = history.length > 1 ? timeToSecs(history[0].time) : null;
+                          const improveDelta = firstSecs && mySecs ? firstSecs - mySecs : null; // positive = got faster
+                          const lastDate = bench?.date ? new Date(bench.date).toLocaleDateString("fr-FR", { day:"numeric", month:"short" }) : null;
+                          return (
+                            <div key={st.id} onClick={() => { haptic([6]); setEditingStation(st.id); setEditMin(""); setEditSec(""); }}
+                              style={{ background: bench ? `${st.color}07` : "rgba(255,255,255,0.04)", border: `1px solid ${bench ? st.color + "30" : "rgba(255,255,255,0.08)"}`, borderLeft: `3px solid ${bench ? st.color : "rgba(255,255,255,0.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", transition: "all 0.18s" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{ fontSize: 20, flexShrink: 0 }}>{st.icon}</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                    <div>
+                                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{st.label}</div>
+                                      <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 1 }}>{st.dist}
+                                        {history.length > 1 && <span style={{ color: st.color, marginLeft: 6 }}>{history.length} tests</span>}
+                                      </div>
+                                    </div>
+                                    <div style={{ textAlign: "right" }}>
+                                      {bench ? (
+                                        <>
+                                          <div className="bebas" style={{ fontSize: 22, color: st.color, lineHeight: 1 }}>{bench.time}</div>
+                                          {improveDelta !== null && improveDelta !== 0 ? (
+                                            <div style={{ fontSize: 9, color: improveDelta > 0 ? "#30D158" : "#FF453A", fontWeight: 700 }}>
+                                              {improveDelta > 0 ? `↓ −${improveDelta}s` : `↑ +${Math.abs(improveDelta)}s`} depuis le 1er
+                                            </div>
+                                          ) : diffVsRef !== null ? (
+                                            <div style={{ fontSize: 9, color: diffVsRef > 0 ? "#30D158" : diffVsRef < -5 ? "#FF453A" : "#FF9F0A", fontWeight: 700 }}>
+                                              {diffVsRef > 0 ? `−${diffVsRef}s vs ref` : `+${Math.abs(diffVsRef)}s vs ref`}
+                                            </div>
+                                          ) : null}
+                                          {lastDate && <div style={{ fontSize: 8, color: "#636366", marginTop: 1 }}>{lastDate}</div>}
+                                        </>
+                                      ) : (
+                                        <div style={{ fontSize: 10, color: "#8E8E93", fontStyle: "italic" }}>Tap pour saisir →</div>
                                       )}
-                                    </>
-                                  ) : (
-                                    <div style={{ fontSize: 10, color: "#8E8E93", fontStyle: "italic" }}>Tap pour saisir →</div>
+                                    </div>
+                                  </div>
+                                  {/* Progress bar vs ref */}
+                                  {bench && refSecs && eliteSecs && (
+                                    <div style={{ marginTop: 8 }}>
+                                      <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "visible", position: "relative" }}>
+                                        <div style={{ position: "absolute", top: -2, left: `${Math.min(98, (eliteSecs / refSecs) * 100)}%`, width: 2, height: 8, background: st.color, borderRadius: 1 }} />
+                                        <div style={{ height: "100%", width: `${Math.min(100, (mySecs / refSecs) * 100)}%`, background: mySecs <= eliteSecs ? st.color : mySecs <= refSecs ? "var(--yellow)" : "var(--orange)", borderRadius: 99, transition: "width 0.5s" }} />
+                                      </div>
+                                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#E5E5EA", marginTop: 3 }}>
+                                        <span>0:00</span>
+                                        <span style={{ color: st.color }}>Élite {st.refEliteH}</span>
+                                        <span>Ref {gender === "H" ? st.refH : st.refF}</span>
+                                      </div>
+                                    </div>
                                   )}
+                                  {/* Mini history sparkline dots */}
+                                  {history.length > 1 && (() => {
+                                    const secs = history.map(e => timeToSecs(e.time));
+                                    const minS = Math.min(...secs), maxS = Math.max(...secs);
+                                    const range = maxS - minS || 1;
+                                    return (
+                                      <div style={{ display: "flex", alignItems: "flex-end", gap: 3, marginTop: 8, height: 20 }}>
+                                        {secs.map((s, i) => {
+                                          const h = 4 + Math.round(((s - minS) / range) * 12);
+                                          const isLast = i === secs.length - 1;
+                                          const isPR = s === minS;
+                                          return <div key={i} style={{ width: 5, height: h, borderRadius: 3, background: isPR ? st.color : isLast ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)", flexShrink: 0, transition: "height 0.3s" }} />;
+                                        })}
+                                        <span style={{ fontSize: 8, color: "#636366", marginLeft: 4, alignSelf: "center" }}>progression</span>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
-                              {/* Progress bar vs ref */}
-                              {bench && refSecs && eliteSecs && (
-                                <div style={{ marginTop: 8 }}>
-                                  <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "visible", position: "relative" }}>
-                                    {/* Elite marker */}
-                                    <div style={{ position: "absolute", top: -2, left: `${Math.min(98, (eliteSecs / refSecs) * 100)}%`, width: 2, height: 8, background: st.color, borderRadius: 1 }} />
-                                    {/* My bar */}
-                                    <div style={{ height: "100%", width: `${Math.min(100, (mySecs / refSecs) * 100)}%`, background: mySecs <= eliteSecs ? st.color : mySecs <= refSecs ? "var(--yellow)" : "var(--orange)", borderRadius: 99, transition: "width 0.5s" }} />
-                                  </div>
-                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#E5E5EA", marginTop: 3 }}>
-                                    <span>0:00</span>
-                                    <span style={{ color: st.color }}>Élite {st.refEliteH}</span>
-                                    <span>Ref {gender === "H" ? st.refH : st.refF}</span>
-                                  </div>
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        </div>
-                      );
+                          );
+                        })();
                     })}
                   </div>
                 </div>
