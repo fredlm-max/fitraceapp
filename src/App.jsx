@@ -12870,6 +12870,130 @@ JSON:
               );
             })()}
 
+            {/* ── PMC — PERFORMANCE MANAGEMENT CHART ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const pmcPts = calcPMC(profile.sessions || []);
+              if (pmcPts.length < 7) return null;
+
+              // Fenêtre 60 jours
+              const WIN = 60;
+              const pts = pmcPts.slice(-WIN);
+
+              const today = pts[pts.length - 1];
+              const tsb2 = tsbLabel(today.tsb);
+
+              // SVG dimensions
+              const W = 320, H = 100, PAD = { l: 28, r: 8, t: 8, b: 20 };
+              const iW = W - PAD.l - PAD.r;
+              const iH = H - PAD.t - PAD.b;
+
+              const allCTL = pts.map(p => p.ctl);
+              const allATL = pts.map(p => p.atl);
+              const allTSB = pts.map(p => p.tsb);
+              const minY = Math.min(0, ...allTSB) - 3;
+              const maxY = Math.max(...allCTL, ...allATL) + 5;
+              const rangeY = maxY - minY || 1;
+
+              const cx = (i) => PAD.l + (i / (pts.length - 1)) * iW;
+              const cy = (v) => PAD.t + iH - ((v - minY) / rangeY) * iH;
+              const line = (vals) => vals.map((v, i) => `${i === 0 ? "M" : "L"}${cx(i).toFixed(1)},${cy(v).toFixed(1)}`).join(" ");
+
+              const zero_y = cy(0);
+
+              // Area TSB (above zero = green, below = red)
+              const tsbLine = line(allTSB);
+              const tsbAreaPos = `${tsbLine} L${cx(pts.length-1)},${zero_y} L${cx(0)},${zero_y} Z`;
+              const tsbAreaNeg = tsbAreaPos;
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>CHARGE · FATIGUE · FORME</div>
+                      <div style={{ fontSize: 10, color: "#636366" }}>Modèle Banister · 60 derniers jours</div>
+                    </div>
+                    {/* TSB today badge */}
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: "#636366" }}>Forme aujourd'hui</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: tsb2.color }}>{today.tsb > 0 ? "+" : ""}{today.tsb} · {tsb2.label}</div>
+                    </div>
+                  </div>
+
+                  {/* Chart SVG */}
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", overflow: "visible" }}>
+                    <defs>
+                      <linearGradient id="ctlGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#007AFF" stopOpacity="0.15" />
+                        <stop offset="100%" stopColor="#007AFF" stopOpacity="0" />
+                      </linearGradient>
+                      <clipPath id="aboveZero">
+                        <rect x={PAD.l} y={PAD.t} width={iW} height={zero_y - PAD.t} />
+                      </clipPath>
+                      <clipPath id="belowZero">
+                        <rect x={PAD.l} y={zero_y} width={iW} height={PAD.t + iH - zero_y} />
+                      </clipPath>
+                    </defs>
+
+                    {/* Grid lines */}
+                    {[0, Math.round(maxY / 2), Math.round(maxY)].map(v => (
+                      <g key={v}>
+                        <line x1={PAD.l} y1={cy(v)} x2={W - PAD.r} y2={cy(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                        <text x={PAD.l - 3} y={cy(v) + 3} textAnchor="end" fontSize="7" fill="#48484A">{v}</text>
+                      </g>
+                    ))}
+
+                    {/* Zero line */}
+                    <line x1={PAD.l} y1={zero_y} x2={W - PAD.r} y2={zero_y} stroke="rgba(255,255,255,0.12)" strokeWidth="0.8" strokeDasharray="3,3" />
+
+                    {/* TSB area fill */}
+                    <path d={tsbAreaPos} fill="rgba(48,209,88,0.12)" clipPath="url(#aboveZero)" />
+                    <path d={tsbAreaNeg} fill="rgba(255,69,58,0.10)" clipPath="url(#belowZero)" />
+
+                    {/* CTL area fill */}
+                    <path d={`${line(allCTL)} L${cx(pts.length-1)},${cy(minY)} L${cx(0)},${cy(minY)} Z`} fill="url(#ctlGrad)" />
+
+                    {/* Lines */}
+                    <path d={line(allCTL)} fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={line(allATL)} fill="none" stroke="#FF453A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4,2" />
+                    <path d={line(allTSB)} fill="none" stroke="#30D158" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+                    {/* Today dot */}
+                    <circle cx={cx(pts.length-1)} cy={cy(today.tsb)} r="3.5" fill={tsb2.color} stroke="#000" strokeWidth="1.5" />
+
+                    {/* X axis labels */}
+                    {[0, Math.floor(pts.length/2), pts.length-1].map(i => {
+                      const d = new Date(pts[i].date);
+                      const lbl = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+                      return <text key={i} x={cx(i)} y={H - 2} textAnchor="middle" fontSize="7" fill="#48484A">{lbl}</text>;
+                    })}
+                  </svg>
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", gap: 14, marginTop: 6 }}>
+                    {[
+                      { color: "#007AFF", label: "CTL (Forme)", val: today.ctl, dash: false },
+                      { color: "#FF453A", label: "ATL (Fatigue)", val: today.atl, dash: true },
+                      { color: "#30D158", label: "TSB (Fraîcheur)", val: `${today.tsb > 0 ? "+" : ""}${today.tsb}`, dash: false },
+                    ].map(l => (
+                      <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke={l.color} strokeWidth="2" strokeDasharray={l.dash ? "4,2" : "none"} /></svg>
+                        <div>
+                          <div style={{ fontSize: 8, color: "#8E8E93" }}>{l.label}</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: l.color }}>{l.val}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Insight */}
+                  <div style={{ marginTop: 8, fontSize: 11, color: "#8E8E93", lineHeight: 1.5, fontStyle: "italic", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 8 }}>
+                    💡 {tsb2.tip}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── VO2MAX PROGRESSION ── */}
             {profile.vmaKmh && (() => {
               // Read VMA history from localStorage (saved on each profile update)
