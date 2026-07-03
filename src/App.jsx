@@ -3307,8 +3307,9 @@ function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, ha
 // ============================================================
 function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [tab, setTab] = useState("home");
-  const [tabDir, setTabDir] = useState(1); // 1=droite, -1=gauche
+  const [tabDir, setTabDir] = useState(1);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showAllHome, setShowAllHome] = useState(false);
 
   // ── Theme
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem("apex_theme") || "black");
@@ -6223,6 +6224,42 @@ JSON:
                 </div>
               );
             })()}
+
+            {/* ── RACCOURCIS ESSENTIELS ── */}
+            <button onClick={() => { haptic([8]); navigateTo("today"); }}
+              style={{ width:"100%", padding:"16px 20px", background:"var(--yellow)", border:"none", borderRadius:18, display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", marginBottom:10, boxShadow:"0 4px 20px rgba(201,168,64,0.25)" }}>
+              <div style={{ textAlign:"left" }}>
+                <div className="bebas" style={{ fontSize:18, color:"#000", letterSpacing:2, lineHeight:1 }}>MA SÉANCE DU JOUR</div>
+                <div style={{ fontSize:11, color:"rgba(0,0,0,0.6)", marginTop:3 }}>Générer · Exécuter · Progresser</div>
+              </div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </button>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16 }}>
+              {[
+                { id:"progress", label:"Stats", sub:"Progression", icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
+                { id:"planning", label:"Planning", sub:"Semaine", icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+                { id:"forme",    label:"Forme", sub:"Bien-être", icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
+                { id:"nutri",    label:"Nutrition", sub:"Alimentation", icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg> },
+              ].map(s => (
+                <button key={s.id} onClick={() => { haptic([6]); navigateTo(s.id); }}
+                  style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"14px 14px", display:"flex", alignItems:"center", gap:10, cursor:"pointer", textAlign:"left" }}>
+                  <div style={{ color:"var(--yellow)", opacity:0.8 }}>{s.icon}</div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"var(--white)", lineHeight:1 }}>{s.label}</div>
+                    <div style={{ fontSize:10, color:"#636366", marginTop:3 }}>{s.sub}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* ── VOIR PLUS / MOINS ── */}
+            <button onClick={() => setShowAllHome(v => !v)}
+              style={{ width:"100%", padding:"10px", background:"none", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, color:"#636366", fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", marginBottom:12 }}>
+              {showAllHome ? "Voir moins ↑" : "Tout afficher ↓"}
+            </button>
+
+            {/* ── SECTIONS SECONDAIRES (toujours dans le DOM pour les hooks) ── */}
+            <div style={{ display: showAllHome ? "block" : "none" }}>
 
             {/* ── HYROX 101 BEGINNER CARD (shows for new users) ── */}
             {(profile.sessions||[]).length < 3 && <Hyrox101Card profile={profile} navigateTo={navigateTo} />}
@@ -10718,6 +10755,8 @@ JSON:
                 </div>
               );
             })()}
+
+            </div>{/* fin sections secondaires */}
 
             {/* Bouton Mon Profil */}
             <button onClick={() => setTab("profil")} className="card-hover" style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 14, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
