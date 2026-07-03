@@ -34319,6 +34319,216 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         );
       })()}
 
+      {/* ── LIVE RACE SPLIT TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_race_splits_${profile.name}`;
+        const [races, setRaces] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+        const [activeRace, setActiveRace] = React.useState(null);
+        const [raceStart, setRaceStart] = React.useState(null);
+        const [elapsed, setElapsed] = React.useState(0);
+        const [tab, setTab] = React.useState("race");
+        const [targetTime, setTargetTime] = React.useState({ h:"1", m:"30", s:"0" });
+        const timerRef = React.useRef(null);
+
+        const CHECKPOINTS = [
+          { id:"run1",    name:"Run 1",         type:"run",     dist:1,   targetPct:6.25 },
+          { id:"skierg",  name:"SkiErg",        type:"station", targetPct:8.3 },
+          { id:"run2",    name:"Run 2",         type:"run",     dist:1,   targetPct:14.6 },
+          { id:"sled_p",  name:"Sled Push",     type:"station", targetPct:16.7 },
+          { id:"run3",    name:"Run 3",         type:"run",     dist:1,   targetPct:22.9 },
+          { id:"sled_l",  name:"Sled Pull",     type:"station", targetPct:25.0 },
+          { id:"run4",    name:"Run 4",         type:"run",     dist:1,   targetPct:31.25 },
+          { id:"burpee",  name:"Burpee BJ",     type:"station", targetPct:33.3 },
+          { id:"run5",    name:"Run 5",         type:"run",     dist:1,   targetPct:39.6 },
+          { id:"rowing",  name:"Rowing",        type:"station", targetPct:41.7 },
+          { id:"run6",    name:"Run 6",         type:"run",     dist:1,   targetPct:47.9 },
+          { id:"farmer",  name:"Farmer Carry",  type:"station", targetPct:50.0 },
+          { id:"run7",    name:"Run 7",         type:"run",     dist:1,   targetPct:56.25 },
+          { id:"sandbag", name:"Sandbag Lunges",type:"station", targetPct:58.3 },
+          { id:"run8",    name:"Run 8",         type:"run",     dist:1,   targetPct:64.6 },
+          { id:"wballs",  name:"Wall Balls",    type:"station", targetPct:66.7 },
+          { id:"finish",  name:"FINISH 🏁",    type:"finish",  targetPct:100 },
+        ];
+
+        const targetSec = parseInt(targetTime.h||0)*3600 + parseInt(targetTime.m||0)*60 + parseInt(targetTime.s||0);
+
+        React.useEffect(() => {
+          if (activeRace !== null) {
+            timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - raceStart) / 1000)), 500);
+          } else {
+            clearInterval(timerRef.current);
+          }
+          return () => clearInterval(timerRef.current);
+        });
+
+        const startRace = () => {
+          const now = Date.now();
+          const race = { id:now, date:new Date().toISOString().slice(0,10), splits:{}, targetSec, startTs:now };
+          setRaces(r => [...r, race]);
+          setActiveRace(race.id);
+          setRaceStart(now);
+          setElapsed(0);
+          localStorage.setItem(KEY, JSON.stringify([...races, race]));
+        };
+
+        const logSplit = (cpId) => {
+          if (!activeRace) return;
+          const elapsedNow = Math.floor((Date.now() - raceStart) / 1000);
+          setRaces(prev => {
+            const updated = prev.map(r => r.id === activeRace ? { ...r, splits:{ ...r.splits, [cpId]:elapsedNow } } : r);
+            localStorage.setItem(KEY, JSON.stringify(updated));
+            return updated;
+          });
+        };
+
+        const finishRace = () => {
+          logSplit("finish");
+          setActiveRace(null);
+          setElapsed(0);
+        };
+
+        const fmtSec = (s) => {
+          if (!s && s !== 0) return "--:--";
+          const h = Math.floor(s/3600);
+          const m = Math.floor((s%3600)/60);
+          const sec = s%60;
+          return h > 0 ? `${h}:${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}` : `${m}:${sec.toString().padStart(2,"0")}`;
+        };
+
+        const currentRace = races.find(r => r.id === activeRace);
+        const lastRace = [...races].sort((a,b) => b.id - a.id).find(r => r.splits?.finish);
+
+        const nextCP = currentRace ? CHECKPOINTS.find(cp => !currentRace.splits?.[cp.id]) : null;
+
+        return (
+          <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ fontSize:16, fontWeight:700, color:"var(--white)", marginBottom:14 }}>Live Race Split Tracker</div>
+
+            {/* Tabs */}
+            <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+              {["race","history"].map(t => (
+                <button key={t} onClick={() => setTab(t)}
+                  style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0",
+                    color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                  {t === "race" ? "🏁 Course active" : "📊 Historique"}
+                </button>
+              ))}
+            </div>
+
+            {tab === "race" && (
+              activeRace && currentRace ? (
+                <div>
+                  {/* Live timer */}
+                  <div style={{ textAlign:"center", marginBottom:16 }}>
+                    <div style={{ fontSize:42, fontWeight:800, color:"var(--yellow)", fontVariantNumeric:"tabular-nums", letterSpacing:-1 }}>
+                      {fmtSec(elapsed)}
+                    </div>
+                    {targetSec > 0 && (
+                      <div style={{ fontSize:13, color: elapsed > targetSec * (nextCP ? CHECKPOINTS.indexOf(nextCP)/CHECKPOINTS.length : 1) ? "#FF453A" : "#30D158" }}>
+                        {elapsed <= targetSec ? `⬇ ${fmtSec(targetSec - elapsed)} sous l'objectif` : `⬆ ${fmtSec(elapsed - targetSec)} au-dessus`}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Next checkpoint CTA */}
+                  {nextCP && (
+                    <button onClick={() => { if (nextCP.id === "finish") finishRace(); else logSplit(nextCP.id); }}
+                      style={{ width:"100%", background: nextCP.type === "finish" ? "#30D158" : nextCP.type === "run" ? "var(--yellow)" : "#FF6B35",
+                        border:"none", borderRadius:14, padding:"16px 0", color:"#fff", fontSize:16, fontWeight:800, cursor:"pointer", marginBottom:12 }}>
+                      ✓ {nextCP.name}
+                    </button>
+                  )}
+
+                  {/* Splits so far */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {CHECKPOINTS.map((cp, i) => {
+                      const splitTime = currentRace.splits?.[cp.id];
+                      const prevSplit = i > 0 ? currentRace.splits?.[CHECKPOINTS[i-1].id] : 0;
+                      const segTime = splitTime && (prevSplit !== undefined) ? splitTime - (prevSplit||0) : null;
+                      const targetAtCP = targetSec * (cp.targetPct/100);
+                      const delta = splitTime ? splitTime - targetAtCP : null;
+                      if (!splitTime && cp.id !== nextCP?.id) return null;
+                      return (
+                        <div key={cp.id} style={{
+                          display:"flex", justifyContent:"space-between", alignItems:"center",
+                          background: cp.id === nextCP?.id ? "rgba(0,122,255,0.15)" : "var(--bg3)",
+                          border: cp.id === nextCP?.id ? "1px solid rgba(0,122,255,0.4)" : "1px solid transparent",
+                          borderRadius:10, padding:"8px 12px"
+                        }}>
+                          <div style={{ fontSize:12, color: splitTime ? "var(--white)" : "#555", fontWeight: splitTime ? 600 : 400 }}>
+                            {cp.type === "run" ? "🏃" : cp.type === "station" ? "⚙️" : "🏁"} {cp.name}
+                          </div>
+                          {splitTime ? (
+                            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                              {segTime && <div style={{ fontSize:10, color:"#666" }}>+{fmtSec(segTime)}</div>}
+                              <div style={{ fontSize:13, fontWeight:700, color:"var(--white)" }}>{fmtSec(splitTime)}</div>
+                              {delta !== null && <div style={{ fontSize:11, fontWeight:700, color: delta > 0 ? "#FF453A" : "#30D158" }}>
+                                {delta > 0 ? "+" : ""}{fmtSec(Math.abs(Math.round(delta)))}
+                              </div>}
+                            </div>
+                          ) : <div style={{ fontSize:11, color:"var(--yellow)" }}>→ Prochain</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>Temps objectif</div>
+                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      <input type="number" value={targetTime.h} onChange={e=>setTargetTime(t=>({...t,h:e.target.value}))} min="0" max="3" placeholder="h"
+                        style={{ width:48, background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 8px", color:"var(--white)", fontSize:16, textAlign:"center" }}/>
+                      <span style={{ color:"#555" }}>h</span>
+                      <input type="number" value={targetTime.m} onChange={e=>setTargetTime(t=>({...t,m:e.target.value}))} min="0" max="59"
+                        style={{ width:48, background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 8px", color:"var(--white)", fontSize:16, textAlign:"center" }}/>
+                      <span style={{ color:"#555" }}>min</span>
+                      <input type="number" value={targetTime.s} onChange={e=>setTargetTime(t=>({...t,s:e.target.value}))} min="0" max="59"
+                        style={{ width:48, background:"var(--bg3)", border:"none", borderRadius:8, padding:"8px 8px", color:"var(--white)", fontSize:16, textAlign:"center" }}/>
+                      <span style={{ color:"#555" }}>s</span>
+                    </div>
+                  </div>
+                  <button onClick={startRace}
+                    style={{ width:"100%", background:"var(--yellow)", border:"none", borderRadius:14, padding:"14px 0", color:"#fff", fontSize:16, fontWeight:800, cursor:"pointer" }}>
+                    🏁 Démarrer la course
+                  </button>
+                  {lastRace && (
+                    <div style={{ marginTop:12, background:"var(--bg3)", borderRadius:12, padding:"10px 14px" }}>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:4 }}>Dernière course ({lastRace.date})</div>
+                      <div style={{ fontSize:18, fontWeight:800, color:"#30D158" }}>{fmtSec(lastRace.splits?.finish)}</div>
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+
+            {tab === "history" && (
+              <div>
+                {races.filter(r => r.splits?.finish).length === 0 ? (
+                  <div style={{ textAlign:"center", color:"#555", fontSize:13, padding:"20px 0" }}>Aucune course complétée</div>
+                ) : [...races].filter(r => r.splits?.finish).sort((a,b) => b.id-a.id).slice(0,5).map(race => {
+                  const finishSec = race.splits?.finish;
+                  const delta = race.targetSec ? finishSec - race.targetSec : null;
+                  return (
+                    <div key={race.id} style={{ background:"var(--bg3)", borderRadius:12, padding:"12px 14px", marginBottom:8 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                        <div style={{ fontSize:12, color:"#666" }}>{race.date}</div>
+                        <div style={{ fontSize:18, fontWeight:800, color:"var(--yellow)" }}>{fmtSec(finishSec)}</div>
+                      </div>
+                      {delta !== null && (
+                        <div style={{ fontSize:11, color: delta <= 0 ? "#30D158" : "#FF453A", fontWeight:700 }}>
+                          {delta <= 0 ? `✓ Objectif battu de ${fmtSec(-delta)}` : `Objectif manqué de ${fmtSec(delta)}`}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── HYROX STATION PB TRACKER ── */}
       {(() => {
         const KEY = `fitrace_station_pb_${profile.name}`;
