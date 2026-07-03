@@ -6311,6 +6311,131 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY CHALLENGE — Nike Training Club style ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const goal = parseInt(profile.seancesParSemaine) || 4;
+
+              // Current week Monday
+              const today = new Date(); today.setHours(0,0,0,0);
+              const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+              const monday = new Date(today); monday.setDate(today.getDate() - dayOfWeek + 1);
+              const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+
+              // Sessions this week
+              const weekSessions = sessions.filter(s => {
+                const d = new Date(s.date); d.setHours(0,0,0,0);
+                return d >= monday && d <= today;
+              });
+              const done = weekSessions.length;
+              const pct = Math.min(done / goal, 1);
+              const isComplete = done >= goal;
+
+              // Streak (consecutive weeks with goal met)
+              const [streak] = (() => {
+                let s = 0;
+                for (let w = 0; w < 12; w++) {
+                  const wMon = new Date(monday); wMon.setDate(monday.getDate() - w * 7);
+                  const wSun = new Date(wMon); wSun.setDate(wMon.getDate() + 6);
+                  const wDone = sessions.filter(x => { const d = new Date(x.date); d.setHours(0,0,0,0); return d >= wMon && d <= wSun; }).length;
+                  if (wDone >= goal) s++;
+                  else if (w > 0) break;
+                }
+                return [s];
+              })();
+
+              // Days distribution this week (Mon-Sun dot row)
+              const dots = Array.from({length: 7}, (_, i) => {
+                const d = new Date(monday); d.setDate(monday.getDate() + i);
+                const ds = d.toISOString().slice(0,10);
+                const hasSess = sessions.some(s => s.date?.slice(0,10) === ds);
+                const isPast = d <= today;
+                const isToday = d.toISOString().slice(0,10) === today.toISOString().slice(0,10);
+                return { hasSess, isPast, isToday, label: ["L","M","M","J","V","S","D"][i] };
+              });
+
+              // Type breakdown this week
+              const TYPE_COLORS = { running_zone2:"#30D158", running_qualite:"#C9A840", force_stations:"#a78bfa", hybride_compromis:"#FF6B00", mobilite:"#007AFF" };
+              const typeBreak = weekSessions.reduce((acc,s) => { acc[s.type] = (acc[s.type]||0)+1; return acc; }, {});
+
+              const ringR = 38;
+              const ringC = 2 * Math.PI * ringR;
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px", marginBottom:12, border: isComplete ? "1px solid rgba(201,168,64,0.4)" : "1px solid rgba(255,255,255,0.07)" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                    {/* Ring */}
+                    <div style={{ position:"relative", width:88, height:88, flexShrink:0 }}>
+                      <svg width="88" height="88" style={{ transform:"rotate(-90deg)" }}>
+                        <circle cx="44" cy="44" r={ringR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                        <circle cx="44" cy="44" r={ringR} fill="none"
+                          stroke={isComplete ? "#C9A840" : "#007AFF"} strokeWidth="8"
+                          strokeDasharray={ringC}
+                          strokeDashoffset={ringC * (1 - pct)}
+                          strokeLinecap="round"
+                          style={{ filter:`drop-shadow(0 0 8px ${isComplete?"#C9A840":"#007AFF"})`, transition:"stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)" }}
+                        />
+                      </svg>
+                      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                        {isComplete
+                          ? <span style={{ fontSize:26 }}>🏆</span>
+                          : <>
+                              <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:26, color:"#fff", lineHeight:1 }}>{done}</div>
+                              <div style={{ fontSize:9, color:"#555" }}>/{goal}</div>
+                            </>
+                        }
+                      </div>
+                    </div>
+
+                    {/* Right side */}
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+                        <div>
+                          <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1 }}>Challenge semaine</div>
+                          <div style={{ fontSize:14, fontWeight:800, color: isComplete ? "#C9A840" : "#fff" }}>
+                            {isComplete ? "Objectif atteint ! 🎯" : `${done} / ${goal} séances`}
+                          </div>
+                        </div>
+                        {streak > 0 && (
+                          <div style={{ background:"rgba(255,154,60,0.12)", border:"1px solid rgba(255,154,60,0.3)", borderRadius:20, padding:"4px 10px", textAlign:"center" }}>
+                            <div style={{ fontSize:16 }}>🔥</div>
+                            <div style={{ fontSize:9, color:"#FF9F0A", fontWeight:700 }}>{streak}w</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Day dots */}
+                      <div style={{ display:"flex", gap:4, marginBottom:8 }}>
+                        {dots.map((dot, i) => (
+                          <div key={i} style={{ flex:1, textAlign:"center" }}>
+                            <div style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", background: dot.hasSess ? "#007AFF" : dot.isPast ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)", border: dot.isToday ? "1.5px solid rgba(255,255,255,0.3)" : "none", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, marginBottom:2 }}>
+                              {dot.hasSess && <span style={{ color:"#fff", fontSize:7 }}>✓</span>}
+                            </div>
+                            <div style={{ fontSize:7, color: dot.isToday ? "#fff" : "#555" }}>{dot.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Type chips */}
+                      {Object.keys(typeBreak).length > 0 && (
+                        <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                          {Object.entries(typeBreak).map(([type, count]) => {
+                            const c = TYPE_COLORS[type] || "#8E8E93";
+                            const labels = {running_zone2:"Z2",running_qualite:"Qual.",force_stations:"Force",hybride_compromis:"Hybr.",mobilite:"Mob."};
+                            return (
+                              <span key={type} style={{ fontSize:9, fontWeight:700, color:c, background:`${c}15`, borderRadius:5, padding:"2px 6px" }}>
+                                {labels[type]||type} ×{count}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── HYROX RACE READINESS SCORE ── */}
             {(() => {
               const sessions = profile.sessions || [];
