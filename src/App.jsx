@@ -24750,6 +24750,194 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── CUSTOM TRAINING BLOCK BUILDER ── */}
+      {(() => {
+        const KEY = `fitrace_block_${profile.name}`;
+        const [block, setBlock] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } });
+        const [showForm, setShowForm] = React.useState(!block);
+        const [form, setForm] = React.useState({
+          name:"Bloc HYROX",
+          weeks:8,
+          startDate:new Date().toISOString().slice(0,10),
+          peakVolume:10,  // heures/semaine
+          goal:"base",    // base|build|peak
+          sesPerWeek:5,
+        });
+        const [expandedWeek, setExpandedWeek] = React.useState(0);
+
+        const GOALS = [
+          { v:"base",  l:"Base Aérobie", desc:"Faible intensité, volume croissant",     easy:70, mod:20, hard:10 },
+          { v:"build", l:"Construction",  desc:"Volume + seuil lactique",                easy:60, mod:25, hard:15 },
+          { v:"peak",  l:"Affûtage",      desc:"Intensité haute, volume réduit",         easy:50, mod:20, hard:30 },
+        ];
+
+        const SESSION_TEMPLATES = {
+          base: [
+            { d:"Lun", type:"Course longue",    intensity:"🟢 Facile",   dur:"60-75min", rpe:"4-5" },
+            { d:"Mar", type:"Repos actif",       intensity:"🟢 Récup",    dur:"30min",    rpe:"2-3" },
+            { d:"Mer", type:"SkiErg + Rowing",   intensity:"🟡 Modéré",   dur:"45min",    rpe:"5-6" },
+            { d:"Jeu", type:"Course tempo",      intensity:"🟡 Modéré",   dur:"40-50min", rpe:"6"   },
+            { d:"Ven", type:"Force / Stations",  intensity:"🟡 Modéré",   dur:"50min",    rpe:"6-7" },
+            { d:"Sam", type:"Course longue",     intensity:"🟢 Facile",   dur:"75-90min", rpe:"4-5" },
+            { d:"Dim", type:"Repos complet",     intensity:"⚫ Repos",    dur:"–",        rpe:"–"   },
+          ],
+          build: [
+            { d:"Lun", type:"Intervalles course",intensity:"🔴 Intense",  dur:"45min",    rpe:"8-9" },
+            { d:"Mar", type:"Stations circuit",  intensity:"🟡 Modéré",   dur:"50min",    rpe:"6-7" },
+            { d:"Mer", type:"Course facile",     intensity:"🟢 Récup",    dur:"45min",    rpe:"4-5" },
+            { d:"Jeu", type:"Seuil lactique",    intensity:"🟠 Dur",      dur:"50min",    rpe:"7-8" },
+            { d:"Ven", type:"Force + Sled",      intensity:"🟡 Modéré",   dur:"55min",    rpe:"7"   },
+            { d:"Sam", type:"Simulation HYROX",  intensity:"🔴 Intense",  dur:"90min",    rpe:"8"   },
+            { d:"Dim", type:"Repos / Mobilité",  intensity:"🟢 Récup",    dur:"30min",    rpe:"2"   },
+          ],
+          peak: [
+            { d:"Lun", type:"Fractionné court",  intensity:"🔴 Max",      dur:"35min",    rpe:"9"   },
+            { d:"Mar", type:"Repos actif",        intensity:"🟢 Récup",    dur:"25min",    rpe:"2-3" },
+            { d:"Mer", type:"Tempo + Stations",   intensity:"🟠 Dur",      dur:"45min",    rpe:"7-8" },
+            { d:"Jeu", type:"Course légère",      intensity:"🟢 Facile",   dur:"30min",    rpe:"4"   },
+            { d:"Ven", type:"Activation vitesse", intensity:"🟠 Dur",      dur:"30min",    rpe:"7-8" },
+            { d:"Sam", type:"Course + 2 stations",intensity:"🟡 Modéré",  dur:"40min",    rpe:"6-7" },
+            { d:"Dim", type:"Repos",              intensity:"⚫ Repos",    dur:"–",        rpe:"–"   },
+          ],
+        };
+
+        const saveBlock = () => {
+          const newBlock = { ...form, createdAt:Date.now() };
+          setBlock(newBlock);
+          localStorage.setItem(KEY, JSON.stringify(newBlock));
+          setShowForm(false);
+        };
+
+        const goalDef = GOALS.find(g=>g.v===(block||form).goal) || GOALS[0];
+
+        // Volume progression: linear ramp with deload every 4th week
+        const weekVolumes = block ? Array.from({length:block.weeks},(_,i)=>{
+          const phase = i/(block.weeks-1);
+          const baseVol = block.peakVolume * (0.6 + phase*0.4);
+          const isDeload = (i+1)%4===0 && i < block.weeks-1;
+          return Math.round((isDeload ? baseVol*0.65 : baseVol)*10)/10;
+        }) : [];
+
+        const maxVol = block ? Math.max(...weekVolumes) : 1;
+
+        return (
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <div style={{ fontSize:10,color:"#636366",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>📋 Training Block Builder</div>
+              <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,cursor:"pointer" }}>
+                {showForm?(block?"Annuler":""):"Modifier"}
+              </button>
+            </div>
+
+            {showForm && (
+              <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                  <input type="text" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nom du bloc"
+                    style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                  <input type="date" value={form.startDate} onChange={e=>setForm(f=>({...f,startDate:e.target.value}))}
+                    style={{ flex:2,background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 8px",color:"var(--white)",fontSize:11 }}/>
+                </div>
+                <div style={{ display:"flex",gap:6,marginBottom:8 }}>
+                  {[4,6,8,10,12].map(w=>(
+                    <button key={w} onClick={()=>setForm(f=>({...f,weeks:w}))}
+                      style={{ flex:1,background:form.weeks===w?"var(--yellow)":"#2C2C2E",color:form.weeks===w?"#000":"#8E8E93",border:"none",borderRadius:8,padding:6,fontSize:11,fontWeight:form.weeks===w?800:400,cursor:"pointer" }}>
+                      {w}sem
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ fontSize:9,color:"#636366",marginBottom:4 }}>Type de bloc:</div>
+                  {GOALS.map(g=>(
+                    <button key={g.v} onClick={()=>setForm(f=>({...f,goal:g.v}))}
+                      style={{ display:"block",width:"100%",background:form.goal===g.v?"#1C3A24":"#2C2C2E",border:`1px solid ${form.goal===g.v?"#30D15840":"transparent"}`,borderRadius:8,padding:"8px 10px",marginBottom:4,cursor:"pointer",textAlign:"left" }}>
+                      <div style={{ fontSize:11,fontWeight:700,color:form.goal===g.v?"#30D158":"var(--white)" }}>{g.l}</div>
+                      <div style={{ fontSize:9,color:"#636366" }}>{g.desc} · {g.easy}/{g.mod}/{g.hard}% Facile/Modéré/Dur</div>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom:8 }}>
+                  <span style={{ fontSize:10,color:"#8E8E93" }}>Volume pic:</span>
+                  <button onClick={()=>setForm(f=>({...f,peakVolume:Math.max(3,f.peakVolume-1)}))} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:6,width:24,height:24,fontSize:14,cursor:"pointer" }}>−</button>
+                  <span style={{ fontSize:14,fontWeight:900,color:"var(--yellow)",minWidth:30,textAlign:"center" }}>{form.peakVolume}h</span>
+                  <button onClick={()=>setForm(f=>({...f,peakVolume:Math.min(20,f.peakVolume+1)}))} style={{ background:"#2C2C2E",color:"var(--yellow)",border:"none",borderRadius:6,width:24,height:24,fontSize:14,cursor:"pointer" }}>+</button>
+                  <span style={{ fontSize:9,color:"#636366" }}>/ semaine au pic</span>
+                </div>
+                <button onClick={saveBlock} style={{ width:"100%",background:"var(--yellow)",color:"#000",border:"none",borderRadius:10,padding:9,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                  Générer le plan
+                </button>
+              </div>
+            )}
+
+            {block && !showForm && (
+              <>
+                {/* Block header */}
+                <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8 }}>
+                    <div>
+                      <div style={{ fontSize:14,fontWeight:900,color:"var(--white)" }}>{block.name}</div>
+                      <div style={{ fontSize:9,color:"#636366" }}>Début: {block.startDate} · {block.weeks} semaines · {goalDef.l}</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:18,fontWeight:900,color:"var(--yellow)" }}>{block.peakVolume}h</div>
+                      <div style={{ fontSize:8,color:"#636366" }}>vol. pic</div>
+                    </div>
+                  </div>
+                  {/* Intensity split */}
+                  <div style={{ height:8,borderRadius:4,overflow:"hidden",display:"flex",marginBottom:4 }}>
+                    <div style={{ width:`${goalDef.easy}%`,background:"#30D158",opacity:0.7 }}/>
+                    <div style={{ width:`${goalDef.mod}%`,background:"#FF9F0A",opacity:0.7 }}/>
+                    <div style={{ width:`${goalDef.hard}%`,background:"#FF453A",opacity:0.7 }}/>
+                  </div>
+                  <div style={{ display:"flex",gap:10,fontSize:8,color:"#636366" }}>
+                    <span>🟢 {goalDef.easy}% Facile</span>
+                    <span>🟡 {goalDef.mod}% Modéré</span>
+                    <span>🔴 {goalDef.hard}% Intense</span>
+                  </div>
+                </div>
+
+                {/* Volume chart */}
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:9,color:"#636366",marginBottom:6 }}>Progression du volume</div>
+                  <div style={{ display:"flex",gap:2,alignItems:"flex-end",height:48 }}>
+                    {weekVolumes.map((vol,i)=>{
+                      const isDeload = (i+1)%4===0 && i<block.weeks-1;
+                      const h = Math.round((vol/maxVol)*44)+4;
+                      return (
+                        <div key={i} onClick={()=>setExpandedWeek(expandedWeek===i?-1:i)}
+                          style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer",gap:2 }}>
+                          <div style={{ width:"100%",height:h,borderRadius:"3px 3px 0 0",background:expandedWeek===i?"var(--yellow)":isDeload?"#2C2C2E":"var(--yellow)",opacity:isDeload?0.4:1,transition:"opacity 0.2s" }}/>
+                          <div style={{ fontSize:6,color:expandedWeek===i?"var(--yellow)":"#636366" }}>S{i+1}{isDeload?" ↓":""}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Expanded week plan */}
+                {expandedWeek >= 0 && expandedWeek < block.weeks && (
+                  <div style={{ background:"var(--bg3)",borderRadius:12,padding:12 }}>
+                    <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}>
+                      <div style={{ fontSize:11,fontWeight:800,color:"var(--white)" }}>Semaine {expandedWeek+1}</div>
+                      <div style={{ fontSize:10,color:"var(--yellow)",fontWeight:700 }}>{weekVolumes[expandedWeek]}h</div>
+                    </div>
+                    {SESSION_TEMPLATES[block.goal].map((ses,i)=>(
+                      <div key={i} style={{ display:"flex",gap:8,alignItems:"flex-start",marginBottom:6,padding:"6px 8px",background:"#2C2C2E",borderRadius:8 }}>
+                        <div style={{ width:24,fontSize:8,color:"#636366",fontWeight:700,paddingTop:1 }}>{ses.d}</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:10,fontWeight:700,color:"var(--white)" }}>{ses.type}</div>
+                          <div style={{ fontSize:8,color:"#636366" }}>{ses.dur}{ses.rpe!=="–"?` · RPE ${ses.rpe}`:""}</div>
+                        </div>
+                        <div style={{ fontSize:9,flexShrink:0 }}>{ses.intensity}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── TAPER CALCULATOR ── */}
       {(() => {
         const sessions = profile.sessions || [];
