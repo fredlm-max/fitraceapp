@@ -3301,10 +3301,12 @@ function LiveTimerModal({ sessionType, setShowLiveTimer, showToast, haptic, prof
     setPhase("rpe");
   };
 
+  const [postSummary, setPostSummary] = React.useState(null);
+
   const handleSave = () => {
     if (saved) return;
     setSaved(true);
-    haptic([10, 30, 10]);
+    haptic([10, 30, 10, 30, 20]);
     const dureeMin = Math.max(1, Math.round(elapsed / 60));
     const today = new Date().toISOString().slice(0, 10);
     const newSess = {
@@ -3320,8 +3322,21 @@ function LiveTimerModal({ sessionType, setShowLiveTimer, showToast, haptic, prof
     };
     const sessions = [...(profile.sessions || []), newSess];
     onUpdateProfile({ sessions });
-    showToast(`✅ ${chosen.label} — ${dureeMin} min enregistrée`, "success", 2500);
-    setTimeout(() => setShowLiveTimer(false), 800);
+
+    // Calculate post-workout stats
+    const kcal = Math.round(dureeMin * (rpe >= 8 ? 11 : rpe >= 6 ? 9 : 7) * ((parseFloat(profile.poids)||70)/70));
+    const aerobicBase = sessionType.includes("zone2") ? 1.2 : sessionType.includes("hybride") ? 1.0 : sessionType.includes("qualite") ? 0.7 : 0.3;
+    const aerobic = Math.min(5, Math.max(1, +(aerobicBase + (rpe/10)*2 + (dureeMin/60)*0.8).toFixed(1)));
+    const anaerobicBase = sessionType.includes("qualite") ? 1.5 : sessionType.includes("force") ? 1.3 : sessionType.includes("hybride") ? 0.8 : 0.1;
+    const anaerobic = Math.min(5, Math.max(0, +(anaerobicBase + (Math.max(0,rpe-6)/4)*2.5).toFixed(1)));
+    const coachNotes = {
+      running_zone2:"✅ Base aérobie renforcée. Récupère bien — ces séances construisent ton moteur.",
+      running_qualite:"⚡ VMA et puissance aérobie stimulées. Hydrate-toi et mange dans l'heure.",
+      force_stations:"💪 Stations HYROX travaillées. Les muscles poussent la nuit — dors 8h.",
+      hybride_compromis:"🔥 Séance hybride complète. Excellent stimulus race-spécifique.",
+      mobilite:"🧘 Mobilité : investissement dans ta longévité. Continue régulièrement.",
+    };
+    setPostSummary({ dureeMin, kcal, aerobic, anaerobic, coachNote: coachNotes[sessionType] || "Bonne séance ! Récupère bien." });
   };
 
   const ringColor = chosen.color;
@@ -3422,8 +3437,46 @@ function LiveTimerModal({ sessionType, setShowLiveTimer, showToast, haptic, prof
 
           {/* Save */}
           <button onClick={handleSave}
-            style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: ringColor, border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: chosen.key === "running_qualite" || chosen.key === "force_stations" ? "#000" : "#000", boxShadow: `0 4px 20px ${ringColor}60`, transition: "all 0.2s" }}>
+            style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: ringColor, border: "none", cursor: "pointer", fontSize: 15, fontWeight: 700, color: "#000", boxShadow: `0 4px 20px ${ringColor}60`, transition: "all 0.2s" }}>
             Enregistrer la séance ✓
+          </button>
+        </div>
+      )}
+
+      {/* ── POST-WORKOUT SUMMARY ── */}
+      {postSummary && (
+        <div style={{ position:"absolute", inset:0, background:"#000", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 24px", animation:"fadeIn 0.4s ease" }}>
+          <div style={{ fontSize:48, marginBottom:8 }}>🎉</div>
+          <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:28, color:"#fff", letterSpacing:2, marginBottom:4 }}>Séance terminée !</div>
+          <div style={{ fontSize:13, color:"#555", marginBottom:28 }}>{chosen.icon} {chosen.label} · {postSummary.dureeMin} min · RPE {rpe}/10</div>
+
+          {/* Stats grid */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, width:"100%", maxWidth:340, marginBottom:20 }}>
+            {[
+              { label:"Calories brûlées", value:`~${postSummary.kcal}`, unit:"kcal", color:"#FF9F0A", icon:"🔥" },
+              { label:"Effet aérobie", value:postSummary.aerobic.toFixed(1), unit:"/5.0", color:ringColor, icon:"💚" },
+              { label:"Effet anaérobie", value:postSummary.anaerobic.toFixed(1), unit:"/5.0", color:"#BF5AF2", icon:"⚡" },
+              { label:"Charge séance", value:Math.round(rpe*postSummary.dureeMin/10)*10, unit:"pts", color:"#007AFF", icon:"📊" },
+            ].map((s,i) => (
+              <div key={i} style={{ background:`${s.color}12`, border:`1px solid ${s.color}25`, borderRadius:14, padding:"12px 10px", textAlign:"center" }}>
+                <div style={{ fontSize:18, marginBottom:4 }}>{s.icon}</div>
+                <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:24, color:s.color, lineHeight:1 }}>
+                  {s.value}<span style={{ fontSize:11, color:"#555" }}>{s.unit}</span>
+                </div>
+                <div style={{ fontSize:9, color:"#555", marginTop:3, textTransform:"uppercase", letterSpacing:0.5 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Coach note */}
+          <div style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:12, padding:"12px 16px", width:"100%", maxWidth:340, marginBottom:24 }}>
+            <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1, marginBottom:4 }}>Note du coach</div>
+            <div style={{ fontSize:12, color:"#AEAEB2", lineHeight:1.6 }}>{postSummary.coachNote}</div>
+          </div>
+
+          <button onClick={() => { setShowLiveTimer(false); }}
+            style={{ width:"100%", maxWidth:340, padding:"14px", borderRadius:14, background:ringColor, border:"none", cursor:"pointer", fontSize:15, fontWeight:800, color:"#000", boxShadow:`0 4px 20px ${ringColor}50` }}>
+            Fermer ✓
           </button>
         </div>
       )}
