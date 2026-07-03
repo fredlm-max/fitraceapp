@@ -8606,6 +8606,175 @@ JSON:
               );
             })()}
 
+            {/* ── ACHIEVEMENTS & BADGES ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const today = new Date().toISOString().slice(0,10);
+
+              // Compute metrics
+              const totalSess = sessions.length;
+              const totalKm = sessions.reduce((s,x) => s + (parseFloat(x.distance)||0), 0);
+              const hyroxSess = sessions.filter(s => s.type?.includes("HYROX") || s.type?.includes("hyrox")).length;
+
+              // Best pace
+              const runSess = sessions.filter(s => s.distance > 0 && s.duration > 0);
+              const bestPace = runSess.length ? Math.min(...runSess.map(s => s.duration/s.distance)) : 999;
+
+              // Best month km
+              const monthKm = {};
+              sessions.forEach(s => {
+                const mo = s.date?.slice(0,7);
+                if (mo) monthKm[mo] = (monthKm[mo]||0) + (parseFloat(s.distance)||0);
+              });
+              const bestMonthKm = Math.max(0, ...Object.values(monthKm));
+
+              // Streak
+              let streak = 0, d = new Date(today);
+              const dateSet = new Set(sessions.map(s => s.date));
+              while (dateSet.has(d.toISOString().slice(0,10))) {
+                streak++;
+                d.setDate(d.getDate() - 1);
+              }
+
+              // Best week
+              const weekMap = {};
+              sessions.forEach(s => {
+                const dt = new Date(s.date+"T12:00:00");
+                const ws = new Date(dt); ws.setDate(dt.getDate() - dt.getDay() + 1);
+                const wk = ws.toISOString().slice(0,10);
+                weekMap[wk] = (weekMap[wk]||0) + 1;
+              });
+              const bestWeekSess = Math.max(0, ...Object.values(weekMap));
+
+              // Total hours
+              const totalHours = sessions.reduce((s,x) => s + (parseFloat(x.duration)||0), 0) / 60;
+
+              // Comp history
+              let hasRace = false;
+              try { hasRace = JSON.parse(localStorage.getItem(`fitrace_comp_history_${profile.name}`) || "[]").length > 0; } catch {}
+
+              const BADGES = [
+                // Milestone badges
+                { id:"first_session", emoji:"🎯", name:"Premier pas", desc:"1ère séance enregistrée", color:"#FF9F0A", unlocked: totalSess >= 1 },
+                { id:"10_sessions",   emoji:"🔟", name:"10 séances",  desc:"10 séances complétées", color:"#FF9F0A", unlocked: totalSess >= 10 },
+                { id:"50_sessions",   emoji:"🏅", name:"50 séances",  desc:"50 séances — sérieux engagement !", color:"#BF5AF2", unlocked: totalSess >= 50 },
+                { id:"100_sessions",  emoji:"💯", name:"Centenaire",  desc:"100 séances — athlète confirmé", color:"#FFD700", unlocked: totalSess >= 100 },
+                // Distance badges
+                { id:"first_10k",   emoji:"📍", name:"10 km",        desc:"10km au total", color:"#30D158", unlocked: totalKm >= 10 },
+                { id:"first_100k",  emoji:"🗺️", name:"100 km",       desc:"100km au total", color:"#30D158", unlocked: totalKm >= 100 },
+                { id:"first_500k",  emoji:"🌍", name:"500 km",       desc:"500km au total — explorateur", color:"#30D158", unlocked: totalKm >= 500 },
+                { id:"first_1000k", emoji:"🌎", name:"1 000 km",     desc:"1000km — ultra-athlète", color:"#FFD700", unlocked: totalKm >= 1000 },
+                // Speed badges
+                { id:"sub6pace",  emoji:"⚡", name:"Sub 6min/km",  desc:"Allure inférieure à 6min/km", color:"var(--yellow)", unlocked: bestPace < 6 },
+                { id:"sub5pace",  emoji:"🚀", name:"Sub 5min/km",  desc:"Allure inférieure à 5min/km — rapide !", color:"var(--yellow)", unlocked: bestPace < 5 },
+                { id:"sub430",    emoji:"🛸", name:"Sub 4:30/km",  desc:"Elite runner territory", color:"var(--yellow)", unlocked: bestPace < 4.5 },
+                // Streak badges
+                { id:"streak3",  emoji:"🔥", name:"3 jours",      desc:"3 jours consécutifs", color:"#FF6B35", unlocked: streak >= 3 },
+                { id:"streak7",  emoji:"🔥🔥", name:"Semaine de feu", desc:"7 jours consécutifs", color:"#FF6B35", unlocked: streak >= 7 },
+                { id:"streak14", emoji:"☄️", name:"Indestructible", desc:"14 jours consécutifs", color:"#FF453A", unlocked: streak >= 14 },
+                { id:"streak30", emoji:"🌟", name:"Légende",        desc:"30 jours consécutifs — légendaire", color:"#FFD700", unlocked: streak >= 30 },
+                // Volume badges
+                { id:"100km_month", emoji:"📅", name:"100km/mois",   desc:"100km en un seul mois", color:"#5AC8FA", unlocked: bestMonthKm >= 100 },
+                { id:"10h_week",    emoji:"⏰", name:"10h/semaine",  desc:"10 séances en une semaine", color:"#5AC8FA", unlocked: bestWeekSess >= 10 },
+                { id:"100h_total",  emoji:"🕐", name:"100 heures",   desc:"100h d'entraînement total", color:"#5AC8FA", unlocked: totalHours >= 100 },
+                // HYROX badges
+                { id:"first_hyrox", emoji:"🏋️", name:"HYROX Fighter",  desc:"Première séance HYROX", color:"#FF453A", unlocked: hyroxSess >= 1 },
+                { id:"10_hyrox",    emoji:"🏆", name:"HYROX Warrior",  desc:"10 séances HYROX", color:"#FF453A", unlocked: hyroxSess >= 10 },
+                { id:"race_finisher",emoji:"🏁", name:"Race Finisher",  desc:"1ère compétition enregistrée", color:"#BF5AF2", unlocked: hasRace },
+              ];
+
+              const unlocked = BADGES.filter(b => b.unlocked);
+              const locked = BADGES.filter(b => !b.unlocked);
+              const [showAll, setShowAll] = React.useState(false);
+              const [newBadge] = React.useState(() => {
+                const prevKey = `fitrace_badge_seen_${profile.name}`;
+                try {
+                  const seen = new Set(JSON.parse(localStorage.getItem(prevKey)||"[]"));
+                  const newOnes = unlocked.filter(b => !seen.has(b.id));
+                  const allIds = BADGES.filter(b=>b.unlocked).map(b=>b.id);
+                  localStorage.setItem(prevKey, JSON.stringify(allIds));
+                  return newOnes[0] || null;
+                } catch { return null; }
+              });
+
+              return (
+                <div style={{ marginBottom:20 }}>
+                  {/* New badge celebration */}
+                  {newBadge && (
+                    <div style={{ background:`linear-gradient(135deg, ${newBadge.color}22, var(--bg2))`,
+                      border:`1px solid ${newBadge.color}66`, borderRadius:18, padding:16, marginBottom:12, textAlign:"center" }}>
+                      <div style={{ fontSize:36, marginBottom:4 }}>{newBadge.emoji}</div>
+                      <div style={{ fontSize:13, fontWeight:800, color:newBadge.color }}>Nouveau badge débloqué !</div>
+                      <div style={{ fontSize:15, fontWeight:700, color:"var(--white)", marginTop:2 }}>{newBadge.name}</div>
+                      <div style={{ fontSize:11, color:"#888", marginTop:2 }}>{newBadge.desc}</div>
+                    </div>
+                  )}
+
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Achievements</div>
+                      <div style={{ fontSize:11, color:"#666", marginTop:2 }}>{unlocked.length}/{BADGES.length} badges</div>
+                    </div>
+                    {/* Progress ring */}
+                    {(() => {
+                      const pct = unlocked.length / BADGES.length;
+                      const R = 20, CIRC = 2*Math.PI*R;
+                      return (
+                        <svg width="52" height="52" viewBox="0 0 52 52">
+                          <circle cx="26" cy="26" r={R} fill="none" stroke="#2C2C2E" strokeWidth="4"/>
+                          <circle cx="26" cy="26" r={R} fill="none" stroke="var(--yellow)" strokeWidth="4"
+                            strokeDasharray={`${pct*CIRC} ${CIRC}`} strokeLinecap="round" transform="rotate(-90 26 26)"/>
+                          <text x="26" y="30" textAnchor="middle" fontSize="11" fontWeight="800" fill="var(--yellow)">
+                            {Math.round(pct*100)}%
+                          </text>
+                        </svg>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Unlocked badges */}
+                  {unlocked.length > 0 && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+                      {unlocked.map(b => (
+                        <div key={b.id} title={`${b.name}: ${b.desc}`}
+                          style={{ background:`${b.color}18`, border:`1px solid ${b.color}44`, borderRadius:12, padding:"8px 10px",
+                            display:"flex", alignItems:"center", gap:6, cursor:"default" }}>
+                          <span style={{ fontSize:18 }}>{b.emoji}</span>
+                          <div>
+                            <div style={{ fontSize:11, fontWeight:700, color:b.color }}>{b.name}</div>
+                            <div style={{ fontSize:9, color:"#666", maxWidth:90, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{b.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Locked badges preview */}
+                  {locked.length > 0 && (
+                    <>
+                      <button onClick={() => setShowAll(s => !s)}
+                        style={{ background:"none", border:"none", color:"#555", fontSize:11, cursor:"pointer", padding:0, marginBottom: showAll ? 8 : 0 }}>
+                        {showAll ? "▲ Masquer" : `▼ ${locked.length} badge${locked.length>1?"s":""} à débloquer`}
+                      </button>
+                      {showAll && (
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                          {locked.map(b => (
+                            <div key={b.id} title={b.desc}
+                              style={{ background:"var(--bg3)", border:"1px solid #2C2C2E", borderRadius:12, padding:"6px 8px",
+                                display:"flex", alignItems:"center", gap:5, opacity:0.5, cursor:"default" }}>
+                              <span style={{ fontSize:16, filter:"grayscale(1)" }}>{b.emoji}</span>
+                              <div style={{ fontSize:10, color:"#666" }}>{b.name}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING STREAK CALENDAR ── */}
             {(() => {
               const sessions = profile.sessions || [];
