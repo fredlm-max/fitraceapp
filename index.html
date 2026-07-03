@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#007AFF" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FitRace" />
+
+    <!-- Apple touch icons (PNG requis par iOS) -->
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-128.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- SEO / Social -->
+    <meta name="description" content="Coach HYROX IA — Planning, séances, nutrition et simulation de race personnalisés" />
+    <meta property="og:title" content="FitRace — Coach HYROX IA" />
+    <meta property="og:description" content="Ton coach HYROX personnel propulsé par l'IA" />
+    <meta property="og:type" content="website" />
+
+    <title>FitRace — Coach HYROX IA</title>
+    <script type="module" crossorigin src="/assets/index-D-cbs3W8.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-nqMpL4T3.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Enregistrement Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('[SW] Enregistré:', reg.scope))
+            .catch(err => console.warn('[SW] Échec:', err));
+        });
+      }
+    </script>
+  </body>
+</html>

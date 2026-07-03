@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <clipPath id="clip"><rect width="128" height="128" rx="28.16" ry="28.16"/></clipPath>
+  </defs>
+  <!-- Fond -->
+  <rect width="128" height="128" rx="28.16" fill="#080808"/>
+  <!-- Cercle glow -->
+  <circle cx="64" cy="64" r="44.8" fill="rgba(232,255,71,0.1)"/>
+  <!-- Anneau bg -->
+  <circle cx="64" cy="64" r="44.8" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7.68"/>
+  <!-- Anneau jaune -->
+  <path d="M 64 19.200000000000003 A 44.8 44.8 0 1 1 27.75603865200236 37.66722069729721" fill="none" stroke="#e8ff47" stroke-width="7.68" stroke-linecap="round"/>
+  <!-- Texte FR -->
+  <text x="64" y="67.328" text-anchor="middle" dominant-baseline="middle"
+    font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="33.28" fill="#e8ff47"
+    letter-spacing="1.6640000000000001">FR</text>
+  <!-- Point vert -->
+  <circle cx="96.256" cy="31.744" r="7.68" fill="#39ff80"/>
+</svg>
