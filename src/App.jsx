@@ -15835,6 +15835,206 @@ JSON:
             )}
           </div>
 
+            {/* ── HYROX INTERVAL TIMER ── Garmin / TrainingPeaks style ── */}
+            {(() => {
+              const PRESETS = [
+                { id:"tabata",    label:"Tabata",          icon:"💥", work:20, rest:10, rounds:8,  color:"#FF453A" },
+                { id:"skierg",    label:"SkiErg 30/30",    icon:"🎿", work:30, rest:30, rounds:10, color:"#C9A840" },
+                { id:"hyrox4",    label:"HYROX 4×4",       icon:"🔥", work:240, rest:120, rounds:4, color:"#FF9F0A" },
+                { id:"power",     label:"Power 10/20",     icon:"⚡", work:10, rest:20, rounds:12, color:"#BF5AF2" },
+                { id:"endurance", label:"Endurance 3min",  icon:"🏃", work:180, rest:60, rounds:5, color:"#30D158" },
+              ];
+
+              const [selPreset, setSelPreset] = React.useState(null);
+              const [customWork, setCustomWork] = React.useState(30);
+              const [customRest, setCustomRest] = React.useState(30);
+              const [customRounds, setCustomRounds] = React.useState(8);
+              const [phase, setPhase] = React.useState("idle"); // idle | work | rest | done
+              const [timeLeft, setTimeLeft] = React.useState(0);
+              const [round, setRound] = React.useState(1);
+              const [running, setRunning] = React.useState(false);
+              const [totalRounds, setTotalRounds] = React.useState(8);
+              const [workDur, setWorkDur] = React.useState(30);
+              const [restDur, setRestDur] = React.useState(30);
+
+              const cfg = selPreset ? (PRESETS.find(p => p.id === selPreset) || PRESETS[0]) : { work:customWork, rest:customRest, rounds:customRounds, color:"#007AFF", label:"Custom" };
+
+              React.useEffect(() => {
+                if (!running || phase === "idle" || phase === "done") return;
+                const id = setInterval(() => {
+                  setTimeLeft(t => {
+                    if (t <= 1) {
+                      if (phase === "work") {
+                        haptic([15, 30, 15]);
+                        setPhase("rest");
+                        return restDur;
+                      } else {
+                        // End of rest
+                        if (round >= totalRounds) {
+                          haptic([20, 40, 20, 40, 30]);
+                          setPhase("done");
+                          setRunning(false);
+                          return 0;
+                        } else {
+                          haptic([10, 20]);
+                          setRound(r => r + 1);
+                          setPhase("work");
+                          return workDur;
+                        }
+                      }
+                    }
+                    return t - 1;
+                  });
+                }, 1000);
+                return () => clearInterval(id);
+              }, [running, phase, round, totalRounds, workDur, restDur]);
+
+              const startTimer = () => {
+                const p = selPreset ? PRESETS.find(x => x.id === selPreset) : null;
+                const w = p ? p.work : customWork;
+                const r = p ? p.rest : customRest;
+                const n = p ? p.rounds : customRounds;
+                setWorkDur(w); setRestDur(r); setTotalRounds(n);
+                setRound(1); setPhase("work"); setTimeLeft(w); setRunning(true);
+                haptic([10, 20, 10]);
+              };
+
+              const stop = () => { setRunning(false); setPhase("idle"); setRound(1); setTimeLeft(0); haptic([8]); };
+
+              const phaseColor = phase === "work" ? (selPreset ? (PRESETS.find(p => p.id === selPreset)?.color || "#FF453A") : "#FF453A") : phase === "rest" ? "#30D158" : "#555";
+              const phaseLabel = phase === "work" ? "EFFORT" : phase === "rest" ? "REPOS" : phase === "done" ? "TERMINÉ ✓" : "";
+              const circumference = 2 * Math.PI * 50;
+              const dur = phase === "work" ? workDur : phase === "rest" ? restDur : 1;
+              const pct = phase === "idle" ? 0 : phase === "done" ? 1 : 1 - (timeLeft / dur);
+              const fmtT = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+              return (
+                <div style={{ background:"rgba(28,28,30,0.6)", border:`1px solid ${phase !== "idle" && phase !== "done" ? phaseColor + "40" : "rgba(255,255,255,0.06)"}`, borderRadius:18, padding:"14px 16px", marginBottom:14, transition:"border-color 0.4s" }}>
+                  <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1, marginBottom:12 }}>⏱️ INTERVAL TIMER</div>
+
+                  {/* Active timer display */}
+                  {phase !== "idle" ? (
+                    <div>
+                      {/* Ring + info */}
+                      <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
+                        <div style={{ position:"relative", width:110, height:110, flexShrink:0 }}>
+                          <svg width="110" height="110" style={{ transform:"rotate(-90deg)" }}>
+                            <circle cx="55" cy="55" r="50" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                            <circle cx="55" cy="55" r="50" fill="none" stroke={phaseColor} strokeWidth="8"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={circumference * pct}
+                              strokeLinecap="round"
+                              style={{ filter:`drop-shadow(0 0 8px ${phaseColor})`, transition: running ? "stroke-dashoffset 1s linear" : "none" }}
+                            />
+                          </svg>
+                          <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                            {phase === "done" ? (
+                              <div style={{ fontSize:28 }}>🎉</div>
+                            ) : (
+                              <>
+                                <div className="bebas" style={{ fontSize:30, color:"#fff", lineHeight:1 }}>{fmtT(timeLeft)}</div>
+                                <div style={{ fontSize:9, color:phaseColor, fontWeight:700 }}>{phaseLabel}</div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ flex:1 }}>
+                          {phase === "done" ? (
+                            <div>
+                              <div className="bebas" style={{ fontSize:18, color:"#fff", marginBottom:4 }}>SÉANCE COMPLÈTE</div>
+                              <div style={{ fontSize:12, color:"#8E8E93" }}>{totalRounds} rounds · {Math.round((totalRounds * (workDur + restDur)) / 60)} min</div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="bebas" style={{ fontSize:22, color:phaseColor, lineHeight:1, marginBottom:2 }}>{phaseLabel}</div>
+                              <div style={{ fontSize:13, color:"#8E8E93", marginBottom:8 }}>Round {round}/{totalRounds}</div>
+                              <div style={{ height:4, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
+                                <div style={{ width:`${(round/totalRounds)*100}%`, height:"100%", background:phaseColor, borderRadius:99, transition:"width 0.4s" }} />
+                              </div>
+                              <div style={{ fontSize:9, color:"#555", marginTop:4 }}>
+                                {phase === "work" ? `Repos dans ${timeLeft}s` : `Effort dans ${timeLeft}s`}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Controls */}
+                      <div style={{ display:"flex", gap:8 }}>
+                        {phase !== "done" && (
+                          <button onClick={() => { setRunning(r => !r); haptic([6]); }}
+                            style={{ flex:1, padding:"11px", borderRadius:12, background: running ? "rgba(255,255,255,0.08)" : phaseColor, border:"none", cursor:"pointer", fontSize:13, fontWeight:700, color: running ? "#fff" : "#000" }}>
+                            {running ? "⏸ Pause" : "▶ Reprendre"}
+                          </button>
+                        )}
+                        <button onClick={stop}
+                          style={{ padding:"11px 16px", borderRadius:12, background:"rgba(255,69,58,0.12)", border:"1px solid rgba(255,69,58,0.2)", cursor:"pointer", fontSize:13, color:"#FF453A" }}>
+                          ■ Stop
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Preset chips */}
+                      <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
+                        {PRESETS.map(p => (
+                          <button key={p.id} onClick={() => { setSelPreset(selPreset === p.id ? null : p.id); haptic([4]); }}
+                            style={{ padding:"6px 10px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, transition:"all 0.2s",
+                              background: selPreset === p.id ? p.color : "rgba(255,255,255,0.06)",
+                              color: selPreset === p.id ? "#000" : "#8E8E93",
+                              boxShadow: selPreset === p.id ? `0 2px 12px ${p.color}50` : "none",
+                            }}>
+                            {p.icon} {p.label}
+                          </button>
+                        ))}
+                        <button onClick={() => { setSelPreset(null); haptic([4]); }}
+                          style={{ padding:"6px 10px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11, fontWeight:700,
+                            background: selPreset === null ? "#007AFF" : "rgba(255,255,255,0.06)",
+                            color: selPreset === null ? "#fff" : "#8E8E93",
+                          }}>
+                          ⚙️ Custom
+                        </button>
+                      </div>
+
+                      {/* Custom config */}
+                      {selPreset === null && (
+                        <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+                          {[
+                            { label:"Effort (s)", val:customWork, set:setCustomWork, min:5, max:600 },
+                            { label:"Repos (s)", val:customRest, set:setCustomRest, min:5, max:600 },
+                            { label:"Rounds", val:customRounds, set:setCustomRounds, min:1, max:50 },
+                          ].map(f => (
+                            <div key={f.label} style={{ flex:1, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"8px 10px" }}>
+                              <div style={{ fontSize:9, color:"#555", marginBottom:4 }}>{f.label}</div>
+                              <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                <button onClick={() => f.set(v => Math.max(f.min, v - (f.label==="Rounds"?1:5)))}
+                                  style={{ width:22, height:22, borderRadius:6, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:14, color:"#fff" }}>−</button>
+                                <div style={{ flex:1, textAlign:"center", fontSize:14, fontWeight:700, color:"#fff" }}>{f.val}</div>
+                                <button onClick={() => f.set(v => Math.min(f.max, v + (f.label==="Rounds"?1:5)))}
+                                  style={{ width:22, height:22, borderRadius:6, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:14, color:"#fff" }}>+</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Summary + Start */}
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <div style={{ flex:1, fontSize:11, color:"#555" }}>
+                          {cfg.rounds}× {fmtT(cfg.work)} / {fmtT(cfg.rest)} ·{" "}
+                          {Math.round((cfg.rounds * (cfg.work + cfg.rest)) / 60)} min total
+                        </div>
+                        <button onClick={startTimer}
+                          style={{ padding:"11px 20px", borderRadius:12, background: cfg.color || "#007AFF", border:"none", cursor:"pointer", fontSize:13, fontWeight:800, color:"#000", boxShadow:`0 4px 16px ${cfg.color || "#007AFF"}50` }}>
+                          ▶ GO
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
 
