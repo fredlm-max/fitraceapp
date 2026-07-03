@@ -3310,6 +3310,7 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [tabDir, setTabDir] = useState(1);
   const [showQuickLog, setShowQuickLog] = useState(false);
   const [showAllHome, setShowAllHome] = useState(false);
+  const [showAllProgress, setShowAllProgress] = useState(false);
 
   // ── Theme
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem("apex_theme") || "black");
@@ -12882,6 +12883,13 @@ JSON:
               );
             })()}
 
+            {/* ── TOGGLE SECTIONS SECONDAIRES STATS ── */}
+            <button onClick={() => setShowAllProgress(v => !v)}
+              style={{ width:"100%", padding:"10px", background:"none", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, color:"#636366", fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", marginBottom:12 }}>
+              {showAllProgress ? "Voir moins ↑" : "Tous les graphiques ↓"}
+            </button>
+            <div style={{ display: showAllProgress ? "block" : "none" }}>
+
             {/* ── WELLNESS HISTORY CHART ── */}
             {(() => {
               const wellKey = `fitrace_wellness_${profile.name}`;
@@ -20382,6 +20390,7 @@ const sessions = profile.sessions || [];
                 ))
               )}
             </div>
+            </div>{/* fin sections secondaires stats */}
           </div>
 
         {/* ZONES — toujours rendu */}
