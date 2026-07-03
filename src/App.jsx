@@ -7180,7 +7180,10 @@ JSON:
 
               // Lire les repas du jour depuis le stockage partagé avec l'onglet Nutrition
               const loadMeals = () => { try { return JSON.parse(localStorage.getItem(MEAL_KEY)||"[]"); } catch { return []; } };
-              const getMealsTotal = (meals) => meals.reduce((a,r)=>({cal:a.cal+(r.kcal||0),prot:a.prot+(r.p||0)}),{cal:0,prot:0});
+              const getMealsTotal = (meals) => meals.reduce((a,r)=>({
+                cal:a.cal+(r.kcal||0), prot:a.prot+(r.p||0),
+                gluc:a.gluc+(r.g||0), lip:a.lip+(r.l||0)
+              }),{cal:0,prot:0,gluc:0,lip:0});
 
               const [meals, setMeals] = React.useState(loadMeals);
               const [eau, setEau] = React.useState(()=>{ try { const d=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); return d[todayStr]?.eau||0; } catch { return 0; } });
@@ -7189,11 +7192,21 @@ JSON:
                 navigateTo("nutri");
               };
 
-              const target = { cal: profile.calories || 2500, prot: profile.proteines || 140, eau: 3 };
+              const poids = parseFloat(profile.poids) || 75;
+              const target = {
+                cal: profile.calories || Math.round(poids * 33),
+                prot: profile.proteines || Math.round(poids * 1.8),
+                gluc: profile.glucides || Math.round(poids * 4.5),
+                lip: profile.lipides || Math.round(poids * 1.0),
+                eau: 3
+              };
               const totals = getMealsTotal(meals);
-              const pctCal = Math.min(100, Math.round((totals.cal / target.cal) * 100));
+              const pctCal  = Math.min(100, Math.round((totals.cal / target.cal) * 100));
               const pctProt = Math.min(100, Math.round((totals.prot / target.prot) * 100));
-              const pctEau = Math.min(100, Math.round((eau / target.eau) * 100));
+              const pctGluc = Math.min(100, Math.round((totals.gluc / target.gluc) * 100));
+              const pctLip  = Math.min(100, Math.round((totals.lip / target.lip) * 100));
+              const pctEau  = Math.min(100, Math.round((eau / target.eau) * 100));
+              const restCal = Math.max(0, target.cal - totals.cal);
 
               const saveEau = (v) => {
                 setEau(v);
@@ -7220,37 +7233,52 @@ JSON:
                     </div>
                   </div>
 
-                  {/* Jauges : Calories / Protéines / Eau */}
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:10 }}>
-                    {[
-                      { label:"Calories", val:totals.cal, target:target.cal, unit:"kcal", color:"#FF9F0A", pct:pctCal },
-                      { label:"Protéines", val:totals.prot, target:target.prot, unit:"g", color:"#39ff80", pct:pctProt },
-                      { label:"Eau", val:eau, target:target.eau, unit:"L", color:"#007AFF", pct:pctEau, isEau:true },
-                    ].map(n=>(
-                      <div key={n.label} style={{ textAlign:"center" }}>
-                        <div style={{ position:"relative", width:52, height:52, margin:"0 auto 5px" }}>
-                          <svg width="52" height="52" viewBox="0 0 52 52">
-                            <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5"/>
-                            <circle cx="26" cy="26" r="22" fill="none" stroke={n.color} strokeWidth="5"
-                              strokeDasharray={`${(n.pct/100)*138.2} 138.2`} strokeLinecap="round"
-                              transform="rotate(-90 26 26)" style={{transition:"stroke-dasharray 0.5s ease"}}/>
-                          </svg>
-                          <div style={{ position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center" }}>
-                            <span style={{ fontSize:10,fontWeight:900,color:n.color }}>{n.pct}%</span>
-                          </div>
+                  {/* MyFitnessPal-style layout: big calorie ring + macro bars */}
+                  <div style={{ display:"flex", gap:14, alignItems:"center", marginBottom:12 }}>
+                    {/* Big calorie donut */}
+                    <div style={{ flexShrink:0, textAlign:"center" }}>
+                      <div style={{ position:"relative", width:80, height:80 }}>
+                        <svg width="80" height="80" viewBox="0 0 80 80">
+                          <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7"/>
+                          <circle cx="40" cy="40" r="34" fill="none" stroke={pctCal>=100?"#FF453A":"#FF9F0A"} strokeWidth="7"
+                            strokeDasharray={`${(pctCal/100)*213.6} 213.6`} strokeLinecap="round"
+                            transform="rotate(-90 40 40)" style={{transition:"stroke-dasharray 0.6s ease"}}/>
+                        </svg>
+                        <div style={{ position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center" }}>
+                          <span style={{ fontSize:14,fontWeight:900,color:pctCal>=100?"#FF453A":"#FF9F0A",lineHeight:1 }}>{restCal}</span>
+                          <span style={{ fontSize:7,color:"#636366",marginTop:1 }}>kcal rest.</span>
                         </div>
-                        <div style={{ fontSize:11,fontWeight:700,color:"var(--white)",lineHeight:1 }}>
-                          {n.isEau ? eau.toFixed(1) : n.val}<span style={{fontSize:8,color:"#636366",marginLeft:1}}>{n.unit}</span>
-                        </div>
-                        <div style={{ fontSize:8,color:"#636366",marginTop:1 }}>{n.label}</div>
-                        {n.isEau && (
-                          <div style={{ display:"flex",gap:3,justifyContent:"center",marginTop:4 }}>
-                            <button onClick={()=>saveEau(Math.max(0,+(eau-0.25).toFixed(2)))} style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:4,width:20,height:20,color:"#8E8E93",fontSize:13,cursor:"pointer",lineHeight:"20px"}}>−</button>
-                            <button onClick={()=>saveEau(+(eau+0.25).toFixed(2))} style={{background:"rgba(0,122,255,0.15)",border:"1px solid rgba(0,122,255,0.3)",borderRadius:4,width:20,height:20,color:"#007AFF",fontSize:13,cursor:"pointer",lineHeight:"18px"}}>+</button>
-                          </div>
-                        )}
                       </div>
-                    ))}
+                      <div style={{ fontSize:9,color:"#636366",marginTop:3 }}>{totals.cal} / {target.cal} kcal</div>
+                    </div>
+
+                    {/* Macro bars */}
+                    <div style={{ flex:1, display:"flex", flexDirection:"column", gap:7 }}>
+                      {[
+                        { label:"Protéines", val:Math.round(totals.prot), target:target.prot, unit:"g", color:"#39ff80", pct:pctProt },
+                        { label:"Glucides",  val:Math.round(totals.gluc), target:target.gluc, unit:"g", color:"#FF9F0A", pct:pctGluc },
+                        { label:"Lipides",   val:Math.round(totals.lip),  target:target.lip,  unit:"g", color:"#a78bfa", pct:pctLip  },
+                        { label:"Eau",       val:eau.toFixed(1),          target:target.eau,  unit:"L", color:"#007AFF", pct:pctEau, isEau:true },
+                      ].map(n=>(
+                        <div key={n.label}>
+                          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3 }}>
+                            <span style={{ fontSize:9,color:"#8E8E93" }}>{n.label}</span>
+                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                              {n.isEau && (
+                                <>
+                                  <button onClick={()=>saveEau(Math.max(0,+(eau-0.25).toFixed(2)))} style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:4,width:18,height:18,color:"#8E8E93",fontSize:12,cursor:"pointer",lineHeight:"18px",padding:0}}>−</button>
+                                  <button onClick={()=>saveEau(+(eau+0.25).toFixed(2))} style={{background:"rgba(0,122,255,0.15)",border:"none",borderRadius:4,width:18,height:18,color:"#007AFF",fontSize:12,cursor:"pointer",lineHeight:"16px",padding:0}}>+</button>
+                                </>
+                              )}
+                              <span style={{ fontSize:9,color:n.color,fontWeight:700 }}>{n.val}<span style={{color:"#636366",fontWeight:400}}>/{n.target}{n.unit}</span></span>
+                            </div>
+                          </div>
+                          <div style={{ height:5,background:"rgba(255,255,255,0.06)",borderRadius:99 }}>
+                            <div style={{ height:"100%",width:`${n.pct}%`,background:n.pct>=100?`${n.color}cc`:n.color,borderRadius:99,transition:"width 0.5s",maxWidth:"100%" }}/>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Liste repas du jour */}
