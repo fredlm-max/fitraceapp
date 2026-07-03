@@ -30957,6 +30957,260 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         );
       })()}
 
+      {/* ── OKR GOAL TRACKER ── */}
+      {(() => {
+        const KEY = `fitrace_okr_${profile.name}`;
+
+        const [okrs, setOkrs] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+        });
+        const [showForm, setShowForm] = React.useState(false);
+        const [editing, setEditing] = React.useState(null);
+        const [form, setForm] = React.useState({ objective:"", quarter:"Q3 2025", keyResults:[], emoji:"🎯" });
+        const [krForm, setKrForm] = React.useState({ title:"", target:0, unit:"", current:0 });
+
+        const sessions = profile.sessions || [];
+        const today = new Date().toISOString().slice(0,10);
+
+        const QUARTERS = ["Q1 2025","Q2 2025","Q3 2025","Q4 2025","Q1 2026","Q2 2026"];
+        const PRESETS = [
+          { objective:"Courir 200km ce trimestre", emoji:"🏃", keyResults:[
+            { title:"Kilomètres parcourus", target:200, unit:"km", current:0, autoKey:"totalKm" },
+            { title:"Séances de run", target:24, unit:"séances", current:0, autoKey:"runSessions" },
+          ]},
+          { objective:"Atteindre sub-1h20 HYROX", emoji:"🏁", keyResults:[
+            { title:"SkiErg sous 4min", target:4, unit:"min", current:0 },
+            { title:"Séances HYROX complètes", target:8, unit:"séances", current:0 },
+            { title:"Temps de run 8km sous 42min", target:42, unit:"min", current:0 },
+          ]},
+          { objective:"Développer ma force fonctionnelle", emoji:"💪", keyResults:[
+            { title:"Squat 1RM augmenté de 10kg", target:10, unit:"kg", current:0 },
+            { title:"Séances de renforcement", target:20, unit:"séances", current:0 },
+            { title:"Farmer carry 100m + lourd", target:5, unit:"kg", current:0 },
+          ]},
+          { objective:"Optimiser ma récupération", emoji:"😴", keyResults:[
+            { title:"7h+ de sommeil/nuit (jours)", target:60, unit:"jours", current:0 },
+            { title:"Score readiness > 70 moyen", target:70, unit:"/100", current:0 },
+            { title:"Séances de mobilité", target:24, unit:"séances", current:0 },
+          ]},
+        ];
+
+        // Auto-compute values
+        const autoValues = (() => {
+          const qStart = new Date(today); qStart.setDate(1); qStart.setMonth(Math.floor(qStart.getMonth()/3)*3);
+          const qs = qStart.toISOString().slice(0,10);
+          const qSessions = sessions.filter(s => s.date >= qs);
+          return {
+            totalKm: qSessions.reduce((s,x) => s+(parseFloat(x.distance)||0), 0),
+            runSessions: qSessions.filter(s => s.type?.toLowerCase().includes("run")).length,
+            totalSessions: qSessions.length,
+          };
+        })();
+
+        const resolveProgress = (kr) => {
+          if (kr.autoKey && autoValues[kr.autoKey] !== undefined) {
+            return Math.round(autoValues[kr.autoKey] * 10) / 10;
+          }
+          return kr.current || 0;
+        };
+
+        const krProgress = (kr) => {
+          const cur = resolveProgress(kr);
+          return kr.target > 0 ? Math.min(100, Math.round(cur/kr.target*100)) : 0;
+        };
+
+        const objectiveProgress = (okr) => {
+          if (!okr.keyResults?.length) return 0;
+          return Math.round(okr.keyResults.reduce((s,kr) => s+krProgress(kr), 0) / okr.keyResults.length);
+        };
+
+        const addKr = () => {
+          if (!krForm.title) return;
+          setForm(f => ({ ...f, keyResults: [...f.keyResults, { ...krForm, id: Date.now() }] }));
+          setKrForm({ title:"", target:0, unit:"", current:0 });
+        };
+
+        const removeKr = (idx) => setForm(f => ({ ...f, keyResults: f.keyResults.filter((_,i) => i !== idx) }));
+
+        const saveOkr = () => {
+          const entry = { ...form, id: Date.now(), createdAt: today };
+          const next = editing
+            ? okrs.map(o => o.id === editing ? { ...o, ...form } : o)
+            : [entry, ...okrs];
+          setOkrs(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          setShowForm(false);
+          setEditing(null);
+          setForm({ objective:"", quarter:"Q3 2025", keyResults:[], emoji:"🎯" });
+        };
+
+        const updateKrCurrent = (okrId, krIdx, val) => {
+          const next = okrs.map(o => o.id === okrId
+            ? { ...o, keyResults: o.keyResults.map((kr,i) => i===krIdx ? {...kr, current:parseFloat(val)||0} : kr) }
+            : o
+          );
+          setOkrs(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const deleteOkr = (id) => {
+          const next = okrs.filter(o => o.id !== id);
+          setOkrs(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+        };
+
+        const progressColor = (p) => p >= 80 ? "#30D158" : p >= 50 ? "var(--yellow)" : p >= 20 ? "#FF9F0A" : "#FF453A";
+
+        if (showForm) {
+          return (
+            <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+              <div style={{ fontSize:15, fontWeight:800, color:"var(--yellow)", marginBottom:14 }}>🎯 {editing ? "Modifier" : "Nouvel"} objectif</div>
+
+              {/* Presets */}
+              {!editing && (
+                <>
+                  <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>DÉMARRAGE RAPIDE</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:12 }}>
+                    {PRESETS.map((p,i) => (
+                      <button key={i} onClick={() => setForm(f => ({...f, objective:p.objective, emoji:p.emoji, keyResults:p.keyResults.map(kr=>({...kr,id:Date.now()+i*100+i}))}))}
+                        style={{ background:"var(--bg3)", border:"1px solid #333", borderRadius:10, padding:"8px 12px", color:"#aaa", textAlign:"left", cursor:"pointer", fontSize:12 }}>
+                        {p.emoji} {p.objective}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:8, marginBottom:8, alignItems:"center" }}>
+                <input value={form.emoji} onChange={e => setForm(f=>({...f,emoji:e.target.value}))}
+                  style={{ width:44, background:"var(--bg3)", border:"1px solid #444", borderRadius:8, padding:"8px 0", color:"#fff", fontSize:22, textAlign:"center" }}/>
+                <input value={form.objective} onChange={e => setForm(f=>({...f,objective:e.target.value}))} placeholder="Mon objectif principal..."
+                  style={{ background:"var(--bg3)", border:"1px solid #444", borderRadius:8, padding:"8px 12px", color:"#fff", fontSize:13, fontWeight:600 }}/>
+              </div>
+
+              <select value={form.quarter} onChange={e => setForm(f=>({...f,quarter:e.target.value}))}
+                style={{ width:"100%", background:"var(--bg3)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12, marginBottom:12, boxSizing:"border-box" }}>
+                {QUARTERS.map(q => <option key={q}>{q}</option>)}
+              </select>
+
+              {/* Key Results */}
+              <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>RÉSULTATS CLÉS</div>
+              {form.keyResults.map((kr,i) => (
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginBottom:4 }}>
+                  <div>
+                    <div style={{ fontSize:12, color:"#fff" }}>{kr.title}</div>
+                    <div style={{ fontSize:10, color:"#666" }}>Cible: {kr.target} {kr.unit}</div>
+                  </div>
+                  <button onClick={() => removeKr(i)} style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:14, cursor:"pointer" }}>✕</button>
+                </div>
+              ))}
+
+              <div style={{ background:"var(--bg3)", borderRadius:12, padding:12, marginBottom:12 }}>
+                <input value={krForm.title} onChange={e => setKrForm(f=>({...f,title:e.target.value}))} placeholder="Résultat à mesurer..."
+                  style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12, marginBottom:7, boxSizing:"border-box" }}/>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:8 }}>
+                  <input type="number" value={krForm.target} onChange={e => setKrForm(f=>({...f,target:parseFloat(e.target.value)||0}))} placeholder="Cible"
+                    style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                  <input value={krForm.unit} onChange={e => setKrForm(f=>({...f,unit:e.target.value}))} placeholder="Unité (km, min, séances...)"
+                    style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                </div>
+                <button onClick={addKr} disabled={!krForm.title}
+                  style={{ width:"100%", background:krForm.title?"rgba(201,168,64,0.2)":"var(--bg2)", border:`1px dashed ${krForm.title?"var(--yellow)":"#333"}`, borderRadius:8, padding:"7px 0", color:krForm.title?"var(--yellow)":"#555", fontSize:12, cursor:"pointer" }}>
+                  + Ajouter ce résultat clé
+                </button>
+              </div>
+
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => { setShowForm(false); setEditing(null); }}
+                  style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                <button onClick={saveOkr} disabled={!form.objective}
+                  style={{ flex:2, background:form.objective?"var(--yellow)":"#333", border:"none", borderRadius:10, padding:"11px 0", color:form.objective?"#000":"#555", fontSize:13, fontWeight:800, cursor:"pointer" }}>
+                  Sauvegarder
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#555" }}>OBJECTIFS TRIMESTRIELS</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🎯 OKR Tracker</div>
+              </div>
+              <button onClick={() => setShowForm(true)}
+                style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"7px 14px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                + Objectif
+              </button>
+            </div>
+
+            {okrs.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"20px 0", color:"#555", fontSize:13 }}>
+                Définis tes objectifs trimestriels pour rester focus 🎯
+              </div>
+            ) : okrs.map(okr => {
+              const prog = objectiveProgress(okr);
+              return (
+                <div key={okr.id} style={{ background:"var(--bg3)", borderRadius:14, padding:"14px 16px", marginBottom:10 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:11, color:"#555", marginBottom:2 }}>{okr.quarter}</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>{okr.emoji} {okr.objective}</div>
+                    </div>
+                    <div style={{ textAlign:"center", marginLeft:12 }}>
+                      <div style={{ fontSize:22, fontWeight:900, color:progressColor(prog) }}>{prog}%</div>
+                      <div style={{ fontSize:9, color:"#555" }}>complété</div>
+                    </div>
+                  </div>
+
+                  {/* Overall bar */}
+                  <div style={{ height:6, background:"var(--bg2)", borderRadius:3, marginBottom:12 }}>
+                    <div style={{ height:"100%", width:`${prog}%`, background:progressColor(prog), borderRadius:3, transition:"width 0.4s" }}/>
+                  </div>
+
+                  {/* Key Results */}
+                  {okr.keyResults?.map((kr,i) => {
+                    const cur = resolveProgress(kr);
+                    const p = krProgress(kr);
+                    const isAuto = !!kr.autoKey;
+                    return (
+                      <div key={i} style={{ marginBottom:8 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                          <div style={{ fontSize:11, color:"#aaa", flex:1 }}>
+                            {kr.title}
+                            {isAuto && <span style={{ fontSize:9, color:"var(--yellow)", marginLeft:4 }}>auto</span>}
+                          </div>
+                          {isAuto ? (
+                            <div style={{ fontSize:11, fontWeight:700, color:progressColor(p) }}>{cur} / {kr.target} {kr.unit}</div>
+                          ) : (
+                            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                              <input type="number" value={kr.current||0} onChange={e => updateKrCurrent(okr.id, i, e.target.value)}
+                                style={{ width:48, background:"var(--bg2)", border:"1px solid #444", borderRadius:6, padding:"2px 5px", color:"var(--yellow)", fontSize:11, textAlign:"center" }}/>
+                              <span style={{ fontSize:11, color:"#555" }}>/ {kr.target} {kr.unit}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ height:4, background:"var(--bg2)", borderRadius:2 }}>
+                          <div style={{ height:"100%", width:`${p}%`, background:progressColor(p), borderRadius:2 }}/>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div style={{ display:"flex", gap:6, marginTop:10 }}>
+                    <button onClick={() => { setForm({...okr}); setEditing(okr.id); setShowForm(true); }}
+                      style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:8, padding:"6px 0", color:"#888", fontSize:11, cursor:"pointer" }}>✏️ Modifier</button>
+                    <button onClick={() => deleteOkr(okr.id)}
+                      style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:8, padding:"6px 0", color:"#FF453A", fontSize:11, cursor:"pointer" }}>✕ Supprimer</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* ── SEASON GOAL TRACKER ── */}
       {(() => {
         const KEY = `fitrace_goals_${profile.name}`;
