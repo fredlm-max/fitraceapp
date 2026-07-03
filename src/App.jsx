@@ -9265,6 +9265,97 @@ JSON:
               );
             })()}
 
+            {/* ── YEAR IN REVIEW — Strava/Garmin style ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+              const currentYear = new Date().getFullYear();
+              const ytd = sessions.filter(s => s.date?.startsWith(String(currentYear)));
+              if (ytd.length === 0) return null;
+
+              const totalSessions = ytd.length;
+              const totalMin = ytd.reduce((a,s) => a + (s.duree||0), 0);
+              const totalLoad = ytd.reduce((a,s) => a + (s.rpe||5)*(s.duree||30), 0);
+              const totalHours = Math.floor(totalMin / 60);
+              const totalMinRem = totalMin % 60;
+
+              // Most trained zone
+              const zoneCounts = {};
+              ytd.forEach(s => { const t = s.type||"autre"; zoneCounts[t] = (zoneCounts[t]||0)+1; });
+              const topZone = Object.entries(zoneCounts).sort((a,b)=>b[1]-a[1])[0];
+              const ZONE_META = { running_zone2:{label:"Zone 2",icon:"🏃"}, running_qualite:{label:"Qualité",icon:"⚡"}, force_stations:{label:"Force",icon:"🏋️"}, hybride_compromis:{label:"Hybride",icon:"🔀"}, mobilite:{label:"Mobilité",icon:"🧘"} };
+              const topZoneMeta = ZONE_META[topZone?.[0]] || { label: topZone?.[0]||"Mixte", icon:"💪" };
+
+              // Best streak (consecutive days)
+              const daySet = new Set(ytd.map(s => s.date?.slice(0,10)));
+              const allDays = [...daySet].sort();
+              let bestStreak = 1, cur = 1;
+              for (let i = 1; i < allDays.length; i++) {
+                const diff = (new Date(allDays[i]) - new Date(allDays[i-1])) / 86400000;
+                if (diff === 1) { cur++; bestStreak = Math.max(bestStreak, cur); } else cur = 1;
+              }
+
+              // Monthly distribution (sparkline)
+              const months = Array.from({length:12}, (_,i) => ytd.filter(s => new Date(s.date).getMonth()===i).length);
+              const maxMonth = Math.max(...months, 1);
+
+              // Avg RPE
+              const rpeArr = ytd.filter(s=>s.rpe).map(s=>s.rpe);
+              const avgRpe = rpeArr.length ? (rpeArr.reduce((a,b)=>a+b,0)/rpeArr.length).toFixed(1) : "—";
+
+              const STATS = [
+                { label:"Séances", value:totalSessions, icon:"🏅", color:"#007AFF" },
+                { label:"Temps total", value:`${totalHours}h${totalMinRem>0?String(totalMinRem).padStart(2,"0"):""}`, icon:"⏱", color:"#30D158" },
+                { label:"Charge totale", value:Math.round(totalLoad/1000)+"k", icon:"⚡", color:"#C9A840" },
+                { label:"Meilleure série", value:`${bestStreak}j`, icon:"🔥", color:"#FF9F0A" },
+                { label:"RPE moyen", value:avgRpe, icon:"💓", color:"#BF5AF2" },
+                { label:"Zone fav.", value:topZoneMeta.label, icon:topZoneMeta.icon, color:"#FF6B00" },
+              ];
+
+              const MONTH_LABELS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
+
+              return (
+                <div style={{ background:"#1C1C1E", borderRadius:18, padding:"16px", marginBottom:12 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"#555", textTransform:"uppercase", letterSpacing:1 }}>Année {currentYear}</div>
+                      <div style={{ fontSize:15, fontWeight:800, color:"#fff" }}>Ton bilan d'entraînement</div>
+                    </div>
+                    <div style={{ fontSize:28 }}>📊</div>
+                  </div>
+
+                  {/* Stats grid 3×2 */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:14 }}>
+                    {STATS.map((s,i) => (
+                      <div key={i} style={{ background:`${s.color}10`, border:`1px solid ${s.color}25`, borderRadius:12, padding:"10px 8px", textAlign:"center" }}>
+                        <div style={{ fontSize:16, marginBottom:2 }}>{s.icon}</div>
+                        <div style={{ fontFamily:"Bebas Neue, Impact, sans-serif", fontSize:20, color:s.color, lineHeight:1 }}>{s.value}</div>
+                        <div style={{ fontSize:9, color:"#555", marginTop:2, textTransform:"uppercase", letterSpacing:0.5 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Monthly bar sparkline */}
+                  <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:10, padding:"10px 12px" }}>
+                    <div style={{ fontSize:9, color:"#555", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Activité mensuelle</div>
+                    <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:36 }}>
+                      {months.map((count, i) => {
+                        const isCurrentMonth = i === new Date().getMonth();
+                        const h = count > 0 ? Math.max(4, Math.round((count/maxMonth)*36)) : 2;
+                        return (
+                          <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                            <div style={{ width:"100%", height:h, borderRadius:2, background: isCurrentMonth ? "#C9A840" : count > 0 ? "#007AFF" : "rgba(255,255,255,0.06)", boxShadow: isCurrentMonth ? "0 0 6px #C9A84060" : "none", transition:"height 0.5s cubic-bezier(.4,0,.2,1)" }} />
+                            <div style={{ fontSize:7, color: isCurrentMonth ? "#C9A840" : "#3A3A3C" }}>{MONTH_LABELS[i]}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── BODY MEASUREMENTS TRACKER (MyFitnessPal-style) ── */}
             {(()=>{
               const KEY = `fitrace_mensur_${profile.name}`;
