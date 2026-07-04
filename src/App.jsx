@@ -6293,6 +6293,9 @@ JSON:
               );
             })()}
 
+            {/* ── ZONE AVANCÉE 1 — masquée par défaut pour simplifier l'accueil ── */}
+            <div style={{ display: showAllHome ? "block" : "none" }}>
+
             {/* ── AI COACH WEEKLY SUMMARY — TrainingPeaks style ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -8206,6 +8209,7 @@ JSON:
             })()}
 
             {/* Profil Athlète supprimé */}
+            </div>
 
             {/* ── CHECK-IN RAPIDE 10 SECONDES ── */}
             {(() => {
@@ -8241,6 +8245,9 @@ JSON:
                 </div>
               );
             })()}
+
+            {/* ── ZONE AVANCÉE 2 — masquée par défaut pour simplifier l'accueil ── */}
+            <div style={{ display: showAllHome ? "block" : "none" }}>
 
             {/* ── XP LEVEL BAR ── */}
             {(() => {
@@ -8648,6 +8655,8 @@ JSON:
               );
             })()}
 
+            </div>
+
             {/* ── RACCOURCIS ESSENTIELS ── */}
             <button onClick={() => { haptic([8]); navigateTo("today"); }}
               style={{ width:"100%", padding:"16px 20px", background:"var(--yellow)", border:"none", borderRadius:18, display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", marginBottom:10, boxShadow:"0 4px 20px rgba(201,168,64,0.25)" }}>
@@ -8678,7 +8687,7 @@ JSON:
             {/* ── VOIR PLUS / MOINS ── */}
             <button onClick={() => setShowAllHome(v => !v)}
               style={{ width:"100%", padding:"10px", background:"none", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, color:"#636366", fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", marginBottom:12 }}>
-              {showAllHome ? "Voir moins ↑" : "Tout afficher ↓"}
+              {showAllHome ? "✕ Masquer les détails" : "＋ Afficher tous les détails (stats, défis, bien-être…)"}
             </button>
 
             {/* ── SECTIONS SECONDAIRES (toujours dans le DOM pour les hooks) ── */}
