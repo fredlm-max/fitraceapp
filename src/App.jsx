@@ -15967,6 +15967,192 @@ JSON:
             )}
           </div>
 
+            {/* ── HYROX PACE & RACE CALCULATOR ── */}
+            {(() => {
+              const [paceMin, setPaceMin] = React.useState(5);
+              const [paceSec, setPaceSec] = React.useState(30);
+              const [targetTime, setTargetTime] = React.useState("");
+              const [mode, setMode] = React.useState("split"); // split | target | zones
+
+              const paceTotalSec = paceMin * 60 + paceSec;
+              const fmtPace = (sec) => `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;
+              const fmtRaceTime = (totalSec) => {
+                const h = Math.floor(totalSec/3600);
+                const m = Math.floor((totalSec%3600)/60);
+                const s = totalSec%60;
+                return h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
+              };
+
+              // HYROX: 8 runs of 1km + 8 stations
+              // Approximate station times based on pace (faster runner = faster stations too)
+              const paceFactor = Math.max(0.5, Math.min(2, paceTotalSec / 330)); // 5:30/km = factor 1
+              const STATIONS = [
+                { name:"SkiErg 1000m",    baseSec:210, icon:"🎿" },
+                { name:"Sled Push 50m",   baseSec:90,  icon:"🛷" },
+                { name:"Sled Pull 50m",   baseSec:105, icon:"🔗" },
+                { name:"Burpee BJ 80m",   baseSec:180, icon:"🔄" },
+                { name:"RowErg 1000m",    baseSec:240, icon:"🚣" },
+                { name:"Farmer's 200m",   baseSec:120, icon:"🧳" },
+                { name:"Sandbag 100m",    baseSec:150, icon:"🎒" },
+                { name:"Wall Balls ×75",  baseSec:240, icon:"🏀" },
+              ];
+              const stationTimes = STATIONS.map(s => ({ ...s, sec: Math.round(s.baseSec * paceFactor) }));
+              const totalStationSec = stationTimes.reduce((a,s) => a + s.sec, 0);
+              const totalRunSec = paceTotalSec * 8;
+              const totalRaceSec = totalRunSec + totalStationSec;
+
+              // Target time mode
+              const parseTarget = (t) => {
+                if (!t) return null;
+                const parts = t.split(":").map(Number);
+                if (parts.length === 2) return parts[0]*60 + parts[1]; // mm:ss
+                if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2]; // h:mm:ss
+                return null;
+              };
+              const targetSec = parseTarget(targetTime);
+              const gapSec = targetSec ? totalRaceSec - targetSec : null;
+
+              // HR Zones from pace
+              const hrZones = [
+                { name:"Z1 Récup",   pace: Math.round(paceTotalSec * 1.35), color:"#636366" },
+                { name:"Z2 Endur.",  pace: Math.round(paceTotalSec * 1.15), color:"#30D158" },
+                { name:"Z3 Tempo",   pace: Math.round(paceTotalSec * 1.0),  color:"#FF9F0A" },
+                { name:"Z4 Seuil",   pace: Math.round(paceTotalSec * 0.92), color:"#FF6B00" },
+                { name:"Z5 VMA",     pace: Math.round(paceTotalSec * 0.85), color:"#FF453A" },
+              ];
+
+              return (
+                <div style={{ background:"rgba(28,28,30,0.6)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"14px 16px", marginBottom:14 }}>
+                  <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1, marginBottom:12 }}>🏁 CALCULATEUR HYROX</div>
+
+                  {/* Mode tabs */}
+                  <div style={{ display:"flex", gap:4, marginBottom:14, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:3 }}>
+                    {[
+                      { id:"split", label:"Race Splits" },
+                      { id:"target", label:"Objectif" },
+                      { id:"zones", label:"Allures Z1-Z5" },
+                    ].map(m => (
+                      <button key={m.id} onClick={() => { setMode(m.id); }} style={{ flex:1, padding:"7px 4px", borderRadius:8, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, transition:"all 0.2s",
+                        background: mode === m.id ? "var(--yellow)" : "transparent",
+                        color: mode === m.id ? "#000" : "#555",
+                      }}>{m.label}</button>
+                    ))}
+                  </div>
+
+                  {/* Pace input — always visible */}
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"10px 14px" }}>
+                    <div style={{ fontSize:11, color:"#555", flex:1 }}>Allure 1km</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:3 }}>
+                        <button onClick={() => setPaceMin(v => Math.max(3, v-1))} style={{ width:24, height:24, borderRadius:6, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:14, color:"#fff" }}>−</button>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"#fff", minWidth:24, textAlign:"center" }}>{paceMin}</div>
+                        <button onClick={() => setPaceMin(v => Math.min(12, v+1))} style={{ width:24, height:24, borderRadius:6, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:14, color:"#fff" }}>+</button>
+                      </div>
+                      <div style={{ fontSize:18, color:"#555" }}>:</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:3 }}>
+                        <button onClick={() => setPaceSec(v => v === 0 ? 55 : v-5)} style={{ width:24, height:24, borderRadius:6, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:14, color:"#fff" }}>−</button>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, color:"#fff", minWidth:32, textAlign:"center" }}>{String(paceSec).padStart(2,"0")}</div>
+                        <button onClick={() => setPaceSec(v => v >= 55 ? 0 : v+5)} style={{ width:24, height:24, borderRadius:6, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:14, color:"#fff" }}>+</button>
+                      </div>
+                      <div style={{ fontSize:11, color:"#555" }}>min/km</div>
+                    </div>
+                  </div>
+
+                  {/* SPLIT MODE */}
+                  {mode === "split" && (
+                    <div>
+                      {/* Summary bar */}
+                      <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                        {[
+                          { label:"Run 8×1km", val:fmtRaceTime(totalRunSec), color:"#30D158" },
+                          { label:"Stations", val:fmtRaceTime(totalStationSec), color:"#FF9F0A" },
+                          { label:"Total ~", val:fmtRaceTime(totalRaceSec), color:"#C9A840" },
+                        ].map(s => (
+                          <div key={s.label} style={{ flex:1, background:`${s.color}12`, borderRadius:10, padding:"8px 6px", textAlign:"center" }}>
+                            <div style={{ fontSize:8, color:"#555", marginBottom:2 }}>{s.label}</div>
+                            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:s.color }}>{s.val}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Station breakdown */}
+                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                        {stationTimes.map((s,i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+                            <span style={{ fontSize:12 }}>{s.icon}</span>
+                            <span style={{ fontSize:11, color:"#8E8E93", flex:1 }}>{s.name}</span>
+                            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"#FF9F0A" }}>{fmtPace(s.sec)}</span>
+                          </div>
+                        ))}
+                        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0" }}>
+                          <span style={{ fontSize:12 }}>🏃</span>
+                          <span style={{ fontSize:11, color:"#8E8E93", flex:1 }}>8 × 1km run</span>
+                          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"#30D158" }}>{fmtPace(paceTotalSec)}/km</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TARGET MODE */}
+                  {mode === "target" && (
+                    <div>
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:10, color:"#555", marginBottom:6 }}>Temps objectif (ex: 1:30:00 ou 90:00)</div>
+                        <input type="text" value={targetTime} onChange={e => setTargetTime(e.target.value)}
+                          placeholder="h:mm:ss ou mm:ss"
+                          style={{ width:"100%", padding:"10px 14px", borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"#fff", fontSize:16, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2 }}
+                        />
+                      </div>
+                      {targetSec && (
+                        <div>
+                          <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                            <div style={{ flex:1, background: gapSec > 0 ? "rgba(255,69,58,0.12)" : "rgba(48,209,88,0.12)", borderRadius:12, padding:12, textAlign:"center", border: gapSec > 0 ? "1px solid rgba(255,69,58,0.2)" : "1px solid rgba(48,209,88,0.2)" }}>
+                              <div style={{ fontSize:9, color:"#555", marginBottom:4 }}>Écart vs objectif</div>
+                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color: gapSec > 0 ? "#FF453A" : "#30D158" }}>
+                                {gapSec > 0 ? "+" : "−"}{fmtRaceTime(Math.abs(gapSec))}
+                              </div>
+                            </div>
+                            <div style={{ flex:1, background:"rgba(201,168,64,0.08)", borderRadius:12, padding:12, textAlign:"center" }}>
+                              <div style={{ fontSize:9, color:"#555", marginBottom:4 }}>Allure cible/km</div>
+                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color:"#C9A840" }}>
+                                {fmtPace(Math.round((targetSec - totalStationSec) / 8))}
+                              </div>
+                            </div>
+                          </div>
+                          {gapSec > 0 && (
+                            <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:10 }}>
+                              <div style={{ fontSize:10, color:"#C9A840", fontWeight:700, marginBottom:4 }}>💡 Pour atteindre ton objectif :</div>
+                              <div style={{ fontSize:11, color:"#8E8E93" }}>
+                                Améliore ton allure de {fmtPace(Math.round(gapSec / 8))} par km
+                                {" "}→ vise {fmtPace(Math.round((targetSec - totalStationSec) / 8))}/km
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ZONES MODE */}
+                  {mode === "zones" && (
+                    <div>
+                      <div style={{ fontSize:10, color:"#555", marginBottom:8 }}>Allures d'entraînement basées sur ton 1km</div>
+                      {hrZones.map((z,i) => (
+                        <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 0", borderBottom: i<hrZones.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                          <div style={{ width:10, height:10, borderRadius:2, background:z.color, flexShrink:0 }} />
+                          <div style={{ flex:1, fontSize:11, color:"var(--white)" }}>{z.name}</div>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:16, color:z.color }}>{fmtPace(z.pace)}</div>
+                          <div style={{ fontSize:9, color:"#555", minWidth:45 }}>{(60 / (z.pace/60)).toFixed(1)} km/h</div>
+                        </div>
+                      ))}
+                      <div style={{ marginTop:10, padding:"8px 10px", background:"rgba(201,168,64,0.06)", borderRadius:8, fontSize:10, color:"#8E8E93" }}>
+                        💡 HYROX : la course se court en Z3-Z4. Entraîne Z2 ×3/semaine pour la base.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── HYROX INTERVAL TIMER ── Garmin / TrainingPeaks style ── */}
             {(() => {
               const PRESETS = [
