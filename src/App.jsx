@@ -15481,7 +15481,36 @@ JSON:
                     </div>
                   </div>
 
-                  {/* 3. Photo montre / séance + charges */}
+                  {/* 3. Temps total — choix rapide + saisie libre */}
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 8 }}>
+                      ⏱ Combien de temps a duré ta séance ?
+                    </label>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                      {["30 min","45 min","60 min","75 min","90 min"].map(t => {
+                        const active = feedbackData.temps === t;
+                        return (
+                          <button key={t} onClick={() => { haptic([5]); setFeedbackData(d => ({ ...d, temps: t })); }} style={{
+                            padding: "9px 14px", borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: "pointer",
+                            background: active ? "var(--green)" : "rgba(255,255,255,0.05)",
+                            border: active ? "none" : "1px solid rgba(255,255,255,0.10)",
+                            color: active ? "#000" : "#8E8E93",
+                            transition: "all 0.15s var(--spring)",
+                          }}>{t}</button>
+                        );
+                      })}
+                    </div>
+                    <Input value={feedbackData.temps} onChange={v => setFeedbackData(d => ({ ...d, temps: v }))} placeholder="Ou tape la durée exacte — ex: 58 min" />
+                  </div>
+
+                  {/* ── Séparateur : la suite est facultative ── */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 16px" }}>
+                    <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+                    <div style={{ fontSize: 10, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap", textAlign: "center" }}>Détails facultatifs<br/>plus tu en donnes, plus le coach est précis</div>
+                    <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+                  </div>
+
+                  {/* 4. Photo montre / séance + charges (facultatif) */}
                   <div style={{ marginBottom: 14 }}>
                     <label style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 8 }}>
                       📸 Photo de ta montre ou de ta séance
@@ -15561,14 +15590,6 @@ JSON:
                       placeholder="ex: Squat 85kg × 5 · SkiErg 1000m en 4min12 · Run 5km en 24:30"
                       style={{ width: "100%", background: "var(--bg3)", border: "1px solid var(--gray2)", borderRadius: 10, padding: "10px 14px", color: "var(--white)", fontSize: 13, minHeight: 80, resize: "vertical", fontFamily: "var(--font-body)", lineHeight: 1.6 }}
                     />
-                  </div>
-
-                  {/* 4. Temps total */}
-                  <div style={{ marginBottom: 14 }}>
-                    <label style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 8 }}>
-                      Durée réelle de la séance
-                    </label>
-                    <Input value={feedbackData.temps} onChange={v => setFeedbackData(d => ({ ...d, temps: v }))} placeholder="ex: 58 min" />
                   </div>
 
                   {/* 5. Douleurs */}
