@@ -11611,6 +11611,7 @@ JSON:
               const [editingId, setEditingId] = React.useState(null);
               const [draft, setDraft] = React.useState("");
               const [showCount, setShowCount] = React.useState(5);
+              const [shareSession, setShareSession] = React.useState(null);
 
               const saveNote = (id, text) => {
                 const updated = { ...notes, [id]: text };
@@ -11619,36 +11620,148 @@ JSON:
                 setEditingId(null);
               };
 
-              const TYPE_LABELS = {
-                running_zone2: "Course Z2 🏃",
-                running_qualite: "Course Qualité ⚡",
-                force_stations: "Force / Stations 💪",
-                hybride_compromis: "Hybride 🔄",
-                mobilite: "Mobilité 🧘",
-                coach: "Séance Coach 🎯",
+              const TYPE_META = {
+                running_zone2:    { label:"Course Zone 2", icon:"🏃", color:"#30D158", gradient:"linear-gradient(135deg,#0A3D1F 0%,#1A6B34 100%)", quote:"La base de tout champion se construit en zone 2." },
+                running_qualite:  { label:"Course Qualité", icon:"⚡", color:"#FF9F0A", gradient:"linear-gradient(135deg,#3D2000 0%,#7A4A00 100%)", quote:"La vitesse s'entraîne. La volonté se forge." },
+                force_stations:   { label:"Force / Stations", icon:"🏋️", color:"#a78bfa", gradient:"linear-gradient(135deg,#1A0A3D 0%,#3D1A7A 100%)", quote:"Chaque répétition est un investissement dans la race." },
+                hybride_compromis:{ label:"Hybride HYROX", icon:"🔥", color:"#FF6B00", gradient:"linear-gradient(135deg,#3D1500 0%,#8B2E00 100%)", quote:"Courir après l'effort. C'est ça, HYROX." },
+                mobilite:         { label:"Mobilité", icon:"🧘", color:"#007AFF", gradient:"linear-gradient(135deg,#001A3D 0%,#00408A 100%)", quote:"Souplesse aujourd'hui. Puissance demain." },
+                coach:            { label:"Séance Coach", icon:"🎯", color:"#C9A840", gradient:"linear-gradient(135deg,#1A1400 0%,#4A3800 100%)", quote:"Suivre son coach, c'est faire confiance au processus." },
               };
 
               const recent = [...sessions].reverse().slice(0, showCount);
 
+              // Training effect badge computation
+              const teLabel = (rpe, type) => {
+                const r = parseFloat(rpe) || 5;
+                const isQual = type === "running_qualite" || type === "hybride_compromis";
+                const ae = Math.min(5, (r / 10) * (isQual ? 4 : 3.5) + 0.5).toFixed(1);
+                const an = Math.min(5, isQual ? (r - 4) * 0.6 : (r - 6) * 0.4).toFixed(1);
+                return { ae: Math.max(0, parseFloat(ae)), an: Math.max(0, parseFloat(an)) };
+              };
+
               return (
                 <div style={{ marginBottom: 16 }}>
+                  {/* Share Card Modal */}
+                  {shareSession && (() => {
+                    const s = shareSession;
+                    const meta = TYPE_META[s.type] || TYPE_META["coach"];
+                    const { ae, an } = teLabel(s.difficulte, s.type);
+                    const trimp = Math.round((s.duree || 45) * ((s.difficulte || 5) / 10) * 10);
+                    const kcal = Math.round(trimp * 0.85);
+                    const dateFormatted = s.date ? new Date(s.date).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" }) : "";
+                    return (
+                      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.88)", zIndex:2000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:16 }}
+                        onClick={() => setShareSession(null)}>
+                        {/* Share Card */}
+                        <div id="share-card" onClick={e => e.stopPropagation()}
+                          style={{ width:"100%", maxWidth:340, borderRadius:24, overflow:"hidden", boxShadow:"0 24px 80px rgba(0,0,0,0.7)", position:"relative" }}>
+                          {/* Header gradient */}
+                          <div style={{ background: meta.gradient, padding:"24px 20px 20px", position:"relative" }}>
+                            {/* Decorative circles */}
+                            <div style={{ position:"absolute", top:-40, right:-40, width:120, height:120, borderRadius:"50%", background:"rgba(255,255,255,0.04)" }} />
+                            <div style={{ position:"absolute", top:-20, right:20, width:60, height:60, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+                            {/* Brand */}
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"rgba(255,255,255,0.5)", letterSpacing:3 }}>FITRACE</div>
+                              <div style={{ fontSize:9, color:"rgba(255,255,255,0.4)", fontWeight:600, letterSpacing:1 }}>HYROX TRAINING</div>
+                            </div>
+                            {/* Session type */}
+                            <div style={{ fontSize:36, marginBottom:6 }}>{meta.icon}</div>
+                            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, color:"#fff", letterSpacing:1, lineHeight:1, marginBottom:4 }}>{meta.label.toUpperCase()}</div>
+                            <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)", marginBottom:16 }}>{dateFormatted}</div>
+                            {/* Big duration */}
+                            <div style={{ display:"flex", alignItems:"baseline", gap:4 }}>
+                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:56, color:"#fff", lineHeight:1 }}>{s.duree || "—"}</div>
+                              <div style={{ fontSize:14, color:"rgba(255,255,255,0.6)", fontWeight:600 }}>min</div>
+                            </div>
+                          </div>
+                          {/* Stats bar */}
+                          <div style={{ background:"#111", display:"flex" }}>
+                            {[
+                              { label:"RPE", value:`${s.difficulte || "—"}/10`, color:meta.color },
+                              { label:"CHARGE", value:`${trimp} pts`, color:"#fff" },
+                              { label:"KCAL ~", value:`${kcal}`, color:"#FF9F0A" },
+                            ].map((stat,i) => (
+                              <div key={i} style={{ flex:1, padding:"12px 8px", textAlign:"center", borderRight: i<2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                                <div style={{ fontSize:8, color:"#555", fontWeight:700, textTransform:"uppercase", letterSpacing:1, marginBottom:4 }}>{stat.label}</div>
+                                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:18, color:stat.color, lineHeight:1 }}>{stat.value}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Training effect */}
+                          <div style={{ background:"#0D0D0D", display:"flex", padding:"12px 16px", gap:12 }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:8, color:"#555", marginBottom:3, fontWeight:700 }}>EFFET AÉROBIE</div>
+                              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.06)", borderRadius:99 }}>
+                                  <div style={{ width:`${(ae/5)*100}%`, height:"100%", background:"#30D158", borderRadius:99 }} />
+                                </div>
+                                <span style={{ fontSize:11, fontWeight:700, color:"#30D158", minWidth:24 }}>{ae.toFixed(1)}</span>
+                              </div>
+                            </div>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:8, color:"#555", marginBottom:3, fontWeight:700 }}>EFFET ANAÉROBIE</div>
+                              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.06)", borderRadius:99 }}>
+                                  <div style={{ width:`${(an/5)*100}%`, height:"100%", background:"#FF453A", borderRadius:99 }} />
+                                </div>
+                                <span style={{ fontSize:11, fontWeight:700, color:"#FF453A", minWidth:24 }}>{an.toFixed(1)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Quote */}
+                          <div style={{ background:"#0D0D0D", padding:"12px 16px 16px", borderTop:"1px solid rgba(255,255,255,0.04)" }}>
+                            <div style={{ fontSize:11, color:"rgba(255,255,255,0.35)", fontStyle:"italic", lineHeight:1.5, textAlign:"center" }}>"{meta.quote}"</div>
+                          </div>
+                        </div>
+                        {/* Actions */}
+                        <div style={{ marginTop:16, display:"flex", gap:10, width:"100%", maxWidth:340 }}>
+                          <button onClick={() => setShareSession(null)}
+                            style={{ flex:1, padding:"12px", borderRadius:14, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", fontSize:13, color:"#8E8E93", fontWeight:600 }}>
+                            Fermer
+                          </button>
+                          <button onClick={() => { haptic([10,20]); showToast("Maintiens le doigt sur la carte pour sauvegarder 📱", "info"); }}
+                            style={{ flex:2, padding:"12px", borderRadius:14, background:meta.color, border:"none", cursor:"pointer", fontSize:13, fontWeight:800, color:"#000", boxShadow:`0 4px 20px ${meta.color}50` }}>
+                            📤 Partager / Sauvegarder
+                          </button>
+                        </div>
+                        <div style={{ marginTop:8, fontSize:9, color:"rgba(255,255,255,0.2)" }}>Maintiens le doigt sur la carte pour l'enregistrer</div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>📓 JOURNAL DE SÉANCES</div>
                   {recent.map(s => {
                     const sid = `${s.date}_${s.type}`;
                     const note = notes[sid] || "";
                     const isEditing = editingId === sid;
+                    const meta = TYPE_META[s.type] || TYPE_META["coach"];
+                    const { ae, an } = teLabel(s.difficulte, s.type);
                     return (
                       <div key={sid} style={{ background: "var(--bg2)", borderRadius: 12, padding: 12, marginBottom: 8, border: "1px solid #2C2C2E" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: note || isEditing ? 8 : 0 }}>
-                          <div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{TYPE_LABELS[s.type] || s.type}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: note || isEditing ? 8 : 6 }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--white)" }}>{meta.icon} {meta.label}</div>
                             <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>
                               {s.date} · {s.duree || "—"} min · RPE {s.difficulte || "—"}/10
                             </div>
                           </div>
-                          <button onClick={() => { if (isEditing) { setEditingId(null); } else { setEditingId(sid); setDraft(note); } }} style={{ background: "none", border: "1px solid #3A3A3C", borderRadius: 6, padding: "3px 8px", color: "#8E8E93", fontSize: 10, cursor: "pointer" }}>
-                            {isEditing ? "Annuler" : note ? "Modifier" : "+ Note"}
-                          </button>
+                          <div style={{ display:"flex", gap:4 }}>
+                            <button onClick={() => { haptic([6]); setShareSession(s); }}
+                              style={{ background:"none", border:`1px solid ${meta.color}40`, borderRadius:6, padding:"3px 8px", color:meta.color, fontSize:10, cursor:"pointer" }}>
+                              📤
+                            </button>
+                            <button onClick={() => { if (isEditing) { setEditingId(null); } else { setEditingId(sid); setDraft(note); } }} style={{ background: "none", border: "1px solid #3A3A3C", borderRadius: 6, padding: "3px 8px", color: "#8E8E93", fontSize: 10, cursor: "pointer" }}>
+                              {isEditing ? "✕" : note ? "✏️" : "+ Note"}
+                            </button>
+                          </div>
+                        </div>
+                        {/* Training effect pills */}
+                        <div style={{ display:"flex", gap:4, marginBottom: note || isEditing ? 8 : 0 }}>
+                          <span style={{ fontSize:9, color:"#30D158", background:"rgba(48,209,88,0.1)", borderRadius:4, padding:"2px 6px", fontWeight:700 }}>A {ae.toFixed(1)}</span>
+                          {an > 0 && <span style={{ fontSize:9, color:"#FF453A", background:"rgba(255,69,58,0.1)", borderRadius:4, padding:"2px 6px", fontWeight:700 }}>An {an.toFixed(1)}</span>}
+                          <span style={{ fontSize:9, color:meta.color, background:`${meta.color}15`, borderRadius:4, padding:"2px 6px", fontWeight:700 }}>HYROX</span>
                         </div>
                         {isEditing ? (
                           <div style={{ display: "flex", gap: 6 }}>
