@@ -4235,6 +4235,7 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
   const lastSession = (profile.sessions || []).slice(-1)[0];
 
   async function generateSession(silent = false) {
+    silent = silent === true; // le bouton passe l'event MouseEvent → ne pas le traiter comme silent
     if (!silent) setLoadingSession(true);
     const week = profile.week || 1;
     const totalWeeksP = totalWeeksFromDate(profile.raceDate);
@@ -4804,12 +4805,66 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
     } catch (e) {
       console.error("Erreur parse séance:", e.message, "Raw:", raw?.slice(0, 500));
       if (silent) setGeneratingSilently(false);
-      if (!silent) setSession({
-        titre: "Erreur — Réessaie",
-        explication: e.message || "Erreur inconnue. Réessaie.",
-        exercices: [],
-        type: "erreur",
-      });
+      if (!silent) {
+        // ── FALLBACK LOCAL : séance précise depuis la bibliothèque (sans API) ──
+        const tmin = parseInt(dailyData.temps) || 60;
+        const deloadNote = isDeloadWeek ? " (décharge : volume réduit)" : "";
+        const FALLBACKS = {
+          running_zone2: {
+            titre: "Base Builder — Zone 2" + deloadNote,
+            explication: `Séance bibliothèque (mode hors-ligne). Construis ton moteur aérobie : ${paceZ2 ? `allure cible ${paceZ2}/km` : "allure conversationnelle"} — reste strictement en Z2, c'est volontairement facile. 80% de ton volume doit ressembler à ça (recherche Seiler 80/20).`,
+            exercices: [
+              { nom: "Échauffement progressif", detail: "10min : marche rapide 2min → trot Z1 → fin en Z2", series: "", reps: "", repos: "" },
+              { nom: "Run Zone 2 continu", detail: `${Math.max(20, tmin - (isDeloadWeek ? 30 : 25))}min ${paceZ2 ? `@ ${paceZ2}/km` : "allure conversation"} — cadence 170-180 pas/min`, cle_technique: "Tu dois pouvoir parler en phrases complètes. Si non, ralentis.", repos: "" },
+              { nom: "Lignes droites", detail: `${isDeloadWeek ? 3 : 5}×80m accélérations progressives (pas des sprints)`, repos: "60s marche" },
+              { nom: "Retour au calme + mobilité", detail: "5min marche + étirements mollets, ischios, hanches", repos: "" },
+            ],
+          },
+          running_qualite: {
+            titre: (phase === "base" ? "Tempo Seuil" : "Norwegian 4×4 — VO2max") + deloadNote,
+            explication: `Séance bibliothèque (mode hors-ligne). ${phase === "base" ? `Développement du seuil lactique${paceZ3 ? ` — allure ${paceZ3}/km` : ""}.` : `Protocole Helgerud validé : 4×4min @ 90-95% FCmax = le gain VO2max le plus rapide documenté.`}`,
+            exercices: phase === "base" ? [
+              { nom: "Échauffement", detail: "12min progressif Z1→Z2 + 3 lignes droites", repos: "" },
+              { nom: "Blocs Tempo", detail: `${isDeloadWeek ? 2 : 3}×8min ${paceZ3 ? `@ ${paceZ3}/km` : "Z3 — phrases courtes seulement"}`, series: String(isDeloadWeek ? 2 : 3), reps: "8min", repos: "3min marche active" },
+              { nom: "Retour au calme", detail: "8min Z1 + étirements", repos: "" },
+            ] : [
+              { nom: "Échauffement", detail: "12min progressif + 4 accélérations 20s", repos: "" },
+              { nom: "Intervalles 4×4", detail: `${isDeloadWeek ? 3 : 4}×4min ${paceZ4 ? `@ ${paceZ4}/km` : "@ 90-95% FCmax — quelques mots max"}`, series: String(isDeloadWeek ? 3 : 4), reps: "4min", repos: "3min trot Z1", cle_technique: "Les 30 premières secondes de chaque bloc : ne pars PAS trop vite." },
+              { nom: "Retour au calme", detail: "8min Z1 très facile", repos: "" },
+            ],
+          },
+          force_stations: {
+            titre: "Lower Power HYROX" + deloadNote,
+            explication: `Séance bibliothèque (mode hors-ligne). Force répétable spécifique HYROX${deadliftWork ? ` — charges calculées sur ton 1RM` : ""}. Termine par un brick run : courir jambes lourdes = LA compétence HYROX.`,
+            exercices: [
+              { nom: "Échauffement", detail: "8min rameur ou vélo facile + squats au poids du corps + fentes dynamiques", repos: "" },
+              { nom: "Sled Push", detail: `${isDeloadWeek ? 3 : 4}×20m charge progressive (finir vers 70% du poids course)`, series: String(isDeloadWeek ? 3 : 4), reps: "20m", repos: "90s", cle_technique: "Corps à 45°, petits pas rapides, expire à chaque poussée." },
+              { nom: "Romanian Deadlift", detail: deadliftWork ? `${isDeloadWeek ? 3 : 4}×8 @ ${Math.round(deadliftWork*0.85)}kg` : `${isDeloadWeek ? 3 : 4}×8 charge permettant 2 reps en réserve`, series: String(isDeloadWeek ? 3 : 4), reps: "8", charge: deadliftWork ? `${Math.round(deadliftWork*0.85)}kg` : "", repos: "2min", cle_technique: "Hanches en arrière, dos plat, barre près du corps." },
+              { nom: "Goblet Squat", detail: squatWork ? `3×10 @ ${Math.round(squatWork*0.5)}kg` : "3×10 KB moyenne", series: "3", reps: "10", repos: "90s" },
+              { nom: "Farmer Carry", detail: `3×40m @ 2×${farmersKg}kg`, series: "3", reps: "40m", charge: `2×${farmersKg}kg`, repos: "90s", cle_technique: "Épaules basses et en arrière, grip serré, pas normaux." },
+              { nom: "Brick Run", detail: `800m ${paceZ2 ? `@ ${paceZ2}/km` : "facile"} immédiatement après — apprendre à retrouver les jambes`, repos: "" },
+            ],
+          },
+          hybride_compromis: {
+            titre: "Brick Classique — Compromised Running" + deloadNote,
+            explication: `Séance bibliothèque (mode hors-ligne). Étude HYROX 2023 : les amateurs perdent 10-20s/km après les stations, les élites 3-5s. Cette séance entraîne exactement ça.`,
+            exercices: [
+              { nom: "Échauffement", detail: "10min : 5min run Z1 + mobilité épaules/hanches + 10 air squats + 10 fentes", repos: "" },
+              { nom: `Round 1 — Wall Balls + Run`, detail: `${isDeloadWeek ? 15 : 25} Wall Balls @ ${wallBallKg}kg puis 1km ${paceZ3 ? `@ ${paceZ3}/km` : "allure course"}`, repos: "90s", cle_technique: "Squat profond, lancer au front, rythme régulier — pas d'explosif-pause." },
+              { nom: `Round 2 — Burpee Broad Jump + Run`, detail: `${isDeloadWeek ? 12 : 20}m BBJ puis 1km ${paceZ3 ? `@ ${paceZ3}/km` : "allure course"}`, repos: "90s", cle_technique: "Rythme constant du début à la fin." },
+              { nom: `Round 3 — Sandbag Lunges + Run`, detail: `${isDeloadWeek ? 20 : 40}m fentes @ ${sandbagKg}kg puis 1km ${paceZ3 ? `@ ${paceZ3}/km` : "allure course"}`, repos: "90s", cle_technique: "Genou arrière à 2cm du sol, tronc droit." },
+              { nom: `Round 4 — Farmer Carry + Run`, detail: `${isDeloadWeek ? 40 : 80}m @ 2×${farmersKg}kg puis 1km ${paceZ3 ? `@ ${paceZ3}/km` : "allure course"}`, repos: "", cle_technique: "Transition rapide : pose les charges et repars en MARCHE RAPIDE, pas à l'arrêt." },
+              { nom: "Retour au calme", detail: "5min marche + étirements complets", repos: "" },
+            ],
+          },
+        };
+        const fb = FALLBACKS[sessionType] || FALLBACKS.hybride_compromis;
+        const fallbackSession = { ...fb, type: sessionType, duree: `${tmin}min`, _fallback: true };
+        setSession(fallbackSession);
+        try { localStorage.setItem(sessionCacheKey, JSON.stringify(fallbackSession)); } catch {}
+        setCheckedExercices({});
+        showToast("📚 Coach IA indisponible — séance précise générée depuis la bibliothèque", "info", 4000);
+      }
     }
     if (!silent) { setSessionStreamText(""); setLoadingSession(false); }
   }
