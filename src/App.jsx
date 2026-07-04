@@ -14821,6 +14821,43 @@ JSON:
                         );
                       })}
                     </div>
+                    {/* Durée + matériel visibles avant de générer */}
+                    {dailyData.typeSeance !== "perso" && (
+                      <div className="fade-in" style={{ marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, minWidth: 62 }}>⏱ Durée</span>
+                          <div style={{ display: "flex", gap: 5, flex: 1 }}>
+                            {[{v:30,l:"30m"},{v:45,l:"45m"},{v:60,l:"1h"},{v:90,l:"1h30"}].map(o => {
+                              const active = parseInt(dailyData.temps) === o.v;
+                              return (
+                                <button key={o.v} onClick={() => { haptic([5]); setDailyData(d => ({ ...d, temps: o.v })); }} style={{
+                                  flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                  background: active ? "rgba(201,168,64,0.18)" : "rgba(255,255,255,0.05)",
+                                  border: active ? "1.5px solid var(--yellow)" : "1px solid rgba(255,255,255,0.08)",
+                                  color: active ? "var(--yellow)" : "#8E8E93", transition: "all 0.15s",
+                                }}>{o.l}</button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, minWidth: 62 }}>🏋️ Matériel</span>
+                          <div style={{ display: "flex", gap: 5, flex: 1 }}>
+                            {[{v:"tout",l:"Box"},{v:"cardio",l:"Cardio"},{v:"halteres",l:"Haltères"},{v:"rien",l:"Aucun"}].map(o => {
+                              const active = dailyData.materiel === o.v;
+                              return (
+                                <button key={o.v} onClick={() => { haptic([5]); setDailyData(d => ({ ...d, materiel: o.v })); }} style={{
+                                  flex: 1, padding: "7px 0", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                  background: active ? "rgba(201,168,64,0.18)" : "rgba(255,255,255,0.05)",
+                                  border: active ? "1.5px solid var(--yellow)" : "1px solid rgba(255,255,255,0.08)",
+                                  color: active ? "var(--yellow)" : "#8E8E93", transition: "all 0.15s",
+                                }}>{o.l}</button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {/* Bouton GÉNÉRER grand et visible */}
                     {dailyData.typeSeance !== "perso" && (
                       <button onClick={generateSession} className="fade-in" style={{
@@ -14830,6 +14867,7 @@ JSON:
                         boxShadow: "0 6px 20px rgba(201,168,64,0.3)",
                       }}>
                         <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 22, letterSpacing: 2, color: "#000" }}>⚡ GÉNÉRER MA SÉANCE IA</span>
+                        <span style={{ fontSize: 11, color: "rgba(0,0,0,0.55)", fontWeight: 700 }}>{parseInt(dailyData.temps) >= 60 ? `${Math.floor(dailyData.temps/60)}h${dailyData.temps%60 ? dailyData.temps%60 : ""}` : `${dailyData.temps}min`}</span>
                       </button>
                     )}
                   </>
