@@ -5997,13 +5997,6 @@ JSON:
               const hrvRaw = parseInt(dailyData.hrv) || 0;
               const hrvScore = hrvRaw >= 80 ? 100 : hrvRaw >= 60 ? 80 : hrvRaw >= 40 ? 60 : hrvRaw > 0 ? 40 : 60;
               const hydraScore = Math.min(100, Math.round((dailyData.hydration || 0) / 3 * 100));
-              const apexScore = Math.max(0, Math.min(100,
-                Math.round(sleepScore * 0.25 + fatigueScore * 0.30 + hrvScore * 0.20 + hydraScore * 0.10 + sc.global * 0.15)
-              ));
-              const tier = apexScore >= 85 ? { label: "Prêt à tout donner", color: "#30D158" }
-                : apexScore >= 60 ? { label: "Prêt avec modération", color: "#C9A840" }
-                : apexScore >= 40 ? { label: "Méfie-toi", color: "#FF9F0A" }
-                : { label: "Récupère d'abord", color: "#FF453A" };
 
               // Charge d'entraînement (ATL sur 7j)
               const allSessions = profile.sessions || [];
@@ -6015,11 +6008,25 @@ JSON:
               const chargeLabel = chargePct >= 80 ? "Élevée" : chargePct >= 50 ? "Optimale" : chargePct >= 20 ? "Légère" : "Faible";
               const chargeColor = chargePct >= 80 ? "#FF453A" : chargePct >= 50 ? "#30D158" : "#FF9F0A";
 
-              // Nutrition (from quick log)
+              // Nutrition — lit les repas réellement loggés (même source que le widget Check-in rapide / onglet Nutrition)
               const todayStr = new Date().toISOString().slice(0,10);
-              const nutriRaw = (() => { try { return JSON.parse(localStorage.getItem(`fitrace_nutri_quick_${profile.name}`))||{}; } catch { return {}; } })();
-              const nutriToday = nutriRaw[todayStr] || { cal:0, prot:0, eau:0 };
-              const nutPct = Math.min(100, Math.round((nutriToday.cal / (profile.calories||2500)) * 100));
+              const totalCalToday = (() => {
+                try {
+                  const meals = JSON.parse(localStorage.getItem(`nutri_${profile.name}_${todayStr}`) || "[]");
+                  return meals.reduce((a,m) => a + (m.kcal||0), 0);
+                } catch { return 0; }
+              })();
+              const targetCalToday = profile.calories || Math.round((parseFloat(profile.poids)||75) * 33);
+              const nutPct = Math.min(100, Math.round((totalCalToday / targetCalToday) * 100));
+
+              // Score APEX final — sommeil, fatigue, VFC, hydratation, nutrition & forme globale
+              const apexScore = Math.max(0, Math.min(100,
+                Math.round(sleepScore * 0.20 + fatigueScore * 0.25 + hrvScore * 0.15 + hydraScore * 0.10 + nutPct * 0.15 + sc.global * 0.15)
+              ));
+              const tier = apexScore >= 85 ? { label: "Prêt à tout donner", color: "#30D158" }
+                : apexScore >= 60 ? { label: "Prêt avec modération", color: "#C9A840" }
+                : apexScore >= 40 ? { label: "Méfie-toi", color: "#FF9F0A" }
+                : { label: "Récupère d'abord", color: "#FF453A" };
 
               // Évolution séances
               const w1 = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; }).length;
@@ -16164,8 +16171,8 @@ JSON:
             )}
           </div>
 
-            {/* ── OUTILS (calculateur + timer) — onglet Séance ET onglet Outils dédié ── */}
-            <div style={{ display: (tab === "today" || tab === "outils") ? "block" : "none" }}>
+            {/* ── OUTILS (calculateur + timer) — onglet Outils dédié uniquement ── */}
+            <div style={{ display: tab === "outils" ? "block" : "none" }}>
             {tab === "outils" && (
               <div style={{ marginBottom: 4, paddingTop: 4 }}>
                 <div className="bebas" style={{ fontSize: 26, color: "var(--white)", letterSpacing: 1, marginBottom: 2 }}>🛠️ BOÎTE À OUTILS</div>
@@ -16173,7 +16180,7 @@ JSON:
               </div>
             )}
 
-            {/* ── HYROX PACE & RACE CALCULATOR (onglet Séance) ── */}
+            {/* ── HYROX PACE & RACE CALCULATOR (onglet Outils) ── */}
             {(() => {
               const [paceMin, setPaceMin] = React.useState(5);
               const [paceSec, setPaceSec] = React.useState(30);
