@@ -15954,7 +15954,10 @@ JSON:
             )}
           </div>
 
-            {/* ── HYROX PACE & RACE CALCULATOR ── */}
+            {/* ── OUTILS SÉANCE (calculateur + timer) — gated onglet Séance ── */}
+            <div style={{ display: tab === "today" ? "block" : "none" }}>
+
+            {/* ── HYROX PACE & RACE CALCULATOR (onglet Séance) ── */}
             {(() => {
               const [paceMin, setPaceMin] = React.useState(5);
               const [paceSec, setPaceSec] = React.useState(30);
@@ -16339,6 +16342,8 @@ JSON:
                 </div>
               );
             })()}
+
+        </div>
 
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
