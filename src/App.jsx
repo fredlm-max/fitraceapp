@@ -15153,78 +15153,107 @@ JSON:
 
             {session && !showFeedback && !feedback && (() => {
               const typeConf0 = {
-                running_zone2: { label: "Running Zone 2", color: "var(--green)", icon: "🏃" },
-                force_stations: { label: "Force Stations", color: "var(--yellow)", icon: "🏋️" },
-                running_qualite: { label: "Running Qualité", color: "var(--orange)", icon: "⚡" },
-                hybride_compromis: { label: "Hybride HYROX", color: "var(--purple)", icon: "🔀" },
+                running_zone2: { label: "Running Zone 2", color: "#30D158", icon: "🏃" },
+                force_stations: { label: "Force Stations", color: "#C9A840", icon: "🏋️" },
+                running_qualite: { label: "Running Qualité", color: "#FF9F0A", icon: "⚡" },
+                hybride_compromis: { label: "Hybride HYROX", color: "#BF5AF2", icon: "🔀" },
                 perso: { label: "Séance Perso", color: "#AEAEB2", icon: "✏️" },
               };
-              const c0 = typeConf0[session.type] || { label: "Séance", color: "var(--yellow)", icon: "💪" };
+              const c0 = typeConf0[session.type] || { label: "Séance", color: "#C9A840", icon: "💪" };
               const doneCount0 = Object.values(checkedExercices).filter(Boolean).length;
               const totalEx0 = (session.exercices || []).length;
+              // Zone FC cible calculée pour la tuile de stats
+              const fcZones0 = {
+                running_zone2: { zone: "Z2", pct: [65, 75], color: "#30D158" },
+                running_qualite: { zone: "Z4", pct: [85, 95], color: "#FF453A" },
+                hybride_compromis: { zone: "Z3-4", pct: [75, 90], color: "#FF9F0A" },
+                force_stations: { zone: "Z2-3", pct: [60, 80], color: "#C9A840" },
+              };
+              const z0 = fcZones0[session.type];
+              const fcMax0 = profile.fcMax || (220 - (parseInt(profile.age) || 30));
+              const exList0 = (session.exercices || []).filter(ex => ex?.nom);
+              const dureeLabel0 = String(session.duree || "").replace(/\s*min.*$/i, "");
               return (
-                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: "var(--bg2)", border: `1.5px solid ${c0.color}25`, borderRadius: 20, overflow: "hidden", marginBottom: 14, cursor: "pointer", boxShadow: "var(--shadow-md)" }}>
-                  {/* Barre colorée en haut */}
-                  <div style={{ height: 4, background: `linear-gradient(90deg, ${c0.color}, ${c0.color}88)` }} />
-                  <div style={{ padding: "16px 18px 14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: `${c0.color}15`, border: `1px solid ${c0.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{c0.icon}</div>
-                    <div>
-                      <div style={{ fontSize: 10, color: c0.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em" }}>{c0.label}</div>
-                      <div style={{ fontSize: 10, color: "var(--gray)", marginTop: 1 }}>⏱ {session.duree} min · {(session.exercices||[]).filter(ex=>ex?.nom).length} exercices</div>
+                <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: `linear-gradient(165deg, ${c0.color}16 0%, var(--bg2) 45%)`, border: `1.5px solid ${c0.color}30`, borderRadius: 22, overflow: "hidden", marginBottom: 14, cursor: "pointer", boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 2px 8px ${c0.color}15`, position: "relative" }}>
+                  {/* Icône filigrane */}
+                  <div style={{ position: "absolute", top: -14, right: -10, fontSize: 96, opacity: 0.05, pointerEvents: "none", transform: "rotate(12deg)" }}>{c0.icon}</div>
+                  <div style={{ padding: "18px 18px 0" }}>
+                    {/* Ligne type + badge bibliothèque */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: c0.color, boxShadow: `0 0 8px ${c0.color}` }} />
+                      <span style={{ fontSize: 10, color: c0.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em" }}>{c0.label}</span>
+                      {session._fallback && (
+                        <span style={{ fontSize: 9, color: "#8E8E93", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>📚 Bibliothèque</span>
+                      )}
+                      <span style={{ marginLeft: "auto", fontSize: 10, color: "#8E8E93", fontWeight: 600 }}>Séance du jour</span>
                     </div>
-                    <div style={{ marginLeft: "auto", background: "var(--yellow)", borderRadius: 10, padding: "6px 14px" }}>
-                      <span style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 13, letterSpacing: 1, color: "#fff" }}>VOIR ›</span>
-                    </div>
-                  </div>
-                  <div className="bebas" style={{ fontSize: 24, color: "var(--white)", lineHeight: 1.1, marginBottom: 5 }}>{session.titre}</div>
-                  <div style={{ fontSize: 12, color: "var(--gray)", lineHeight: 1.5, marginBottom: 10 }}>{session.explication?.slice(0, 90)}{(session.explication?.length || 0) > 90 ? "…" : ""}</div>
-                  {/* Zone FC cible */}
-                  {(() => {
-                    const fcZones = {
-                      running_zone2: { zone: "Z2", label: "Endurance", pct: "65–75%", color: "#30D158", desc: "Conversation possible" },
-                      running_qualite: { zone: "Z4", label: "Seuil", pct: "85–95%", color: "#FF453A", desc: "Effort soutenu" },
-                      hybride_compromis: { zone: "Z3–Z4", label: "Tempo", pct: "75–90%", color: "#FF9F0A", desc: "Rythme de course" },
-                      force_stations: { zone: "Z2–Z3", label: "Force", pct: "60–80%", color: "#C9A840", desc: "Récupération active" },
-                    };
-                    const z = fcZones[session.type];
-                    const fcMax = profile.fcMax || (220 - (parseInt(profile.age) || 30));
-                    if (!z) return null;
-                    const fcLow = Math.round(fcMax * parseFloat(z.pct.split("–")[0]) / 100);
-                    const fcHigh = Math.round(fcMax * parseFloat(z.pct.split("–")[1]) / 100);
-                    return (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "7px 10px", background: `${z.color}10`, borderRadius: 10, border: `1px solid ${z.color}25` }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: z.color, flexShrink: 0, boxShadow: `0 0 6px ${z.color}` }} />
-                        <span style={{ fontSize: 11, color: z.color, fontWeight: 700 }}>Zone {z.zone} · {z.label}</span>
-                        <span style={{ fontSize: 11, color: "#8E8E93" }}>{fcLow}–{fcHigh} bpm · {z.desc}</span>
+                    {/* Titre */}
+                    <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.05, letterSpacing: 0.5, marginBottom: 6 }}>{session.titre}</div>
+                    <div style={{ fontSize: 12, color: "#AEAEB2", lineHeight: 1.55, marginBottom: 14 }}>{session.explication?.slice(0, 110)}{(session.explication?.length || 0) > 110 ? "…" : ""}</div>
+                    {/* Tuiles stats */}
+                    <div style={{ display: "grid", gridTemplateColumns: z0 ? "1fr 1fr 1fr" : "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                      <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{dureeLabel0 || "—"}<span style={{ fontSize: 11, color: "#8E8E93", marginLeft: 2 }}>min</span></div>
+                        <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 3 }}>Durée</div>
                       </div>
-                    );
-                  })()}
-                  {/* Mini exercice chips */}
-                  {(session.exercices || []).length > 0 && (
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
-                      {(session.exercices || []).filter(ex => ex?.nom).slice(0, 4).map((ex, ei) => (
-                        <div key={ei} style={{ background: `${c0.color}10`, border: `1px solid ${c0.color}25`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: c0.color, fontWeight: 600, whiteSpace: "nowrap" }}>
-                          {ex.nom?.length > 16 ? ex.nom.slice(0, 16) + "…" : ex.nom}
-                          {ex.series && ex.reps ? <span style={{ opacity: 0.7, marginLeft: 3 }}>{ex.series}×{ex.reps}</span> : null}
-                        </div>
-                      ))}
-                      {(session.exercices || []).length > 4 && (
-                        <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 20, padding: "3px 9px", fontSize: 10, color: "var(--gray)" }}>
-                          +{(session.exercices || []).length - 4}
+                      <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 22, color: "var(--white)", lineHeight: 1 }}>{exList0.length}</div>
+                        <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 3 }}>Exercices</div>
+                      </div>
+                      {z0 && (
+                        <div style={{ background: `${z0.color}0C`, border: `1px solid ${z0.color}30`, borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
+                          <div className="bebas" style={{ fontSize: 22, color: z0.color, lineHeight: 1 }}>{z0.zone}</div>
+                          <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 3 }}>{Math.round(fcMax0 * z0.pct[0] / 100)}–{Math.round(fcMax0 * z0.pct[1] / 100)} bpm</div>
                         </div>
                       )}
                     </div>
-                  )}
-                  {/* Progress si déjà commencé */}
-                  {doneCount0 > 0 && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${Math.round(doneCount0/totalEx0*100)}%`, background: "var(--green)", borderRadius: 99, transition: "width 0.4s" }} />
+                    {/* Timeline numérotée des exercices */}
+                    {exList0.length > 0 && (
+                      <div style={{ marginBottom: 14 }}>
+                        {exList0.slice(0, 5).map((ex, ei) => {
+                          const isDone0 = checkedExercices[ei];
+                          const isLastShown = ei === Math.min(exList0.length, 5) - 1;
+                          return (
+                            <div key={ei} style={{ display: "flex", alignItems: "stretch", gap: 10 }}>
+                              {/* Colonne numéro + ligne de connexion */}
+                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 22, flexShrink: 0 }}>
+                                <div style={{ width: 20, height: 20, borderRadius: 7, background: isDone0 ? "var(--green)" : `${c0.color}18`, border: isDone0 ? "none" : `1px solid ${c0.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: isDone0 ? "#000" : c0.color, flexShrink: 0 }}>{isDone0 ? "✓" : ei + 1}</div>
+                                {!isLastShown && <div style={{ width: 1.5, flex: 1, background: `${c0.color}20`, minHeight: 8 }} />}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: isLastShown ? 0 : 9 }}>
+                                <span style={{ fontSize: 12.5, color: isDone0 ? "#8E8E93" : "var(--white)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: isDone0 ? "line-through" : "none", lineHeight: "20px" }}>{ex.nom}</span>
+                                {(ex.series || ex.reps) ? (
+                                  <span style={{ fontSize: 11, color: c0.color, fontWeight: 800, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{ex.series ? `${ex.series}×` : ""}{ex.reps || ""}</span>
+                                ) : ex.charge ? (
+                                  <span style={{ fontSize: 11, color: c0.color, fontWeight: 800, flexShrink: 0 }}>{ex.charge}</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {exList0.length > 5 && (
+                          <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 6, marginLeft: 32 }}>+ {exList0.length - 5} autres exercices…</div>
+                        )}
                       </div>
-                      <div style={{ fontSize: 10, color: "var(--green)", marginTop: 4 }}>{doneCount0}/{totalEx0} exercices faits</div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  {/* CTA pleine largeur */}
+                  <div style={{ background: doneCount0 > 0 ? "linear-gradient(90deg, #30D158, #28a745)" : `linear-gradient(90deg, ${c0.color}, ${c0.color}CC)`, padding: "14px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    {doneCount0 > 0 ? (
+                      <>
+                        <span className="bebas" style={{ fontSize: 17, letterSpacing: 2, color: "#000" }}>CONTINUER · {doneCount0}/{totalEx0}</span>
+                        <div style={{ flex: "0 0 60px", height: 4, background: "rgba(0,0,0,0.25)", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${Math.round(doneCount0 / Math.max(1, totalEx0) * 100)}%`, background: "#000", borderRadius: 99 }} />
+                        </div>
+                        <span style={{ fontSize: 15, color: "#000", fontWeight: 800 }}>›</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#000"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                        <span className="bebas" style={{ fontSize: 17, letterSpacing: 2, color: "#000" }}>DÉMARRER LA SÉANCE</span>
+                        <span style={{ fontSize: 15, color: "#000", fontWeight: 800 }}>›</span>
+                      </>
+                    )}
                   </div>
                 </div>
               );
