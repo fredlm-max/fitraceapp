@@ -1392,8 +1392,8 @@ function Section({ title, children, action, stagger }) {
     <div className={stagger ? `stagger-${stagger}` : ""} style={{ marginBottom: 28 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 3, height: 20, background: "var(--yellow)", borderRadius: 99, flexShrink: 0 }} />
-          <h2 className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 1 }}>{title}</h2>
+          <div style={{ width: 4, height: 20, background: "linear-gradient(180deg, var(--yellow) 0%, rgba(201,168,64,0.35) 100%)", borderRadius: 99, flexShrink: 0, boxShadow: "0 0 8px rgba(201,168,64,0.3)" }} />
+          <h2 className="bebas" style={{ fontSize: 22, color: "var(--white)", letterSpacing: 1.5 }}>{title}</h2>
         </div>
         {action}
       </div>
@@ -5583,7 +5583,7 @@ JSON:
                       {dims.map((d, i) => {
                         const angle = (i / dims.length) * Math.PI * 2 - Math.PI / 2;
                         const lx = cx + (R + 10) * Math.cos(angle); const ly = cy + (R + 10) * Math.sin(angle);
-                        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="7" fill="#8E8E93" fontFamily="'DM Sans',sans-serif">{d}</text>;
+                        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="8" fill="#8E8E93" fontFamily="'DM Sans',sans-serif">{d}</text>;
                       })}
                     </svg>
                     {/* Stats */}
@@ -5824,12 +5824,15 @@ JSON:
         const now = new Date();
         const dayLabel = now.toLocaleDateString("fr-FR", { weekday: "long" });
         const dateLabel = now.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+        const isLightHdr = appTheme === "apple";
         return (
-          <div style={{ background: "rgba(0,0,0,0.92)", padding: "12px 20px 10px", borderBottom: "1px solid rgba(201,168,64,0.08)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(40px) saturate(1.8)" }}>
+          <div style={{ background: isLightHdr ? "rgba(242,242,247,0.85)" : "rgba(0,0,0,0.80)", padding: "12px 20px 10px", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(40px) saturate(1.8)", WebkitBackdropFilter: "blur(40px) saturate(1.8)" }}>
+            {/* Ligne d'accent dégradée à la couleur de l'onglet */}
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 1, background: `linear-gradient(90deg, transparent 0%, ${meta.color === "var(--yellow)" ? "rgba(201,168,64,0.35)" : "rgba(255,255,255,0.12)"} 50%, transparent 100%)` }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 4, lineHeight: 1 }}>APEX</div>
-                <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.08)" }} />
+                <div className="bebas" style={{ fontSize: 22, color: "var(--yellow)", letterSpacing: 4, lineHeight: 1, textShadow: isLightHdr ? "none" : "0 0 18px rgba(201,168,64,0.35)" }}>APEX</div>
+                <div style={{ width: 1, height: 16, background: isLightHdr ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.08)" }} />
                 <div>
                   <div className="bebas" style={{ fontSize: 13, color: meta.color, letterSpacing: 2, lineHeight: 1 }}>{meta.label.toUpperCase()}</div>
                   <div style={{ fontSize: 9, color: "#8E8E93", textTransform: "capitalize", lineHeight: 1.3, marginTop: 2 }}>{dayLabel} {dateLabel}</div>
@@ -5921,11 +5924,12 @@ JSON:
                   {/* Greeting */}
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div>
-                      <div style={{ fontSize:13, color:"#8E8E93" }}>
-                        {greet}, <span style={{ color:"var(--yellow)", fontWeight:700 }}>{firstName}</span>
-                        {streak > 0 && <span style={{ marginLeft:8, fontSize:11, color:"#FF9F0A", fontWeight:600 }}>🔥 {streak}j</span>}
+                      <div style={{ fontSize:12, color:"#8E8E93", letterSpacing:"0.02em" }}>{greet} 👋</div>
+                      <div style={{ fontSize:22, fontWeight:800, color:"var(--white)", lineHeight:1.15, letterSpacing:"-0.02em" }}>
+                        {firstName}
+                        {streak > 0 && <span style={{ marginLeft:10, fontSize:13, color:"#FF9F0A", fontWeight:700, verticalAlign:"middle" }}>🔥 {streak}j</span>}
                       </div>
-                      <div style={{ fontSize:10, color:"#4A4A4E", marginTop:2 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
+                      <div style={{ fontSize:10, color:"#7C7C80", marginTop:3 }}>{today.charAt(0).toUpperCase() + today.slice(1)}</div>
                     </div>
                     {evolutionPct !== null && (
                       <div style={{ background:`${evoColor}18`, border:`1px solid ${evoColor}30`, borderRadius:10, padding:"5px 10px", textAlign:"center" }}>
@@ -8840,7 +8844,7 @@ JSON:
                           strokeDasharray={circ} strokeDashoffset={offset} transform="rotate(-90 40 40)"
                           style={{ transition: "stroke-dashoffset 1.2s ease" }} />
                         <text x="40" y="38" textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="22" fill={color}>{readiness}</text>
-                        <text x="40" y="50" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="8" fill="#8E8E93">/ 100</text>
+                        <text x="40" y="50" textAnchor="middle" fontFamily="'DM Sans',sans-serif" fontSize="9" fill="#8E8E93">/ 100</text>
                       </svg>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -9577,7 +9581,7 @@ JSON:
                       <svg width={W+20} height={H+16} viewBox={`0 0 ${W+20} ${H+16}`} style={{ display:"block", minWidth: W+20 }}>
                         {/* Month labels */}
                         {monthLabels.map((m,i)=>(
-                          <text key={i} x={20+m.col*(cellSize+cellGap)} y={10} fill="#8E8E93" fontSize="7" fontFamily="system-ui">{m.label}</text>
+                          <text key={i} x={20+m.col*(cellSize+cellGap)} y={10} fill="#8E8E93" fontSize="8" fontFamily="system-ui">{m.label}</text>
                         ))}
                         {/* Day labels (L M M J V S D) */}
                         {["L","","M","","V","","D"].map((l,i)=>(
@@ -9707,7 +9711,7 @@ JSON:
                       {[minHrv, avgHrv, maxHrv-5].map((v,i)=>(
                         <g key={i}>
                           <line x1={PAD.l} y1={yOf(v)} x2={W-PAD.r} y2={yOf(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
-                          <text x={PAD.l-3} y={yOf(v)+3} textAnchor="end" fill="#8E8E93" fontSize="7" fontFamily="system-ui">{Math.round(v)}</text>
+                          <text x={PAD.l-3} y={yOf(v)+3} textAnchor="end" fill="#8E8E93" fontSize="8" fontFamily="system-ui">{Math.round(v)}</text>
                         </g>
                       ))}
 
@@ -9754,11 +9758,11 @@ JSON:
                       {monthMarks.map((m,i)=>(
                         <g key={i}>
                           <line x1={xOf(m.i,30)} y1={PAD.t} x2={xOf(m.i,30)} y2={PAD.t+cH} stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="2,3"/>
-                          <text x={xOf(m.i,30)} y={H-4} textAnchor="middle" fill="#8E8E93" fontSize="7" fontFamily="system-ui">{m.label}</text>
+                          <text x={xOf(m.i,30)} y={H-4} textAnchor="middle" fill="#8E8E93" fontSize="8" fontFamily="system-ui">{m.label}</text>
                         </g>
                       ))}
                       {/* "Auj" label */}
-                      <text x={xOf(29,30)} y={H-4} textAnchor="middle" fill="#C9A840" fontSize="7" fontFamily="system-ui" fontWeight="bold">Auj</text>
+                      <text x={xOf(29,30)} y={H-4} textAnchor="middle" fill="#C9A840" fontSize="8" fontFamily="system-ui" fontWeight="bold">Auj</text>
                     </svg>
 
                     {/* Legend */}
@@ -9857,7 +9861,7 @@ JSON:
                         <circle cx={cx} cy={cy} r={r} fill="var(--bg,#000)"/>
                         {/* Center text */}
                         <text x={cx} y={cy-4} textAnchor="middle" fill="#fff" fontSize="15" fontFamily="'Bebas Neue',sans-serif">{totalSess}</text>
-                        <text x={cx} y={cy+9} textAnchor="middle" fill="#8E8E93" fontSize="7" fontFamily="system-ui">séances</text>
+                        <text x={cx} y={cy+9} textAnchor="middle" fill="#8E8E93" fontSize="8" fontFamily="system-ui">séances</text>
                       </svg>
 
                       {/* Legend + bars */}
@@ -10382,7 +10386,7 @@ JSON:
                       {goalY && (
                         <>
                           <line x1={PAD} y1={goalY} x2={W-PAD} y2={goalY} stroke="#30D158" strokeWidth="1" strokeDasharray="4 3" opacity="0.5"/>
-                          <text x={W-PAD-2} y={goalY-3} fill="#30D158" fontSize="7" textAnchor="end" opacity="0.7">objectif {goalWeight}kg</text>
+                          <text x={W-PAD-2} y={goalY-3} fill="#30D158" fontSize="8" textAnchor="end" opacity="0.7">objectif {goalWeight}kg</text>
                         </>
                       )}
 
@@ -10428,7 +10432,7 @@ JSON:
                       {/* Labels X (tous les 7j) */}
                       {pts.filter(p=>p.label).map((p,i) => {
                         const idx = pts.indexOf(p);
-                        return <text key={i} x={xOf(idx)} y={H+14} fill="#8E8E93" fontSize="8" textAnchor="middle">{p.label}</text>;
+                        return <text key={i} x={xOf(idx)} y={H+14} fill="#8E8E93" fontSize="9" textAnchor="middle">{p.label}</text>;
                       })}
                     </svg>
                   </div>
@@ -10704,7 +10708,7 @@ JSON:
                         strokeDasharray={circumference} strokeDashoffset={offset}
                         strokeLinecap="round" transform="rotate(-90 45 45)" style={{ transition: "stroke-dashoffset 0.6s ease" }} />
                       <text x="45" y="42" textAnchor="middle" fill={status.color} fontSize="20" fontWeight="900">{total}</text>
-                      <text x="45" y="55" textAnchor="middle" fill="#8E8E93" fontSize="8">/100</text>
+                      <text x="45" y="55" textAnchor="middle" fill="#8E8E93" fontSize="9">/100</text>
                     </svg>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 18, fontWeight: 900, color: status.color, marginBottom: 2 }}>{status.emoji} {status.label}</div>
@@ -16714,7 +16718,7 @@ JSON:
                     {[0, Math.round(maxY / 2), Math.round(maxY)].map(v => (
                       <g key={v}>
                         <line x1={PAD.l} y1={cy(v)} x2={W - PAD.r} y2={cy(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-                        <text x={PAD.l - 3} y={cy(v) + 3} textAnchor="end" fontSize="7" fill="#48484A">{v}</text>
+                        <text x={PAD.l - 3} y={cy(v) + 3} textAnchor="end" fontSize="8" fill="#48484A">{v}</text>
                       </g>
                     ))}
 
@@ -16740,7 +16744,7 @@ JSON:
                     {[0, Math.floor(pts.length/2), pts.length-1].map(i => {
                       const d = new Date(pts[i].date);
                       const lbl = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-                      return <text key={i} x={cx(i)} y={H - 2} textAnchor="middle" fontSize="7" fill="#48484A">{lbl}</text>;
+                      return <text key={i} x={cx(i)} y={H - 2} textAnchor="middle" fontSize="8" fill="#48484A">{lbl}</text>;
                     })}
                   </svg>
 
@@ -16847,7 +16851,7 @@ JSON:
                     {vo2pts.map((p, i) => (
                       <g key={i}>
                         <circle cx={cx(i)} cy={cy(p.vo2)} r="4" fill="#C9A840" stroke="#000" strokeWidth="1.5" />
-                        <text x={cx(i)} y={cy(p.vo2) - 7} textAnchor="middle" fontSize="8" fill="#C9A840">{p.vo2}</text>
+                        <text x={cx(i)} y={cy(p.vo2) - 7} textAnchor="middle" fontSize="9" fill="#C9A840">{p.vo2}</text>
                       </g>
                     ))}
                   </svg>
@@ -17436,7 +17440,7 @@ JSON:
                         const col = s.score >= 100 ? "#30D158" : s.score >= 85 ? "#FF9F0A" : "#FF453A";
                         return (
                           <g key={i}>
-                            <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" fill={col} fontSize="8" fontWeight="700">{s.label}</text>
+                            <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" fill={col} fontSize="9" fontWeight="700">{s.label}</text>
                           </g>
                         );
                       })}
@@ -18241,12 +18245,12 @@ JSON:
                         ))}
                         {/* Legend */}
                         <circle cx={PAD.l+6} cy={PAD.t+4} r="3" fill="var(--yellow)"/>
-                        <text x={PAD.l+12} y={PAD.t+8} fontSize="8" fill="#888">Poids</text>
+                        <text x={PAD.l+12} y={PAD.t+8} fontSize="9" fill="#888">Poids</text>
                         <line x1={PAD.l+44} x2={PAD.l+58} y1={PAD.t+4} y2={PAD.t+4} stroke="#30D158" strokeWidth="1.5" strokeDasharray="4,3"/>
-                        <text x={PAD.l+62} y={PAD.t+8} fontSize="8" fill="#888">Objectif</text>
+                        <text x={PAD.l+62} y={PAD.t+8} fontSize="9" fill="#888">Objectif</text>
                         {fatPath && <>
                           <line x1={PAD.l+98} x2={PAD.l+112} y1={PAD.t+4} y2={PAD.t+4} stroke="#BF5AF2" strokeWidth="1.5" strokeDasharray="3,3"/>
-                          <text x={PAD.l+116} y={PAD.t+8} fontSize="8" fill="#888">% graisse</text>
+                          <text x={PAD.l+116} y={PAD.t+8} fontSize="9" fill="#888">% graisse</text>
                         </>}
                       </svg>
                     )
@@ -19988,7 +19992,7 @@ JSON:
                       <circle cx={CX} cy={CY} r={r-2} fill="var(--bg2)"/>
                       <text x={CX} y={CY-8} textAnchor="middle" fontSize="20" fontWeight="800" fill={scoreColor}>{polarScore}</text>
                       <text x={CX} y={CY+6} textAnchor="middle" fontSize="9" fill="#666">Score</text>
-                      <text x={CX} y={CY+18} textAnchor="middle" fontSize="8" fill="#98989D">Polarisation</text>
+                      <text x={CX} y={CY+18} textAnchor="middle" fontSize="9" fill="#98989D">Polarisation</text>
                     </svg>
 
                     {/* Zone legend */}
@@ -21299,8 +21303,8 @@ JSON:
                                 <rect x={x} y={PAD.t + cH - bh} width={bWidth} height={bh}
                                   fill={isCurMonth ? "var(--yellow)" : m.month === bestMonth.month ? "#30D158" : "#2C2C2E"}
                                   rx="2"/>
-                                {m.sess > 0 && <text x={x + bWidth/2} y={PAD.t + cH - bh - 2} textAnchor="middle" fontSize="7" fill={m.month === bestMonth.month ? "#30D158" : "#666"}>{m.sess}</text>}
-                                <text x={x + bWidth/2} y={H - 4} textAnchor="middle" fontSize="8" fill={isCurMonth ? "var(--yellow)" : "#555"}>{monthAbbr[i]}</text>
+                                {m.sess > 0 && <text x={x + bWidth/2} y={PAD.t + cH - bh - 2} textAnchor="middle" fontSize="8" fill={m.month === bestMonth.month ? "#30D158" : "#666"}>{m.sess}</text>}
+                                <text x={x + bWidth/2} y={H - 4} textAnchor="middle" fontSize="9" fill={isCurMonth ? "var(--yellow)" : "#555"}>{monthAbbr[i]}</text>
                               </g>
                             );
                           })}
@@ -22497,7 +22501,7 @@ const sessions = profile.sessions || [];
                         ))}
                         {/* Score text */}
                         <text x={cx} y={cy-4} textAnchor="middle" fill={cat.color} fontSize="22" fontFamily="'Bebas Neue',sans-serif" fontWeight="900">{score}</text>
-                        <text x={cx} y={cy+10} textAnchor="middle" fill="#8E8E93" fontSize="8" fontFamily="system-ui">/ 100</text>
+                        <text x={cx} y={cy+10} textAnchor="middle" fill="#8E8E93" fontSize="9" fontFamily="system-ui">/ 100</text>
                       </svg>
                     </div>
 
@@ -22591,10 +22595,10 @@ const sessions = profile.sessions || [];
                     )}
                     {/* X labels */}
                     {[0, 2, 4, 7].map(i => (
-                      <text key={i} x={xPos(i)} y={H-4} textAnchor="middle" fontSize="8" fill="#48484A">{weeks[i].label}</text>
+                      <text key={i} x={xPos(i)} y={H-4} textAnchor="middle" fontSize="9" fill="#48484A">{weeks[i].label}</text>
                     ))}
                     {/* Y label */}
-                    <text x={PL-4} y={PT + chartH * 0.5} textAnchor="end" fontSize="8" fill="#8E8E93" dominantBaseline="middle">RPE</text>
+                    <text x={PL-4} y={PT + chartH * 0.5} textAnchor="end" fontSize="9" fill="#8E8E93" dominantBaseline="middle">RPE</text>
                   </svg>
                   <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#8E8E93" }}>
@@ -23127,7 +23131,7 @@ const sessions = profile.sessions || [];
                           <text x={x + barW/2} y={H - barH - 20} textAnchor="middle"
                             fontSize="10" fontFamily="'Bebas Neue',sans-serif" fill={isLast ? col : "#444"}>{v.count}</text>
                           <text x={x + barW/2} y={H - 2} textAnchor="middle"
-                            fontSize="8" fill={isLast ? "#888" : "#2a2a2a"}>{wk.slice(6)}</text>
+                            fontSize="9" fill={isLast ? "#888" : "#2a2a2a"}>{wk.slice(6)}</text>
                         </g>
                       );
                     })}
@@ -23606,8 +23610,8 @@ const sessions = profile.sessions || [];
                     })()}
 
                     {/* Y labels */}
-                    <text x="2" y={py(maxPoids)} fontSize="7" fill="#8E8E93" dominantBaseline="middle">{maxPoids.toFixed(1)}</text>
-                    <text x="2" y={py(minPoids)} fontSize="7" fill="#8E8E93" dominantBaseline="middle">{minPoids.toFixed(1)}</text>
+                    <text x="2" y={py(maxPoids)} fontSize="8" fill="#8E8E93" dominantBaseline="middle">{maxPoids.toFixed(1)}</text>
+                    <text x="2" y={py(minPoids)} fontSize="8" fill="#8E8E93" dominantBaseline="middle">{minPoids.toFixed(1)}</text>
                   </svg>
 
                   {/* X axis */}
@@ -25251,12 +25255,12 @@ const sessions = profile.sessions || [];
                             <circle cx={xOf(i)} cy={yOf(d.hours)} r={d.isToday ? 5 : 3.5}
                               fill={d.hours >= 7.5 ? "#30D158" : d.hours >= 6.5 ? "#FF9F0A" : "#FF453A"}
                               stroke={d.isToday ? "rgba(255,255,255,0.3)" : "none"} strokeWidth="2" />
-                            <text x={xOf(i)} y={yOf(d.hours) - 7} textAnchor="middle" fill="#8E8E93" fontSize="7" fontWeight="700">{d.hours}h</text>
+                            <text x={xOf(i)} y={yOf(d.hours) - 7} textAnchor="middle" fill="#8E8E93" fontSize="8" fontWeight="700">{d.hours}h</text>
                           </g>
                         ) : null)}
                         {/* Day labels */}
                         {past7.map((d, i) => (
-                          <text key={i} x={xOf(i)} y={H+2} textAnchor="middle" fill={d.isToday ? "#C9A840" : "#48484A"} fontSize="8" fontWeight={d.isToday ? "800" : "600"}>{d.day}</text>
+                          <text key={i} x={xOf(i)} y={H+2} textAnchor="middle" fill={d.isToday ? "#C9A840" : "#48484A"} fontSize="9" fontWeight={d.isToday ? "800" : "600"}>{d.day}</text>
                         ))}
                       </svg>
                       {/* 7h / 8h reference labels */}
@@ -26723,8 +26727,8 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
                     <text x={xP(i)} y={H-4} textAnchor="middle" fontSize="7.5" fill="#48484A">{(d.date||"").slice(5)}</text>
                   </g>
                 ))}
-                <text x={PL-4} y={PT} textAnchor="end" fontSize="8" fill="#48484A" dominantBaseline="middle">{maxRM}</text>
-                <text x={PL-4} y={PT+cH} textAnchor="end" fontSize="8" fill="#48484A" dominantBaseline="middle">{minRM}</text>
+                <text x={PL-4} y={PT} textAnchor="end" fontSize="9" fill="#48484A" dominantBaseline="middle">{maxRM}</text>
+                <text x={PL-4} y={PT+cH} textAnchor="end" fontSize="9" fill="#48484A" dominantBaseline="middle">{minRM}</text>
               </svg>
               <div style={{ marginTop: 4, fontSize: 10, color: "#8E8E93" }}>1RM Epley · {data.length} mesures</div>
             </div>
@@ -37635,7 +37639,7 @@ JSON: {
                         transform={`rotate(${a.rotation} ${CX} ${CY})`} />
                     ))}
                     <text x={CX} y={CY - 4} textAnchor="middle" fill="#F2F2F7" fontSize="13" fontFamily="'Bebas Neue'" letterSpacing="1">{displayObj.kcal}</text>
-                    <text x={CX} y={CY + 10} textAnchor="middle" fill="#8E8E93" fontSize="7">kcal</text>
+                    <text x={CX} y={CY + 10} textAnchor="middle" fill="#8E8E93" fontSize="8">kcal</text>
                   </svg>
 
                   {/* Macro details */}
@@ -40631,7 +40635,7 @@ JSON: {
                       {/* Barre kcal */}
                       <rect x={x} y={80 - barH} width={24} height={barH} rx={4} fill={color} opacity={d.hasData ? 1 : 0.25} />
                       {/* Label jour */}
-                      <text x={x + 12} y={78} textAnchor="middle" fontSize="7" fill="#666" fontFamily="system-ui">{d.label.slice(0,3)}</text>
+                      <text x={x + 12} y={78} textAnchor="middle" fontSize="8" fill="#666" fontFamily="system-ui">{d.label.slice(0,3)}</text>
                     </g>
                   );
                 })}
@@ -43810,7 +43814,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                       {sorted.map((r,i) => (
                         <g key={i}>
                           <circle cx={x(i)} cy={y(r.totalSec)} r="4" fill="var(--yellow)"/>
-                          <text x={x(i)} y={H} fontSize="8" fill="#98989D" textAnchor="middle">{r.date.slice(5)}</text>
+                          <text x={x(i)} y={H} fontSize="9" fill="#98989D" textAnchor="middle">{r.date.slice(5)}</text>
                         </g>
                       ))}
                     </svg>
@@ -44275,7 +44279,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     })}
                     {/* Pct labels on points */}
                     {radarPoints.map((p,i) => pctiles[i] > 0 && (
-                      <text key={i} x={p.x} y={p.y-7} textAnchor="middle" fontSize="8" fill="var(--yellow)" fontWeight="700">
+                      <text key={i} x={p.x} y={p.y-7} textAnchor="middle" fontSize="9" fill="var(--yellow)" fontWeight="700">
                         {Math.round(pctiles[i])}%
                       </text>
                     ))}
