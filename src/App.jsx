@@ -57,7 +57,13 @@ const GLOBAL_STYLES = `
   [data-theme="apple"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
   [data-theme="apple"] .card-bg { background: #FFFFFF !important; border-color: rgba(0,0,0,0.08) !important; color: #1D1D1F !important; }
   html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; }
-  #root { min-height: 100vh; background: var(--bg); }
+  #root { min-height: 100vh; background: var(--bg); position: relative; }
+  #root::before {
+    content: ""; position: fixed; top: -140px; left: 50%; transform: translateX(-50%);
+    width: 130vw; height: 380px; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse at center top, rgba(201,168,64,0.10) 0%, rgba(201,168,64,0.04) 40%, transparent 70%);
+  }
+  [data-theme="apple"] #root::before { background: radial-gradient(ellipse at center top, rgba(0,122,255,0.07) 0%, transparent 70%); }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
@@ -26069,15 +26075,18 @@ const sessions = profile.sessions || [];
       {showLiveTimer && <LiveTimerModal sessionType={liveTimerType} setShowLiveTimer={setShowLiveTimer} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
 
       {/* Bottom Nav — Premium */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        {appTheme !== "apple" && <div style={{ height: 20, background: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 60%, transparent 100%)", pointerEvents: "none" }} />}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, padding: "0 14px", paddingBottom: "max(env(safe-area-inset-bottom, 10px), 10px)", pointerEvents: "none" }}>
         <div style={{
-          background: appTheme === "apple" ? "rgba(242,242,247,0.92)" : "rgba(8,8,8,0.96)",
-          backdropFilter: "blur(60px) saturate(2.2)",
-          borderTop: appTheme === "apple" ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(201,168,64,0.1)",
+          pointerEvents: "auto",
+          maxWidth: 480, margin: "0 auto",
+          background: appTheme === "apple" ? "rgba(255,255,255,0.78)" : "rgba(18,18,20,0.82)",
+          backdropFilter: "blur(40px) saturate(1.8)",
+          WebkitBackdropFilter: "blur(40px) saturate(1.8)",
+          border: appTheme === "apple" ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.09)",
+          borderRadius: 28,
           display: "flex", justifyContent: "space-around", alignItems: "center",
-          padding: "6px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)",
-          boxShadow: appTheme === "apple" ? "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 20px rgba(0,0,0,0.06)" : "0 -1px 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.5)"
+          padding: "8px 8px",
+          boxShadow: appTheme === "apple" ? "0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)" : "0 8px 40px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)"
         }}>
           {(() => {
             const activeColor = appTheme === "apple" ? "#007AFF" : "#C9A840";
@@ -26094,13 +26103,14 @@ const sessions = profile.sessions || [];
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
-                  style={{ background: "none", border: "none", flex: 1, padding: "4px 2px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", transition: "all 0.2s var(--spring)", cursor: "pointer" }}>
-                  {active && <div style={{ position: "absolute", top: -6, left: "25%", right: "25%", height: 2, background: `linear-gradient(90deg, transparent, ${activeColor}, transparent)`, borderRadius: "0 0 3px 3px", boxShadow: `0 0 8px ${activeColor}99` }} />}
-                  <div style={{ position: "relative", width: 40, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: active ? `${activeColor}18` : "transparent", transition: "all 0.2s var(--spring)", transform: active ? "scale(1.05)" : "scale(1)", boxShadow: active ? `0 0 12px ${activeColor}33` : "none" }}>
+                  style={{ background: "none", border: "none", flex: 1, padding: "2px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative", transition: "all 0.25s var(--spring)", cursor: "pointer" }}>
+                  <div style={{ position: "relative", width: 48, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 16, background: active ? `${activeColor}1F` : "transparent", transition: "all 0.25s var(--spring)", transform: active ? "scale(1.08) translateY(-1px)" : "scale(1)", boxShadow: active ? `0 2px 12px ${activeColor}30` : "none" }}>
                     {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?activeColor:inactiveColor }}>{t.icon}</span>}
-                    {t.badge && !active && <div style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: "#30D158", border: `1.5px solid ${appTheme === "apple" ? "#F2F2F7" : "#000"}`, animation: "pulse 2s ease infinite" }} />}
+                    {t.badge && !active && <div style={{ position: "absolute", top: 3, right: 8, width: 7, height: 7, borderRadius: "50%", background: "#30D158", border: `1.5px solid ${appTheme === "apple" ? "#FFF" : "#121214"}`, animation: "pulse 2s ease infinite" }} />}
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? activeColor : inactiveColor, letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.2s" }}>{t.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? activeColor : inactiveColor, letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.25s", opacity: active ? 1 : 0.85 }}>{t.label}</span>
+                  {active && <div style={{ width: 4, height: 4, borderRadius: "50%", background: activeColor, boxShadow: `0 0 6px ${activeColor}`, transition: "all 0.25s var(--spring)" }} />}
+                  {!active && <div style={{ width: 4, height: 4 }} />}
                 </button>
               );
             });
