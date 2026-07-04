@@ -44,8 +44,20 @@ const GLOBAL_STYLES = `
   }
   :root[data-theme="charcoal"] { --bg: #0F0F0F; --bg2: #1A1A1A; --bg3: #252525; }
   :root[data-theme="midnight"] { --bg: #000814; --bg2: #001233; --bg3: #023E8A22; }
+  :root[data-theme="apple"] {
+    --bg: #F2F2F7; --bg2: #FFFFFF; --bg3: #E5E5EA;
+    --yellow: #007AFF; --yellow-bright: #0A84FF;
+    --white: #1D1D1F; --gray: #6E6E73; --gray2: #86868B;
+    --green: #34C759; --orange: #FF9500; --red: #FF3B30; --purple: #AF52DE;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 20px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.07);
+  }
+  /* Apple theme: invert semi-transparent surfaces */
+  [data-theme="apple"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+  [data-theme="apple"] .card-bg { background: #FFFFFF !important; border-color: rgba(0,0,0,0.08) !important; color: #1D1D1F !important; }
   html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; }
-  #root { min-height: 100vh; background: #000; }
+  #root { min-height: 100vh; background: var(--bg); }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
@@ -1310,8 +1322,15 @@ function Btn({ children, onClick, variant = "primary", size = "md", disabled, st
 }
 
 function Card({ children, style, onClick }) {
+  const isLight = document.documentElement.getAttribute("data-theme") === "apple";
   return (
-    <div onClick={onClick} style={{ background: "linear-gradient(145deg, rgba(44,44,46,1) 0%, rgba(28,28,30,1) 100%)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: 18, cursor: onClick ? "pointer" : "default", boxShadow: "0 2px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)", ...style }}>
+    <div onClick={onClick} style={{
+      background: isLight ? "#FFFFFF" : "linear-gradient(145deg, rgba(44,44,46,1) 0%, rgba(28,28,30,1) 100%)",
+      border: isLight ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.07)",
+      borderRadius: 16, padding: 18, cursor: onClick ? "pointer" : "default",
+      boxShadow: isLight ? "0 2px 16px rgba(0,0,0,0.08)" : "0 2px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+      ...style
+    }}>
       {children}
     </div>
   );
@@ -26319,30 +26338,37 @@ const sessions = profile.sessions || [];
 
       {/* Bottom Nav — Premium */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        <div style={{ height: 20, background: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 60%, transparent 100%)", pointerEvents: "none" }} />
-        <div style={{ background: "rgba(8,8,8,0.96)", backdropFilter: "blur(60px) saturate(2.2)", borderTop: "1px solid rgba(201,168,64,0.1)", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "6px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)", boxShadow: "0 -1px 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.5)" }}>
+        {appTheme !== "apple" && <div style={{ height: 20, background: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 60%, transparent 100%)", pointerEvents: "none" }} />}
+        <div style={{
+          background: appTheme === "apple" ? "rgba(242,242,247,0.92)" : "rgba(8,8,8,0.96)",
+          backdropFilter: "blur(60px) saturate(2.2)",
+          borderTop: appTheme === "apple" ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(201,168,64,0.1)",
+          display: "flex", justifyContent: "space-around", alignItems: "center",
+          padding: "6px 4px", paddingBottom: "max(env(safe-area-inset-bottom, 12px), 12px)",
+          boxShadow: appTheme === "apple" ? "0 -1px 0 rgba(0,0,0,0.06), 0 -4px 20px rgba(0,0,0,0.06)" : "0 -1px 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.5)"
+        }}>
           {(() => {
+            const activeColor = appTheme === "apple" ? "#007AFF" : "#C9A840";
+            const inactiveColor = appTheme === "apple" ? "#8E8E93" : "#5A5A5E";
             const ic = {
-              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-              planning: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?"#C9A840":"#5A5A5E"} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+              home:     (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?activeColor:inactiveColor} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+              today:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?activeColor:inactiveColor} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+              planning: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?activeColor:inactiveColor} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+              progress: (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?activeColor:inactiveColor} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+              forme:    (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?activeColor:inactiveColor} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+              profil:   (a) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a?activeColor:inactiveColor} strokeWidth={a?"2.2":"1.8"} strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             };
             return tabs.map(t => {
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => { haptic([8]); navigateTo(t.id); }}
                   style={{ background: "none", border: "none", flex: 1, padding: "4px 2px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", transition: "all 0.2s var(--spring)", cursor: "pointer" }}>
-                  {/* Gold pill indicator */}
-                  {active && <div style={{ position: "absolute", top: -6, left: "25%", right: "25%", height: 2, background: "linear-gradient(90deg, transparent, #C9A840, transparent)", borderRadius: "0 0 3px 3px", boxShadow: "0 0 8px rgba(201,168,64,0.6)" }} />}
-                  {/* Icon container with glow */}
-                  <div style={{ position: "relative", width: 40, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: active ? "rgba(201,168,64,0.1)" : "transparent", transition: "all 0.2s var(--spring)", transform: active ? "scale(1.05)" : "scale(1)", boxShadow: active ? "0 0 12px rgba(201,168,64,0.2)" : "none" }}>
-                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?"#C9A840":"#5A5A5E" }}>{t.icon}</span>}
-                    {t.badge && !active && <div style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: "#30D158", border: "1.5px solid #000", animation: "pulse 2s ease infinite" }} />}
+                  {active && <div style={{ position: "absolute", top: -6, left: "25%", right: "25%", height: 2, background: `linear-gradient(90deg, transparent, ${activeColor}, transparent)`, borderRadius: "0 0 3px 3px", boxShadow: `0 0 8px ${activeColor}99` }} />}
+                  <div style={{ position: "relative", width: 40, height: 34, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, background: active ? `${activeColor}18` : "transparent", transition: "all 0.2s var(--spring)", transform: active ? "scale(1.05)" : "scale(1)", boxShadow: active ? `0 0 12px ${activeColor}33` : "none" }}>
+                    {ic[t.id]?.(active) ?? <span style={{ fontSize: 18, color: active?activeColor:inactiveColor }}>{t.icon}</span>}
+                    {t.badge && !active && <div style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: "#30D158", border: `1.5px solid ${appTheme === "apple" ? "#F2F2F7" : "#000"}`, animation: "pulse 2s ease infinite" }} />}
                   </div>
-                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? "#C9A840" : "#5A5A5E", letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.2s" }}>{t.label}</span>
+                  <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? activeColor : inactiveColor, letterSpacing: active ? "0.04em" : "0.02em", transition: "all 0.2s" }}>{t.label}</span>
                 </button>
               );
             });
@@ -27707,14 +27733,15 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 {[
-                  { id: "black", label: "AMOLED", color: "#000000", border: "#333" },
-                  { id: "charcoal", label: "Charcoal", color: "#0F0F0F", border: "#333" },
-                  { id: "midnight", label: "Midnight", color: "#000814", border: "#023E8A" },
+                  { id: "black",    label: "AMOLED",   color: "#000000", border: "#333",    textColor: "#8E8E93" },
+                  { id: "charcoal", label: "Charcoal", color: "#0F0F0F", border: "#333",    textColor: "#8E8E93" },
+                  { id: "midnight", label: "Midnight", color: "#000814", border: "#023E8A", textColor: "#8E8E93" },
+                  { id: "apple",    label: "☀️ Apple",  color: "#F2F2F7", border: "#C7C7CC", textColor: "#1D1D1F" },
                 ].map(t => (
                   <button key={t.id} onClick={() => setAppTheme(t.id)}
-                    style={{ flex: 1, padding: "10px 6px", borderRadius: 12, border: appTheme === t.id ? "2px solid #C9A840" : `1px solid ${t.border}`, background: t.color, cursor: "pointer", transition: "all 0.2s" }}>
-                    <div style={{ fontSize: 10, color: appTheme === t.id ? "#C9A840" : "#8E8E93", fontWeight: 700 }}>{t.label}</div>
-                    {appTheme === t.id && <div style={{ fontSize: 9, color: "#C9A840", marginTop: 2 }}>✓ Actif</div>}
+                    style={{ flex: 1, padding: "10px 6px", borderRadius: 12, border: appTheme === t.id ? "2px solid #007AFF" : `1px solid ${t.border}`, background: t.color, cursor: "pointer", transition: "all 0.2s" }}>
+                    <div style={{ fontSize: 10, color: appTheme === t.id ? "#007AFF" : t.textColor, fontWeight: 700 }}>{t.label}</div>
+                    {appTheme === t.id && <div style={{ fontSize: 9, color: "#007AFF", marginTop: 2 }}>✓ Actif</div>}
                   </button>
                 ))}
               </div>
