@@ -41971,6 +41971,7 @@ function ModeCompetition({ profile, onClose }) {
 }
 
 function RaceTab({ profile, onOpenBenchmark }) {
+  const haptic = (pattern = [8]) => { try { navigator.vibrate?.(pattern); } catch {} };
   const [strategy, setStrategy] = useState(null);
   const [loading, setLoading] = useState(false);
   const [strategyStream, setStrategyStream] = useState("");
@@ -42002,6 +42003,21 @@ function RaceTab({ profile, onOpenBenchmark }) {
     try { return parseInt(localStorage.getItem(`fitrace_race_target_${profile.name}`)) || 90; } catch { return 90; }
   });
   const [roxzoneMin, setRoxzoneMin] = useState(6);
+  const [editStation, setEditStation] = useState(null);
+
+  function adjustStationTime(key, deltaSec) {
+    setPacerStations(prev => {
+      const p = String(prev[key]||"0:00").split(":");
+      let secs = Math.max(30, ((parseInt(p[0])||0)*60 + (parseInt(p[1])||0)) + deltaSec);
+      const str = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}`;
+      try {
+        const saved = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}");
+        saved[key] = secs;
+        localStorage.setItem(`fitrace_hyrox_times_${profile.name}`, JSON.stringify(saved));
+      } catch {}
+      return { ...prev, [key]: str };
+    });
+  }
 
   async function generateStrategy() {
     setLoading(true);
@@ -42235,16 +42251,31 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div style={{ fontSize:9, color:"#8E8E93", textTransform:"uppercase", letterSpacing:"0.1em", textAlign:"right" }}>Temps</div>
                     <div style={{ fontSize:9, color:"var(--yellow)", textTransform:"uppercase", letterSpacing:"0.1em", textAlign:"right", fontWeight:700 }}>Passage</div>
                   </div>
-                  {segments.map((seg, i) => (
-                    <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 62px 70px", padding:"6px 14px", background: seg.type === "station" ? "rgba(255,255,255,0.025)" : "transparent", borderBottom: i < segments.length-1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
-                      <div style={{ fontSize:12, color: seg.type === "station" ? "var(--white)" : "#AEAEB2", fontWeight: seg.type === "station" ? 600 : 400 }}>{seg.icon} {seg.label}</div>
-                      <div style={{ fontSize:12, color:"#8E8E93", textAlign:"right", fontVariantNumeric:"tabular-nums" }}>{fmt(seg.time)}</div>
-                      <div className="bebas" style={{ fontSize:14, color: i === segments.length-1 ? "#30D158" : "var(--yellow)", textAlign:"right", letterSpacing:0.5 }}>{fmt(seg.cumul)}</div>
-                    </div>
-                  ))}
+                  {segments.map((seg, i) => {
+                    const stKey = seg.type === "station" ? STATION_ORDER[Math.floor(i/2)].key : null;
+                    const isEditing = stKey && editStation === stKey;
+                    return (
+                      <React.Fragment key={i}>
+                        <div onClick={stKey ? () => { haptic([5]); setEditStation(isEditing ? null : stKey); } : undefined}
+                          style={{ display:"grid", gridTemplateColumns:"1fr 62px 70px", padding:"6px 14px", background: isEditing ? "rgba(201,168,64,0.08)" : seg.type === "station" ? "rgba(255,255,255,0.025)" : "transparent", borderBottom: i < segments.length-1 && !isEditing ? "1px solid rgba(255,255,255,0.03)" : "none", cursor: stKey ? "pointer" : "default" }}>
+                          <div style={{ fontSize:12, color: seg.type === "station" ? "var(--white)" : "#AEAEB2", fontWeight: seg.type === "station" ? 600 : 400 }}>{seg.icon} {seg.label} {stKey && <span style={{ fontSize:9, color: isEditing ? "var(--yellow)" : "#5A5A5E" }}>✎</span>}</div>
+                          <div style={{ fontSize:12, color: isEditing ? "var(--yellow)" : "#8E8E93", textAlign:"right", fontVariantNumeric:"tabular-nums", fontWeight: isEditing ? 700 : 400 }}>{fmt(seg.time)}</div>
+                          <div className="bebas" style={{ fontSize:14, color: i === segments.length-1 ? "#30D158" : "var(--yellow)", textAlign:"right", letterSpacing:0.5 }}>{fmt(seg.cumul)}</div>
+                        </div>
+                        {isEditing && (
+                          <div className="fade-in-fast" style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, padding:"8px 14px", background:"rgba(201,168,64,0.06)", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
+                            <span style={{ fontSize:10, color:"#8E8E93", marginRight:"auto" }}>Ajuste ton chrono {STATION_ORDER[Math.floor(i/2)].label}</span>
+                            <button onClick={(e) => { e.stopPropagation(); haptic([5]); adjustStationTime(stKey, -15); }} style={{ padding:"6px 14px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"var(--white)", fontSize:13, fontWeight:800, cursor:"pointer" }}>−15s</button>
+                            <button onClick={(e) => { e.stopPropagation(); haptic([5]); adjustStationTime(stKey, 15); }} style={{ padding:"6px 14px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"var(--white)", fontSize:13, fontWeight:800, cursor:"pointer" }}>+15s</button>
+                            <button onClick={(e) => { e.stopPropagation(); haptic([8]); setEditStation(null); }} style={{ padding:"6px 12px", borderRadius:10, background:"var(--yellow)", border:"none", color:"#000", fontSize:12, fontWeight:800, cursor:"pointer" }}>OK</button>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
                 <div style={{ fontSize:10, color:"#8E8E93", marginTop:10, lineHeight:1.5 }}>
-                  💡 Dérive de fatigue intégrée : Run 1 à {fmt(runSecs[0])} → Run 8 à {fmt(runSecs[7])}. La Roxzone ({roxzoneMin} min) est répartie dans les passages. Mets à jour tes chronos stations dans Benchmarks pour affiner.
+                  💡 Dérive de fatigue intégrée : Run 1 à {fmt(runSecs[0])} → Run 8 à {fmt(runSecs[7])}. La Roxzone ({roxzoneMin} min) est répartie dans les passages. Tape une station ✎ pour ajuster ton chrono.
                 </div>
               </>
             )}
