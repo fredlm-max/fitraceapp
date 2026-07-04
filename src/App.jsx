@@ -16432,6 +16432,41 @@ JSON:
 
               const stop = () => { setRunning(false); setPhase("idle"); setRound(1); setTimeLeft(0); haptic([8]); };
 
+              // ── Écran toujours allumé pendant le timer (Wake Lock API) ──
+              const wakeLockRef = React.useRef(null);
+              const [wakeLockOn, setWakeLockOn] = React.useState(false);
+              React.useEffect(() => {
+                const isActive = running && phase !== "idle" && phase !== "done";
+                if (isActive && "wakeLock" in navigator) {
+                  navigator.wakeLock.request("screen").then(lock => {
+                    wakeLockRef.current = lock;
+                    setWakeLockOn(true);
+                    lock.addEventListener("release", () => setWakeLockOn(false));
+                  }).catch(() => setWakeLockOn(false));
+                } else if (!isActive && wakeLockRef.current) {
+                  wakeLockRef.current.release().catch(() => {});
+                  wakeLockRef.current = null;
+                  setWakeLockOn(false);
+                }
+                return () => {
+                  if (!isActive && wakeLockRef.current) { wakeLockRef.current.release().catch(() => {}); wakeLockRef.current = null; }
+                };
+              }, [running, phase]);
+              // Re-acquérir le verrou si l'utilisateur revient sur l'onglet pendant le timer (le navigateur le relâche automatiquement en arrière-plan)
+              React.useEffect(() => {
+                const reacquire = () => {
+                  if (document.visibilityState === "visible" && running && phase !== "idle" && phase !== "done" && !wakeLockRef.current && "wakeLock" in navigator) {
+                    navigator.wakeLock.request("screen").then(lock => {
+                      wakeLockRef.current = lock;
+                      setWakeLockOn(true);
+                      lock.addEventListener("release", () => setWakeLockOn(false));
+                    }).catch(() => {});
+                  }
+                };
+                document.addEventListener("visibilitychange", reacquire);
+                return () => document.removeEventListener("visibilitychange", reacquire);
+              }, [running, phase]);
+
               const phaseColor = phase === "work" ? (selPreset ? (PRESETS.find(p => p.id === selPreset)?.color || "#FF453A") : "#FF453A") : phase === "rest" ? "#30D158" : "#555";
               const phaseLabel = phase === "work" ? "EFFORT" : phase === "rest" ? "REPOS" : phase === "done" ? "TERMINÉ ✓" : "";
               const circumference = 2 * Math.PI * 50;
@@ -16441,7 +16476,15 @@ JSON:
 
               return (
                 <div style={{ background:"rgba(28,28,30,0.6)", border:`1px solid ${phase !== "idle" && phase !== "done" ? phaseColor + "40" : "rgba(255,255,255,0.06)"}`, borderRadius:18, padding:"14px 16px", marginBottom:14, transition:"border-color 0.4s" }}>
-                  <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1, marginBottom:12 }}>⏱️ INTERVAL TIMER</div>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                    <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1 }}>⏱️ INTERVAL TIMER</div>
+                    {wakeLockOn && (
+                      <div style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(48,209,88,0.1)", border:"1px solid rgba(48,209,88,0.25)", borderRadius:20, padding:"3px 9px" }}>
+                        <span style={{ fontSize:10 }}>🔓</span>
+                        <span style={{ fontSize:9, color:"#30D158", fontWeight:700 }}>Écran actif</span>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Active timer display */}
                   {phase !== "idle" ? (
