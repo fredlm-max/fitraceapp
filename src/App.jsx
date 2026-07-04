@@ -4246,6 +4246,31 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     const allAdaptations = profile.adaptations || [];
     const nbSessions = allSessions.length;
 
+    // ── DÉTERMINER LE TYPE DE SÉANCE (avant l'analyse qui en dépend) ──
+    const choixManuel = dailyData.typeSeance && dailyData.typeSeance !== "auto";
+    // Détection semaine de décharge : toutes les 4 semaines
+    const isDeloadWeek = week > 0 && week % 4 === 0 && phase !== "affûtage";
+    // Éviter de répéter le même type que la dernière séance
+    const lastSessionType = allSessions.length > 0 ? allSessions[allSessions.length - 1]?.type : null;
+    // Structure semaine HYROX validée par jour de la semaine
+    const dayOfWeek = new Date().getDay(); // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
+    const smartTypeByDay = {
+      0: "running_zone2",      // Dimanche → sortie longue Z2
+      1: "force_stations",     // Lundi → force + stations
+      2: "running_qualite",    // Mardi → qualité running
+      3: "running_zone2",      // Mercredi → Z2 récup
+      4: "force_stations",     // Jeudi → force
+      5: "hybride_compromis",  // Vendredi → hybride HYROX
+      6: "running_zone2",      // Samedi → sortie Z2
+    };
+    const rotationFallback = ["running_zone2", "force_stations", "running_qualite", "hybride_compromis", "force_stations"];
+    let autoType = smartTypeByDay[dayOfWeek];
+    if (autoType === lastSessionType) {
+      const idx = rotationFallback.indexOf(lastSessionType);
+      autoType = rotationFallback[(idx + 1) % rotationFallback.length];
+    }
+    const sessionType = choixManuel ? dailyData.typeSeance : autoType;
+
     // ── ANALYSE APPROFONDIE DES FEEDBACKS ──────────────────────────────
 
     // 1. Séances récentes enrichies (exercicesLog + douleurs + énergie)
@@ -4344,37 +4369,6 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
 Énergie post-séance moyenne: ${avgEnergie}/5
 → DIRECTIVE PRINCIPALE AUJOURD'HUI: ${allAdaptations.slice(-1)[0]?.adaptation || "Calibrer sur profil de base"}`;
     // ─────────────────────────────────────────────────────────────────
-
-    // Déterminer le type de séance — logique intelligente basée sur le jour + historique
-    const choixManuel = dailyData.typeSeance && dailyData.typeSeance !== "auto";
-
-    // Détection semaine de décharge : toutes les 4 semaines
-    const isDeloadWeek = week > 0 && week % 4 === 0 && phase !== "affûtage";
-
-    // Éviter de répéter le même type que la dernière séance
-    const lastSessionType = allSessions.length > 0 ? allSessions[allSessions.length - 1]?.type : null;
-
-    // Structure semaine HYROX validée par jour de la semaine
-    const dayOfWeek = new Date().getDay(); // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
-    const smartTypeByDay = {
-      0: "running_zone2",      // Dimanche → sortie longue Z2
-      1: "force_stations",     // Lundi → force + stations
-      2: "running_qualite",    // Mardi → qualité running
-      3: "running_zone2",      // Mercredi → Z2 récup
-      4: "force_stations",     // Jeudi → force
-      5: "hybride_compromis",  // Vendredi → hybride HYROX
-      6: "running_zone2",      // Samedi → sortie Z2
-    };
-    // Rotation de secours si conflit avec dernière séance
-    const rotationFallback = ["running_zone2", "force_stations", "running_qualite", "hybride_compromis", "force_stations"];
-    let autoType = smartTypeByDay[dayOfWeek];
-    if (autoType === lastSessionType) {
-      // Éviter répétition : prendre le suivant dans la rotation
-      const idx = rotationFallback.indexOf(lastSessionType);
-      autoType = rotationFallback[(idx + 1) % rotationFallback.length];
-    }
-
-    const sessionType = choixManuel ? dailyData.typeSeance : autoType;
 
     const sessionTypeDescriptions = {
       running_zone2: `SESSION RUNNING ZONE 2 + TECHNIQUE STATIONS
@@ -4595,6 +4589,52 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
         surcompensation: "Appliquer la surcharge puis laisser 48-72h de récupération pour adaptation. La progression vient PENDANT la récup, pas pendant l'effort.",
       },
 
+      recherche: {
+        // Synthèse des recherches physiologiques récentes (2020-2025) applicables à HYROX
+        polarise_8020: "Seiler: distribution polarisée 80% basse intensité / 20% haute = gains supérieurs au modèle seuil. Chez les amateurs, l'erreur #1 est de courir les jours faciles trop vite (Z3 'no man's land').",
+        norwegian_4x4: "Helgerud/Hoff: 4x4min @ 90-95% FCmax récup 3min = amélioration VO2max ~0.5%/séance, 3x supérieure au continu. 1-2x/semaine max.",
+        double_seuil: "Méthode Ingebrigtsen: 2 séances seuil le même jour (matin+soir) à intensité contrôlée (lactate 2-3.5mmol) = volume seuil élevé sans surcharge. Réservé aux athlètes 5+ séances/sem.",
+        durabilite: "Recherche 2022-2024 (Maunder, Jones): la 'durabilité' (résistance à la dérive physiologique après 1h+ d'effort) est le 4e pilier de la performance avec VO2max/seuil/économie. S'entraîne par: sorties longues Z2, blocs qualité EN FIN de séance longue, compromised running.",
+        interference: "Effet d'interférence force/endurance (Coffey & Hawley): séparer force et cardio intense de 6h+ si possible, ou faire force APRÈS cardio léger. Force lourde (>80% 1RM) basse reps préserve mieux l'endurance que l'hypertrophie volume.",
+        acwr: "Gabbett: ratio charge aiguë/chronique (ACWR) optimal 0.8-1.3. Au-dessus de 1.5 = risque de blessure x2-4. Augmenter le volume hebdo de max 10%/semaine.",
+        hyrox_race_analysis: "Analyses de courses HYROX (données officielles): la Roxzone représente 8-12% du temps total chez les amateurs (vs 4-6% élites) — transitions = gains gratuits. Wall Balls et Sandbag Lunges = stations où les amateurs perdent le plus de temps vs élites. Le pacing négatif (2e moitié plus rapide) corrèle avec les meilleures perfs.",
+        compromised_running: "Étude spécifique HYROX 2023: la perte d'allure post-station est de 10-20s/km chez les amateurs vs 3-5s chez les élites. S'entraîne spécifiquement: run à allure cible IMMÉDIATEMENT après effort de force, 1-2x/semaine.",
+        cadence: "Économie de course: cadence optimale 170-180 pas/min réduit le coût énergétique de 3-5% vs surstride. Travailler avec métronome sur les runs Z2.",
+        chaleur_hydratation: "Déshydratation >2% du poids corporel = -10% performance aérobie. En course HYROX indoor (souvent chaud): 500-750ml/h + électrolytes.",
+        sommeil: "Walker/Mah: <7h de sommeil chronique = -10-30% temps jusqu'à épuisement, VFC dégradée, risque blessure +70%. Le sommeil est le premier levier de récupération, avant tout supplément.",
+        taper: "Méta-analyse Bosquet: affûtage optimal = réduction volume 40-60% sur 8-14 jours, INTENSITÉ ET FRÉQUENCE MAINTENUES. Gain moyen +3% performance.",
+      },
+
+      seancesTypes: {
+        // Bibliothèque de séances HYROX canoniques — choisir et adapter selon phase/niveau/temps
+        running_zone2: [
+          { nom: "Base Builder", structure: "40-60min Z2 continu + 5 lignes droites 80m en fin", phase: "toutes", focus: "volume aérobie" },
+          { nom: "Z2 + Technique", structure: "35min Z2 + 3x(3min station technique légère: SkiErg OU Row OU Wall Balls) sans intensité", phase: "base", focus: "économie gestuelle sous légère fatigue" },
+          { nom: "Long Run Durabilité", structure: "60-90min Z2 avec 3x1km à allure course (Z3) dans les 20 dernières minutes", phase: "développement/pic", focus: "durabilité — qualité sous fatigue" },
+          { nom: "Récup Active", structure: "25-30min Z1-Z2 très facile + 10min mobilité complète", phase: "toutes/décharge", focus: "récupération" },
+        ],
+        running_qualite: [
+          { nom: "Norwegian 4x4", structure: "Éch 12min + 4x4min @ 90-95% FCmax (Z4) récup 3min trot + RAC 8min", phase: "développement/pic", focus: "VO2max — protocole validé" },
+          { nom: "Tempo Seuil", structure: "Éch 10min + 3x8-10min Z3 seuil récup 3min + RAC 8min", phase: "base/développement", focus: "seuil lactique" },
+          { nom: "Intervalles Race Pace", structure: "Éch 12min + 5-6x1km @ allure course cible récup 90s-2min + RAC", phase: "pic", focus: "spécificité allure HYROX" },
+          { nom: "400s Vitesse", structure: "Éch 12min + 8-10x400m Z4+ récup 90s + RAC", phase: "développement", focus: "économie + vitesse" },
+          { nom: "Fartlek Pyramide", structure: "Éch 10min + 1-2-3-4-3-2-1min Z4 récup = moitié du temps d'effort + RAC", phase: "base/développement", focus: "VO2max ludique" },
+        ],
+        force_stations: [
+          { nom: "Lower Power HYROX", structure: "Sled Push 4x20m progressif + Trap Bar DL 4x5 @ 75-80% + Bulgarian Split 3x8/jambe + Farmer 3x60m + brick run 800m", phase: "toutes", focus: "force jambes + transfert" },
+          { nom: "Pull Day Stations", structure: "Sled Pull 4x20m + RDL 4x8 @ 60-65% + Pull-ups 4xmax + KB Swing 3x15 + Dead Hang 3x30s + brick run 800m Z2", phase: "toutes", focus: "chaîne postérieure + grip" },
+          { nom: "Wall Ball Density", structure: "Front Squat 4x6 @ 65% + Wall Balls EMOM 10min (12-15 reps/min) + Push Press 3x8 + gainage 3x45s + brick 600m", phase: "développement/pic", focus: "endurance de force quadris/épaules" },
+          { nom: "Strength Endurance Circuit", structure: "3-4 rounds: Goblet Squat x12 + KB Swing x15 + Walking Lunges 20m + Farmer 40m + repos 90s + brick run 1km Z2-Z3", phase: "base/développement", focus: "force répétable" },
+        ],
+        hybride_compromis: [
+          { nom: "Brick Classique", structure: "4-5 rounds: 1 station race-effort + 1km run @ allure course. Stations: rotation Wall Balls/BBJ/Farmer/Lunges", phase: "développement", focus: "compromised running" },
+          { nom: "Demi-Sim HYROX", structure: "4km run + 4 stations alternés exactement comme en course (SkiErg→Sled Push→Sled Pull→BBJ), transitions chronométrées", phase: "pic", focus: "simulation partielle + roxzone" },
+          { nom: "Sim Complète", structure: "8x(1km + station) aux charges officielles — 1x max par bloc de prépa, 3+ semaines avant course", phase: "pic", focus: "répétition générale" },
+          { nom: "Roxzone Trainer", structure: "6 rounds: 800m Z3 + station courte (30-45s effort) + transition MARCHE RAPIDE 30s chrono — travailler des transitions actives", phase: "développement/pic", focus: "transitions = gains gratuits" },
+          { nom: "Mini-Brick Décharge", structure: "3 rounds légers: station @ 50% + 500m Z2", phase: "décharge/affûtage", focus: "rappel neuromusculaire sans fatigue" },
+        ],
+      },
+
       nutrition: {
         avant_seance: {
           moins2h: "Repas complet : 60-80g glucides complexes + 20-30g protéines + légumes. Ex: riz + poulet + brocoli",
@@ -4615,13 +4655,28 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
     };
 
     // Extraire le bon bloc selon le type de séance
+    // Recherche physiologique pertinente selon le type de séance
+    const rechercheByType = {
+      running_zone2: ["polarise_8020", "durabilite", "cadence", "acwr", "sommeil"],
+      running_qualite: ["norwegian_4x4", "double_seuil", "polarise_8020", "cadence", "taper"],
+      force_stations: ["interference", "hyrox_race_analysis", "acwr", "sommeil"],
+      hybride_compromis: ["compromised_running", "hyrox_race_analysis", "durabilite", "chaleur_hydratation", "taper"],
+    };
+    const rechercheBlock = (rechercheByType[sessionType] || Object.keys(hyroxDB.recherche).slice(0, 5))
+      .map(k => `- ${hyroxDB.recherche[k]}`).join("\n");
+    // Templates de séances canoniques du type demandé (l'IA choisit + adapte le plus pertinent)
+    const templates = hyroxDB.seancesTypes[sessionType] || [];
+    const templatesBlock = templates.map(t => `- "${t.nom}" [phase: ${t.phase}] — ${t.structure} (focus: ${t.focus})`).join("\n");
+
     const dbByType = {
       running_zone2: `\n\nBASE DE CONNAISSANCES RUNNING:\n${JSON.stringify({zones: hyroxDB.running.zones, protocoles: hyroxDB.running.protocoles, economieCourse: hyroxDB.running.economieCourse, periodisation: hyroxDB.periodisation.phases}, null, 1)}`,
       running_qualite: `\n\nBASE DE CONNAISSANCES RUNNING QUALITÉ:\n${JSON.stringify({zones: hyroxDB.running.zones, protocoles: hyroxDB.running.protocoles, economieCourse: hyroxDB.running.economieCourse}, null, 1)}`,
       force_stations: `\n\nBASE DE CONNAISSANCES FORCE & STATIONS:\n${JSON.stringify({stations: hyroxDB.stations, force: hyroxDB.force}, null, 1)}`,
       hybride_compromis: `\n\nBASE DE CONNAISSANCES HYBRIDE HYROX:\n${JSON.stringify({stations: {skiErg: hyroxDB.stations.skiErg, rowingErg: hyroxDB.stations.rowingErg, wallBalls: hyroxDB.stations.wallBalls, burpeeBroadJump: hyroxDB.stations.burpeeBroadJump}, running: hyroxDB.running, force: {conditioning: hyroxDB.force.conditioning}}, null, 1)}`,
     };
-    const knowledgeBlock = dbByType[sessionType] || `\n\nBASE DE CONNAISSANCES HYROX:\n${JSON.stringify({stations: hyroxDB.stations, running: hyroxDB.running.zones}, null, 1)}`;
+    const knowledgeBlock = (dbByType[sessionType] || `\n\nBASE DE CONNAISSANCES HYROX:\n${JSON.stringify({stations: hyroxDB.stations, running: hyroxDB.running.zones}, null, 1)}`)
+      + `\n\nRECHERCHE PHYSIOLOGIQUE RÉCENTE (2020-2025) — À APPLIQUER:\n${rechercheBlock}`
+      + (templatesBlock ? `\n\nBIBLIOTHÈQUE DE SÉANCES ${sessionType.toUpperCase()} (phase actuelle: ${phase}${isDeloadWeek ? " + DÉCHARGE" : ""}) — choisis le template le plus adapté à la phase et personnalise-le avec les charges/allures de l'athlète:\n${templatesBlock}` : "");
     // ════════════════════════════════════════════════════════════════════
 
     const expertSystemPrompt = `Tu es Marc, coach HYROX certifié niveau Pro avec 10 ans d'expérience. Tu as préparé des centaines d'athlètes HYROX du débutant au Pro. Ta méthode est scientifique, précise et individualisée.
