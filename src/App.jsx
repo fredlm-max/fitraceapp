@@ -5003,6 +5003,15 @@ JSON:
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
     try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
   });
+  // Auto-masquer le hint après 6s (sinon il reste affiché pour toujours sans swipe)
+  useEffect(() => {
+    if (!showSwipeHint) return;
+    const t = setTimeout(() => {
+      try { localStorage.setItem("fitrace_swipe_hint_seen", "1"); } catch {}
+      setShowSwipeHint(false);
+    }, 6000);
+    return () => clearTimeout(t);
+  }, [showSwipeHint]);
   const BOTTOM_TABS = ["home","today","planning","progress","forme"];
 
   function handleTouchStart(e) {
