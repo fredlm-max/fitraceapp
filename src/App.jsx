@@ -41998,6 +41998,10 @@ function RaceTab({ profile, onOpenBenchmark }) {
   });
   const days = daysUntil(profile.raceDate);
   const poidsHyrox = getPoidsHyrox(profile);
+  const [targetFinishMin, setTargetFinishMin] = useState(() => {
+    try { return parseInt(localStorage.getItem(`fitrace_race_target_${profile.name}`)) || 90; } catch { return 90; }
+  });
+  const [roxzoneMin, setRoxzoneMin] = useState(6);
 
   async function generateStrategy() {
     setLoading(true);
@@ -42133,6 +42137,120 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           <div style={{ fontSize: 14, color: "#8E8E93" }}>Aucune date renseignée.<br/>Ajoute ta date de course dans ton profil.</div>
         </div>
       )}
+
+      {/* ── PLAN DE COURSE — TEMPS DE PASSAGE (pro pacing card) ── */}
+      {(() => {
+        const toSec = (str) => { const p = String(str||"0:00").split(":"); return (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); };
+        const fmt = (s) => { s = Math.max(0, Math.round(s)); const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return h > 0 ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`; };
+        const STATION_ORDER = [
+          { key:"skierg", label:"SkiErg 1000m", icon:"🎿" },
+          { key:"sled_push", label:"Sled Push 50m", icon:"🛷" },
+          { key:"sled_pull", label:"Sled Pull 50m", icon:"⛓" },
+          { key:"burpee_broad_jump", label:"Burpee BJ 80m", icon:"🐸" },
+          { key:"rowing", label:"Row 1000m", icon:"🚣" },
+          { key:"farmers_carry", label:"Farmer's 200m", icon:"🧳" },
+          { key:"sandbag_lunges", label:"Lunges 100m", icon:"🎒" },
+          { key:"wall_balls", label:"Wall Balls", icon:"🏐" },
+        ];
+        const stationSecs = STATION_ORDER.map(s => toSec(pacerStations[s.key]));
+        const stationsTotal = stationSecs.reduce((a,b)=>a+b,0);
+        const roxzone = roxzoneMin * 60;
+        const targetSec = targetFinishMin * 60;
+        const runsTotal = targetSec - stationsTotal - roxzone;
+        const feasible = runsTotal >= 8 * 200; // au moins ~3:20/km impossible en-dessous
+        // Dérive de fatigue : run 1 plus rapide, run 8 plus lent (+~9% du 1er au dernier)
+        const factors = Array.from({length:8}, (_,i) => 0.955 + i * 0.0129);
+        const fSum = factors.reduce((a,b)=>a+b,0);
+        const runSecs = factors.map(f => runsTotal * f / fSum);
+        const avgPace = runsTotal / 8; // par km
+        // Segments alternés + cumul
+        let cumul = 0;
+        const roxShare = roxzone / 8; // transitions réparties après chaque station
+        const segments = [];
+        for (let i = 0; i < 8; i++) {
+          cumul += runSecs[i];
+          segments.push({ type:"run", label:`Run ${i+1} — 1km`, icon:"🏃", time: runSecs[i], cumul });
+          cumul += stationSecs[i] + roxShare;
+          segments.push({ type:"station", label: STATION_ORDER[i].label, icon: STATION_ORDER[i].icon, time: stationSecs[i], cumul });
+        }
+        const TARGETS = [70, 80, 90, 100, 110];
+        return (
+          <div style={{ background:"linear-gradient(160deg, #101014 0%, #0a0a0c 100%)", border:"1.5px solid rgba(201,168,64,0.28)", borderRadius:22, padding:"20px 18px", marginBottom:12, position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:-60, left:-40, width:220, height:220, borderRadius:"50%", background:"radial-gradient(circle, rgba(201,168,64,0.08) 0%, transparent 70%)", pointerEvents:"none" }} />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
+              <div>
+                <div className="bebas" style={{ fontSize:22, color:"var(--yellow)", letterSpacing:1.5, lineHeight:1 }}>📋 PLAN DE COURSE</div>
+                <div style={{ fontSize:11, color:"#8E8E93", marginTop:4 }}>Tes temps de passage à mémoriser — basés sur tes chronos stations</div>
+              </div>
+            </div>
+
+            {/* Objectif finish */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:10, color:"#8E8E93", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>🎯 Objectif finish</div>
+              <div style={{ display:"flex", gap:6 }}>
+                {TARGETS.map(t => {
+                  const active = targetFinishMin === t;
+                  return (
+                    <button key={t} onClick={() => { haptic([5]); setTargetFinishMin(t); try { localStorage.setItem(`fitrace_race_target_${profile.name}`, String(t)); } catch {} }} style={{
+                      flex:1, padding:"9px 0", borderRadius:12, fontSize:13, fontWeight:800, cursor:"pointer",
+                      background: active ? "var(--yellow)" : "rgba(255,255,255,0.05)",
+                      border: active ? "none" : "1px solid rgba(255,255,255,0.10)",
+                      color: active ? "#000" : "#8E8E93", transition:"all 0.15s var(--spring)",
+                      boxShadow: active ? "0 4px 14px rgba(201,168,64,0.35)" : "none",
+                    }}>{Math.floor(t/60)}h{String(t%60).padStart(2,"0")}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Répartition + allure requise */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:14 }}>
+              <div style={{ background:"rgba(48,209,88,0.07)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:12, padding:"10px 8px", textAlign:"center" }}>
+                <div style={{ fontSize:9, color:"#8E8E93", textTransform:"uppercase", marginBottom:3 }}>Allure runs</div>
+                <div className="bebas" style={{ fontSize:20, color: feasible ? "#30D158" : "#FF453A", lineHeight:1 }}>{feasible ? fmt(avgPace) : "—"}</div>
+                <div style={{ fontSize:8, color:"#8E8E93", marginTop:2 }}>min/km moy.</div>
+              </div>
+              <div style={{ background:"rgba(201,168,64,0.07)", border:"1px solid rgba(201,168,64,0.2)", borderRadius:12, padding:"10px 8px", textAlign:"center" }}>
+                <div style={{ fontSize:9, color:"#8E8E93", textTransform:"uppercase", marginBottom:3 }}>Stations</div>
+                <div className="bebas" style={{ fontSize:20, color:"var(--yellow)", lineHeight:1 }}>{fmt(stationsTotal)}</div>
+                <div style={{ fontSize:8, color:"#8E8E93", marginTop:2 }}>tes chronos</div>
+              </div>
+              <div onClick={() => { haptic([5]); setRoxzoneMin(r => r >= 8 ? 4 : r + 1); }} style={{ background:"rgba(56,189,248,0.07)", border:"1px solid rgba(56,189,248,0.2)", borderRadius:12, padding:"10px 8px", textAlign:"center", cursor:"pointer" }}>
+                <div style={{ fontSize:9, color:"#8E8E93", textTransform:"uppercase", marginBottom:3 }}>Roxzone</div>
+                <div className="bebas" style={{ fontSize:20, color:"#38bdf8", lineHeight:1 }}>{roxzoneMin}:00</div>
+                <div style={{ fontSize:8, color:"#38bdf8", marginTop:2 }}>tap pour ajuster</div>
+              </div>
+            </div>
+
+            {!feasible ? (
+              <div style={{ background:"rgba(255,69,58,0.08)", border:"1px solid rgba(255,69,58,0.25)", borderRadius:12, padding:"12px 14px", fontSize:12, color:"#FF453A", lineHeight:1.5 }}>
+                ⚠️ Objectif trop ambitieux vs tes chronos stations actuels ({fmt(stationsTotal)} de stations + {roxzoneMin} min de transitions). Choisis un objectif plus élevé ou améliore tes stations.
+              </div>
+            ) : (
+              <>
+                {/* Table des temps de passage */}
+                <div style={{ background:"rgba(0,0,0,0.35)", borderRadius:14, padding:"4px 0", border:"1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 62px 70px", padding:"8px 14px 6px", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
+                    <div style={{ fontSize:9, color:"#8E8E93", textTransform:"uppercase", letterSpacing:"0.1em" }}>Segment</div>
+                    <div style={{ fontSize:9, color:"#8E8E93", textTransform:"uppercase", letterSpacing:"0.1em", textAlign:"right" }}>Temps</div>
+                    <div style={{ fontSize:9, color:"var(--yellow)", textTransform:"uppercase", letterSpacing:"0.1em", textAlign:"right", fontWeight:700 }}>Passage</div>
+                  </div>
+                  {segments.map((seg, i) => (
+                    <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 62px 70px", padding:"6px 14px", background: seg.type === "station" ? "rgba(255,255,255,0.025)" : "transparent", borderBottom: i < segments.length-1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
+                      <div style={{ fontSize:12, color: seg.type === "station" ? "var(--white)" : "#AEAEB2", fontWeight: seg.type === "station" ? 600 : 400 }}>{seg.icon} {seg.label}</div>
+                      <div style={{ fontSize:12, color:"#8E8E93", textAlign:"right", fontVariantNumeric:"tabular-nums" }}>{fmt(seg.time)}</div>
+                      <div className="bebas" style={{ fontSize:14, color: i === segments.length-1 ? "#30D158" : "var(--yellow)", textAlign:"right", letterSpacing:0.5 }}>{fmt(seg.cumul)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize:10, color:"#8E8E93", marginTop:10, lineHeight:1.5 }}>
+                  💡 Dérive de fatigue intégrée : Run 1 à {fmt(runSecs[0])} → Run 8 à {fmt(runSecs[7])}. La Roxzone ({roxzoneMin} min) est répartie dans les passages. Mets à jour tes chronos stations dans Benchmarks pour affiner.
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── CHECKLIST PRÉPARATION COURSE ── */}
       {profile.raceDate && days !== null && days <= 7 && (() => {
