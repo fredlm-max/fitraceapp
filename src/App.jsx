@@ -16185,7 +16185,10 @@ JSON:
               const [paceMin, setPaceMin] = React.useState(5);
               const [paceSec, setPaceSec] = React.useState(30);
               const [targetTime, setTargetTime] = React.useState("");
-              const [mode, setMode] = React.useState("split"); // split | target | zones
+              const [mode, setMode] = React.useState("split"); // split | target | zones | bench
+              const [sexe, setSexe] = React.useState(profile.sexe === "F" ? "F" : "H"); // H | F | Mixte (duo)
+              const [categorie, setCategorie] = React.useState("open"); // open | pro
+              const [format, setFormat] = React.useState("solo"); // solo | duo
 
               const paceTotalSec = paceMin * 60 + paceSec;
               const fmtPace = (sec) => `${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;
@@ -16196,23 +16199,53 @@ JSON:
                 return h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
               };
 
-              // HYROX: 8 runs of 1km + 8 stations
-              // Approximate station times based on pace (faster runner = faster stations too)
-              const paceFactor = Math.max(0.5, Math.min(2, paceTotalSec / 330)); // 5:30/km = factor 1
+              // ── Poids officiels par division — HYROX Rulebook 25/26 ──
+              // Farmers = charge par main. Sandbag/Wall Ball = charge de l'engin.
+              const WEIGHTS = {
+                H_open: { sled_push:152, sled_pull:103, farmers:24, sandbag:20, wallball:6, wallH:"3m" },
+                F_open: { sled_push:102, sled_pull:78,  farmers:16, sandbag:10, wallball:4, wallH:"2.70m" },
+                H_pro:  { sled_push:202, sled_pull:153, farmers:32, sandbag:30, wallball:9, wallH:"3m" },
+                F_pro:  { sled_push:152, sled_pull:103, farmers:24, sandbag:20, wallball:6, wallH:"2.70m" },
+              };
+              // En duo mixte, la charge officielle = celle des hommes (Open ou Pro selon la catégorie choisie)
+              const weightKey = `${sexe === "Mixte" ? "H" : sexe}_${categorie}`;
+              const w = WEIGHTS[weightKey];
+              const refW = WEIGHTS.H_open; // référence de calibration des temps de base
+
+              // HYROX: 8 runs de 1km + 8 stations
+              // Le temps de base par station est calibré sur Homme Open, puis ajusté :
+              // 1) par l'allure du coureur (paceFactor) 2) par la charge réelle de la division (loadFactor)
+              const paceFactor = Math.max(0.5, Math.min(2, paceTotalSec / 330)); // 5:30/km = facteur 1
+              const loadFactor = (weight, refWeight, exp) => Math.pow(weight / refWeight, exp);
               const STATIONS = [
-                { name:"SkiErg 1000m",    baseSec:210, icon:"🎿" },
-                { name:"Sled Push 50m",   baseSec:90,  icon:"🛷" },
-                { name:"Sled Pull 50m",   baseSec:105, icon:"🔗" },
-                { name:"Burpee BJ 80m",   baseSec:180, icon:"🔄" },
-                { name:"RowErg 1000m",    baseSec:240, icon:"🚣" },
-                { name:"Farmer's 200m",   baseSec:120, icon:"🧳" },
-                { name:"Sandbag 100m",    baseSec:150, icon:"🎒" },
-                { name:"Wall Balls ×75",  baseSec:240, icon:"🏀" },
+                { name:"SkiErg 1000m",     baseSec:210, icon:"🎿" },
+                { name:"Sled Push 50m",    baseSec:90,  icon:"🛷", loadKg:w.sled_push, refKg:refW.sled_push, exp:0.55 },
+                { name:"Sled Pull 50m",    baseSec:105, icon:"🔗", loadKg:w.sled_pull, refKg:refW.sled_pull, exp:0.55 },
+                { name:"Burpee BJ 80m",    baseSec:180, icon:"🔄" },
+                { name:"RowErg 1000m",     baseSec:240, icon:"🚣" },
+                { name:"Farmer's 200m",    baseSec:120, icon:"🧳", loadKg:w.farmers, refKg:refW.farmers, exp:0.45, perHand:true },
+                { name:"Sandbag 100m",     baseSec:150, icon:"🎒", loadKg:w.sandbag, refKg:refW.sandbag, exp:0.45 },
+                { name:"Wall Balls ×100",  baseSec:260, icon:"🏀", loadKg:w.wallball, refKg:refW.wallball, exp:0.30 },
               ];
-              const stationTimes = STATIONS.map(s => ({ ...s, sec: Math.round(s.baseSec * paceFactor) }));
+              const stationTimes = STATIONS.map(s => {
+                const lf = s.loadKg ? loadFactor(s.loadKg, s.refKg, s.exp) : 1;
+                return { ...s, sec: Math.round(s.baseSec * paceFactor * lf) };
+              });
               const totalStationSec = stationTimes.reduce((a,s) => a + s.sec, 0);
               const totalRunSec = paceTotalSec * 8;
               const totalRaceSec = totalRunSec + totalStationSec;
+
+              // ── Repères temps moyens / élite par division (données publiques HYROX 2024-2026) ──
+              const BENCH = {
+                H_open: { label:"Homme Open", elite:65*60, goodLo:65*60, goodHi:80*60, avg:85*60, beginner:105*60, wr:50*60+38, wrLabel:"A. Rončević" },
+                F_open: { label:"Femme Open", elite:70*60, goodLo:70*60, goodHi:85*60, avg:95*60, beginner:110*60, wr:55*60+38, wrLabel:"L. Weeks" },
+                H_pro:  { label:"Homme Pro",  elite:60*60, goodLo:60*60, goodHi:75*60, avg:82*60, beginner:null,   wr:51*60+59, wrLabel:"A. Rončević" },
+                F_pro:  { label:"Femme Pro",  elite:65*60, goodLo:65*60, goodHi:80*60, avg:88*60, beginner:null,   wr:54*60+25, wrLabel:"J. Wietrzyk" },
+              };
+              const benchKey = `${sexe === "Mixte" ? "H" : sexe}_${categorie}`;
+              const bench = BENCH[benchKey];
+              const DUO_WR = { open: null, pro: { H:48*60+31, F:54*60+24, Mixte:49*60+58 } };
+              const duoWr = format === "duo" ? DUO_WR[categorie]?.[sexe] ?? DUO_WR[categorie]?.H : null;
 
               // Target time mode
               const parseTarget = (t) => {
@@ -16239,16 +16272,45 @@ JSON:
                   <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1, marginBottom:12 }}>🏁 CALCULATEUR HYROX</div>
 
                   {/* Mode tabs */}
-                  <div style={{ display:"flex", gap:4, marginBottom:14, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:3 }}>
+                  <div style={{ display:"flex", gap:4, marginBottom:10, background:"rgba(255,255,255,0.04)", borderRadius:10, padding:3 }}>
                     {[
                       { id:"split", label:"Race Splits" },
                       { id:"target", label:"Objectif" },
                       { id:"zones", label:"Allures Z1-Z5" },
+                      { id:"bench", label:"Repères" },
                     ].map(m => (
-                      <button key={m.id} onClick={() => { setMode(m.id); }} style={{ flex:1, padding:"7px 4px", borderRadius:8, border:"none", cursor:"pointer", fontSize:11, fontWeight:700, transition:"all 0.2s",
+                      <button key={m.id} onClick={() => { setMode(m.id); }} style={{ flex:1, padding:"7px 2px", borderRadius:8, border:"none", cursor:"pointer", fontSize:10.5, fontWeight:700, transition:"all 0.2s",
                         background: mode === m.id ? "var(--yellow)" : "transparent",
                         color: mode === m.id ? "#000" : "#555",
                       }}>{m.label}</button>
+                    ))}
+                  </div>
+
+                  {/* Sélecteurs Format / Sexe / Catégorie — pilotent poids officiels + repères */}
+                  <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+                    <div style={{ flex:1, display:"flex", background:"rgba(255,255,255,0.04)", borderRadius:9, padding:2 }}>
+                      {[{v:"solo",l:"Solo"},{v:"duo",l:"Duo"}].map(f => (
+                        <button key={f.v} onClick={() => { setFormat(f.v); if (f.v === "solo" && sexe === "Mixte") setSexe("H"); }} style={{
+                          flex:1, padding:"6px 0", borderRadius:7, border:"none", cursor:"pointer", fontSize:10.5, fontWeight:700,
+                          background: format === f.v ? "#007AFF" : "transparent", color: format === f.v ? "#fff" : "#8E8E93", transition:"all 0.15s",
+                        }}>{f.l}</button>
+                      ))}
+                    </div>
+                    <div style={{ flex:1, display:"flex", background:"rgba(255,255,255,0.04)", borderRadius:9, padding:2 }}>
+                      {[{v:"open",l:"Open"},{v:"pro",l:"Pro"}].map(c => (
+                        <button key={c.v} onClick={() => setCategorie(c.v)} style={{
+                          flex:1, padding:"6px 0", borderRadius:7, border:"none", cursor:"pointer", fontSize:10.5, fontWeight:700,
+                          background: categorie === c.v ? "#BF5AF2" : "transparent", color: categorie === c.v ? "#fff" : "#8E8E93", transition:"all 0.15s",
+                        }}>{c.l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:6, marginBottom:14, background:"rgba(255,255,255,0.04)", borderRadius:9, padding:2 }}>
+                    {(format === "duo" ? [{v:"H",l:"♂ Homme"},{v:"F",l:"♀ Femme"},{v:"Mixte",l:"⚥ Mixte"}] : [{v:"H",l:"♂ Homme"},{v:"F",l:"♀ Femme"}]).map(s => (
+                      <button key={s.v} onClick={() => setSexe(s.v)} style={{
+                        flex:1, padding:"6px 0", borderRadius:7, border:"none", cursor:"pointer", fontSize:10.5, fontWeight:700,
+                        background: sexe === s.v ? "var(--yellow)" : "transparent", color: sexe === s.v ? "#000" : "#8E8E93", transition:"all 0.15s",
+                      }}>{s.l}</button>
                     ))}
                   </div>
 
@@ -16293,6 +16355,11 @@ JSON:
                           <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
                             <span style={{ fontSize:12 }}>{s.icon}</span>
                             <span style={{ fontSize:11, color:"#8E8E93", flex:1 }}>{s.name}</span>
+                            {s.loadKg && (
+                              <span style={{ fontSize:9, color:"#BF5AF2", background:"rgba(191,90,242,0.1)", borderRadius:6, padding:"1px 6px", fontWeight:700 }}>
+                                {s.perHand ? `2×${s.loadKg}kg` : `${s.loadKg}kg`}
+                              </span>
+                            )}
                             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"#FF9F0A" }}>{fmtPace(s.sec)}</span>
                           </div>
                         ))}
@@ -16302,8 +16369,79 @@ JSON:
                           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:13, color:"#30D158" }}>{fmtPace(paceTotalSec)}/km</span>
                         </div>
                       </div>
+                      <div style={{ marginTop:10, fontSize:9, color:"#8E8E93", lineHeight:1.5 }}>
+                        📋 Charges officielles {bench.label}{format === "duo" ? " (duo)" : ""} · Wall Balls cible {w.wallH}
+                      </div>
                     </div>
                   )}
+
+                  {/* BENCHMARK MODE — temps moyens & élite */}
+                  {mode === "bench" && (() => {
+                    const projected = totalRaceSec;
+                    const maxScale = (bench.beginner || bench.goodHi + 25*60);
+                    const posPct = (sec) => Math.min(100, Math.max(0, (sec / maxScale) * 100));
+                    const zones = [
+                      { from:0, to:bench.elite, label:"Élite", color:"#FF453A" },
+                      { from:bench.elite, to:bench.goodHi, label:"Compétitif", color:"#FF9F0A" },
+                      { from:bench.goodHi, to:bench.avg, label:"Moyenne", color:"#30D158" },
+                      { from:bench.avg, to:maxScale, label:"Découverte", color:"#38bdf8" },
+                    ];
+                    let userTier = zones[zones.length-1];
+                    for (const z of zones) { if (projected <= z.to) { userTier = z; break; } }
+                    return (
+                      <div>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                          <div style={{ fontSize:11, color:"#98989D" }}>Repères — <span style={{ color:"var(--yellow)", fontWeight:700 }}>{bench.label}{format === "duo" ? " · Duo" : ""}</span></div>
+                          <div style={{ fontSize:9, color:"#48484A" }}>Données publiques 2024–2026</div>
+                        </div>
+
+                        {/* Ton temps projeté */}
+                        <div style={{ background:`${userTier.color}12`, border:`1px solid ${userTier.color}30`, borderRadius:12, padding:"10px 12px", marginBottom:12, textAlign:"center" }}>
+                          <div style={{ fontSize:9, color:"#98989D", marginBottom:2 }}>Ton temps projeté</div>
+                          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color:userTier.color }}>{fmtRaceTime(projected)}</div>
+                          <div style={{ fontSize:10, color:userTier.color, fontWeight:700, marginTop:2 }}>Niveau {userTier.label}</div>
+                        </div>
+
+                        {/* Gauge — gauche = rapide (Élite) → droite = lent (Découverte) */}
+                        <div style={{ position:"relative", height:10, borderRadius:99, overflow:"hidden", display:"flex", marginBottom:6 }}>
+                          {zones.map(z => (
+                            <div key={z.label} style={{ flex: Math.max(1, z.to - z.from), background:z.color, opacity:0.7 }} />
+                          ))}
+                          <div style={{ position:"absolute", left:`${posPct(projected)}%`, top:-3, width:2, height:16, background:"#fff", boxShadow:"0 0 6px rgba(255,255,255,0.8)" }} />
+                        </div>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:8, color:"#8E8E93", marginBottom:14 }}>
+                          <span>Élite</span><span>Compétitif</span><span>Moyenne</span><span>Découverte</span>
+                        </div>
+
+                        {/* Repères chiffrés */}
+                        <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12 }}>
+                          {[
+                            { label:`🏆 Record du monde (${bench.wrLabel})`, val: fmtRaceTime(bench.wr), color:"#FF453A" },
+                            { label:"⚡ Temps Élite (podium)", val: `< ${fmtRaceTime(bench.elite)}`, color:"#FF9F0A" },
+                            { label:"💪 Temps compétitif", val: `${fmtRaceTime(bench.goodLo)} – ${fmtRaceTime(bench.goodHi)}`, color:"#30D158" },
+                            { label:"📊 Moyenne mondiale", val: `~${fmtRaceTime(bench.avg)}`, color:"#38bdf8" },
+                          ].map(r => (
+                            <div key={r.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 10px", background:"rgba(255,255,255,0.03)", borderRadius:8 }}>
+                              <span style={{ fontSize:10.5, color:"#8E8E93" }}>{r.label}</span>
+                              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:r.color }}>{r.val}</span>
+                            </div>
+                          ))}
+                          {format === "duo" && duoWr && (
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 10px", background:"rgba(191,90,242,0.08)", borderRadius:8, border:"1px solid rgba(191,90,242,0.2)" }}>
+                              <span style={{ fontSize:10.5, color:"#BF5AF2" }}>🥇 Record du monde Duo {categorie === "pro" ? "Pro" : "Open"}</span>
+                              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"#BF5AF2" }}>{fmtRaceTime(duoWr)}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {format === "duo" && (
+                          <div style={{ background:"rgba(191,90,242,0.06)", border:"1px solid rgba(191,90,242,0.15)", borderRadius:10, padding:"8px 10px", fontSize:10, color:"#8E8E93", lineHeight:1.5 }}>
+                            💡 En duo, le temps d'équipe dépend de votre répartition du travail entre partenaires — ce calculateur estime ta portion individuelle à l'allure indiquée.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* TARGET MODE */}
                   {mode === "target" && (
