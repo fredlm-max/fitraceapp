@@ -1522,7 +1522,12 @@ function LoginScreen({ onLogin }) {
       if (hash !== userData.hash) { setError("Mot de passe incorrect."); setLoading(false); return; }
       // Mémoriser l'email pour pré-remplir
       try { localStorage.setItem("fitrace_last_email", email.trim().toLowerCase()); } catch {}
-      await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
+      const sessionOk = await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
+      if (!sessionOk) {
+        setError("Ton navigateur bloque le stockage local (navigation privée ou mémoire pleine) — la connexion ne restera pas active après un rechargement.");
+        setLoading(false);
+        return;
+      }
       onLogin("athlete", userData.name, userData.email);
     } catch (e) { setError("Erreur de connexion."); }
     setLoading(false);
