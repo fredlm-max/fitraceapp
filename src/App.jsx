@@ -46883,7 +46883,14 @@ export default function App() {
     setProfile(updatedProfile);
     setNeedTests(false);
     const email = user?.email || updatedProfile.email;
-    if (email) await athleteBackend.saveProfile(email, { ...updatedProfile, email, onboardingComplete: true });
+    if (!email) return;
+    try {
+      await athleteBackend.saveProfile(email, { ...updatedProfile, email, onboardingComplete: true });
+      if (globalSaveError) setGlobalSaveError("");
+    } catch (e) {
+      console.error("Erreur sauvegarde après batterie de tests:", e, "email:", email);
+      setGlobalSaveError("⚠️ Tes résultats de tests n'ont pas pu être sauvegardés en ligne (connexion internet ?). Ils restent sur cet appareil — réessaie dès que possible.");
+    }
   }
 
   if (loading) return (
