@@ -1918,7 +1918,13 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
       await athleteBackend.saveProfile(athleteEmail, finalProfile);
       currentAthleteEmail = athleteEmail; // active la synchro cloud pour nutrition/sommeil/etc. dès maintenant
     } catch (e) {
-      setSaveError("⚠️ Impossible d'enregistrer ton profil (connexion internet ?). Réessaie.");
+      console.error("finishOnboarding saveProfile error:", e, "email utilisé:", athleteEmail);
+      const msg = e?.message || "";
+      if (msg.includes("unknown_account")) {
+        setSaveError("⚠️ Ton compte n'a pas été retrouvé côté serveur. Reviens à l'écran de connexion et recrée un compte, ou réessaie dans quelques secondes.");
+      } else {
+        setSaveError("⚠️ Impossible d'enregistrer ton profil (connexion internet ?). Réessaie.");
+      }
       return;
     }
     // Onboarding terminé : le brouillon n'est plus nécessaire
