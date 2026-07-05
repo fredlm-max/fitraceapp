@@ -46825,6 +46825,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needTests, setNeedTests] = useState(false);
+  const [globalSaveError, setGlobalSaveError] = useState("");
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -46929,9 +46930,22 @@ export default function App() {
       onUpdateProfile={async (updated) => {
         setProfile(updated);
         const email = user?.email || updated.email;
-        if (email) await athleteBackend.saveProfile(email, { ...updated, email });
+        if (!email) return;
+        try {
+          await athleteBackend.saveProfile(email, { ...updated, email });
+          if (globalSaveError) setGlobalSaveError("");
+        } catch (e) {
+          console.error("Erreur sauvegarde profil:", e, "email:", email);
+          setGlobalSaveError("⚠️ Tes dernières modifications n'ont pas pu être sauvegardées en ligne (connexion internet ?). Elles restent sur cet appareil — réessaie dès que possible.");
+        }
       }}
     />
+    {globalSaveError && (
+      <div onClick={() => setGlobalSaveError("")} style={{ position: "fixed", left: 12, right: 12, bottom: "max(env(safe-area-inset-bottom, 90px), 90px)", zIndex: 999, background: "rgba(255,69,58,0.95)", color: "#fff", padding: "12px 16px", borderRadius: 14, fontSize: 13, lineHeight: 1.4, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", cursor: "pointer" }}>
+        {globalSaveError}
+        <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4 }}>Toucher pour fermer</div>
+      </div>
+    )}
     </ErrorBoundary>
   );
 }
