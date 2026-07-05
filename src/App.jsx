@@ -182,8 +182,10 @@ const storage = {
   async set(key, value) {
     try {
       localStorage.setItem("fitrace_" + key, JSON.stringify(value));
+      return true;
     } catch (e) {
       console.error("Storage set error:", e);
+      return false; // quota dépassé, navigation privée, stockage désactivé...
     }
   },
   async list(prefix) {
@@ -1344,10 +1346,15 @@ function Card({ children, style, onClick }) {
 
 function Input({ label, value, onChange, type = "text", placeholder, style, min, max, step }) {
   const [focused, setFocused] = useState(false);
+  // Email/mot de passe : évite que Safari iOS auto-capitalise/corrige la 1re lettre,
+  // ce qui peut faire échouer silencieusement la comparaison email/hash au login.
+  const isAuthField = type === "email" || type === "password";
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {label && <label style={{ fontSize: 12, color: "#8E8E93", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</label>}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} min={min} max={max} step={step}
+        autoCapitalize={isAuthField ? "none" : undefined} autoCorrect={isAuthField ? "off" : undefined} spellCheck={isAuthField ? false : undefined}
+        autoComplete={type === "email" ? "email" : type === "password" ? "current-password" : undefined}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
         style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${focused ? "rgba(201,168,64,0.6)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, padding: "10px 14px", color: "var(--white)", fontSize: 15, width: "100%", outline: "none", boxShadow: focused ? "0 0 0 3px rgba(201,168,64,0.15)" : "none", transition: "border-color 0.2s, box-shadow 0.2s", ...style }} />
     </div>
@@ -1467,12 +1474,35 @@ function LoginScreen({ onLogin }) {
     if (!email.trim() || !password || !name.trim()) return;
     setLoading(true); setError("");
     try {
+      // Vérifier d'abord que le stockage local est bien accessible (navigation privée,
+      // quota plein... sinon le compte semblerait créé mais ne survivrait jamais à un rechargement)
+      try {
+        localStorage.setItem("fitrace_storage_test", "1");
+        localStorage.removeItem("fitrace_storage_test");
+      } catch {
+        setError("Ton navigateur bloque le stockage local (navigation privée ou mémoire pleine) — le compte ne pourra pas être sauvegardé. Essaie hors navigation privée ou libère de l'espace.");
+        setLoading(false);
+        return;
+      }
+
       const key = `user_${email.trim().toLowerCase()}`;
       const existing = await storage.get(key);
       if (existing) { setError("Un compte existe déjà avec cet email."); setLoading(false); return; }
       const hash = await hashPassword(password);
       const userData = { email: email.trim().toLowerCase(), name: name.trim(), hash, createdAt: new Date().toISOString() };
-      await storage.set(key, userData);
+      const savedOk = await storage.set(key, userData);
+      if (!savedOk) {
+        setError("Impossible d'enregistrer ton compte sur cet appareil (stockage plein ou bloqué). Libère de l'espace et réessaie.");
+        setLoading(false);
+        return;
+      }
+      // Vérification immédiate : relire ce qu'on vient d'écrire pour être sûr que ça a bien pris
+      const verify = await storage.get(key);
+      if (!verify || verify.hash !== hash) {
+        setError("La création du compte a échoué de façon inattendue. Réessaie.");
+        setLoading(false);
+        return;
+      }
       // Mémoriser l'email pour pré-remplir
       try { localStorage.setItem("fitrace_last_email", email.trim().toLowerCase()); } catch {}
       await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
@@ -1647,6 +1677,7 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
   const [showWelcome, setShowWelcome] = useState(!draft);
   const [step, setStep] = useState(draft?.step || 0);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [profile, setProfile] = useState(draft?.profile || {
     name: athleteName || "", poids: "", age: "", sexe: "homme", raceDate: "",
     niveauRessenti: "intermédiaire", dejaFaitHyrox: "non", previousChrono: "", previousDate: "",
@@ -1806,6 +1837,7 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
   }
 
   async function finishOnboarding(skipTests = false) {
+    setSaveError("");
     const finalProfile = {
       ...profile,
       email: athleteEmail || profile.email || "",
@@ -1815,7 +1847,14 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
     };
     // Sauvegarder avec email si disponible, sinon par nom
     const key = athleteEmail ? `athlete_email_${athleteEmail}` : `athlete_${athleteName}`;
-    await storage.set(key, finalProfile);
+    const savedOk = await storage.set(key, finalProfile);
+    // Vérification immédiate — si l'écriture a échoué (stockage plein/bloqué), on prévient
+    // au lieu de laisser croire que le compte est prêt alors qu'il ne survivra pas à un reload
+    const verify = savedOk ? await storage.get(key) : null;
+    if (!savedOk || !verify) {
+      setSaveError("⚠️ Impossible d'enregistrer ton profil sur cet appareil (stockage plein ou navigation privée). Libère de l'espace de stockage puis réessaie — sinon tes données seront perdues au prochain redémarrage.");
+      return;
+    }
     // Onboarding terminé : le brouillon n'est plus nécessaire
     try { localStorage.removeItem(draftKey); } catch {}
     // Mettre à jour la session avec le bon email
@@ -2085,6 +2124,11 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
             {/* Option batterie de tests */}
             {!loading && (
               <div className="fade-in">
+                {saveError && (
+                  <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 12, padding: "12px 14px", color: "#ff6b6b", fontSize: 12.5, lineHeight: 1.5, marginBottom: 12 }}>
+                    {saveError}
+                  </div>
+                )}
                 <div style={{ background: "rgba(201,168,64,0.04)", border: "1px solid rgba(201,168,64,0.15)", borderRadius: 14, padding: "16px", marginBottom: 12 }}>
                   <div className="bebas" style={{ fontSize: 17, color: "var(--yellow)", marginBottom: 6 }}>🧪 CALIBRER TON PROGRAMME</div>
                   <div style={{ fontSize: 13, color: "#AEAEB2", lineHeight: 1.6, marginBottom: 12 }}>
