@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, Component } from "react";
+import { supabase } from "./supabaseClient";
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -204,6 +205,41 @@ const storage = {
   async del(key) {
     try { localStorage.removeItem("fitrace_" + key); } catch {}
   }
+};
+
+// ============================================================
+// COMPTES & PROFILS ATHLÈTES — Supabase (partagé entre appareils)
+// Remplace le stockage localStorage pour l'identité/le profil de l'athlète
+// afin que le mode Coach puisse voir tous les athlètes, peu importe
+// l'appareil où ils se sont inscrits. Tout le reste (nutrition, sommeil,
+// planning, préférences UI...) reste en localStorage via `storage` ci-dessus.
+// ============================================================
+const athleteBackend = {
+  async signup(email, name, password) {
+    const { error } = await supabase.rpc("signup_athlete", { p_email: email, p_name: name, p_password: password });
+    if (error) throw error;
+  },
+  async login(email, password) {
+    const { data, error } = await supabase.rpc("login_athlete", { p_email: email, p_password: password });
+    if (error) throw error;
+    return data; // { email, name }
+  },
+  async saveProfile(email, profile) {
+    if (!email) throw new Error("saveProfile appelé sans email");
+    const { error } = await supabase.rpc("save_athlete_profile", { p_email: email, p_profile: profile });
+    if (error) throw error;
+    return true;
+  },
+  async getProfile(email) {
+    const { data, error } = await supabase.rpc("get_athlete_profile", { p_email: email });
+    if (error) throw error;
+    return data || null;
+  },
+  async listAthletes() {
+    const { data, error } = await supabase.from("athlete_directory").select("email, profile, updated_at");
+    if (error) throw error;
+    return (data || []).map(row => ({ ...(row.profile || {}), email: row.email, _updatedAt: row.updated_at }));
+  },
 };
 
 // ============================================================
@@ -1451,14 +1487,6 @@ function FitnessScoreCard({ profile }) {
 // ============================================================
 const COACH_CODE = "FITRACE2025";
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + "fitrace_salt_2025");
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("choose"); // choose | login | register | coach
   const [email, setEmail] = useState(() => {
@@ -1474,40 +1502,18 @@ function LoginScreen({ onLogin }) {
     if (!email.trim() || !password || !name.trim()) return;
     setLoading(true); setError("");
     try {
-      // Vérifier d'abord que le stockage local est bien accessible (navigation privée,
-      // quota plein... sinon le compte semblerait créé mais ne survivrait jamais à un rechargement)
-      try {
-        localStorage.setItem("fitrace_storage_test", "1");
-        localStorage.removeItem("fitrace_storage_test");
-      } catch {
-        setError("Ton navigateur bloque le stockage local (navigation privée ou mémoire pleine) — le compte ne pourra pas être sauvegardé. Essaie hors navigation privée ou libère de l'espace.");
-        setLoading(false);
-        return;
-      }
-
-      const key = `user_${email.trim().toLowerCase()}`;
-      const existing = await storage.get(key);
-      if (existing) { setError("Un compte existe déjà avec cet email."); setLoading(false); return; }
-      const hash = await hashPassword(password);
-      const userData = { email: email.trim().toLowerCase(), name: name.trim(), hash, createdAt: new Date().toISOString() };
-      const savedOk = await storage.set(key, userData);
-      if (!savedOk) {
-        setError("Impossible d'enregistrer ton compte sur cet appareil (stockage plein ou bloqué). Libère de l'espace et réessaie.");
-        setLoading(false);
-        return;
-      }
-      // Vérification immédiate : relire ce qu'on vient d'écrire pour être sûr que ça a bien pris
-      const verify = await storage.get(key);
-      if (!verify || verify.hash !== hash) {
-        setError("La création du compte a échoué de façon inattendue. Réessaie.");
-        setLoading(false);
-        return;
-      }
-      // Mémoriser l'email pour pré-remplir
-      try { localStorage.setItem("fitrace_last_email", email.trim().toLowerCase()); } catch {}
-      await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
-      onLogin("athlete", name.trim(), email.trim().toLowerCase());
-    } catch (e) { setError("Erreur lors de l'inscription."); }
+      const cleanEmail = email.trim().toLowerCase();
+      await athleteBackend.signup(cleanEmail, name.trim(), password);
+      // Mémoriser l'email pour pré-remplir (confort local, pas la source de vérité)
+      try { localStorage.setItem("fitrace_last_email", cleanEmail); } catch {}
+      await storage.set("session_current", { email: cleanEmail, name: name.trim(), role: "athlete", loginAt: new Date().toISOString() });
+      onLogin("athlete", name.trim(), cleanEmail);
+    } catch (e) {
+      const msg = e?.message || "";
+      if (msg.includes("account_exists")) setError("Un compte existe déjà avec cet email.");
+      else if (msg.includes("invalid_input")) setError("Email invalide ou mot de passe trop court (min. 6 caractères).");
+      else setError("Erreur lors de l'inscription. Vérifie ta connexion internet et réessaie.");
+    }
     setLoading(false);
   }
 
@@ -1515,21 +1521,23 @@ function LoginScreen({ onLogin }) {
     if (!email.trim() || !password) return;
     setLoading(true); setError("");
     try {
-      const key = `user_${email.trim().toLowerCase()}`;
-      const userData = await storage.get(key);
-      if (!userData) { setError("Aucun compte trouvé avec cet email."); setLoading(false); return; }
-      const hash = await hashPassword(password);
-      if (hash !== userData.hash) { setError("Mot de passe incorrect."); setLoading(false); return; }
+      const cleanEmail = email.trim().toLowerCase();
+      const account = await athleteBackend.login(cleanEmail, password);
       // Mémoriser l'email pour pré-remplir
-      try { localStorage.setItem("fitrace_last_email", email.trim().toLowerCase()); } catch {}
-      const sessionOk = await storage.set("session_current", { email: userData.email, name: userData.name, role: "athlete", loginAt: new Date().toISOString() });
+      try { localStorage.setItem("fitrace_last_email", cleanEmail); } catch {}
+      const sessionOk = await storage.set("session_current", { email: account.email, name: account.name, role: "athlete", loginAt: new Date().toISOString() });
       if (!sessionOk) {
         setError("Ton navigateur bloque le stockage local (navigation privée ou mémoire pleine) — la connexion ne restera pas active après un rechargement.");
         setLoading(false);
         return;
       }
-      onLogin("athlete", userData.name, userData.email);
-    } catch (e) { setError("Erreur de connexion."); }
+      onLogin("athlete", account.name, account.email);
+    } catch (e) {
+      const msg = e?.message || "";
+      if (msg.includes("not_found")) setError("Aucun compte trouvé avec cet email.");
+      else if (msg.includes("bad_password")) setError("Mot de passe incorrect.");
+      else setError("Erreur de connexion. Vérifie ta connexion internet et réessaie.");
+    }
     setLoading(false);
   }
 
@@ -1843,29 +1851,27 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
 
   async function finishOnboarding(skipTests = false) {
     setSaveError("");
+    if (!athleteEmail) {
+      setSaveError("⚠️ Email manquant — impossible d'enregistrer ton profil. Reconnecte-toi puis réessaie.");
+      return;
+    }
     const finalProfile = {
       ...profile,
-      email: athleteEmail || profile.email || "",
+      email: athleteEmail,
       createdAt: new Date().toISOString(),
       tests: {}, sessions: [], adaptations: [], alerts: [], week: 1,
       onboardingComplete: skipTests, // false = lance la batterie, true = passe directement
     };
-    // Sauvegarder avec email si disponible, sinon par nom
-    const key = athleteEmail ? `athlete_email_${athleteEmail}` : `athlete_${athleteName}`;
-    const savedOk = await storage.set(key, finalProfile);
-    // Vérification immédiate — si l'écriture a échoué (stockage plein/bloqué), on prévient
-    // au lieu de laisser croire que le compte est prêt alors qu'il ne survivra pas à un reload
-    const verify = savedOk ? await storage.get(key) : null;
-    if (!savedOk || !verify) {
-      setSaveError("⚠️ Impossible d'enregistrer ton profil sur cet appareil (stockage plein ou navigation privée). Libère de l'espace de stockage puis réessaie — sinon tes données seront perdues au prochain redémarrage.");
+    try {
+      await athleteBackend.saveProfile(athleteEmail, finalProfile);
+    } catch (e) {
+      setSaveError("⚠️ Impossible d'enregistrer ton profil (connexion internet ?). Réessaie.");
       return;
     }
     // Onboarding terminé : le brouillon n'est plus nécessaire
     try { localStorage.removeItem(draftKey); } catch {}
     // Mettre à jour la session avec le bon email
-    if (athleteEmail) {
-      await storage.set("session_current", { email: athleteEmail, name: athleteName, role: "athlete", loginAt: new Date().toISOString() });
-    }
+    await storage.set("session_current", { email: athleteEmail, name: athleteName, role: "athlete", loginAt: new Date().toISOString() });
     onComplete(finalProfile);
   }
 
@@ -2214,8 +2220,7 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
       const jAvant = profile.raceDate ? Math.max(0, Math.ceil((new Date(profile.raceDate) - new Date()) / (1000*60*60*24))) : null;
       const aiProf = await callClaude("Tu es coach HYROX expert. 150 mots max, en français.", `Profil pour ${profile.name}, ${profile.age}ans, ${profile.poids}kg, ${profile.sexe}. Objectif: ${profile.objectifPrincipal || "hyrox"} ${profile.hyroxCategorie || ""}. Niveau ${parsed.level}/4. VMA:${parsed.vmaKmh || vma}km/h | Squat:${parsed.squat1RM || squat1RM}kg. Aujourd'hui:${today}${jAvant !== null ? ` | J-${jAvant} avant la course` : ""}. Analyse courte et encourageante avec objectif réaliste. Emojis.`);
       const updatedProfile = { ...profile, tests: { ...results, analyzed: true }, level: parsed.level, vmaKmh: parsed.vmaKmh || vma, squat1RM_final: parsed.squat1RM || squat1RM, deadlift1RM_final: parsed.deadlift1RM || dl1RM, levelAnalysis: parsed, onboardingComplete: true, fcMax: fcMax, fcMin: fcMin, aiProfile: aiProf || "" };
-      const saveKey = profile.email ? `athlete_email_${profile.email}` : `athlete_${profile.name}`;
-      await storage.set(saveKey, updatedProfile);
+      if (profile.email) await athleteBackend.saveProfile(profile.email, updatedProfile);
     } catch (e) { console.error(e, raw); }
     setLoading(false);
   }
@@ -4157,7 +4162,6 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
     // Sauvegarder le streak dans le profil si changé
     if (current !== profile.streak) {
       const updated = { ...profile, streak: current, bestStreak: Math.max(profile.bestStreak || 0, current) };
-      await storage.set(`athlete_${profile.name}`, updated);
       onUpdateProfile(updated);
       // Détecter les jalons de streak
       const MILESTONES = [
@@ -5118,9 +5122,7 @@ JSON:
           }]
         : (profile.alerts || []);
 
-      const updated = { ...profile, sessions: newSessions, adaptations: newAdaptations, alerts: newAlerts };
-      const storageKey = (profile.email || user?.email) ? `athlete_email_${profile.email || user?.email}` : `athlete_${profile.name}`;
-      await storage.set(storageKey, { ...updated, email: profile.email || user?.email });
+      const updated = { ...profile, sessions: newSessions, adaptations: newAdaptations, alerts: newAlerts, email: profile.email || user?.email };
       onUpdateProfile(updated);
       setTimeout(() => calcStreak(), 500);
 
@@ -26678,7 +26680,6 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
   async function saveProfile() {
     const updated = { ...profile, ...form };
-    await storage.set(`athlete_${profile.name}`, updated);
     onUpdateProfile(updated);
     setEditing(false);
   }
@@ -26839,7 +26840,6 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         const GOAL_LEVELS = ["Sub 1h00","Sub 1h15","Sub 1h30","Sub 1h45","Sub 2h00","Finisher"];
         async function saveGoals() {
           const updated = { ...profile, goalTargetTime: goals.targetTime, goalWeakStation: goals.weakStation, goalTargetLevel: goals.targetLevel };
-          await storage.set(`athlete_${profile.name}`, updated);
           onUpdateProfile(updated);
           setEditGoals(false);
         }
@@ -46429,9 +46429,13 @@ function CoachApp() {
 
   async function loadAthletes() {
     setLoading(true);
-    const keys = await storage.list("athlete_");
-    const data = await Promise.all(keys.map(k => storage.get(k)));
-    setAthletes(data.filter(Boolean));
+    try {
+      const data = await athleteBackend.listAthletes();
+      setAthletes(data.filter(Boolean));
+    } catch (e) {
+      console.error("Erreur chargement athlètes:", e);
+      setAthletes([]);
+    }
     setLoading(false);
   }
 
@@ -46587,7 +46591,7 @@ function CoachApp() {
           <div className="fade-in">
             {selected ? (
               <AthleteDetail athlete={selected} onBack={() => setSelected(null)} onUpdate={async (updated) => {
-                await storage.set(`athlete_${updated.name}`, updated);
+                if (updated.email) await athleteBackend.saveProfile(updated.email, updated);
                 setSelected(updated);
                 loadAthletes();
               }} />
@@ -46775,27 +46779,13 @@ export default function App() {
     storage.get("session_current").then(async session => {
       if (session && session.role === "athlete") {
         try {
-          let existing = null;
-          // 1. Chercher par email
-          if (session.email) {
-            existing = await storage.get(`athlete_email_${session.email}`);
-          }
-          // 2. Fallback par nom
-          if (!existing && session.name) {
-            existing = await storage.get(`athlete_${session.name}`);
-          }
-          // 3. Si trouvé, restaurer la session
+          const existing = session.email ? await athleteBackend.getProfile(session.email) : null;
           if (existing) {
-            // S'assurer que l'email est dans le profil
-            if (session.email && !existing.email) {
-              existing = { ...existing, email: session.email };
-              await storage.set(`athlete_email_${session.email}`, existing);
-            }
             setProfile(existing);
             setNeedTests(!existing.onboardingComplete);
-            setUser({ role: "athlete", name: session.name || existing.name, email: session.email || existing.email });
+            setUser({ role: "athlete", name: session.name || existing.name, email: session.email });
           } else if (session.email) {
-            // Session existe mais profil perdu — relancer l'onboarding avec les infos connues
+            // Session existe mais profil pas encore créé (onboarding jamais terminé) — relancer l'onboarding
             setUser({ role: "athlete", name: session.name || "", email: session.email });
           }
         } catch (e) { console.error("Session restore error:", e); }
@@ -46808,15 +46798,8 @@ export default function App() {
 
   async function handleLogin(role, name, email) {
     if (role === "coach") { setUser({ role: "coach", name }); return; }
-
-    // Clé basée sur email si disponible
-    const key = email ? `athlete_email_${email}` : `athlete_${name}`;
-    let existing = await storage.get(key);
+    const existing = email ? await athleteBackend.getProfile(email) : null;
     if (existing) {
-      if (email && !existing.email) {
-        existing = { ...existing, email };
-        await storage.set(key, existing);
-      }
       setProfile(existing);
       setNeedTests(!existing.onboardingComplete);
     }
@@ -46836,11 +46819,8 @@ export default function App() {
   async function handleTestsComplete(updatedProfile) {
     setProfile(updatedProfile);
     setNeedTests(false);
-    // Sauvegarder les résultats de tests en localStorage
-    const key = (user?.email || updatedProfile.email)
-      ? `athlete_email_${user?.email || updatedProfile.email}`
-      : `athlete_${updatedProfile.name}`;
-    await storage.set(key, { ...updatedProfile, onboardingComplete: true });
+    const email = user?.email || updatedProfile.email;
+    if (email) await athleteBackend.saveProfile(email, { ...updatedProfile, email, onboardingComplete: true });
   }
 
   if (loading) return (
@@ -46886,8 +46866,8 @@ export default function App() {
       onLogout={handleLogout}
       onUpdateProfile={async (updated) => {
         setProfile(updated);
-        const key = (user?.email || updated.email) ? `athlete_email_${user?.email || updated.email}` : `athlete_${updated.name}`;
-        await storage.set(key, { ...updated, email: user?.email || updated.email });
+        const email = user?.email || updated.email;
+        if (email) await athleteBackend.saveProfile(email, { ...updated, email });
       }}
     />
     </ErrorBoundary>
