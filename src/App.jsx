@@ -183,6 +183,10 @@ const storage = {
   async set(key, value) {
     try {
       localStorage.setItem("fitrace_" + key, JSON.stringify(value));
+      // Synchro cloud transparente (sauf le pointeur de session, purement local à l'appareil)
+      if (key !== "session_current" && typeof currentAthleteEmail !== "undefined" && currentAthleteEmail) {
+        athleteKV.push(currentAthleteEmail, "fitrace_" + key, value);
+      }
       return true;
     } catch (e) {
       console.error("Storage set error:", e);
@@ -241,6 +245,54 @@ const athleteBackend = {
     return (data || []).map(row => ({ ...(row.profile || {}), email: row.email, _updatedAt: row.updated_at }));
   },
 };
+
+// ============================================================
+// DONNÉES ATHLÈTE SECONDAIRES (nutrition, sommeil, douleurs, records...)
+// — synchronisation cloud transparente par-dessus localStorage —
+// Les lectures existantes (localStorage.getItem, inchangées) continuent de
+// fonctionner exactement comme avant. `syncedStorage.set` écrit en local
+// (identique à aujourd'hui) ET pousse une copie vers Supabase en arrière-plan,
+// pour que ces données survivent au changement d'appareil et soient visibles
+// par le coach. `hydrateFromCloud` est appelée une fois après connexion pour
+// rapatrier ces données AVANT que le reste de l'app ne les lise.
+// ============================================================
+let currentAthleteEmail = null;
+
+const athleteKV = {
+  async pullAll(email) {
+    const { data, error } = await supabase.rpc("kv_pull_all", { p_email: email });
+    if (error) throw error;
+    return data || []; // [{ key, value }, ...]
+  },
+  push(email, key, value) {
+    if (!email) return;
+    // Fire-and-forget — ne bloque jamais l'UI, échoue silencieusement hors-ligne
+    supabase.rpc("kv_push", { p_email: email, p_key: key, p_value: value }).then(({ error }) => {
+      if (error) console.error("Sync cloud échouée pour", key, error);
+    });
+  },
+};
+
+const syncedStorage = {
+  // Remplace syncedStorage.set(key, value) — même effet local,
+  // plus une synchronisation cloud en arrière-plan.
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error("localStorage set error:", e); }
+    if (currentAthleteEmail) athleteKV.push(currentAthleteEmail, key, value);
+  },
+};
+
+async function hydrateFromCloud(email) {
+  currentAthleteEmail = email;
+  try {
+    const rows = await athleteKV.pullAll(email);
+    for (const row of rows) {
+      try { localStorage.setItem(row.key, JSON.stringify(row.value)); } catch {}
+    }
+  } catch (e) {
+    console.error("Hydratation cloud échouée:", e);
+  }
+}
 
 // ============================================================
 // CONSTANTES & HELPERS
@@ -1864,6 +1916,7 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
     };
     try {
       await athleteBackend.saveProfile(athleteEmail, finalProfile);
+      currentAthleteEmail = athleteEmail; // active la synchro cloud pour nutrition/sommeil/etc. dès maintenant
     } catch (e) {
       setSaveError("⚠️ Impossible d'enregistrer ton profil (connexion internet ?). Réessaie.");
       return;
@@ -5152,7 +5205,7 @@ JSON:
             prs[key] = { value: est1RM, date: new Date().toISOString(), nom: e.nom };
           }
         });
-        localStorage.setItem(prKey, JSON.stringify(prs));
+        syncedStorage.set(prKey, prs);
         if (newPRs.length > 0) {
           setTimeout(() => {
             newPRs.forEach((pr, i) => setTimeout(() =>
@@ -7604,7 +7657,7 @@ JSON:
                 try {
                   const all = JSON.parse(localStorage.getItem(KEY_CIN)||"{}");
                   all[todayStr] = entry;
-                  localStorage.setItem(KEY_CIN, JSON.stringify(all));
+                  syncedStorage.set(KEY_CIN, all);
                 } catch {}
               };
 
@@ -7735,7 +7788,7 @@ JSON:
                 const entry = { ...form, dur };
                 const next = { ...logs, [todayStr]: entry };
                 setLogs(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setEditing(false);
               };
 
@@ -7923,7 +7976,7 @@ JSON:
               const dismiss = (id) => {
                 const next = [...dismissed, id];
                 setDismissed(next);
-                localStorage.setItem(KEY_DISMISS, JSON.stringify(next));
+                syncedStorage.set(KEY_DISMISS, next);
               };
 
               // Compute metrics
@@ -8137,7 +8190,7 @@ JSON:
                 const filtered = log.filter(e => e.date !== form.date);
                 const next = [entry, ...filtered].sort((a,b) => b.date.localeCompare(a.date)).slice(0,90);
                 setLog(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setShowForm(false);
               };
 
@@ -8768,13 +8821,13 @@ JSON:
 
               const saveEau = (v) => {
                 setEau(v);
-                try { const all=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); all[todayStr]={...(all[todayStr]||{}),eau:v}; localStorage.setItem(KEY_QUICK,JSON.stringify(all)); } catch {}
+                try { const all=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); all[todayStr]={...(all[todayStr]||{}),eau:v}; syncedStorage.set(KEY_QUICK, all); } catch {}
               };
 
               const removeMeal = (id) => {
                 const next = meals.filter(m=>m.id!==id);
                 setMeals(next);
-                try { localStorage.setItem(MEAL_KEY, JSON.stringify(next)); } catch {}
+                try { syncedStorage.set(MEAL_KEY, next); } catch {}
               };
 
               return (
@@ -9457,7 +9510,7 @@ JSON:
               const toggleCheck = (i) => {
                 const next = { ...checked, [i]: !checked[i] };
                 setChecked(next);
-                localStorage.setItem(checklistKey, JSON.stringify(next));
+                syncedStorage.set(checklistKey, next);
               };
 
               const color = isRaceDay ? "#BF5AF2" : daysLeft <= 1 ? "#FF453A" : daysLeft <= 3 ? "#FF9F0A" : "#C9A840";
@@ -10189,7 +10242,7 @@ JSON:
                 if (Object.keys(entry).length <= 1) return;
                 const next = [...logs, entry];
                 setLogs(next);
-                try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+                try { syncedStorage.set(KEY, next); } catch {}
                 setShowForm(false);
                 setForm({ taille:"", poitrine:"", bras:"", cuisse:"", hanches:"" });
               };
@@ -11021,14 +11074,14 @@ JSON:
                 const entry = { ml, time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), id: Date.now() };
                 const updated = [...intake, entry];
                 setIntake(updated);
-                localStorage.setItem(hydKey, JSON.stringify(updated));
+                syncedStorage.set(hydKey, updated);
               };
 
               const removeLastEntry = () => {
                 if (intake.length === 0) return;
                 const updated = intake.slice(0, -1);
                 setIntake(updated);
-                localStorage.setItem(hydKey, JSON.stringify(updated));
+                syncedStorage.set(hydKey, updated);
               };
 
               const statusColor = pct >= 100 ? "#30D158" : pct >= 60 ? "var(--yellow)" : pct >= 30 ? "#FF9F0A" : "#FF453A";
@@ -11301,7 +11354,7 @@ JSON:
               const saveSleep = (h, q) => {
                 const updated = { ...sleepLog, [todayStr]: { hours: h, quality: q } };
                 setSleepLog(updated);
-                localStorage.setItem(sleepKey, JSON.stringify(updated));
+                syncedStorage.set(sleepKey, updated);
               };
 
               // Last 7 days
@@ -11501,7 +11554,7 @@ JSON:
                 const next = (current + 1) % 4; // 0=none, 1=mild, 2=moderate, 3=severe
                 const updated = { ...pain, [id]: next };
                 if (next === 0) delete updated[id];
-                setPain(updated); localStorage.setItem(painKey, JSON.stringify(updated));
+                setPain(updated); syncedStorage.set(painKey, updated);
               };
 
               const getPainColor = (level) => ["transparent", "#FF9F0A", "#FF6B35", "#FF453A"][level] || "transparent";
@@ -11567,7 +11620,7 @@ JSON:
               const save = () => {
                 const entry = { date: todayStr, mood, stress, energy, score: Math.round((mood + (6 - stress) + energy) / 3 * 10) / 10 };
                 const updated = [entry, ...log.filter(e => e.date !== todayStr)].slice(0, 30);
-                setLog(updated); localStorage.setItem(wellKey, JSON.stringify(updated)); setSaved(true);
+                setLog(updated); syncedStorage.set(wellKey, updated); setSaved(true);
               };
 
               const last7 = log.slice(0, 7).reverse();
@@ -11803,7 +11856,7 @@ JSON:
               const saveNote = (id, text) => {
                 const updated = { ...notes, [id]: text };
                 setNotes(updated);
-                localStorage.setItem(notesKey, JSON.stringify(updated));
+                syncedStorage.set(notesKey, updated);
                 setEditingId(null);
               };
 
@@ -12183,7 +12236,7 @@ JSON:
               const dayName = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"][new Date().getDay()];
 
               const markDone = () => {
-                localStorage.setItem(KEY, "true");
+                syncedStorage.set(KEY, "true");
                 setDone(true);
               };
 
@@ -12372,7 +12425,7 @@ JSON:
                 const next = Math.max(0, Math.min(challenge.target, (progress[challenge.id] || 0) + delta));
                 const updated = { ...progress, [challenge.id]: next };
                 setProgress(updated);
-                localStorage.setItem(KEY_PROGRESS, JSON.stringify(updated));
+                syncedStorage.set(KEY_PROGRESS, updated);
               };
 
               return (
@@ -12466,7 +12519,7 @@ JSON:
                 const entry = { ...form, date: today, savedAt: new Date().toISOString() };
                 const updated = { ...log, [today]: entry };
                 setLog(updated);
-                localStorage.setItem(KEY, JSON.stringify(updated));
+                syncedStorage.set(KEY, updated);
                 setSaving(false);
               };
 
@@ -12650,7 +12703,7 @@ JSON:
               const [showForm, setShowForm] = React.useState(false);
               const [form, setForm] = React.useState({ title: "", target: "", current: "0", unit: "", deadline: "" });
 
-              const save = (g) => { setGoals(g); localStorage.setItem(goalsKey, JSON.stringify(g)); };
+              const save = (g) => { setGoals(g); syncedStorage.set(goalsKey, g); };
 
               const addGoal = () => {
                 if (!form.title) return;
@@ -13002,7 +13055,7 @@ JSON:
                 const next = new Set(kudosSet);
                 if (next.has(id)) next.delete(id); else next.add(id);
                 setKudosSet(next);
-                localStorage.setItem(`fitrace_kudos_${profile.name}`, JSON.stringify([...next]));
+                syncedStorage.set(`fitrace_kudos_${profile.name}`, [...next]);
               };
 
               const typeEmoji = {
@@ -13222,7 +13275,7 @@ JSON:
                   const seen = new Set(JSON.parse(localStorage.getItem(prevKey)||"[]"));
                   const newOnes = unlocked.filter(b => !seen.has(b.id));
                   const allIds = BADGES.filter(b=>b.unlocked).map(b=>b.id);
-                  localStorage.setItem(prevKey, JSON.stringify(allIds));
+                  syncedStorage.set(prevKey, allIds);
                   return newOnes[0] || null;
                 } catch { return null; }
               });
@@ -13344,14 +13397,14 @@ JSON:
                 const filtered = entries.filter(e => e.id !== editing);
                 const next = [entry, ...filtered].slice(0, 100).sort((a,b) => b.date.localeCompare(a.date));
                 setEntries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setEditing(null);
               };
 
               const deleteEntry = (id) => {
                 const next = entries.filter(e => e.id !== id);
                 setEntries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
               };
 
               const editEntry = (e) => {
@@ -14083,7 +14136,7 @@ JSON:
               });
               const daysLeft = 7 - dayOfWeek + 1;
               function complete() {
-                try { localStorage.setItem(weekKey, "1"); } catch {}
+                try { syncedStorage.set(weekKey, "1"); } catch {}
                 setDefiDone(true);
               }
               return (
@@ -17327,7 +17380,7 @@ JSON:
               // If current not in history, add it
               if (!vmaHistory.find(h => h.date === today)) {
                 vmaHistory = [...vmaHistory, { date: today, vma: currentVma }].slice(-12);
-                try { localStorage.setItem(vmaHistKey, JSON.stringify(vmaHistory)); } catch {}
+                try { syncedStorage.set(vmaHistKey, vmaHistory); } catch {}
               }
 
               if (vmaHistory.length < 2) {
@@ -17523,7 +17576,7 @@ JSON:
                 const today = new Date().toISOString().slice(0, 10);
                 const next = [...sleepLog.filter(e => e.date !== today), { date: today, dur, quality }];
                 setSleepLog(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setShowForm(false);
               };
 
@@ -17846,7 +17899,7 @@ JSON:
                 entry.total = Object.values(entry.splits).reduce((a,b) => a+b, 0);
                 const updated = [entry, ...splits].slice(0, 20);
                 setSplits(updated);
-                localStorage.setItem(splitsKey, JSON.stringify(updated));
+                syncedStorage.set(splitsKey, updated);
                 setShowForm(false); setFormVals({});
               };
 
@@ -18208,7 +18261,7 @@ JSON:
 
               const getLevelColor = (level) => ({ "Excellent": "#30D158", "Très bon": "#34C759", "Bon": "#FF9F0A", "Moyen": "#FF6B35", "Insuffisant": "#FF453A" }[level] || "#636366");
 
-              const save = (l) => { setLog(l); localStorage.setItem(benchKey, JSON.stringify(l)); };
+              const save = (l) => { setLog(l); syncedStorage.set(benchKey, l); };
 
               const addResult = (testId) => {
                 if (!inputVal) return;
@@ -18294,7 +18347,7 @@ JSON:
               const [hr1min, setHr1min] = React.useState("");
               const [hrDate, setHrDate] = React.useState(new Date().toISOString().slice(0, 10));
 
-              const save = (log) => { setHrrLog(log); localStorage.setItem(hrrKey, JSON.stringify(log)); };
+              const save = (log) => { setHrrLog(log); syncedStorage.set(hrrKey, log); };
 
               const addEntry = () => {
                 const peak = parseInt(hrPeak), r1 = parseInt(hr1min);
@@ -18397,7 +18450,7 @@ JSON:
               const saveZoneSession = () => {
                 const next = [...hrZoneSessions, { date: hrZoneForm.date, minutes: hrZoneForm.minutes }];
                 setHrZoneSessions(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setHrZoneForm({ date: new Date().toISOString().slice(0,10), minutes: [0,0,0,0,0] });
                 setHrZoneView("stats");
               };
@@ -18505,7 +18558,7 @@ JSON:
               const addInjury = () => {
                 const next = [{ id:Date.now(), ...form }, ...injuries];
                 setInjuries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setShowForm(false);
                 setForm({ area:"Genou gauche", severity:2, status:"active", notes:"", date:new Date().toISOString().slice(0,10) });
               };
@@ -18513,13 +18566,13 @@ JSON:
               const updateStatus = (id, status) => {
                 const next = injuries.map(i => i.id===id ? {...i, status} : i);
                 setInjuries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
               };
 
               const removeInjury = (id) => {
                 const next = injuries.filter(i => i.id!==id);
                 setInjuries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
               };
 
               const activeCount = injuries.filter(i=>i.status==="active").length;
@@ -18614,7 +18667,7 @@ JSON:
               const [targetW, setTargetW] = React.useState(() => parseFloat(profile.poids) || 70);
               const [tab, setTab] = React.useState("chart");
 
-              const save = (arr) => { setEntries(arr); localStorage.setItem(KEY, JSON.stringify(arr)); };
+              const save = (arr) => { setEntries(arr); syncedStorage.set(KEY, arr); };
 
               const addEntry = () => {
                 if (!weight) return;
@@ -18904,14 +18957,14 @@ JSON:
                 const entry = { ml, label, time: new Date().toLocaleTimeString("fr", {hour:"2-digit",minute:"2-digit"}), id: Date.now() };
                 const updated = { ...log, [viewDate]: [...dayIntake, entry] };
                 setLog(updated);
-                localStorage.setItem(KEY, JSON.stringify(updated));
+                syncedStorage.set(KEY, updated);
               };
 
               const removeLast = () => {
                 if (!dayIntake.length) return;
                 const updated = { ...log, [viewDate]: dayIntake.slice(0,-1) };
                 setLog(updated);
-                localStorage.setItem(KEY, JSON.stringify(updated));
+                syncedStorage.set(KEY, updated);
               };
 
               const prevDay = () => { const d=new Date(viewDate); d.setDate(d.getDate()-1); setViewDate(d.toISOString().slice(0,10)); };
@@ -19742,7 +19795,7 @@ JSON:
                 const entry = { ...form, method, id: Date.now() };
                 const next = [entry, ...tests].slice(0,20);
                 setTests(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setShowForm(false);
               };
 
@@ -19955,7 +20008,7 @@ JSON:
                 if (!v || v < 8 || v > 30) return;
                 const updated = [...history, { date: newDate, vma: v, method: newMethod }].sort((a,b)=>new Date(a.date)-new Date(b.date));
                 setHistory(updated);
-                localStorage.setItem(vmaKey, JSON.stringify(updated));
+                syncedStorage.set(vmaKey, updated);
                 setShowAdd(false); setNewVma("");
               };
 
@@ -20612,7 +20665,7 @@ JSON:
               const saveLog = (entry) => {
                 const next = [entry, ...hrLog].slice(0, 200);
                 setHrLog(next);
-                localStorage.setItem(HRZ_LOG_KEY, JSON.stringify(next));
+                syncedStorage.set(HRZ_LOG_KEY, next);
                 setShowForm(false);
                 setForm({ date: new Date().toISOString().slice(0,10), duration:30, z1:0, z2:0, z3:0, z4:0, z5:0, label:"" });
               };
@@ -20620,7 +20673,7 @@ JSON:
               const saveHrMax = (val) => {
                 const next = { ...hrData, hrMax: val };
                 setHrData(next);
-                localStorage.setItem(HRZ_KEY, JSON.stringify(next));
+                syncedStorage.set(HRZ_KEY, next);
               };
 
               const fmtMin = (m) => m >= 60 ? `${Math.floor(m/60)}h${String(m%60).padStart(2,"0")}` : `${m}min`;
@@ -21245,7 +21298,7 @@ JSON:
                 if (!form.zone) return;
                 const next = [{ id: Date.now(), ...form, status:"active" }, ...injuries];
                 setInjuries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setShowForm(false);
                 setForm({ zone:"", severity:3, date: new Date().toISOString().slice(0,10), note:"" });
               };
@@ -21253,13 +21306,13 @@ JSON:
               const toggleStatus = (id) => {
                 const next = injuries.map(inj => inj.id === id ? { ...inj, status: inj.status==="active"?"recovered":"active" } : inj);
                 setInjuries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
               };
 
               const removeInj = (id) => {
                 const next = injuries.filter(i=>i.id!==id);
                 setInjuries(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
               };
 
               const active = injuries.filter(i=>i.status==="active");
@@ -21363,7 +21416,7 @@ JSON:
               const update = (id, val) => {
                 const updated = { ...tests, [id]: parseFloat(val) || 0 };
                 setTests(updated);
-                localStorage.setItem(mobKey, JSON.stringify(updated));
+                syncedStorage.set(mobKey, updated);
               };
 
               const score = TESTS.reduce((s, t) => {
@@ -21527,7 +21580,7 @@ JSON:
                 { name: "Objectif pré-course", target: 60, unit: "séances", type: "count", deadline: profile.raceDate || "" },
               ];
 
-              const saveChallenges = c => { setChallenges(c); localStorage.setItem(chalKey, JSON.stringify(c)); };
+              const saveChallenges = c => { setChallenges(c); syncedStorage.set(chalKey, c); };
 
               const getProgress = c => {
                 if (c.type === "count") return sessions.length;
@@ -21657,7 +21710,7 @@ JSON:
                   // Still log attempt even if not PR
                 }
                 setPrs(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setEditKey(null);
                 setEditVal("");
               };
@@ -21957,7 +22010,7 @@ JSON:
                 const entry = { ...form, id: Date.now(), addedAt: new Date().toISOString().slice(0,10) };
                 const next = [...gear, entry];
                 setGear(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
                 setShowForm(false);
                 setForm({ name:"", brand:"", model:"", type:"shoe", startKm:0, maxKm:700, color:"#FF6B35", acquired:"", notes:"" });
               };
@@ -21965,7 +22018,7 @@ JSON:
               const retireGear = (id) => {
                 const next = gear.map(g => g.id === id ? {...g, retired:true} : g);
                 setGear(next);
-                localStorage.setItem(KEY, JSON.stringify(next));
+                syncedStorage.set(KEY, next);
               };
 
               const activeGear = gear.filter(g => !g.retired);
@@ -21980,7 +22033,7 @@ JSON:
               const setDefault = (gearId) => {
                 const next = { ...assign, default: gearId };
                 setAssign(next);
-                localStorage.setItem(ASSIGN_KEY, JSON.stringify(next));
+                syncedStorage.set(ASSIGN_KEY, next);
                 setDefaultGear(gearId);
               };
 
@@ -22467,7 +22520,7 @@ const sessions = profile.sessions || [];
 
               const height = parseFloat(profile.taille) || null;
 
-              const save = (l) => { setLog(l); localStorage.setItem(bcKey, JSON.stringify(l)); };
+              const save = (l) => { setLog(l); syncedStorage.set(bcKey, l); };
 
               const addEntry = () => {
                 const weight = parseFloat(wt);
@@ -22574,7 +22627,7 @@ const sessions = profile.sessions || [];
 
               const savePerf = (id, val) => {
                 const updated = { ...perf, [id]: parseFloat(val) };
-                setPerf(updated); localStorage.setItem(stdKey, JSON.stringify(updated));
+                setPerf(updated); syncedStorage.set(stdKey, updated);
                 setEditing(null); setInputVal("");
               };
 
@@ -22880,7 +22933,7 @@ const sessions = profile.sessions || [];
               const saveNote = (date) => {
                 const next = { ...diary, [date]: editText };
                 setDiary(next);
-                localStorage.setItem(diaryKey, JSON.stringify(next));
+                syncedStorage.set(diaryKey, next);
                 setEditDay(null);
               };
 
@@ -26219,7 +26272,7 @@ const sessions = profile.sessions || [];
                 const setScore = (zoneId, score) => {
                   const updated = { ...log, [today]: { ...todayLog, [zoneId]: score } };
                   setLog(updated);
-                  localStorage.setItem(mobKey, JSON.stringify(updated));
+                  syncedStorage.set(mobKey, updated);
                 };
                 const avgScore = ZONES.filter(z => todayLog[z.id]).length > 0
                   ? Math.round(ZONES.filter(z => todayLog[z.id]).reduce((a, z) => a + todayLog[z.id], 0) / ZONES.filter(z => todayLog[z.id]).length)
@@ -26311,7 +26364,7 @@ const sessions = profile.sessions || [];
                   const entry = { ...newInj, date: new Date().toISOString().slice(0,10), id: Date.now() };
                   const next = [entry, ...injuries].slice(0, 20);
                   setInjuries(next);
-                  localStorage.setItem(injuryKey, JSON.stringify(next));
+                  syncedStorage.set(injuryKey, next);
                   setShowForm(false);
                   setNewInj({ zone: "genou", sev: 2, note: "" });
                 };
@@ -26319,7 +26372,7 @@ const sessions = profile.sessions || [];
                 const removeInjury = (id) => {
                   const next = injuries.filter(x => x.id !== id);
                   setInjuries(next);
-                  localStorage.setItem(injuryKey, JSON.stringify(next));
+                  syncedStorage.set(injuryKey, next);
                 };
 
                 const recent = injuries.filter(x => {
@@ -26404,7 +26457,7 @@ const sessions = profile.sessions || [];
 
                 const save = (next) => {
                   setNut(next);
-                  localStorage.setItem(nutKey, JSON.stringify(next));
+                  syncedStorage.set(nutKey, next);
                 };
 
                 const TARGETS = {
@@ -27377,7 +27430,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
             ? weightLog.map((e, i) => i === existing ? { ...e, w } : e)
             : [...weightLog, { date: today, w }].sort((a,b) => a.date.localeCompare(b.date));
           setWeightLog(next);
-          localStorage.setItem(weightKey, JSON.stringify(next));
+          syncedStorage.set(weightKey, next);
           setNewWeight("");
           setShowInput(false);
         };
@@ -27642,7 +27695,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         const [showAdd, setShowAdd] = React.useState(false);
         const [newGoal, setNewGoal] = React.useState({ type: "vma", target: "", label: "" });
 
-        const saveGoals = (g) => { setGoals(g); localStorage.setItem(goalsKey, JSON.stringify(g)); };
+        const saveGoals = (g) => { setGoals(g); syncedStorage.set(goalsKey, g); };
 
         const GOAL_TYPES = [
           { id: "vma", label: "VMA", unit: "km/h", icon: "🏃", current: () => parseFloat(profile.vmaKmh) || 0 },
@@ -28044,8 +28097,8 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
             const [reminderTime, setReminderTime] = React.useState(() => localStorage.getItem(`fitrace_reminder_time_${profile.name}`) || "07:30");
             const [reminderOn, setReminderOn] = React.useState(() => localStorage.getItem(`fitrace_reminder_on_${profile.name}`) !== "false");
             const saveReminder = (time, on) => {
-              localStorage.setItem(`fitrace_reminder_time_${profile.name}`, time);
-              localStorage.setItem(`fitrace_reminder_on_${profile.name}`, String(on));
+              syncedStorage.set(`fitrace_reminder_time_${profile.name}`, time);
+              syncedStorage.set(`fitrace_reminder_on_${profile.name}`, on);
             };
             const testNotif = () => {
               if (typeof Notification !== "undefined" && Notification.permission === "granted") {
@@ -28085,7 +28138,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
         const TYPES = ["Chaussures", "Chaussures race", "Chaussures trail", "Vêtements", "Ceinture FC", "Autre"];
 
-        const save = (g) => { setGear(g); localStorage.setItem(gearKey, JSON.stringify(g)); };
+        const save = (g) => { setGear(g); syncedStorage.set(gearKey, g); };
         const addGear = () => {
           if (!form.name) return;
           save([...gear, { id: Date.now(), ...form, km: parseFloat(form.km)||0, maxKm: parseFloat(form.maxKm)||800 }]);
@@ -28312,7 +28365,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
           if (!wt || wt < 30 || wt > 200) return;
           const next = [...entries, { date: new Date().toISOString().slice(0,10), wt, bf: isNaN(bf) ? null : bf }];
           setEntries(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setBfInput(""); setShowForm(false);
         };
 
@@ -29058,7 +29111,7 @@ function HyroxBenchmarkTab({ profile }) {
     if (!sec || isNaN(sec)) return;
     const next = { ...userTimes, [id]: sec };
     setUserTimes(next);
-    localStorage.setItem(`fitrace_hyrox_times_${profile.name}`, JSON.stringify(next));
+    syncedStorage.set(`fitrace_hyrox_times_${profile.name}`, next);
     setActiveStation(null);
     setInputVal("");
   };
@@ -29875,7 +29928,7 @@ function TechniqueTab({ profile = {} }) {
           const entry = { date: dateStr, exId: selectedEx, sets: validSets, volume: totalVol };
           const next = [entry, ...log];
           setLog(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setSets([{ reps:8, kg:0 }]);
           setSelectedEx(null);
         };
@@ -30016,7 +30069,7 @@ function TechniqueTab({ profile = {} }) {
           if (!form.name || form.exercises.length===0) return;
           const next = [{ id:Date.now(), ...form }, ...workouts];
           setWorkouts(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setMode("list");
           setForm({ name:"", exercises:[] });
         };
@@ -30024,7 +30077,7 @@ function TechniqueTab({ profile = {} }) {
         const deleteWorkout = (id) => {
           const next = workouts.filter(w=>w.id!==id);
           setWorkouts(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         // Run mode
@@ -30220,7 +30273,7 @@ function TechniqueTab({ profile = {} }) {
         // Epley formula: 1RM = weight × (1 + reps/30)
         const epley = (w, r) => Math.round(w * (1 + r/30));
 
-        const save = (e) => { setEntries(e); localStorage.setItem(KEY, JSON.stringify(e)); };
+        const save = (e) => { setEntries(e); syncedStorage.set(KEY, e); };
 
         const addSet = (liftKey) => {
           const inp = inputs[liftKey] || { weight:"", reps:"" };
@@ -30469,7 +30522,7 @@ function TechniqueTab({ profile = {} }) {
           const plan = { id: Date.now(), name: planName.trim(), steps: [...steps], createdAt: new Date().toISOString().slice(0,10) };
           const next = [plan, ...plans].slice(0, 20);
           setPlans(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setBuilding(false);
           setPlanName("");
           setSelectedPlan(plan.id);
@@ -30484,7 +30537,7 @@ function TechniqueTab({ profile = {} }) {
         const deletePlan = (id) => {
           const next = plans.filter(p => p.id !== id);
           setPlans(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           if (selectedPlan === id) setSelectedPlan(null);
         };
 
@@ -30767,7 +30820,7 @@ function TechniqueTab({ profile = {} }) {
         const saveTarget = (id, val) => {
           const updated = { ...targets, [id]: val };
           setTargets(updated);
-          localStorage.setItem(simKey, JSON.stringify(updated));
+          syncedStorage.set(simKey, updated);
         };
 
         const STATIONS = [
@@ -31410,7 +31463,7 @@ function TechniqueTab({ profile = {} }) {
         const setScore = (stationName, val) => {
           const next = { ...scores, [stationName]: val };
           setScores(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const activeStation = STATIONS.find(s=>s.name===active);
@@ -31555,7 +31608,7 @@ function TechniqueTab({ profile = {} }) {
             notes: "Session live tracker"
           };
           const updated = { ...profile, sessions: [...(profile.sessions || []), newSession] };
-          localStorage.setItem(`fitrace_${profile.name}`, JSON.stringify(updated));
+          syncedStorage.set(`fitrace_${profile.name}`, updated);
           if (typeof setProfile === "function") setProfile(updated);
           setLiveSaved(true);
         };
@@ -31897,7 +31950,7 @@ function TechniqueTab({ profile = {} }) {
           const entry = { id:Date.now(), date:todayStr, ...form };
           const next = [entry, ...entries].slice(0, 60);
           setEntries(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowLog(false);
           setForm({ confidence:5, focus:5, motivation:5, reflection:"", phase:"pre" });
         };
@@ -32037,7 +32090,7 @@ function TechniqueTab({ profile = {} }) {
           next.push({ date:todayStr, type, ...form, ts:Date.now() });
           next.sort((a,b)=>b.ts-a.ts);
           setEntries(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setMode("view");
           setForm({ confidence:3, focus:3, motivation:3, stress:3, notes:"" });
         };
@@ -32269,7 +32322,7 @@ function TechniqueTab({ profile = {} }) {
                     const entry = { id: proto.id, name: proto.name, date: new Date().toISOString().slice(0,10), cycles: proto.cycles };
                     const nextLog = [entry, ...log].slice(0,50);
                     setLog(nextLog);
-                    localStorage.setItem(LOG_KEY, JSON.stringify(nextLog));
+                    syncedStorage.set(LOG_KEY, nextLog);
                     return 0;
                   }
                   setCycle(nextCycle);
@@ -32521,7 +32574,7 @@ function TechniqueTab({ profile = {} }) {
           const entry = { date: today, proto: protoKey, name: PROTOCOLS[protoKey].name };
           const updated = [entry, ...log].slice(0, 50);
           setLog(updated);
-          localStorage.setItem(KEY, JSON.stringify(updated));
+          syncedStorage.set(KEY, updated);
           setActiveProto(null);
           setActiveStep(0);
           setRunning(false);
@@ -32740,7 +32793,7 @@ function TechniqueTab({ profile = {} }) {
           const newHistory = [{ zoneId, ...entry, id: Date.now() }, ...history].slice(0,100);
           const updated = { ...data, zones: newZones, history: newHistory };
           setData(updated);
-          localStorage.setItem(KEY, JSON.stringify(updated));
+          syncedStorage.set(KEY, updated);
           setSelected(null);
         };
 
@@ -32749,7 +32802,7 @@ function TechniqueTab({ profile = {} }) {
           delete newZones[zoneId];
           const updated = { ...data, zones: newZones };
           setData(updated);
-          localStorage.setItem(KEY, JSON.stringify(updated));
+          syncedStorage.set(KEY, updated);
           setSelected(null);
         };
 
@@ -32913,7 +32966,7 @@ function TechniqueTab({ profile = {} }) {
         const toggle = (key) => {
           const updated = { ...checks, [key]: !checks[key] };
           setChecks(updated);
-          localStorage.setItem(checkKey, JSON.stringify(updated));
+          syncedStorage.set(checkKey, updated);
         };
 
         const total = MOVEMENTS.reduce((s, m) => s + m.items.length, 0);
@@ -33526,7 +33579,7 @@ function TechniqueTab({ profile = {} }) {
         const save = () => {
           const next = [{ id:Date.now(), ...form }, ...logs].slice(0,50);
           setLogs(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowForm(false);
         };
 
@@ -34030,7 +34083,7 @@ function TechniqueTab({ profile = {} }) {
             const entry = { routineId: activeRoutine, name: routine.name, date: new Date().toISOString().slice(0,10), durationSec: timer };
             const nextLog = [entry, ...log].slice(0,50);
             setLog(nextLog);
-            localStorage.setItem(KEY, JSON.stringify(nextLog));
+            syncedStorage.set(KEY, nextLog);
           }
         };
 
@@ -35067,7 +35120,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const [form, setForm] = React.useState({ name: "", type: "force_stations", notes: "", exercises: [] });
         const [newEx, setNewEx] = React.useState({ nom: "", sets: "3", reps: "10", charge: "", rest: "90" });
 
-        const saveTemplates = t => { setTemplates(t); localStorage.setItem(tmplKey, JSON.stringify(t)); };
+        const saveTemplates = t => { setTemplates(t); syncedStorage.set(tmplKey, t); };
 
         const TYPE_OPTS = [
           { id: "force_stations", label: "Force / Stations", icon: "💪" },
@@ -35318,7 +35371,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           if (!form.title || !form.target) return;
           const next = [...goals, { id:Date.now(), ...form, createdAt: new Date().toISOString().slice(0,10), achieved:false }];
           setGoals(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowForm(false);
           setForm({ title:"", type:"time", target:"", unit:"", deadline:"", current:"" });
         };
@@ -35326,19 +35379,19 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const updateCurrent = (id, val) => {
           const next = goals.map(g => g.id===id ? { ...g, current: val } : g);
           setGoals(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const toggleAchieved = (id) => {
           const next = goals.map(g => g.id===id ? { ...g, achieved:!g.achieved } : g);
           setGoals(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const removeGoal = (id) => {
           const next = goals.filter(g=>g.id!==id);
           setGoals(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const calcPct = (g) => {
@@ -35513,7 +35566,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const saveBlock = () => {
           const newBlock = { ...form, createdAt:Date.now() };
           setBlock(newBlock);
-          localStorage.setItem(KEY, JSON.stringify(newBlock));
+          syncedStorage.set(KEY, newBlock);
           setShowForm(false);
         };
 
@@ -36057,7 +36110,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const [form, setForm] = React.useState({ type:"Course", duration:60, distance:"", rpe:7, notes:"" });
         const [showForm, setShowForm] = React.useState(false);
 
-        const savePlanned = (p) => { setPlanned(p); localStorage.setItem(KEY, JSON.stringify(p)); };
+        const savePlanned = (p) => { setPlanned(p); syncedStorage.set(KEY, p); };
         const todayStr = today.toISOString().slice(0,10);
 
         const monthNames = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
@@ -36390,7 +36443,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const applyPlan = () => {
           const p = generatePlan(cfg);
           setSaved(p);
-          localStorage.setItem(KEY, JSON.stringify(p));
+          syncedStorage.set(KEY, p);
           setShowConfig(false);
         };
 
@@ -36631,7 +36684,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
             ? okrs.map(o => o.id === editing ? { ...o, ...form } : o)
             : [entry, ...okrs];
           setOkrs(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowForm(false);
           setEditing(null);
           setForm({ objective:"", quarter:"Q3 2025", keyResults:[], emoji:"🎯" });
@@ -36643,13 +36696,13 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
             : o
           );
           setOkrs(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const deleteOkr = (id) => {
           const next = okrs.filter(o => o.id !== id);
           setOkrs(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const progressColor = (p) => p >= 80 ? "#30D158" : p >= 50 ? "var(--yellow)" : p >= 20 ? "#FF9F0A" : "#FF453A";
@@ -36854,7 +36907,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           if (!form.name||!form.target) return;
           const next = [{ id:Date.now(), ...form }, ...goals];
           setGoals(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowForm(false);
           setForm({ name:"", type:"hyrox_time", target:"", unit:"", deadline:"" });
         };
@@ -36862,7 +36915,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const removeGoal = (id) => {
           const next = goals.filter(g=>g.id!==id);
           setGoals(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const daysLeft = (deadline) => {
@@ -38004,7 +38057,7 @@ JSON: {
             const toggle = id => {
               const next = { ...checked, [id]: !checked[id] };
               setChecked(next);
-              localStorage.setItem(suppKey, JSON.stringify(next));
+              syncedStorage.set(suppKey, next);
             };
             const doneCount = Object.values(checked).filter(Boolean).length;
             return (
@@ -38059,12 +38112,12 @@ JSON: {
             const addGlass = () => {
               const next = Math.min(glasses + 1, 20);
               setGlasses(next);
-              localStorage.setItem(hydKey, String(next));
+              syncedStorage.set(hydKey, next);
             };
             const removeGlass = () => {
               const next = Math.max(glasses - 1, 0);
               setGlasses(next);
-              localStorage.setItem(hydKey, String(next));
+              syncedStorage.set(hydKey, next);
             };
             // 35ml/kg base + 500ml per training day (EFSA 2010)
             const targetL = ((poids * 35) / 1000 + (isTrainingDay ? 0.5 : 0)).toFixed(1);
@@ -38514,7 +38567,7 @@ JSON: {
             const toggleSupp = (id) => {
               const next = { ...suppChecked, [id]: !suppChecked[id] };
               setSuppChecked(next);
-              localStorage.setItem(SKEY, JSON.stringify(next));
+              syncedStorage.set(SKEY, next);
             };
 
             const PHASES = [
@@ -38592,7 +38645,7 @@ JSON: {
 
             const toggleTaken = (id) => {
               const updated = taken.includes(id) ? taken.filter(x => x !== id) : [...taken, id];
-              setTaken(updated); localStorage.setItem(logKey, JSON.stringify(updated));
+              setTaken(updated); syncedStorage.set(logKey, updated);
             };
 
             const mySupps = DEFAULT_SUPPS.filter(s => supps.includes(s.id));
@@ -39073,14 +39126,14 @@ JSON: {
             const toggleTaken = (id) => {
               const updated = { ...log, [today]: { ...todayLog, [id]: !todayLog[id] ? new Date().toLocaleTimeString("fr",{hour:"2-digit",minute:"2-digit"}) : null }};
               setLog(updated);
-              localStorage.setItem(LOG_KEY, JSON.stringify(updated));
+              syncedStorage.set(LOG_KEY, updated);
             };
 
             const addSupp = (s) => {
               const entry = { ...s, id: Date.now() };
               const next = [...stack, entry];
               setStack(next);
-              localStorage.setItem(KEY, JSON.stringify(next));
+              syncedStorage.set(KEY, next);
               setShowAdd(false);
               setForm({ name:"", dose:"", unit:"g", timing:"pre", notes:"", emoji:"💊" });
             };
@@ -39088,7 +39141,7 @@ JSON: {
             const removeSupp = (id) => {
               const next = stack.filter(s => s.id !== id);
               setStack(next);
-              localStorage.setItem(KEY, JSON.stringify(next));
+              syncedStorage.set(KEY, next);
             };
 
             // Compliance last 7 days
@@ -39263,7 +39316,7 @@ JSON: {
               const entry = { ...form, id: Date.now() };
               const updated = { ...log, [viewDate]: [...dayLog, entry] };
               setLog(updated);
-              localStorage.setItem(KEY, JSON.stringify(updated));
+              syncedStorage.set(KEY, updated);
               setForm({ name:"", meal:"breakfast", kcal:0, prot:0, carbs:0, fat:0 });
               setShowForm(false);
             };
@@ -39271,7 +39324,7 @@ JSON: {
             const removeEntry = (id) => {
               const updated = { ...log, [viewDate]: dayLog.filter(e => e.id !== id) };
               setLog(updated);
-              localStorage.setItem(KEY, JSON.stringify(updated));
+              syncedStorage.set(KEY, updated);
             };
 
             const pct = (val, g) => Math.min(100, g > 0 ? Math.round(val/g*100) : 0);
@@ -39391,7 +39444,7 @@ JSON: {
                           const entry = { ...q, id: Date.now() };
                           const updated = { ...log, [viewDate]: [...dayLog, entry] };
                           setLog(updated);
-                          localStorage.setItem(KEY, JSON.stringify(updated));
+                          syncedStorage.set(KEY, updated);
                         }}
                           style={{ background:"var(--bg3)", border:"1px solid #333", borderRadius:8, padding:"5px 10px", color:"#aaa", fontSize:10, cursor:"pointer", textAlign:"left" }}>
                           {q.name}
@@ -39589,7 +39642,7 @@ JSON: {
 
             const saveMeals = (next) => {
               setMeals(next);
-              localStorage.setItem(KEY, JSON.stringify(next));
+              syncedStorage.set(KEY, next);
             };
 
             const applyTemplate = (mealId, tplName) => {
@@ -39945,9 +39998,9 @@ JSON: {
             const add = (amount) => {
               const next = Math.min(target + 500, ml + amount);
               setMl(next);
-              localStorage.setItem(KEY, String(next));
+              syncedStorage.set(KEY, next);
             };
-            const reset = () => { setMl(0); localStorage.setItem(KEY, "0"); };
+            const reset = () => { setMl(0); syncedStorage.set(KEY, "0"); };
 
             const statusColor = pct >= 100 ? "#30D158" : pct >= 60 ? "#FF9F0A" : "#FF453A";
             const statusLabel = pct >= 100 ? "Hydraté ✓" : pct >= 60 ? "En cours" : "Attention";
@@ -40026,7 +40079,7 @@ JSON: {
             const update = (meal, val) => {
               const updated = { ...mealProteins, [meal]: Math.max(0, parseInt(val) || 0) };
               setMealProteins(updated);
-              localStorage.setItem(proteinKey, JSON.stringify(updated));
+              syncedStorage.set(proteinKey, updated);
             };
 
             const total = meals.reduce((s, m) => s + (mealProteins[m] || 0), 0);
@@ -40159,9 +40212,9 @@ JSON: {
             const add = (amount) => {
               const next = ml + amount;
               setMl(next);
-              localStorage.setItem(KEY, String(next));
+              syncedStorage.set(KEY, next);
             };
-            const reset = () => { setMl(0); localStorage.setItem(KEY, "0"); };
+            const reset = () => { setMl(0); syncedStorage.set(KEY, "0"); };
 
             const status = pct >= 100 ? { label:"Hydraté ✅", color:"#30D158" }
               : pct >= 70 ? { label:"Bon niveau 🟡", color:"#FF9F0A" }
@@ -40457,7 +40510,7 @@ JSON: {
                   name: f.name, kcal: f.kcal, p: f.p, c: f.c, f: f.f, icon: f.icon, heure, id: Date.now() + i, source: "vocal"
                 }));
               });
-              localStorage.setItem(macroKey, JSON.stringify([...current, ...newItems]));
+              syncedStorage.set(macroKey, [...current, ...newItems]);
               setSaved(true);
               setDetected([]);
               setTranscript("");
@@ -40670,7 +40723,7 @@ JSON: {
               const current = (() => { try { return JSON.parse(localStorage.getItem(macroKey) || "[]"); } catch { return []; } })();
               const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
               const updated = [...current, { ...food, heure, id: Date.now() }];
-              localStorage.setItem(macroKey, JSON.stringify(updated));
+              syncedStorage.set(macroKey, updated);
               setAdded(true);
               setTimeout(() => setAdded(false), 1500);
             };
@@ -40714,7 +40767,7 @@ JSON: {
               : { p: Math.round(poids * 2.0), c: Math.round(poids * 5), f: Math.round(poids * 1.2) };
             TARGET.kcal = TARGET.p * 4 + TARGET.c * 4 + TARGET.f * 9;
 
-            const save = (e) => { setEntries(e); localStorage.setItem(macroKey, JSON.stringify(e)); };
+            const save = (e) => { setEntries(e); syncedStorage.set(macroKey, e); };
             const addEntry = () => {
               const e = { id: Date.now(), name: form.name || "Repas", p: parseFloat(form.p) || 0, c: parseFloat(form.c) || 0, f: parseFloat(form.f) || 0, kcal: parseFloat(form.kcal) || 0 };
               if (!e.kcal) e.kcal = Math.round(e.p * 4 + e.c * 4 + e.f * 9);
@@ -40968,7 +41021,7 @@ JSON: {
         const addWater = (ml) => {
           const newVal = Math.max(0, waterMl + ml);
           setWaterMl(newVal);
-          localStorage.setItem(waterKey, newVal.toString());
+          syncedStorage.set(waterKey, newVal.toString());
         };
         const col = pct >= 80 ? "var(--green)" : pct >= 50 ? "#38bdf8" : "var(--orange)";
         return (
@@ -41246,12 +41299,12 @@ JSON: {
         const addGlass = () => {
           const next = Math.min(glasses + 1, 20);
           setGlasses(next);
-          localStorage.setItem(hydKey, String(next));
+          syncedStorage.set(hydKey, next);
         };
         const removeGlass = () => {
           const next = Math.max(glasses - 1, 0);
           setGlasses(next);
-          localStorage.setItem(hydKey, String(next));
+          syncedStorage.set(hydKey, next);
         };
         const color = pct >= 100 ? "#30D158" : pct >= 60 ? "#C9A840" : "#FF453A";
         return (
@@ -42214,7 +42267,7 @@ function RaceWeekChecklist({ days, checkKey }) {
   const toggle = (id) => {
     const next = { ...checked, [id]: !checked[id] };
     setChecked(next);
-    try { localStorage.setItem(checkKey, JSON.stringify(next)); } catch {}
+    try { syncedStorage.set(checkKey, next); } catch {}
   };
 
   const CHECKLIST_PHASES = [
@@ -42477,7 +42530,7 @@ function RaceTab({ profile, onOpenBenchmark }) {
       try {
         const saved = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}");
         saved[key] = secs;
-        localStorage.setItem(`fitrace_hyrox_times_${profile.name}`, JSON.stringify(saved));
+        syncedStorage.set(`fitrace_hyrox_times_${profile.name}`, saved);
       } catch {}
       return { ...prev, [key]: str };
     });
@@ -42671,7 +42724,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                 {TARGETS.map(t => {
                   const active = targetFinishMin === t;
                   return (
-                    <button key={t} onClick={() => { haptic([5]); setTargetFinishMin(t); try { localStorage.setItem(`fitrace_race_target_${profile.name}`, String(t)); } catch {} }} style={{
+                    <button key={t} onClick={() => { haptic([5]); setTargetFinishMin(t); try { syncedStorage.set(`fitrace_race_target_${profile.name}`, t); } catch {} }} style={{
                       flex:1, padding:"9px 0", borderRadius:12, fontSize:13, fontWeight:800, cursor:"pointer",
                       background: active ? "var(--yellow)" : "rgba(255,255,255,0.05)",
                       border: active ? "none" : "1px solid rgba(255,255,255,0.10)",
@@ -42848,7 +42901,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const [showForm, setShowForm] = React.useState(false);
         const [form, setForm] = React.useState({ date: "", location: "", time: "", category: "Open", rank: "", participants: "", notes: "" });
 
-        const saveHistory = (h) => { setHistory(h); localStorage.setItem(histKey, JSON.stringify(h)); };
+        const saveHistory = (h) => { setHistory(h); syncedStorage.set(histKey, h); };
 
         const parseTime = t => {
           const m = t.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
@@ -43026,7 +43079,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const toggle = (id) => {
           const next = { ...checked, [id]: !checked[id] };
           setChecked(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const activePhaseData = PHASES.find(p=>p.id===activePhase);
@@ -43092,7 +43145,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           const timeSec = form.timeH*3600 + form.timeM*60 + form.timeS;
           const next = [{ id:Date.now(), ...form, timeSec }, ...races].sort((a,b)=>a.date>b.date?-1:1);
           setRaces(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowForm(false);
           setForm({ date:"", location:"", category:"Open Hommes", timeH:1, timeM:30, timeS:0, rank:"", total:"", notes:"" });
         };
@@ -43100,7 +43153,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const removeRace = (id) => {
           const next = races.filter(r=>r.id!==id);
           setRaces(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const fmtTime = (sec) => {
@@ -43470,7 +43523,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         });
 
         React.useEffect(() => {
-          localStorage.setItem(stratKey, String(targetMin));
+          syncedStorage.set(stratKey, targetMin);
         }, [targetMin]);
 
         // HYROX Individual structure
@@ -43569,7 +43622,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
         const toggle = (id) => {
           const u = { ...checked, [id]: !checked[id] };
-          setChecked(u); localStorage.setItem(prepKey, JSON.stringify(u));
+          setChecked(u); syncedStorage.set(prepKey, u);
         };
 
         const SECTIONS = [
@@ -43690,7 +43743,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
         const toggleCheck = (id) => {
           const updated = { ...checked, [id]: !checked[id] };
-          setChecked(updated); localStorage.setItem(recovKey, JSON.stringify(updated));
+          setChecked(updated); syncedStorage.set(recovKey, updated);
         };
 
         const PROTOCOL = [
@@ -43827,7 +43880,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           entry.total = Object.values(entry.splits).reduce((a,b)=>a+b,0);
           const updated = [entry, ...analyses];
           setAnalyses(updated);
-          localStorage.setItem(analysisKey, JSON.stringify(updated));
+          syncedStorage.set(analysisKey, updated);
           setShowForm(false); setFormVals({}); setRaceName("");
         };
 
@@ -44006,12 +44059,12 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const toggle = (id) => {
           const next = { ...checked, [id]: !checked[id] };
           setChecked(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
         };
 
         const toggleCollapse = (phase) => setCollapsed(c=>({...c,[phase]:!c[phase]}));
 
-        const resetAll = () => { setChecked({}); localStorage.setItem(KEY, "{}"); };
+        const resetAll = () => { setChecked({}); syncedStorage.set(KEY, "{}"); };
 
         const allItems = CHECKLIST.flatMap(c=>c.items);
         const doneCount = allItems.filter(i=>checked[i.id]).length;
@@ -44348,7 +44401,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           const entry = { ...form, id: Date.now(), totalSec: total };
           const next = [entry, ...races].sort((a,b) => b.date.localeCompare(a.date));
           setRaces(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setShowForm(false);
           setForm(emptyForm());
         };
@@ -44356,7 +44409,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const deleteRace = (id) => {
           const next = races.filter(r => r.id !== id);
           setRaces(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           if (viewId === id) setViewId(null);
         };
 
@@ -44599,7 +44652,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           setActiveRace(race.id);
           setRaceStart(now);
           setElapsed(0);
-          localStorage.setItem(KEY, JSON.stringify([...races, race]));
+          syncedStorage.set(KEY, [...races, race]);
         };
 
         const logSplit = (cpId) => {
@@ -44607,7 +44660,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           const elapsedNow = Math.floor((Date.now() - raceStart) / 1000);
           setRaces(prev => {
             const updated = prev.map(r => r.id === activeRace ? { ...r, splits:{ ...r.splits, [cpId]:elapsedNow } } : r);
-            localStorage.setItem(KEY, JSON.stringify(updated));
+            syncedStorage.set(KEY, updated);
             return updated;
           });
         };
@@ -44816,7 +44869,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           if (!sec) return;
           const next = { ...pbs, [editing]: sec };
           setPbs(next);
-          localStorage.setItem(KEY, JSON.stringify(next));
+          syncedStorage.set(KEY, next);
           setEditing(null);
         };
 
@@ -45078,7 +45131,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const saveConfig = (updates) => {
           const next = { ...config, ...updates };
           setConfig(next);
-          localStorage.setItem(PRED_KEY, JSON.stringify(next));
+          syncedStorage.set(PRED_KEY, next);
         };
 
         const improvement = (target) => {
@@ -45257,7 +45310,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const toggle = id => {
           const next = { ...checked, [id]: !checked[id] };
           setChecked(next);
-          localStorage.setItem(gearKey, JSON.stringify(next));
+          syncedStorage.set(gearKey, next);
         };
 
         const GEAR = [
@@ -46781,6 +46834,7 @@ export default function App() {
         try {
           const existing = session.email ? await athleteBackend.getProfile(session.email) : null;
           if (existing) {
+            if (session.email) await hydrateFromCloud(session.email);
             setProfile(existing);
             setNeedTests(!existing.onboardingComplete);
             setUser({ role: "athlete", name: session.name || existing.name, email: session.email });
@@ -46800,6 +46854,7 @@ export default function App() {
     if (role === "coach") { setUser({ role: "coach", name }); return; }
     const existing = email ? await athleteBackend.getProfile(email) : null;
     if (existing) {
+      if (email) await hydrateFromCloud(email);
       setProfile(existing);
       setNeedTests(!existing.onboardingComplete);
     }
@@ -46808,6 +46863,7 @@ export default function App() {
 
   async function handleLogout() {
     await storage.del("session_current");
+    currentAthleteEmail = null;
     setUser(null); setProfile(null); setNeedTests(false);
   }
 
