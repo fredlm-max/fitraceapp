@@ -1743,6 +1743,15 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
   const [step, setStep] = useState(draft?.step || 0);
   const [loading, setLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [unknownAccount, setUnknownAccount] = useState(false);
+
+  function backToLogin() {
+    try {
+      localStorage.removeItem("fitrace_session_current");
+      localStorage.removeItem(draftKey);
+    } catch {}
+    window.location.reload();
+  }
   const [profile, setProfile] = useState(draft?.profile || {
     name: athleteName || "", poids: "", age: "", sexe: "homme", raceDate: "",
     niveauRessenti: "intermédiaire", dejaFaitHyrox: "non", previousChrono: "", previousDate: "",
@@ -1790,6 +1799,20 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
       desc: "Simulation de race, split par station, pacing planner, checklist J-Day. Prépare chaque détail avant le départ.",
     },
   ];
+  if (unknownAccount) return (
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", textAlign: "center" }}>
+      <style>{GLOBAL_STYLES}</style>
+      <div style={{ fontSize: 44, marginBottom: 16 }}>🔑</div>
+      <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", letterSpacing: 1, marginBottom: 12 }}>SESSION EXPIRÉE</div>
+      <div style={{ fontSize: 14, color: "#AEAEB2", lineHeight: 1.6, marginBottom: 28, maxWidth: 320 }}>
+        Ton compte n'a pas pu être retrouvé côté serveur — probablement une ancienne session. Reconnecte-toi ou recrée ton compte pour continuer.
+      </div>
+      <button onClick={backToLogin} style={{ width: "100%", maxWidth: 320, background: "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+        Retour à la connexion
+      </button>
+    </div>
+  );
+
   if (showWelcome) return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", padding: "0" }}>
       <style>{GLOBAL_STYLES}</style>
@@ -1921,7 +1944,11 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
       console.error("finishOnboarding saveProfile error:", e, "email utilisé:", athleteEmail);
       const msg = e?.message || "";
       if (msg.includes("unknown_account")) {
-        setSaveError("⚠️ Ton compte n'a pas été retrouvé côté serveur. Reviens à l'écran de connexion et recrée un compte, ou réessaie dans quelques secondes.");
+        // Session orpheline : pointe vers un email sans compte réel côté serveur
+        // (ancien compte d'avant la migration, ou signup jamais abouti). Pas de mot
+        // de passe en mémoire pour recréer le compte ici — on nettoie la session
+        // locale et on renvoie proprement vers l'écran de connexion/inscription.
+        setUnknownAccount(true);
       } else {
         setSaveError("⚠️ Impossible d'enregistrer ton profil (connexion internet ?). Réessaie.");
       }
