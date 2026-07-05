@@ -1635,10 +1635,19 @@ function LoginScreen({ onLogin }) {
 // ONBOARDING
 // ============================================================
 function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [step, setStep] = useState(0);
+  // Brouillon persistant : si l'utilisateur quitte avant la fin de l'inscription
+  // (ferme l'onglet, met l'app en veille sur mobile...), il reprend là où il en était
+  // au lieu de perdre sa progression et de repartir de zéro.
+  const draftKey = `fitrace_onboarding_draft_${athleteEmail || athleteName || "guest"}`;
+  const loadDraft = () => {
+    try { return JSON.parse(localStorage.getItem(draftKey) || "null"); } catch { return null; }
+  };
+  const draft = loadDraft();
+
+  const [showWelcome, setShowWelcome] = useState(!draft);
+  const [step, setStep] = useState(draft?.step || 0);
   const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState(draft?.profile || {
     name: athleteName || "", poids: "", age: "", sexe: "homme", raceDate: "",
     niveauRessenti: "intermédiaire", dejaFaitHyrox: "non", previousChrono: "", previousDate: "",
     squat1RM: "", deadlift1RM: "", squatReps: "", squatWeight: "", deadliftReps: "", deadliftWeight: "", aiProfile: "",
@@ -1646,6 +1655,14 @@ function OnboardingScreen({ athleteName, athleteEmail, onComplete }) {
     seancesParSemaine: "auto", repartition: "auto", nbRun: "2", nbMuscu: "2", nbHybride: "1",
   });
   const set = (k, v) => setProfile(p => ({ ...p, [k]: v }));
+
+  // Auto-sauvegarde du brouillon à chaque changement (débattue 500ms)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { localStorage.setItem(draftKey, JSON.stringify({ step, profile })); } catch {}
+    }, 500);
+    return () => clearTimeout(t);
+  }, [step, profile]);
 
   const steps = [
     { title: "Profil de base", icon: "👤" },
@@ -1791,6 +1808,7 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
   async function finishOnboarding(skipTests = false) {
     const finalProfile = {
       ...profile,
+      email: athleteEmail || profile.email || "",
       createdAt: new Date().toISOString(),
       tests: {}, sessions: [], adaptations: [], alerts: [], week: 1,
       onboardingComplete: skipTests, // false = lance la batterie, true = passe directement
@@ -1798,6 +1816,8 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
     // Sauvegarder avec email si disponible, sinon par nom
     const key = athleteEmail ? `athlete_email_${athleteEmail}` : `athlete_${athleteName}`;
     await storage.set(key, finalProfile);
+    // Onboarding terminé : le brouillon n'est plus nécessaire
+    try { localStorage.removeItem(draftKey); } catch {}
     // Mettre à jour la session avec le bon email
     if (athleteEmail) {
       await storage.set("session_current", { email: athleteEmail, name: athleteName, role: "athlete", loginAt: new Date().toISOString() });
@@ -2075,7 +2095,7 @@ IMPORTANT: Utilise les dates EXACTES ci-dessus. Inclus: analyse selon l'objectif
                       <span key={t} style={{ fontSize: 11, background: "var(--bg3)", color: "#666", padding: "3px 8px", borderRadius: 6 }}>{t}</span>
                     ))}
                   </div>
-                  <Btn size="lg" onClick={finishOnboarding} style={{ width: "100%" }}>
+                  <Btn size="lg" onClick={() => finishOnboarding(false)} style={{ width: "100%" }}>
                     Commencer la batterie →
                   </Btn>
                 </div>
@@ -46742,8 +46762,12 @@ export default function App() {
 
     // Clé basée sur email si disponible
     const key = email ? `athlete_email_${email}` : `athlete_${name}`;
-    const existing = await storage.get(key);
+    let existing = await storage.get(key);
     if (existing) {
+      if (email && !existing.email) {
+        existing = { ...existing, email };
+        await storage.set(key, existing);
+      }
       setProfile(existing);
       setNeedTests(!existing.onboardingComplete);
     }
