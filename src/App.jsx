@@ -220,24 +220,36 @@ const storage = {
 // ============================================================
 const athleteBackend = {
   async signup(email, name, password) {
-    const { error } = await supabase.rpc("signup_athlete", { p_email: email, p_name: name, p_password: password });
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
     if (error) throw error;
+    return data;
   },
   async login(email, password) {
-    const { data, error } = await supabase.rpc("login_athlete", { p_email: email, p_password: password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    return data; // { email, name }
+    return { email: data.user.email, name: data.user.user_metadata?.name || "" };
+  },
+  async logout() {
+    await supabase.auth.signOut();
+  },
+  async requestPasswordReset(email) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (error) throw error;
+  },
+  async updatePassword(newPassword) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
   },
   async saveProfile(email, profile) {
     if (!email) throw new Error("saveProfile appelé sans email");
-    const { error } = await supabase.rpc("save_athlete_profile", { p_email: email, p_profile: profile });
+    const { error } = await supabase.from("athlete_profiles").upsert({ email, profile, updated_at: new Date().toISOString() });
     if (error) throw error;
     return true;
   },
   async getProfile(email) {
-    const { data, error } = await supabase.rpc("get_athlete_profile", { p_email: email });
+    const { data, error } = await supabase.from("athlete_profiles").select("profile").eq("email", email).maybeSingle();
     if (error) throw error;
-    return data || null;
+    return data?.profile || null;
   },
   async listAthletes() {
     const { data, error } = await supabase.from("athlete_directory").select("email, profile, updated_at");
@@ -1539,6 +1551,61 @@ function FitnessScoreCard({ profile }) {
 // ============================================================
 const COACH_CODE = "FITRACE2025";
 
+// Écran affiché quand l'utilisateur arrive via le lien de réinitialisation
+// reçu par email (Supabase déclenche l'événement PASSWORD_RECOVERY et établit
+// déjà une session temporaire — il ne reste qu'à choisir un nouveau mot de passe).
+function NewPasswordScreen({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    if (password.length < 6) { setError("Au moins 6 caractères requis."); return; }
+    if (password !== confirm) { setError("Les deux mots de passe ne correspondent pas."); return; }
+    setLoading(true); setError("");
+    try {
+      await athleteBackend.updatePassword(password);
+      setDone(true);
+      setTimeout(onDone, 1800);
+    } catch (e) {
+      setError("Impossible de mettre à jour le mot de passe. Réessaie.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "var(--bg)", padding: 24 }}>
+      <style>{GLOBAL_STYLES}</style>
+      <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 14, textAlign: "center" }}>
+        {done ? (
+          <>
+            <div style={{ fontSize: 44 }}>✅</div>
+            <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)" }}>MOT DE PASSE MIS À JOUR</div>
+            <div style={{ fontSize: 13, color: "#8E8E93" }}>Tu peux continuer vers l'app...</div>
+          </>
+        ) : (
+          <>
+            <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)" }}>NOUVEAU MOT DE PASSE</div>
+            <div style={{ fontSize: 13, color: "#8E8E93", marginBottom: 4 }}>Choisis un nouveau mot de passe pour ton compte</div>
+            <Input label="Nouveau mot de passe" value={password} onChange={setPassword} placeholder="min. 6 caractères" type="password" />
+            <Input label="Confirme le mot de passe" value={confirm} onChange={setConfirm} placeholder="min. 6 caractères" type="password" />
+            {error && (
+              <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13 }}>
+                {error}
+              </div>
+            )}
+            <button disabled={!password || !confirm || loading} onClick={submit} style={{ width: "100%", background: (!password || !confirm || loading) ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer" }}>
+              {loading ? "Mise à jour…" : "Valider →"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("choose"); // choose | login | register | coach
   const [email, setEmail] = useState(() => {
@@ -1558,12 +1625,12 @@ function LoginScreen({ onLogin }) {
       await athleteBackend.signup(cleanEmail, name.trim(), password);
       // Mémoriser l'email pour pré-remplir (confort local, pas la source de vérité)
       try { localStorage.setItem("fitrace_last_email", cleanEmail); } catch {}
-      await storage.set("session_current", { email: cleanEmail, name: name.trim(), role: "athlete", loginAt: new Date().toISOString() });
       onLogin("athlete", name.trim(), cleanEmail);
     } catch (e) {
       const msg = e?.message || "";
-      if (msg.includes("account_exists")) setError("Un compte existe déjà avec cet email.");
-      else if (msg.includes("invalid_input")) setError("Email invalide ou mot de passe trop court (min. 6 caractères).");
+      if (msg.includes("already registered") || msg.includes("already exists")) setError("Un compte existe déjà avec cet email.");
+      else if (msg.includes("Password") || msg.includes("password")) setError("Mot de passe trop court (min. 6 caractères).");
+      else if (msg.includes("valid email") || msg.includes("Invalid email")) setError("Email invalide.");
       else setError("Erreur lors de l'inscription. Vérifie ta connexion internet et réessaie.");
     }
     setLoading(false);
@@ -1577,18 +1644,24 @@ function LoginScreen({ onLogin }) {
       const account = await athleteBackend.login(cleanEmail, password);
       // Mémoriser l'email pour pré-remplir
       try { localStorage.setItem("fitrace_last_email", cleanEmail); } catch {}
-      const sessionOk = await storage.set("session_current", { email: account.email, name: account.name, role: "athlete", loginAt: new Date().toISOString() });
-      if (!sessionOk) {
-        setError("Ton navigateur bloque le stockage local (navigation privée ou mémoire pleine) — la connexion ne restera pas active après un rechargement.");
-        setLoading(false);
-        return;
-      }
       onLogin("athlete", account.name, account.email);
     } catch (e) {
       const msg = e?.message || "";
-      if (msg.includes("not_found")) setError("Aucun compte trouvé avec cet email.");
-      else if (msg.includes("bad_password")) setError("Mot de passe incorrect.");
+      if (msg.includes("Invalid login credentials")) setError("Email ou mot de passe incorrect.");
+      else if (msg.includes("Email not confirmed")) setError("Confirme d'abord ton email (vérifie ta boîte mail).");
       else setError("Erreur de connexion. Vérifie ta connexion internet et réessaie.");
+    }
+    setLoading(false);
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) return;
+    setLoading(true); setError("");
+    try {
+      await athleteBackend.requestPasswordReset(email.trim().toLowerCase());
+      setMode("forgot-sent");
+    } catch (e) {
+      setError("Impossible d'envoyer l'email de réinitialisation. Vérifie ta connexion internet et réessaie.");
     }
     setLoading(false);
   }
@@ -1643,14 +1716,12 @@ function LoginScreen({ onLogin }) {
               </div>
               <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" />
               <Input label="Mot de passe" value={password} onChange={setPassword} placeholder="••••••••" type="password" />
+              <div style={{ textAlign: "right", marginTop: -8 }}>
+                <span onClick={() => { setMode("forgot"); setError(""); }} style={{ fontSize: 12, color: "#8E8E93", cursor: "pointer", textDecoration: "underline" }}>Mot de passe oublié ?</span>
+              </div>
               {error && (
                 <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13, textAlign: "center" }}>
                   {error}
-                  {error.includes("Aucun compte") && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: "#ff9999" }}>
-                      ⚠️ Les données sont stockées sur cet appareil. Si tu as changé de navigateur ou vidé le cache, ton compte n'est plus accessible.
-                    </div>
-                  )}
                 </div>
               )}
               <button disabled={!email || !password || loading} onClick={handleLogin} style={{ width: "100%", background: !email || !password || loading ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}>
@@ -1663,9 +1734,40 @@ function LoginScreen({ onLogin }) {
                 Pas encore de compte ?{" "}
                 <span onClick={() => { setMode("register"); setError(""); }} style={{ color: "var(--yellow)", cursor: "pointer", fontWeight: 600 }}>Créer un compte</span>
               </div>
-              <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "10px 12px", fontSize: 10, color: "#8E8E93", textAlign: "center", lineHeight: 1.5 }}>
-                Tes données sont sauvegardées localement sur cet appareil. Utilise toujours le même navigateur pour retrouver ton compte.
+            </div>
+          )}
+
+          {mode === "forgot" && (
+            <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ textAlign: "center", marginBottom: 4 }}>
+                <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)" }}>MOT DE PASSE OUBLIÉ</div>
+                <div style={{ fontSize: 13, color: "#8E8E93", marginTop: 2 }}>On t'envoie un lien de réinitialisation par email</div>
               </div>
+              <Input label="Email" value={email} onChange={setEmail} placeholder="ton@email.com" type="email" />
+              {error && (
+                <div style={{ background: "rgba(255,60,60,0.1)", border: "1px solid rgba(255,60,60,0.3)", borderRadius: 10, padding: "10px 14px", color: "#ff6b6b", fontSize: 13, textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
+              <button disabled={!email || loading} onClick={handleForgotPassword} style={{ width: "100%", background: !email || loading ? "rgba(255,213,0,0.3)" : "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}>
+                {loading ? "Envoi…" : "Envoyer le lien →"}
+              </button>
+              <button onClick={() => { setMode("login"); setError(""); }} style={{ width: "100%", background: "transparent", color: "#8E8E93", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: "12px", fontSize: 13, cursor: "pointer" }}>
+                ← Retour à la connexion
+              </button>
+            </div>
+          )}
+
+          {mode === "forgot-sent" && (
+            <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 44, marginBottom: 4 }}>📬</div>
+              <div className="bebas" style={{ fontSize: 26, color: "var(--yellow)" }}>VÉRIFIE TA BOÎTE MAIL</div>
+              <div style={{ fontSize: 13, color: "#8E8E93", lineHeight: 1.6 }}>
+                Si un compte existe pour <strong style={{ color: "var(--white)" }}>{email}</strong>, un lien de réinitialisation vient d'être envoyé. Clique dessus pour choisir un nouveau mot de passe.
+              </div>
+              <button onClick={() => { setMode("login"); setError(""); }} style={{ width: "100%", background: "rgba(255,255,255,0.08)", color: "var(--white)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "14px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 8 }}>
+                ← Retour à la connexion
+              </button>
             </div>
           )}
 
@@ -46853,6 +46955,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [needTests, setNeedTests] = useState(false);
   const [globalSaveError, setGlobalSaveError] = useState("");
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -46861,31 +46964,62 @@ export default function App() {
     return () => document.head.removeChild(style);
   }, []);
 
+  async function loadAthleteSession(authUser) {
+    const email = authUser.email;
+    const name = authUser.user_metadata?.name || "";
+    const existing = await athleteBackend.getProfile(email);
+    if (existing) {
+      await hydrateFromCloud(email);
+      setProfile(existing);
+      setNeedTests(!existing.onboardingComplete);
+      setUser({ role: "athlete", name: name || existing.name, email });
+    } else {
+      // Compte Supabase Auth existant mais onboarding jamais terminé — relancer l'onboarding
+      setUser({ role: "athlete", name, email });
+    }
+  }
+
   // Vérifier session existante au démarrage — setLoading(false) SEULEMENT ici
   useEffect(() => {
-    storage.get("session_current").then(async session => {
-      if (session && session.role === "athlete") {
-        try {
-          const existing = session.email ? await athleteBackend.getProfile(session.email) : null;
-          if (existing) {
-            if (session.email) await hydrateFromCloud(session.email);
-            setProfile(existing);
-            setNeedTests(!existing.onboardingComplete);
-            setUser({ role: "athlete", name: session.name || existing.name, email: session.email });
-          } else if (session.email) {
-            // Session existe mais profil pas encore créé (onboarding jamais terminé) — relancer l'onboarding
-            setUser({ role: "athlete", name: session.name || "", email: session.email });
-          }
-        } catch (e) { console.error("Session restore error:", e); }
-      } else if (session && session.role === "coach") {
-        setUser({ role: "coach", name: "Coach" });
+    let cancelled = false;
+    (async () => {
+      try {
+        // Session coach (locale, pas de vrai compte Supabase pour le coach)
+        const coachSession = await storage.get("session_current");
+        if (coachSession && coachSession.role === "coach") {
+          if (!cancelled) { setUser({ role: "coach", name: "Coach" }); setLoading(false); }
+          return;
+        }
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.user) {
+          await loadAthleteSession(data.session.user);
+        }
+      } catch (e) { console.error("Session restore error:", e); }
+      if (!cancelled) setLoading(false);
+    })();
+
+    // Réagit aux changements de session Supabase Auth (déconnexion, expiration,
+    // et surtout l'événement PASSWORD_RECOVERY déclenché par le lien reçu par email)
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setPasswordRecoveryMode(true);
+        setLoading(false);
+      } else if (event === "SIGNED_OUT") {
+        currentAthleteEmail = null;
+        setUser(u => (u?.role === "coach" ? u : null));
+        setProfile(p => null);
+        setNeedTests(false);
       }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    });
+    return () => { cancelled = true; sub?.subscription?.unsubscribe(); };
   }, []);
 
   async function handleLogin(role, name, email) {
-    if (role === "coach") { setUser({ role: "coach", name }); return; }
+    if (role === "coach") {
+      await storage.set("session_current", { role: "coach", loginAt: new Date().toISOString() });
+      setUser({ role: "coach", name });
+      return;
+    }
     const existing = email ? await athleteBackend.getProfile(email) : null;
     if (existing) {
       if (email) await hydrateFromCloud(email);
@@ -46896,7 +47030,8 @@ export default function App() {
   }
 
   async function handleLogout() {
-    await storage.del("session_current");
+    if (user?.role === "coach") { await storage.del("session_current"); }
+    else { await athleteBackend.logout(); }
     currentAthleteEmail = null;
     setUser(null); setProfile(null); setNeedTests(false);
   }
@@ -46950,6 +47085,7 @@ export default function App() {
     </div>
   );
 
+  if (passwordRecoveryMode) return <NewPasswordScreen onDone={() => setPasswordRecoveryMode(false)} />;
   if (!user) return <LoginScreen onLogin={handleLogin} />;
   if (user.role === "coach") return <CoachApp />;
   if (!profile) return <OnboardingScreen athleteName={user.name} athleteEmail={user.email} onComplete={handleOnboardingComplete} />;
