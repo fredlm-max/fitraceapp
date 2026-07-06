@@ -57,7 +57,7 @@ const GLOBAL_STYLES = `
   /* Apple theme: invert semi-transparent surfaces */
   [data-theme="apple"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
   [data-theme="apple"] .card-bg { background: #FFFFFF !important; border-color: rgba(0,0,0,0.08) !important; color: #1D1D1F !important; }
-  html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; line-height: 1.45; }
+  html, body { background: var(--bg); color: var(--white); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; line-height: 1.45; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
   #root { min-height: 100vh; background: var(--bg); position: relative; }
   #root::before {
     content: ""; position: fixed; top: -140px; left: 50%; transform: translateX(-50%);
@@ -70,18 +70,18 @@ const GLOBAL_STYLES = `
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
   .bebas { font-family: var(--font-title); letter-spacing: 0.04em; }
 
-  /* ── Buttons ── */
-  button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); transition: transform 0.15s var(--spring), opacity 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent; user-select: none; }
-  button:active { transform: scale(0.94) !important; opacity: 0.85; }
+  /* ── Buttons — press-in instantané, relâchement avec ressort ── */
+  button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); transition: transform 0.22s var(--spring), opacity 0.18s ease, box-shadow 0.22s var(--ease-out), filter 0.18s ease; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; }
+  button:active { transform: scale(0.95) !important; filter: brightness(0.92); transition-duration: 0.06s; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   input, select, textarea { font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
   input:focus, select:focus, textarea:focus { outline: none; }
 
-  /* ── Tab transitions ── */
-  @keyframes slideInRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes slideInLeft { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: translateX(0); } }
-  .tab-slide-right { animation: slideInRight 0.24s var(--ease-out) both; }
-  .tab-slide-left { animation: slideInLeft 0.24s var(--ease-out) both; }
+  /* ── Tab transitions — glissement + léger flou de mouvement ── */
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(24px) scale(0.995); filter: blur(2px); } 60% { filter: blur(0); } to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); } }
+  @keyframes slideInLeft { from { opacity: 0; transform: translateX(-24px) scale(0.995); filter: blur(2px); } 60% { filter: blur(0); } to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); } }
+  .tab-slide-right { animation: slideInRight 0.3s var(--ease-out) both; }
+  .tab-slide-left { animation: slideInLeft 0.3s var(--ease-out) both; }
 
   /* ── Core animations ── */
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -167,6 +167,28 @@ const GLOBAL_STYLES = `
 
   /* ── Focus ring ── */
   :focus-visible { outline: 2px solid rgba(201,168,64,0.5); outline-offset: 2px; }
+
+  /* ── Chiffres tabulaires — les stats ne "sautent" plus quand elles changent ── */
+  .bebas, input[type="number"] { font-variant-numeric: tabular-nums; }
+
+  /* ── Titres équilibrés sur 2 lignes ── */
+  h1, h2, h3, .bebas { text-wrap: balance; }
+
+  /* ── Cartes : élévation douce au toucher (utilitaire) ── */
+  .card-lift { transition: transform 0.25s var(--spring), box-shadow 0.25s var(--ease-out); }
+  .card-lift:active { transform: translateY(1px) scale(0.985); box-shadow: var(--shadow-sm); }
+
+  /* ── SVG anneaux/progressions : transitions fluides par défaut ── */
+  svg circle, svg path, svg rect { transition: stroke-dashoffset 0.6s var(--ease-out), fill 0.3s ease, stroke 0.3s ease; }
+
+  /* ── Scroll horizontal à ancrage (pills, carrousels) ── */
+  .snap-x { scroll-snap-type: x proximity; }
+  .snap-x > * { scroll-snap-align: start; }
+
+  /* ── Accessibilité & confort : réduire les animations si demandé par l'OS ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
 `;
 
 // ============================================================
