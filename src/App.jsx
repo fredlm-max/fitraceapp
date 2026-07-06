@@ -2903,7 +2903,6 @@ function AchievementsCard({ profile }) {
   const hasRace = !!profile.raceDate;
   const maxRPE = sessions.reduce((m, s) => Math.max(m, s.difficulte||0), 0);
   const hasZone2 = sessions.some(s => s.type === "running_zone2");
-  const hasSimulation = (() => { try { return !!localStorage.getItem(`fitrace_sim_done_${profile.name}`); } catch { return false; } })();
   const weeklyMax = (() => {
     const w = {}; sessions.forEach(s => { const wk = s.date?.slice(0,7); if(wk) w[wk] = (w[wk]||0)+1; });
     return Math.max(0, ...Object.values(w));
@@ -25962,12 +25961,13 @@ const sessions = profile.sessions || [];
 
               {/* ── HR ZONES TRAINING GUIDE ── */}
               {(() => {
-                const fcMax = profile.fcMax || estimateFCmax(profile.age, profile.sex);
+                const sex = profile.sexe === "F" ? "F" : "H";
+                const fcMax = profile.fcMax || estimateFCmax(profile.age, sex);
                 if (!fcMax) return null;
-                const zones = calcFCZones(fcMax, profile.fcRest, profile.age, profile.sex);
+                const zones = calcFCZones(fcMax, profile.fcMin, profile.age, sex);
                 if (!zones) return null;
                 const [expanded, setExpanded] = React.useState(null);
-                const method = profile.fcRest ? "Karvonen" : "% FCmax";
+                const method = profile.fcMin ? "Karvonen" : "% FCmax";
                 return (
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -46606,6 +46606,7 @@ function CoachApp() {
   const [loading, setLoading] = useState(true);
   const [coachSession, setCoachSession] = useState({ titre: "", description: "" });
   const [sessionSaved, setSessionSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => { loadAthletes(); loadCoachSession(); }, []);
 
@@ -46772,11 +46773,26 @@ function CoachApp() {
         {tab === "athletes" && (
           <div className="fade-in">
             {selected ? (
+              <>
               <AthleteDetail athlete={selected} onBack={() => setSelected(null)} onUpdate={async (updated) => {
-                if (updated.email) await athleteBackend.saveProfile(updated.email, updated);
                 setSelected(updated);
+                try {
+                  if (updated.email) await athleteBackend.saveProfile(updated.email, updated);
+                  if (saveError) setSaveError("");
+                } catch (e) {
+                  // Le rôle Coach n'a pas de vraie session Supabase Auth — la policy RLS
+                  // bloque l'écriture directe sur le profil d'un athlète (comportement voulu).
+                  console.error("Erreur sauvegarde côté coach:", e.message);
+                  setSaveError("⚠️ Modification non enregistrée : le mode Coach ne peut pas modifier directement le profil d'un athlète.");
+                }
                 loadAthletes();
               }} />
+              {saveError && (
+                <div onClick={() => setSaveError("")} style={{ position: "fixed", left: 12, right: 12, bottom: 90, zIndex: 999, background: "rgba(255,69,58,0.95)", color: "#fff", padding: "12px 16px", borderRadius: 14, fontSize: 13, lineHeight: 1.4, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", cursor: "pointer" }}>
+                  {saveError}
+                </div>
+              )}
+              </>
             ) : (
               <Section title={`Athlètes (${athletes.length})`}>
                 {loading ? <Spinner /> : athletes.length === 0 ? (
