@@ -1625,7 +1625,7 @@ function LoginScreen({ onLogin }) {
       await athleteBackend.signup(cleanEmail, name.trim(), password);
       // Mémoriser l'email pour pré-remplir (confort local, pas la source de vérité)
       try { localStorage.setItem("fitrace_last_email", cleanEmail); } catch {}
-      onLogin("athlete", name.trim(), cleanEmail);
+      await onLogin("athlete", name.trim(), cleanEmail);
     } catch (e) {
       const msg = e?.message || "";
       console.error("[signup]", msg, e);
@@ -1646,7 +1646,7 @@ function LoginScreen({ onLogin }) {
       const account = await athleteBackend.login(cleanEmail, password);
       // Mémoriser l'email pour pré-remplir
       try { localStorage.setItem("fitrace_last_email", cleanEmail); } catch {}
-      onLogin("athlete", account.name, account.email);
+      await onLogin("athlete", account.name, account.email);
     } catch (e) {
       const msg = e?.message || "";
       if (msg.includes("Invalid login credentials")) setError("Email ou mot de passe incorrect.");
@@ -47073,11 +47073,17 @@ export default function App() {
       setUser({ role: "coach", name });
       return;
     }
-    const existing = email ? await athleteBackend.getProfile(email) : null;
-    if (existing) {
-      if (email) await hydrateFromCloud(email);
-      setProfile(existing);
-      setNeedTests(!existing.onboardingComplete);
+    try {
+      const existing = email ? await athleteBackend.getProfile(email) : null;
+      if (existing) {
+        if (email) await hydrateFromCloud(email);
+        setProfile(existing);
+        setNeedTests(!existing.onboardingComplete);
+      }
+      if (globalSaveError) setGlobalSaveError("");
+    } catch (e) {
+      console.error("Erreur chargement profil après connexion:", e, "email:", email);
+      setGlobalSaveError("⚠️ Ton profil n'a pas pu être chargé depuis le cloud (" + (e?.message || "erreur serveur") + "). Réessaie de te reconnecter dans quelques instants.");
     }
     setUser({ role: "athlete", name, email });
   }
@@ -47138,11 +47144,21 @@ export default function App() {
     </div>
   );
 
-  if (passwordRecoveryMode) return <NewPasswordScreen onDone={() => setPasswordRecoveryMode(false)} />;
-  if (!user) return <LoginScreen onLogin={handleLogin} />;
-  if (user.role === "coach") return <CoachApp />;
-  if (!profile) return <OnboardingScreen athleteName={user.name} athleteEmail={user.email} onComplete={handleOnboardingComplete} />;
-  if (needTests && !profile.onboardingComplete) return <TestsBattery profile={profile} onComplete={handleTestsComplete} />;
+  // Bannière d'erreur globale — affichée quelle que soit l'écran actif (onboarding,
+  // tests, login inclus), pour ne jamais échouer silencieusement (cf. bug où un 403
+  // RLS pendant le chargement du profil ne remontait aucun message à l'utilisateur).
+  const errorBanner = globalSaveError && (
+    <div onClick={() => setGlobalSaveError("")} style={{ position: "fixed", left: 12, right: 12, bottom: "max(env(safe-area-inset-bottom, 90px), 90px)", zIndex: 999, background: "rgba(255,69,58,0.95)", color: "#fff", padding: "12px 16px", borderRadius: 14, fontSize: 13, lineHeight: 1.4, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", cursor: "pointer" }}>
+      {globalSaveError}
+      <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4 }}>Toucher pour fermer</div>
+    </div>
+  );
+
+  if (passwordRecoveryMode) return <><NewPasswordScreen onDone={() => setPasswordRecoveryMode(false)} />{errorBanner}</>;
+  if (!user) return <><LoginScreen onLogin={handleLogin} />{errorBanner}</>;
+  if (user.role === "coach") return <><CoachApp />{errorBanner}</>;
+  if (!profile) return <><OnboardingScreen athleteName={user.name} athleteEmail={user.email} onComplete={handleOnboardingComplete} />{errorBanner}</>;
+  if (needTests && !profile.onboardingComplete) return <><TestsBattery profile={profile} onComplete={handleTestsComplete} />{errorBanner}</>;
 
   return (
     <ErrorBoundary>
@@ -47163,12 +47179,7 @@ export default function App() {
         }
       }}
     />
-    {globalSaveError && (
-      <div onClick={() => setGlobalSaveError("")} style={{ position: "fixed", left: 12, right: 12, bottom: "max(env(safe-area-inset-bottom, 90px), 90px)", zIndex: 999, background: "rgba(255,69,58,0.95)", color: "#fff", padding: "12px 16px", borderRadius: 14, fontSize: 13, lineHeight: 1.4, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", cursor: "pointer" }}>
-        {globalSaveError}
-        <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4 }}>Toucher pour fermer</div>
-      </div>
-    )}
+    {errorBanner}
     </ErrorBoundary>
   );
 }
