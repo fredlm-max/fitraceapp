@@ -3773,6 +3773,115 @@ function LiveTimerModal({ sessionType, setShowLiveTimer, showToast, haptic, prof
   );
 }
 
+function MorningCheckinModal({ profile, onClose, showToast, haptic }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const SLEEP_KEY = `fitrace_sleep_unified_${profile.name}`;
+  const CIN_KEY = `fitrace_checkin_${profile.name}`;
+
+  const existingSleep = (() => { try { return (JSON.parse(localStorage.getItem(SLEEP_KEY)) || {})[todayStr] || null; } catch { return null; } })();
+  const existingCin = (() => { try { return (JSON.parse(localStorage.getItem(CIN_KEY)) || {})[todayStr] || null; } catch { return null; } })();
+
+  const [h, setH] = React.useState(existingSleep?.h ?? 7);
+  const [m, setM] = React.useState(existingSleep?.m ?? 30);
+  const [quality, setQuality] = React.useState(existingSleep?.quality ?? 3);
+  const [hrv, setHrv] = React.useState(existingSleep?.hrv ?? "");
+  const [weight, setWeight] = React.useState(existingCin?.weight ?? (parseFloat(profile.poids) || 70));
+  const [saving, setSaving] = React.useState(false);
+
+  const save = () => {
+    haptic?.([10, 30, 10]);
+    setSaving(true);
+    try {
+      const sleepAll = JSON.parse(localStorage.getItem(SLEEP_KEY) || "{}");
+      sleepAll[todayStr] = { ...(existingSleep || { bedtime: "23:00", wake: "07:00", restingHr: "" }), h, m, quality, hrv, dur: parseFloat((h + m / 60).toFixed(1)) };
+      syncedStorage.set(SLEEP_KEY, sleepAll);
+
+      const cinAll = JSON.parse(localStorage.getItem(CIN_KEY) || "{}");
+      cinAll[todayStr] = { ...(existingCin || { energy: 3 }), weight: parseFloat(weight) || 0, date: todayStr };
+      syncedStorage.set(CIN_KEY, cinAll);
+    } catch {}
+    setTimeout(() => {
+      setSaving(false);
+      showToast?.("☀️ Check-in matinal enregistré", "success", 2200);
+      onClose();
+    }, 500);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }} onClick={onClose} />
+      <div className="slide-up" style={{ position: "relative", background: "#0d0d0d", borderRadius: "24px 24px 0 0", padding: "0 0 calc(env(safe-area-inset-bottom,16px) + 24px)", borderTop: "1px solid rgba(255,255,255,0.08)", maxHeight: "88vh", overflowY: "auto" }}>
+        <div style={{ padding: "14px 0 0", textAlign: "center" }}>
+          <div style={{ width: 36, height: 4, background: "rgba(255,255,255,0.15)", borderRadius: 99, margin: "0 auto" }} />
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px 4px" }}>
+          <div>
+            <div className="bebas" style={{ fontSize: 24, color: "var(--yellow)", letterSpacing: 1, lineHeight: 1 }}>☀️ CHECK-IN MATINAL</div>
+            <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 4 }}>30 secondes pour aider ton coach IA à adapter la séance</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "none", color: "#8E8E93", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>
+        </div>
+
+        <div style={{ padding: "14px 20px 4px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Sommeil : heures */}
+          <div>
+            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>🌙 Heures de sommeil</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <button onClick={() => { haptic?.([5]); setM(m2 => { if (m2 === 0) { setH(h2 => Math.max(0, h2 - 1)); return 45; } return m2 - 15; }); }}
+                style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "none", color: "var(--white)", fontSize: 20, cursor: "pointer" }}>−</button>
+              <div style={{ minWidth: 110, textAlign: "center", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 0" }}>
+                <span className="bebas" style={{ fontSize: 26, color: "var(--yellow)" }}>{h}h{m > 0 ? m.toString().padStart(2, "0") : ""}</span>
+              </div>
+              <button onClick={() => { haptic?.([5]); setM(m2 => { if (m2 === 45) { setH(h2 => Math.min(14, h2 + 1)); return 0; } return m2 + 15; }); }}
+                style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "none", color: "var(--white)", fontSize: 20, cursor: "pointer" }}>+</button>
+            </div>
+          </div>
+
+          {/* Qualité */}
+          <div>
+            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>⭐ Qualité du sommeil</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[1, 2, 3, 4, 5].map(v => (
+                <button key={v} onClick={() => { haptic?.([6]); setQuality(v); }}
+                  style={{ flex: 1, background: "none", border: "none", fontSize: 26, cursor: "pointer", opacity: v <= quality ? 1 : 0.25, filter: v <= quality ? "none" : "grayscale(1)", padding: "4px 0" }}>⭐</button>
+              ))}
+            </div>
+          </div>
+
+          {/* VFC */}
+          <div>
+            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>💓 VFC (optionnel)</div>
+            <input type="number" inputMode="numeric" value={hrv} onChange={e => setHrv(e.target.value)} placeholder="ex: 65 ms"
+              style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 14px", color: "var(--white)", fontSize: 16, fontWeight: 700, textAlign: "center" }} />
+          </div>
+
+          {/* Poids */}
+          <div>
+            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>⚖️ Poids ce matin (kg)</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => { haptic?.([5]); setWeight(w => Math.max(30, +(+w - 0.1).toFixed(1))); }}
+                style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "none", color: "var(--white)", fontSize: 20, cursor: "pointer" }}>−</button>
+              <input type="number" step="0.1" value={weight} onChange={e => setWeight(e.target.value)}
+                style={{ flex: 1, textAlign: "center", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 0", color: "var(--white)", fontSize: 22, fontWeight: 800 }} />
+              <button onClick={() => { haptic?.([5]); setWeight(w => +(+w + 0.1).toFixed(1)); }}
+                style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "none", color: "var(--white)", fontSize: 20, cursor: "pointer" }}>+</button>
+            </div>
+          </div>
+
+          <button onClick={save} disabled={saving} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 800, cursor: saving ? "default" : "pointer", marginTop: 4, opacity: saving ? 0.7 : 1 }}>
+            {saving ? "Enregistrement…" : "Valider mon check-in →"}
+          </button>
+          <button onClick={onClose} style={{ width: "100%", background: "transparent", color: "#8E8E93", border: "none", padding: "4px 0 8px", fontSize: 12, cursor: "pointer" }}>
+            Plus tard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QuickLogModal({ dailyData, setDailyData, setShowQuickLog, showToast, haptic, profile, onUpdateProfile }) {
   const SESSION_TYPES = [
     { key: "running_zone2",    label: "Zone 2",   icon: "🏃", color: "#007AFF", sub: "Endurance fondamentale" },
@@ -3941,6 +4050,21 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [liveTimerType, setLiveTimerType] = useState("running_zone2");
   const [showAllHome, setShowAllHome] = useState(false);
   const [showAllProgress, setShowAllProgress] = useState(false);
+
+  // ── Check-in matinal — popup à la première ouverture de la journée
+  const [showMorningCheckin, setShowMorningCheckin] = useState(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    try {
+      const sleepDone = !!(JSON.parse(localStorage.getItem(`fitrace_sleep_unified_${profile.name}`)) || {})[todayStr];
+      const cinDone = !!(JSON.parse(localStorage.getItem(`fitrace_checkin_${profile.name}`)) || {})[todayStr];
+      const dismissedToday = localStorage.getItem(`fitrace_morningcheckin_dismissed_${profile.name}`) === todayStr;
+      return !sleepDone && !cinDone && !dismissedToday;
+    } catch { return false; }
+  });
+  const dismissMorningCheckin = () => {
+    setShowMorningCheckin(false);
+    try { localStorage.setItem(`fitrace_morningcheckin_dismissed_${profile.name}`, new Date().toISOString().slice(0, 10)); } catch {}
+  };
 
   // ── Theme
   const [appTheme, setAppTheme] = useState(() => localStorage.getItem("apex_theme") || "black");
@@ -26833,6 +26957,7 @@ const sessions = profile.sessions || [];
 
       {/* Quick Log Modal */}
       {showQuickLog && <QuickLogModal dailyData={dailyData} setDailyData={setDailyData} setShowQuickLog={setShowQuickLog} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
+      {showMorningCheckin && <MorningCheckinModal profile={profile} onClose={dismissMorningCheckin} showToast={showToast} haptic={haptic} />}
 
       {/* Live Session Timer */}
       {showLiveTimer && <LiveTimerModal sessionType={liveTimerType} setShowLiveTimer={setShowLiveTimer} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
