@@ -1628,10 +1628,12 @@ function LoginScreen({ onLogin }) {
       onLogin("athlete", name.trim(), cleanEmail);
     } catch (e) {
       const msg = e?.message || "";
+      console.error("[signup]", msg, e);
       if (msg.includes("already registered") || msg.includes("already exists")) setError("Un compte existe déjà avec cet email.");
       else if (msg.includes("Password") || msg.includes("password")) setError("Mot de passe trop court (min. 6 caractères).");
       else if (msg.includes("valid email") || msg.includes("Invalid email")) setError("Email invalide.");
-      else setError("Erreur lors de l'inscription. Vérifie ta connexion internet et réessaie.");
+      else if (msg.includes("rate limit")) setError("Trop d'inscriptions récentes depuis ce serveur, réessaie dans quelques minutes (limite temporaire liée à l'envoi d'emails).");
+      else setError(`Erreur lors de l'inscription. Vérifie ta connexion internet et réessaie. (${msg || "détail indisponible"})`);
     }
     setLoading(false);
   }
