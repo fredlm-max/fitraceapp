@@ -1164,15 +1164,6 @@ function recoveryLabel(score) {
 // Storage clé quotidienne
 const getDailyLogKey = (name, dateStr) => `fitrace_daily_log_${name}_${dateStr}`;
 
-// Helper — lit les séances d'un profil depuis localStorage
-function getSessionsForProfile(name) {
-  try {
-    const profiles = JSON.parse(localStorage.getItem("fitrace_profiles") || "[]");
-    const p = profiles.find(p => p.name === name);
-    return p?.sessions || [];
-  } catch { return []; }
-}
-
 // ============================================================
 // PMC — Performance Management Chart (CTL / ATL / TSB)
 // Modèle Banister impulse-response, standard coaching pro
@@ -23232,7 +23223,7 @@ const sessions = profile.sessions || [];
 
             {/* ── RPE TREND + VOLUME ── */}
             {(profile.sessions||[]).length >= 3 && (() => {
-              const sessions = getSessionsForProfile(profile.name);
+              const sessions = profile.sessions || [];
               const now = new Date();
               // 8 weeks buckets Mon→Sun
               const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -24390,7 +24381,7 @@ const sessions = profile.sessions || [];
 
             {/* ── MUSCLE FATIGUE HEATMAP ── */}
             {(profile.sessions||[]).length >= 1 && (() => {
-              const sessions = getSessionsForProfile(profile.name);
+              const sessions = profile.sessions || [];
               const now = Date.now();
               // muscle groups and which session types stress them (weight = intensity 0-1)
               const MUSCLE_MAP = {
@@ -24556,7 +24547,7 @@ const sessions = profile.sessions || [];
 
             {/* ── WEEKLY COMPARISON ── */}
             {(() => {
-              const sessions = getSessionsForProfile(profile.name);
+              const sessions = profile.sessions || [];
               const now = new Date();
               const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0
               const thisMonday = new Date(now); thisMonday.setDate(now.getDate() - dayOfWeek); thisMonday.setHours(0,0,0,0);
@@ -27302,7 +27293,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
       {/* ── PERSONAL RECORDS HALL OF FAME ── */}
       {(() => {
-        const sessions = getSessionsForProfile(profile.name);
+        const sessions = profile.sessions || [];
         const exercicesLog = JSON.parse(localStorage.getItem(`fitrace_exercices_${profile.name}`) || "[]");
 
         // Best session TRIMP
@@ -34981,7 +34972,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
       {/* ── MONTHLY CALENDAR VIEW ── */}
       {(() => {
         const [calMonth, setCalMonth] = React.useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
-        const sessions = getSessionsForProfile(profile.name);
+        const sessions = profile.sessions || [];
 
         const TYPE_COLOR = {
           running_zone2: "#30D158", running_qualite: "#FF9F0A",
