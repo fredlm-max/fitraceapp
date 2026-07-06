@@ -3764,7 +3764,7 @@ function LiveTimerModal({ sessionType, setShowLiveTimer, showToast, haptic, prof
   );
 }
 
-function MorningCheckinModal({ profile, onClose, showToast, haptic }) {
+function MorningCheckinModal({ profile, onClose, showToast, haptic, dailyData, setDailyData }) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const SLEEP_KEY = `fitrace_sleep_unified_${profile.name}`;
   const CIN_KEY = `fitrace_checkin_${profile.name}`;
@@ -3777,7 +3777,15 @@ function MorningCheckinModal({ profile, onClose, showToast, haptic }) {
   const [quality, setQuality] = React.useState(existingSleep?.quality ?? 3);
   const [hrv, setHrv] = React.useState(existingSleep?.hrv ?? "");
   const [weight, setWeight] = React.useState(existingCin?.weight ?? (parseFloat(profile.poids) || 70));
+  const [fatigue, setFatigue] = React.useState(dailyData?.fatigue || 3);
   const [saving, setSaving] = React.useState(false);
+
+  const FATIGUE_OPTS = [
+    { v: 1, emoji: "😴", label: "Fatigué", color: "#FF453A" },
+    { v: 2, emoji: "😐", label: "Moyen", color: "#FF9F0A" },
+    { v: 3, emoji: "😊", label: "Bien", color: "var(--yellow)" },
+    { v: 4, emoji: "🔥", label: "Frais", color: "#30D158" },
+  ];
 
   const save = () => {
     haptic?.([10, 30, 10]);
@@ -3790,6 +3798,8 @@ function MorningCheckinModal({ profile, onClose, showToast, haptic }) {
       const cinAll = JSON.parse(localStorage.getItem(CIN_KEY) || "{}");
       cinAll[todayStr] = { ...(existingCin || { energy: 3 }), weight: parseFloat(weight) || 0, date: todayStr };
       syncedStorage.set(CIN_KEY, cinAll);
+
+      setDailyData?.(d => ({ ...d, fatigue }));
     } catch {}
     setTimeout(() => {
       setSaving(false);
@@ -3815,6 +3825,24 @@ function MorningCheckinModal({ profile, onClose, showToast, haptic }) {
         </div>
 
         <div style={{ padding: "14px 20px 4px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Fatigue physique */}
+          <div>
+            <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>💪 Fatigue physique</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {FATIGUE_OPTS.map(f => (
+                <button key={f.v} onClick={() => { haptic?.([6]); setFatigue(f.v); }} style={{
+                  flex: 1, padding: "10px 4px", borderRadius: 12, textAlign: "center",
+                  background: fatigue === f.v ? `${f.color}18` : "rgba(255,255,255,0.04)",
+                  border: fatigue === f.v ? `2px solid ${f.color}` : "1.5px solid rgba(255,255,255,0.08)",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>
+                  <div style={{ fontSize: 22 }}>{f.emoji}</div>
+                  <div style={{ fontSize: 9, marginTop: 4, color: fatigue === f.v ? f.color : "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Sommeil : heures */}
           <div>
@@ -26736,7 +26764,7 @@ const sessions = profile.sessions || [];
 
       {/* Quick Log Modal */}
       {showQuickLog && <QuickLogModal dailyData={dailyData} setDailyData={setDailyData} setShowQuickLog={setShowQuickLog} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
-      {showMorningCheckin && <MorningCheckinModal profile={profile} onClose={dismissMorningCheckin} showToast={showToast} haptic={haptic} />}
+      {showMorningCheckin && <MorningCheckinModal profile={profile} onClose={dismissMorningCheckin} showToast={showToast} haptic={haptic} dailyData={dailyData} setDailyData={setDailyData} />}
 
       {/* Live Session Timer */}
       {showLiveTimer && <LiveTimerModal sessionType={liveTimerType} setShowLiveTimer={setShowLiveTimer} showToast={showToast} haptic={haptic} profile={profile} onUpdateProfile={onUpdateProfile} />}
