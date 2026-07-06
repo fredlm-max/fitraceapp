@@ -11478,17 +11478,24 @@ JSON:
             {/* ── SLEEP QUALITY TRACKER ── */}
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
+              // Clé canonique partagée avec le widget "Sleep Tracker" (tableau [{date,dur,quality}]).
               const sleepKey = `fitrace_sleep_${profile.name}`;
-              const [sleepLog, setSleepLog] = React.useState(() => {
-                try { return JSON.parse(localStorage.getItem(sleepKey) || "{}"); } catch { return {}; }
+              const [sleepArr, setSleepArr] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(sleepKey)) || []; } catch { return []; }
               });
+              const sleepLog = React.useMemo(() => {
+                const dict = {};
+                sleepArr.forEach(e => { dict[e.date] = { hours: e.dur, quality: e.quality }; });
+                return dict;
+              }, [sleepArr]);
               const todaySleep = sleepLog[todayStr] || { hours: "", quality: 0 };
               const [hours, setHours] = React.useState(todaySleep.hours || "");
               const [quality, setQuality] = React.useState(todaySleep.quality || 0);
 
               const saveSleep = (h, q) => {
-                const updated = { ...sleepLog, [todayStr]: { hours: h, quality: q } };
-                setSleepLog(updated);
+                const dur = parseFloat(h) || 0;
+                const updated = [...sleepArr.filter(e => e.date !== todayStr), { date: todayStr, dur, quality: q }];
+                setSleepArr(updated);
                 syncedStorage.set(sleepKey, updated);
               };
 
