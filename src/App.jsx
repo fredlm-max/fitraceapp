@@ -38280,19 +38280,21 @@ JSON: {
             const todayDate = new Date().toISOString().slice(0,10);
             const lastSession = (profile.sessions||[]).slice(-1)[0];
             const isTrainingDay = lastSession?.date === todayDate;
+            // Clé partagée avec les autres widgets hydratation — unité canonique: ml (pas "verres").
             const hydKey = `fitrace_hydration_${profile.name}_${todayDate}`;
+            const GLASS_ML = 250;
             const [glasses, setGlasses] = React.useState(() => {
-              try { return parseInt(localStorage.getItem(hydKey) || "0"); } catch { return 0; }
+              try { return Math.round((parseInt(localStorage.getItem(hydKey)) || 0) / GLASS_ML); } catch { return 0; }
             });
             const addGlass = () => {
               const next = Math.min(glasses + 1, 20);
               setGlasses(next);
-              syncedStorage.set(hydKey, next);
+              syncedStorage.set(hydKey, next * GLASS_ML);
             };
             const removeGlass = () => {
               const next = Math.max(glasses - 1, 0);
               setGlasses(next);
-              syncedStorage.set(hydKey, next);
+              syncedStorage.set(hydKey, next * GLASS_ML);
             };
             // 35ml/kg base + 500ml per training day (EFSA 2010)
             const targetL = ((poids * 35) / 1000 + (isTrainingDay ? 0.5 : 0)).toFixed(1);
@@ -41464,9 +41466,11 @@ JSON: {
 
       {/* ── HYDRATION TRACKER ── */}
       {(() => {
+        // Clé partagée avec les autres widgets hydratation — unité canonique: ml (pas "verres").
         const hydKey = `fitrace_hydration_${profile.name}_${today}`;
+        const GLASS_ML = 250;
         const [glasses, setGlasses] = React.useState(() => {
-          try { return parseInt(localStorage.getItem(hydKey) || "0"); } catch { return 0; }
+          try { return Math.round((parseInt(localStorage.getItem(hydKey)) || 0) / GLASS_ML); } catch { return 0; }
         });
         const target = Math.round((parseFloat(profile.poids) || 75) * 0.035);
         const glassesNeeded = Math.ceil(target / 0.25);
@@ -41474,12 +41478,12 @@ JSON: {
         const addGlass = () => {
           const next = Math.min(glasses + 1, 20);
           setGlasses(next);
-          syncedStorage.set(hydKey, next);
+          syncedStorage.set(hydKey, next * GLASS_ML);
         };
         const removeGlass = () => {
           const next = Math.max(glasses - 1, 0);
           setGlasses(next);
-          syncedStorage.set(hydKey, next);
+          syncedStorage.set(hydKey, next * GLASS_ML);
         };
         const color = pct >= 100 ? "#30D158" : pct >= 60 ? "#C9A840" : "#FF453A";
         return (
