@@ -18302,9 +18302,18 @@ JSON:
 
             {/* ── BENCHMARK TEST TRACKER ── */}
             {(() => {
-              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              // Clé distincte de `fitrace_benchmarks_` (temps stations HYROX) — même préfixe
+              // par erreur historiquement, ce qui mélangeait deux jeux de données incompatibles
+              // (ici : tests Cooper/Ruffier/Plank, tableau brut).
+              const benchKey = `fitrace_fitness_tests_${profile.name}`;
               const [log, setLog] = React.useState(() => {
-                try { return JSON.parse(localStorage.getItem(benchKey) || "[]"); } catch { return []; }
+                try {
+                  const current = JSON.parse(localStorage.getItem(benchKey) || "null");
+                  if (current) return current;
+                  // Repli one-shot sur l'ancienne clé partagée, pour ne pas perdre l'historique déjà saisi.
+                  const legacy = JSON.parse(localStorage.getItem(`fitrace_benchmarks_${profile.name}`) || "[]");
+                  return Array.isArray(legacy) ? legacy : [];
+                } catch { return []; }
               });
               const [activeTest, setActiveTest] = React.useState(null);
               const [inputVal, setInputVal] = React.useState("");
@@ -24896,15 +24905,18 @@ const sessions = profile.sessions || [];
                 { id: "wallball", icon: "🏀",  label: "Wall Balls",      dist: "100 reps",refH: "4:00", refF: "5:00", refEliteH: "3:20", color: "var(--yellow)" },
               ];
               const benchKey = `fitrace_benchmarks_${profile.name}`;
-              const [benchmarks, setBenchmarks] = React.useState({});
+              // Bug corrigé : ce widget utilisait storage.get/set (qui rajoute son propre
+              // préfixe "fitrace_") sur une clé qui contenait déjà "fitrace_" — la donnée
+              // finissait sous "fitrace_fitrace_benchmarks_..." et n'était jamais lue par
+              // aucun autre écran de l'app. On lit maintenant en localStorage brut, comme
+              // les autres widgets qui utilisent cette même clé `fitrace_benchmarks_`.
+              const [benchmarks, setBenchmarks] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(benchKey) || "{}"); } catch { return {}; }
+              });
               const [editingStation, setEditingStation] = React.useState(null);
               const [editMin, setEditMin] = React.useState("");
               const [editSec, setEditSec] = React.useState("");
               const [prCelebration, setPrCelebration] = React.useState(null); // { stationLabel, newTime, delta }
-
-              React.useEffect(() => {
-                storage.get(benchKey).then(b => { if (b) setBenchmarks(b); });
-              }, []);
 
               const saveBench = async (id, min, sec) => {
                 const timeStr = `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
@@ -24920,7 +24932,18 @@ const sessions = profile.sessions || [];
                 const prEntry = history.reduce((best,e) => toSecs(e.time) < toSecs(best.time) ? e : best, history[0]);
                 const updated = { ...benchmarks, [id]: { time: prEntry.time, date: prEntry.date, history } };
                 setBenchmarks(updated);
-                await storage.set(benchKey, updated);
+                syncedStorage.set(benchKey, updated);
+                // Répercute aussi vers fitrace_hyrox_times_ (temps plats en secondes) — la
+                // source lue par les 7+ autres écrans d'analyse (weakness detector, drill
+                // picker, race simulator...), qui utilisent des identifiants de station
+                // légèrement différents de ceux de ce widget.
+                const CANONICAL_ID = { ski:"skierg", sledpush:"sled_push", sledpull:"sled_pull", wallball:"wallballs" };
+                const canonicalId = CANONICAL_ID[id] || id;
+                try {
+                  const canonical = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}");
+                  canonical[canonicalId] = toSecs(prEntry.time);
+                  syncedStorage.set(`fitrace_hyrox_times_${profile.name}`, canonical);
+                } catch {}
                 setEditingStation(null);
                 // PR celebration: did we beat the previous best?
                 const stInfo = BENCH_STATIONS.find(s => s.id === id);
@@ -29247,6 +29270,23 @@ function HyroxBenchmarkTab({ profile }) {
     const next = { ...userTimes, [id]: sec };
     setUserTimes(next);
     syncedStorage.set(`fitrace_hyrox_times_${profile.name}`, next);
+    // Répercute aussi vers fitrace_benchmarks_ (format détaillé avec historique + PR)
+    // utilisé par le widget "Benchmarks Stations" — synchro dans les deux sens.
+    const LEGACY_ID = { skierg:"ski", sled_push:"sledpush", sled_pull:"sledpull", wallballs:"wallball" };
+    const legacyId = LEGACY_ID[id] || id;
+    try {
+      const benchKey2 = `fitrace_benchmarks_${profile.name}`;
+      const legacy = JSON.parse(localStorage.getItem(benchKey2) || "{}");
+      const timeStr = `${String(Math.floor(sec/60)).padStart(2,"0")}:${String(sec%60).padStart(2,"0")}`;
+      const today = new Date().toISOString().split("T")[0];
+      const prev = legacy[legacyId] || {};
+      const toSecs = t => { const [m,s]=t.split(":").map(Number); return m*60+(s||0); };
+      const prevHistory = prev.history || (prev.time ? [{ time: prev.time, date: prev.date || today }] : []);
+      const history = [...prevHistory, { time: timeStr, date: today }];
+      const prEntry = history.reduce((best,e) => toSecs(e.time) < toSecs(best.time) ? e : best, history[0]);
+      legacy[legacyId] = { time: prEntry.time, date: prEntry.date, history };
+      syncedStorage.set(benchKey2, legacy);
+    } catch {}
     setActiveStation(null);
     setInputVal("");
   };
