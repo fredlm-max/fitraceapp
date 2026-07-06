@@ -34769,6 +34769,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
   const [selectedJour, setSelectedJour] = useState(null);
   const [showPrefs, setShowPrefs] = useState(false);
   const [showMacroCycle, setShowMacroCycle] = useState(false);
+  const [showAdvancedPlanning, setShowAdvancedPlanning] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [expandedExo, setExpandedExo] = useState(null);
   const [joursFaits, setJoursFaits] = useState(() => {
@@ -35073,6 +35074,13 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           </div>
         );
       })()}
+
+      {/* ── OUTILS AVANCÉS — masqués par défaut pour simplifier le planning ── */}
+      <button onClick={() => setShowAdvancedPlanning(v => !v)}
+        style={{ width: "100%", padding: "10px", background: "none", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, color: "#8E8E93", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", marginBottom: 12 }}>
+        {showAdvancedPlanning ? "✕ Masquer les outils avancés" : "＋ Outils avancés (objectifs, calculateurs, tapering…)"}
+      </button>
+      <div style={{ display: showAdvancedPlanning ? "block" : "none" }}>
 
       {/* ── WEEKLY CUSTOM PLAN EDITOR ── */}
       {(() => {
@@ -37258,6 +37266,8 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
           </div>
         );
       })()}
+
+      </div>
 
       {/* ── CHARGEMENT ── */}
       {loadingPlanning ? (
