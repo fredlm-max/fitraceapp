@@ -8558,7 +8558,7 @@ JSON:
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
                     <div>
                       <div style={{ fontSize:11, color:"#98989D" }}>WHOOP · SOMMEIL & RÉCUPÉRATION</div>
-                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>😴 Sleep Tracker</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>😴 Suivi du sommeil</div>
                     </div>
                     <div style={{ textAlign:"center" }}>
                       <div style={{ fontSize:28, fontWeight:900, color: scoreColor }}>{score !== null ? score : "—"}</div>
@@ -17078,7 +17078,7 @@ JSON:
                 <div style={{ background:"rgba(28,28,30,0.6)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:18, padding:"14px 16px", marginBottom:14 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div>
-                      <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1 }}>ACHIEVEMENTS</div>
+                      <div className="bebas" style={{ fontSize:16, color:"#F2F2F7", letterSpacing:1 }}>SUCCÈS</div>
                       <div style={{ fontSize:10, color:"#8E8E93" }}>{unlocked.length}/{BADGES.length} débloqués</div>
                     </div>
                     {/* Progress bar */}
@@ -19126,7 +19126,7 @@ JSON:
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
                     <div>
                       <div style={{ fontSize:11, color:"#98989D" }}>GARMIN · HYDRATATION QUOTIDIENNE</div>
-                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>💧 Hydration Tracker</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>💧 Suivi hydratation</div>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                       <button onClick={prevDay} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:"#888", cursor:"pointer", fontSize:14 }}>‹</button>
@@ -22918,7 +22918,7 @@ const sessions = profile.sessions || [];
                 <div style={{ background: "linear-gradient(145deg, #0a0800 0%, #080808 60%)", border: "1px solid rgba(191,90,242,0.2)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                     <span style={{ fontSize: 18 }}>🏆</span>
-                    <div className="bebas" style={{ fontSize: 18, color: "#BF5AF2", letterSpacing: 1 }}>PERSONAL RECORDS</div>
+                    <div className="bebas" style={{ fontSize: 18, color: "#BF5AF2", letterSpacing: 1 }}>RECORDS PERSONNELS</div>
                     <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{prList.length} exercice{prList.length > 1 ? "s" : ""}</div>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -30558,7 +30558,7 @@ function TechniqueTab({ profile = {} }) {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
               <div>
                 <div style={{ fontSize:11, color:"#98989D" }}>GARMIN / TRAININGPEAKS</div>
-                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>⏱ Interval Builder</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>⏱ Créateur d'intervalles</div>
               </div>
               {!building && (
                 <button onClick={() => { setBuilding(true); setSelectedPlan(null); }}
@@ -31628,7 +31628,7 @@ function TechniqueTab({ profile = {} }) {
 
         return (
           <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
-            <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Live Session Tracker</div>
+            <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Séance en direct</div>
 
             {!liveActive && !liveSaved && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -39376,7 +39376,7 @@ JSON: {
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
                   <div>
                     <div style={{ fontSize:11, color:"#98989D" }}>MYFITNESSPAL · JOURNAL ALIMENTAIRE</div>
-                    <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🥗 Nutrition Log</div>
+                    <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🥗 Journal nutrition</div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     <button onClick={prevDay} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:"#888", cursor:"pointer", fontSize:14 }}>‹</button>
@@ -43592,7 +43592,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
         return (
           <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
-            <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Race Strategy Planner</div>
+            <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Stratégie de course</div>
 
             <div style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -44710,7 +44710,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
 
         return (
           <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:"var(--white)", marginBottom:14 }}>Live Race Split Tracker</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"var(--white)", marginBottom:14 }}>Chrono course en direct</div>
 
             {/* Tabs */}
             <div style={{ display:"flex", gap:6, marginBottom:14 }}>
