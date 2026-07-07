@@ -8240,7 +8240,9 @@ JSON:
               const todayStr = new Date().toISOString().slice(0,10);
               const KEY = `fitrace_sleep_unified_${profile.name}`;
 
-              const [logs, setLogs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+              // Réactif : le sommeil saisi via le check-in matinal (ou ailleurs) se
+              // reflète ici en direct, et inversement.
+              const [logs, setLogs] = useSyncedStorage(KEY, {});
               const todayLog = logs[todayStr];
 
               const [editing, setEditing] = React.useState(false);
@@ -8264,9 +8266,7 @@ JSON:
               const save = () => {
                 const dur = parseFloat((durFromTimes > 0 ? durFromTimes : form.h + form.m/60).toFixed(1));
                 const entry = { ...form, dur };
-                const next = { ...logs, [todayStr]: entry };
-                setLogs(next);
-                syncedStorage.set(KEY, next);
+                setLogs(prev => ({ ...prev, [todayStr]: entry }));
                 setEditing(false);
               };
 
