@@ -2556,13 +2556,21 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
       const tCleaned = raw?.replace(/```json|```/g, "").trim() || "{}";
       const tMatch = tCleaned.match(/\{[\s\S]*\}/);
       const parsed = JSON.parse(tMatch ? tMatch[0] : "{}");
+      // Fallback si l'IA n'a rien renvoyé d'exploitable : on garde un niveau par
+      // défaut pour que l'écran de résultat s'affiche et que les tests soient conservés.
+      if (!parsed.level) { parsed.level = 1; parsed.objectif = parsed.objectif || "Finir ton HYROX"; parsed.analyse = parsed.analyse || "Tes résultats sont enregistrés. L'analyse IA détaillée sera disponible plus tard."; }
       setLevelResult(parsed);
       const today = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
       const jAvant = profile.raceDate ? Math.max(0, Math.ceil((new Date(profile.raceDate) - new Date()) / (1000*60*60*24))) : null;
       const aiProf = await callClaude("Tu es coach HYROX expert. 150 mots max, en français.", `Profil pour ${profile.name}, ${profile.age}ans, ${profile.poids}kg, ${profile.sexe}. Objectif: ${profile.objectifPrincipal || "hyrox"} ${profile.hyroxCategorie || ""}. Niveau ${parsed.level}/4. VMA:${parsed.vmaKmh || vma}km/h | Squat:${parsed.squat1RM || squat1RM}kg. Aujourd'hui:${today}${jAvant !== null ? ` | J-${jAvant} avant la course` : ""}. Analyse courte et encourageante avec objectif réaliste. Emojis.`);
       const updatedProfile = { ...profile, tests: { ...results, analyzed: true }, level: parsed.level, vmaKmh: parsed.vmaKmh || vma, squat1RM_final: parsed.squat1RM || squat1RM, deadlift1RM_final: parsed.deadlift1RM || dl1RM, levelAnalysis: parsed, onboardingComplete: true, fcMax: fcMax, fcMin: fcMin, aiProfile: aiProf || "" };
       if (profile.email) await athleteBackend.saveProfile(profile.email, updatedProfile);
-    } catch (e) { console.error(e, raw); }
+    } catch (e) {
+      console.error(e, raw);
+      // L'IA a échoué : on affiche quand même un résultat pour ne pas bloquer, et
+      // les vraies mesures seront enregistrées via le bouton "Accéder à mon programme".
+      setLevelResult({ level: 1, objectif: "Finir ton HYROX", analyse: "Analyse IA momentanément indisponible — tes résultats de tests sont bien enregistrés.", pointsForts: [], axesTravail: [] });
+    }
     setLoading(false);
   }
 
@@ -2607,7 +2615,20 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
                 </div>
               </div>
             </Card>
-            <Btn size="lg" onClick={() => onComplete({ ...profile, level: levelResult.level, vmaKmh: levelResult.vmaKmh, squat1RM_final: levelResult.squat1RM, deadlift1RM_final: levelResult.deadlift1RM, levelAnalysis: levelResult, tests: results, onboardingComplete: true })} style={{ width: "100%" }}>
+            <Btn size="lg" onClick={() => {
+              // Valeurs calculées à partir des saisies (source fiable) ; l'IA n'est
+              // qu'un enrichissement — on ne perd jamais les vraies mesures si elle échoue.
+              const vmaCalc = results.vma?.distance ? calcVMA(results.vma.distance) : (profile.vmaKmh || null);
+              const squatCalc = (results.squat?.poids && results.squat?.reps) ? epley1RM(results.squat.poids, results.squat.reps) : (profile.squat1RM_final || null);
+              const dlCalc = (results.deadlift?.poids && results.deadlift?.reps) ? epley1RM(results.deadlift.poids, results.deadlift.reps) : (profile.deadlift1RM_final || null);
+              const benchCalc = (results.bench?.poids && results.bench?.reps) ? epley1RM(results.bench.poids, results.bench.reps) : (profile.bench1RM_final || null);
+              onComplete({ ...profile, level: levelResult.level,
+                vmaKmh: levelResult.vmaKmh || vmaCalc,
+                squat1RM_final: levelResult.squat1RM || squatCalc,
+                deadlift1RM_final: levelResult.deadlift1RM || dlCalc,
+                bench1RM_final: benchCalc,
+                levelAnalysis: levelResult, tests: results, onboardingComplete: true });
+            }} style={{ width: "100%" }}>
               Accéder à mon programme 🏆
             </Btn>
           </div>
