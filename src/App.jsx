@@ -292,6 +292,39 @@ const athleteBackend = {
 // ============================================================
 let currentAthleteEmail = null;
 
+// File d'attente des synchros échouées (hors-ligne, erreur réseau...) :
+// une seule entrée par clé (la dernière valeur gagne), persistée en local
+// pour survivre à une fermeture de l'app, rejouée au retour en ligne.
+const SYNC_PENDING_KEY = "fitrace_sync_pending";
+const syncQueue = {
+  load() { try { return JSON.parse(localStorage.getItem(SYNC_PENDING_KEY) || "{}"); } catch { return {}; } },
+  save(q) { try { localStorage.setItem(SYNC_PENDING_KEY, JSON.stringify(q)); } catch {} },
+  add(email, key, value) { const q = this.load(); q[key] = { email, value }; this.save(q); },
+  remove(key) { const q = this.load(); if (key in q) { delete q[key]; this.save(q); } },
+};
+
+let flushingSyncQueue = false;
+async function flushSyncQueue() {
+  if (flushingSyncQueue) return;
+  const q = syncQueue.load();
+  const keys = Object.keys(q);
+  if (!keys.length) return;
+  flushingSyncQueue = true;
+  try {
+    for (const key of keys) {
+      const { email, value } = q[key];
+      try {
+        const { error } = await supabase.rpc("kv_push", { p_email: email, p_key: key, p_value: value });
+        if (!error) syncQueue.remove(key);
+      } catch { break; } // toujours hors-ligne — on réessaiera au prochain passage
+    }
+  } finally { flushingSyncQueue = false; }
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("online", flushSyncQueue);
+  setInterval(() => { if (navigator.onLine) flushSyncQueue(); }, 60000);
+}
+
 const athleteKV = {
   async pullAll(email) {
     const { data, error } = await supabase.rpc("kv_pull_all", { p_email: email });
@@ -300,10 +333,12 @@ const athleteKV = {
   },
   push(email, key, value) {
     if (!email) return;
-    // Fire-and-forget — ne bloque jamais l'UI, échoue silencieusement hors-ligne
+    // Ne bloque jamais l'UI ; en cas d'échec la valeur est mise en file
+    // et rejouée automatiquement (retour en ligne ou toutes les 60s).
     supabase.rpc("kv_push", { p_email: email, p_key: key, p_value: value }).then(({ error }) => {
-      if (error) console.error("Sync cloud échouée pour", key, error);
-    });
+      if (error) { console.error("Sync cloud échouée pour", key, error.message); syncQueue.add(email, key, value); }
+      else syncQueue.remove(key);
+    }).catch(() => syncQueue.add(email, key, value));
   },
 };
 
