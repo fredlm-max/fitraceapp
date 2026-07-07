@@ -6703,9 +6703,11 @@ JSON:
               const urgColor = daysToRace <= 7 ? "#FF453A" : daysToRace <= 21 ? "#FF9F0A" : daysToRace <= 42 ? "#C9A840" : "#8E8E93";
 
               return (
-                <div style={{ marginBottom: 14, background: "linear-gradient(135deg, #0a0a0a 0%, #111 100%)", border: `1px solid ${currentPhase.color}30`, borderRadius: 20, padding: "16px 16px 14px", position: "relative", overflow: "hidden" }}>
+                <div style={{ marginBottom: 14, background: "linear-gradient(160deg, #121110 0%, #0c0b0a 100%)", border: `1px solid ${currentPhase.color}30`, borderRadius: 22, padding: "16px 16px 14px", position: "relative", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                  {/* Reflet spéculaire haut */}
+                  <div style={{ position: "absolute", top: 0, left: "14%", right: "14%", height: 1, background: `linear-gradient(90deg, transparent, ${currentPhase.color}55, transparent)`, pointerEvents: "none" }} />
                   {/* Glow fond */}
-                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${currentPhase.color}12 0%, transparent 70%)`, pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: `radial-gradient(circle, ${currentPhase.color}18 0%, transparent 70%)`, pointerEvents: "none" }} />
 
                   {/* Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -6805,7 +6807,7 @@ JSON:
               };
 
               return (
-                <div style={{ marginBottom:12, padding:"14px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16 }}>
+                <div style={{ marginBottom:12, padding:"14px 16px", background:"linear-gradient(160deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.02) 100%)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:18, boxShadow:"0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)" }}>
                   {/* Header */}
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                     <div style={{ fontSize:10, color:"#8E8E93", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>🥗 Nutrition du jour</div>
