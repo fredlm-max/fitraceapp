@@ -641,7 +641,10 @@ function getPhase(week, totalWeeks) {
 function calcFitnessScore(profile) {
   const sessions = profile.sessions || [];
   const nbSessions = sessions.length;
-  if (nbSessions === 0) return { global: 0, force: 0, endurance: 0, puissance: 0 };
+  // Les résultats des tests (VMA, 1RM squat/deadlift) suffisent à calculer un score,
+  // même sans séance loggée : on ne renvoie 0 que si AUCUNE donnée n'existe.
+  const hasTestData = !!(profile.vmaKmh || profile.squat1RM_final || profile.deadlift1RM_final || profile.bench1RM_final);
+  if (nbSessions === 0 && !hasTestData) return { global: 0, force: 0, endurance: 0, puissance: 0 };
 
   const poids = parseFloat(profile.poids) || 70;
 
