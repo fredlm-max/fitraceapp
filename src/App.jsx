@@ -47104,6 +47104,21 @@ export default function App() {
   async function handleTestsComplete(updatedProfile) {
     setProfile(updatedProfile);
     setNeedTests(false);
+    // Répercute les temps de stations de la batterie de tests vers la clé canonique
+    // `fitrace_hyrox_times_` que lisent les widgets HYROX (points faibles, race sim...),
+    // pour que les tables saisies soient prises en compte partout.
+    try {
+      const t = updatedProfile.tests || {};
+      const MAP = { ski: "skierg", row: "rowing", sled: "sled_push", burpee: "burpee_broad_jump", farmers: "farmers_carry" };
+      const key = `fitrace_hyrox_times_${updatedProfile.name}`;
+      const existing = JSON.parse(localStorage.getItem(key) || "{}");
+      let changed = false;
+      Object.entries(MAP).forEach(([testId, stationId]) => {
+        const sec = parseInt(t[testId]?.value);
+        if (sec && !isNaN(sec)) { existing[stationId] = sec; changed = true; }
+      });
+      if (changed) syncedStorage.set(key, existing);
+    } catch {}
     const email = user?.email || updatedProfile.email;
     if (!email) return;
     try {
