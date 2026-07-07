@@ -3955,7 +3955,10 @@ function MorningCheckinModal({ profile, onClose, showToast, haptic, dailyData, s
       cinAll[todayStr] = { ...(existingCin || { energy: 3 }), weight: parseFloat(weight) || 0, date: todayStr };
       syncedStorage.set(CIN_KEY, cinAll);
 
-      setDailyData?.(d => ({ ...d, fatigue }));
+      // Répercute vers dailyData pour que le score Sommeil, la récupération et
+      // le score APEX de l'accueil se recalculent immédiatement avec ces valeurs.
+      const sleepHours = parseFloat((h + m / 60).toFixed(1));
+      setDailyData?.(d => ({ ...d, fatigue, sommeil: quality, sleepHours, hrv: hrv || d.hrv, poidsJour: parseFloat(weight) || d.poidsJour }));
     } catch {}
     setTimeout(() => {
       setSaving(false);
