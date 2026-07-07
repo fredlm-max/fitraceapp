@@ -1499,6 +1499,33 @@ function Card({ children, style, onClick }) {
   );
 }
 
+// Compteur animé — fait défiler le nombre de 0 (ou valeur précédente) jusqu'à la cible
+// avec une courbe ease-out. Respecte prefers-reduced-motion. `className`/`style`
+// transmis à l'élément <span> pour hériter du style du nombre affiché.
+function CountUp({ value, duration = 1100, decimals = 0, className, style }) {
+  const target = Number(value) || 0;
+  const [display, setDisplay] = React.useState(target);
+  const fromRef = React.useRef(0);
+  React.useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setDisplay(target); fromRef.current = target; return; }
+    const from = fromRef.current;
+    const start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setDisplay(from + (target - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  const shown = decimals > 0 ? display.toFixed(decimals) : Math.round(display);
+  return <span className={className} style={style}>{shown}</span>;
+}
+
 function Input({ label, value, onChange, type = "text", placeholder, style, min, max, step }) {
   const [focused, setFocused] = useState(false);
   // Email/mot de passe : évite que Safari iOS auto-capitalise/corrige la 1re lettre,
@@ -6567,7 +6594,7 @@ JSON:
                               style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${tier.color}70)` }}/>
                           </svg>
                           <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-                            <div className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{apexScore}</div>
+                            <CountUp value={apexScore} duration={1300} className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }} />
                             <div style={{ fontSize:8, color:"#4A4A4E" }}>/ 100</div>
                           </div>
                         </div>
@@ -6612,7 +6639,7 @@ JSON:
                               style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}55)` }}/>
                           </svg>
                           <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-                            <div className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{sc.global}</div>
+                            <CountUp value={sc.global} duration={1300} className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }} />
                             <div style={{ fontSize:8, color:"#4A4A4E" }}>/ 100</div>
                           </div>
                         </div>
