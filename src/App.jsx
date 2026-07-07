@@ -349,12 +349,30 @@ const athleteKV = {
   },
 };
 
+// ── Couche réactive ──────────────────────────────────────────────
+// Dès qu'une donnée est écrite (repas, sommeil, poids, hydratation...),
+// on notifie l'app pour que TOUS les widgets qui recalculent à partir de
+// localStorage (scores APEX/Fitness, anneaux, résumés, récupération...) se
+// rafraîchissent ensemble, sans que chacun ait à s'abonner manuellement.
+// Les notifications d'un même "tick" sont fusionnées (une seule mise à jour).
+const dataListeners = new Set();
+let dataChangeScheduled = false;
+function notifyDataChange() {
+  if (dataChangeScheduled) return;
+  dataChangeScheduled = true;
+  const run = () => { dataChangeScheduled = false; dataListeners.forEach(fn => { try { fn(); } catch {} }); };
+  if (typeof queueMicrotask === "function") queueMicrotask(run);
+  else Promise.resolve().then(run);
+}
+
 const syncedStorage = {
   // Remplace syncedStorage.set(key, value) — même effet local,
-  // plus une synchronisation cloud en arrière-plan.
+  // plus une synchronisation cloud en arrière-plan, plus une notification
+  // réactive pour que les autres widgets se mettent à jour ensemble.
   set(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { console.error("localStorage set error:", e); }
     if (currentAthleteEmail) athleteKV.push(currentAthleteEmail, key, value);
+    notifyDataChange();
   },
 };
 
@@ -1497,6 +1515,36 @@ function Card({ children, style, onClick }) {
       {children}
     </div>
   );
+}
+
+// Hook de stockage réactif partagé : lit une clé localStorage et se met à jour
+// automatiquement quand N'IMPORTE QUEL widget écrit cette même clé (via
+// syncedStorage.set). Deux widgets utilisant la même clé restent ainsi synchronisés
+// en direct. `setValue` écrit + synchronise + notifie les autres.
+function useSyncedStorage(key, fallback) {
+  const read = React.useCallback(() => {
+    try { const raw = localStorage.getItem(key); return raw != null ? JSON.parse(raw) : fallback; }
+    catch { return fallback; }
+  }, [key]);
+  const [value, setValue] = React.useState(read);
+  const ref = React.useRef(JSON.stringify(value));
+  React.useEffect(() => {
+    const sync = () => {
+      const next = read();
+      const s = JSON.stringify(next);
+      if (s !== ref.current) { ref.current = s; setValue(next); }
+    };
+    sync(); // resynchronise si la clé a changé depuis le montage
+    dataListeners.add(sync);
+    return () => { dataListeners.delete(sync); };
+  }, [key, read]);
+  const write = React.useCallback((next) => {
+    const resolved = typeof next === "function" ? next(read()) : next;
+    ref.current = JSON.stringify(resolved);
+    setValue(resolved);
+    syncedStorage.set(key, resolved);
+  }, [key, read]);
+  return [value, write];
 }
 
 // Compteur animé — fait défiler le nombre de 0 (ou valeur précédente) jusqu'à la cible
@@ -4178,6 +4226,16 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   const [showAllHome, setShowAllHome] = useState(false);
   const [showAllProgress, setShowAllProgress] = useState(false);
 
+  // ── Réactivité globale : re-render quand une donnée est écrite dans un
+  // widget (repas, sommeil, poids...), pour que tous les scores/anneaux/résumés
+  // calculés à partir de localStorage se mettent à jour ensemble en direct.
+  const [, setDataVersion] = useState(0);
+  useEffect(() => {
+    const fn = () => setDataVersion(v => v + 1);
+    dataListeners.add(fn);
+    return () => { dataListeners.delete(fn); };
+  }, []);
+
   // ── Check-in matinal — popup à la première ouverture de la journée
   const [showMorningCheckin, setShowMorningCheckin] = useState(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -6810,15 +6868,16 @@ JSON:
               const todayStr = new Date().toISOString().slice(0,10);
               const MEAL_KEY = `nutri_${profile.name}_${todayStr}`;
 
-              // Lire les repas du jour depuis le stockage partagé avec l'onglet Nutrition
-              const loadMeals = () => { try { return JSON.parse(localStorage.getItem(MEAL_KEY)||"[]"); } catch { return []; } };
+              // Repas du jour — stockage réactif partagé avec l'onglet Nutrition :
+              // ajouter un repas ailleurs met à jour ce widget en direct.
               const getMealsTotal = (meals) => meals.reduce((a,r)=>({
                 cal:a.cal+(r.kcal||0), prot:a.prot+(r.p||0),
                 gluc:a.gluc+(r.g||0), lip:a.lip+(r.l||0)
               }),{cal:0,prot:0,gluc:0,lip:0});
 
-              const [meals, setMeals] = React.useState(loadMeals);
-              const [eau, setEau] = React.useState(()=>{ try { const d=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); return d[todayStr]?.eau||0; } catch { return 0; } });
+              const [meals, setMeals] = useSyncedStorage(MEAL_KEY, []);
+              const [eauData, setEauData] = useSyncedStorage(KEY_QUICK, {});
+              const eau = eauData?.[todayStr]?.eau || 0;
               const openNutriAdd = () => {
                 localStorage.setItem("fitrace_open_nutri_add", "1");
                 navigateTo("nutri");
@@ -6841,14 +6900,11 @@ JSON:
               const restCal = Math.max(0, target.cal - totals.cal);
 
               const saveEau = (v) => {
-                setEau(v);
-                try { const all=JSON.parse(localStorage.getItem(KEY_QUICK)||"{}"); all[todayStr]={...(all[todayStr]||{}),eau:v}; syncedStorage.set(KEY_QUICK, all); } catch {}
+                setEauData(prev => ({ ...(prev||{}), [todayStr]: { ...((prev||{})[todayStr]||{}), eau: v } }));
               };
 
               const removeMeal = (id) => {
-                const next = meals.filter(m=>m.id!==id);
-                setMeals(next);
-                try { syncedStorage.set(MEAL_KEY, next); } catch {}
+                setMeals(prev => prev.filter(m=>m.id!==id));
               };
 
               return (
@@ -37836,7 +37892,6 @@ const OBJECTIFS_NUTRI = (poids, sessionType) => {
 
 function NutritionTab({ profile }) {
   const [subTab, setSubTab] = useState("journal");
-  const [repasJour, setRepasJour] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [customAliment, setCustomAliment] = useState({ nom: "", kcal: "", p: "", g: "", l: "" });
@@ -37852,8 +37907,18 @@ function NutritionTab({ profile }) {
   const storageKey = `nutri_${profile.name}_${today}`;
   const bilanKey = `bilan_nutri_${profile.name}_${today}`;
 
+  // Repas du jour — clé réactive partagée avec le widget nutrition de l'accueil :
+  // un repas ajouté ici se reflète immédiatement partout (anneau, score APEX...).
+  const [repasJour, setRepasJour] = useSyncedStorage(storageKey, []);
+
   useEffect(() => {
-    storage.get(storageKey).then(d => { if (d) setRepasJour(d); });
+    // Migration one-shot : ancienne clé préfixée `fitrace_nutri_...` → clé partagée
+    try {
+      if ((JSON.parse(localStorage.getItem(storageKey) || "[]")).length === 0) {
+        const legacy = localStorage.getItem("fitrace_" + storageKey);
+        if (legacy) { const arr = JSON.parse(legacy); if (Array.isArray(arr) && arr.length) setRepasJour(arr); }
+      }
+    } catch {}
     storage.get(bilanKey).then(d => { if (d) setBilanIA(d); });
     // Ouverture automatique du modal depuis l'accueil
     if (localStorage.getItem("fitrace_open_nutri_add") === "1") {
@@ -37887,19 +37952,15 @@ Valeurs pour 1 portion normale. Arrondis à l'unité.`
     setLoadingMacros(false);
   }
 
-  async function ajouterAliment(aliment) {
-    const newRepas = [...repasJour, { ...aliment, id: Date.now(), heure: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }];
-    setRepasJour(newRepas);
-    await storage.set(storageKey, newRepas);
+  function ajouterAliment(aliment) {
+    setRepasJour(prev => [...prev, { ...aliment, id: Date.now(), heure: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }]);
     setShowAdd(false);
     setSearchText("");
     setCustomAliment({ nom: "", kcal: "", p: "", g: "", l: "" });
   }
 
-  async function supprimerAliment(id) {
-    const newRepas = repasJour.filter(r => r.id !== id);
-    setRepasJour(newRepas);
-    await storage.set(storageKey, newRepas);
+  function supprimerAliment(id) {
+    setRepasJour(prev => prev.filter(r => r.id !== id));
   }
 
   const [bilanStreamText, setBilanStreamText] = useState("");
@@ -41783,9 +41844,7 @@ JSON: {
           setAddingTemplate(true);
           const now2 = new Date().toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
           const newItems = activeTemplate.items.map(item => ({ ...item, id: Date.now() + Math.random(), heure: now2 }));
-          const newRepas = [...repasJour, ...newItems];
-          setRepasJour(newRepas);
-          await storage.set(storageKey, newRepas);
+          setRepasJour(prev => [...prev, ...newItems]);
           setAddingTemplate(false);
           setSubTab("journal");
           showToast(`✅ ${activeTemplate.label} ajouté au journal`, "success", 2500);
