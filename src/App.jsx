@@ -4232,12 +4232,31 @@ function AthleteApp({ profile, user, onUpdateProfile, onLogout }) {
   // ── Réactivité globale : re-render quand une donnée est écrite dans un
   // widget (repas, sommeil, poids...), pour que tous les scores/anneaux/résumés
   // calculés à partir de localStorage se mettent à jour ensemble en direct.
-  const [, setDataVersion] = useState(0);
+  const [dataVersion, setDataVersion] = useState(0);
   useEffect(() => {
     const fn = () => setDataVersion(v => v + 1);
     dataListeners.add(fn);
     return () => { dataListeners.delete(fn); };
   }, []);
+
+  // ── Compteur d'eau unifié : la clé millilitres `fitrace_hydration_${nom}_${date}`
+  // est l'unique source de vérité. `dailyData.hydration` (en verres, utilisé par les
+  // scores de forme) en devient un simple miroir, mis à jour dès qu'on boit de l'eau
+  // n'importe où dans l'app. Migration one-shot des anciens "verres" vers les ml.
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const canonKey = `fitrace_hydration_${profile.name}_${today}`;
+    let ml = 0;
+    try { ml = parseInt(localStorage.getItem(canonKey)); } catch {}
+    if (!ml || isNaN(ml)) {
+      // Aucune valeur canonique : si d'anciens "verres" existent, on les convertit une fois.
+      const legacyGlasses = parseInt(dailyData.hydration) || 0;
+      if (legacyGlasses > 0) { syncedStorage.set(canonKey, legacyGlasses * 250); return; }
+      ml = 0;
+    }
+    const glasses = Math.round(ml / 250);
+    setDailyData(d => (d.hydration === glasses ? d : { ...d, hydration: glasses }));
+  }, [dataVersion, profile.name]);
 
   // ── Check-in matinal — popup à la première ouverture de la journée
   const [showMorningCheckin, setShowMorningCheckin] = useState(() => {
@@ -6867,7 +6886,6 @@ JSON:
 
             {/* ── ENCART NUTRITION ── */}
             {(()=>{
-              const KEY_QUICK = `fitrace_nutri_quick_${profile.name}`;
               const todayStr = new Date().toISOString().slice(0,10);
               const MEAL_KEY = `nutri_${profile.name}_${todayStr}`;
 
@@ -6879,8 +6897,10 @@ JSON:
               }),{cal:0,prot:0,gluc:0,lip:0});
 
               const [meals, setMeals] = useSyncedStorage(MEAL_KEY, []);
-              const [eauData, setEauData] = useSyncedStorage(KEY_QUICK, {});
-              const eau = eauData?.[todayStr]?.eau || 0;
+              // Eau : même source unique que tous les autres compteurs (clé ml canonique),
+              // affichée ici en litres. Boire ici met à jour l'app entière, et inversement.
+              const [hydMlNutri, setHydMlNutri] = useSyncedStorage(`fitrace_hydration_${profile.name}_${todayStr}`, 0);
+              const eau = (parseInt(hydMlNutri) || 0) / 1000;
               const openNutriAdd = () => {
                 localStorage.setItem("fitrace_open_nutri_add", "1");
                 navigateTo("nutri");
@@ -6903,7 +6923,7 @@ JSON:
               const restCal = Math.max(0, target.cal - totals.cal);
 
               const saveEau = (v) => {
-                setEauData(prev => ({ ...(prev||{}), [todayStr]: { ...((prev||{})[todayStr]||{}), eau: v } }));
+                setHydMlNutri(Math.max(0, Math.round(v * 1000)));
               };
 
               const removeMeal = (id) => {
@@ -25913,7 +25933,7 @@ const sessions = profile.sessions || [];
                 </div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                   {Array.from({ length: 8 }, (_, i) => (
-                    <button key={i} onClick={() => { haptic([6]); setDailyData(d => ({ ...d, hydration: i < d.hydration ? i : i + 1 })); }}
+                    <button key={i} onClick={() => { haptic([6]); const g = i < dailyData.hydration ? i : i + 1; syncedStorage.set(`fitrace_hydration_${profile.name}_${new Date().toISOString().slice(0,10)}`, g * 250); }}
                       style={{ width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${i < dailyData.hydration ? "rgba(56,189,248,0.6)" : "rgba(255,255,255,0.1)"}`, background: i < dailyData.hydration ? "rgba(56,189,248,0.15)" : "rgba(255,255,255,0.05)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s var(--spring)" }}>
                       {i < dailyData.hydration ? "💧" : "○"}
                     </button>
