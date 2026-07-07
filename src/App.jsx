@@ -29230,9 +29230,9 @@ function HyroxBenchmarkTab({ profile }) {
   const [cat, setCat] = useState(userCat);
   const [activeStation, setActiveStation] = useState(null); // station sélectionnée pour "ma perf"
   const [inputVal, setInputVal] = useState("");
-  const [userTimes, setUserTimes] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}"); } catch { return {}; }
-  });
+  // Temps HYROX — clé réactive : une perf saisie ici met à jour en direct tous les
+  // autres écrans qui l'exploitent (détecteur de points faibles, simulateur de course...).
+  const [userTimes, setUserTimes] = useSyncedStorage(`fitrace_hyrox_times_${profile.name}`, {});
 
   const catObj = HYROX_CATS.find(c => c.id === cat) || HYROX_CATS[0];
   const benchRun = HYROX_BENCHMARKS.run_pace_sec[cat] || {};
@@ -29243,8 +29243,7 @@ function HyroxBenchmarkTab({ profile }) {
     const sec = parts.length === 2 ? parseInt(parts[0])*60 + parseInt(parts[1]) : parseInt(val);
     if (!sec || isNaN(sec)) return;
     const next = { ...userTimes, [id]: sec };
-    setUserTimes(next);
-    syncedStorage.set(`fitrace_hyrox_times_${profile.name}`, next);
+    setUserTimes(next); // écrit + synchronise + notifie les autres widgets
     // Répercute aussi vers fitrace_benchmarks_ (format détaillé avec historique + PR)
     // utilisé par le widget "Benchmarks Stations" — synchro dans les deux sens.
     const LEGACY_ID = { skierg:"ski", sled_push:"sledpush", sled_pull:"sledpull", wallballs:"wallball" };
