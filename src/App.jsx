@@ -8864,7 +8864,7 @@ JSON:
               };
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Readiness du Jour</div>
                   <div style={{ display:"flex",alignItems:"center",gap:16 }}>
                     <svg width={120} height={80} style={{ flexShrink:0 }}>
@@ -11936,7 +11936,7 @@ JSON:
               const maxDay = Math.max(...dayCount, 1);
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Score de Consistance</div>
                     <div style={{ textAlign:"right" }}>
@@ -12293,7 +12293,7 @@ JSON:
               const dash = (readiness/100)*CIRC;
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:14 }}>Readiness du Jour</div>
 
                   <div style={{ display:"flex",gap:16,alignItems:"center",marginBottom:14 }}>
@@ -13185,7 +13185,7 @@ JSON:
               const bestSession = thisW.reduce((best,s)=>(!best||((s.km||0)>(best.km||0)))?s:best, null);
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Bilan de Semaine</div>
                     <div style={{ fontSize:9,color:"#8E8E93" }}>vs semaine dernière</div>
@@ -17803,7 +17803,7 @@ JSON:
               const W = 300, H = 60, barW = Math.floor(W / 8) - 4;
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Suivi du Sommeil 💤</div>
                     <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -17912,7 +17912,7 @@ JSON:
               const sel = sessions.find(s=>s.id===selected||s.date+s.type===selected);
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Historique Séances</div>
 
                   {/* Type filter */}
@@ -18327,7 +18327,7 @@ JSON:
               const avgRpeAll = sessions.length ? (sessions.reduce((s,e)=>s+(e.rpe||5),0)/sessions.length).toFixed(1) : 0;
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Calendrier d'Entraînement</div>
                     <div style={{ fontSize:9,color:"#8E8E93" }}>{totalSessions} séances · {activeDays} jours actifs</div>
@@ -18682,7 +18682,7 @@ JSON:
               const balanceOk = lowPct >= 75;
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Zones FC · FCmax {maxHR}</div>
                     <button onClick={()=>setHrZoneView(hrZoneView==="log"?"stats":"log")} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -18799,7 +18799,7 @@ JSON:
               const healedCount = injuries.filter(i=>i.status==="healed").length;
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🩹 Suivi Blessures</div>
                     <div style={{ display:"flex",gap:8,alignItems:"center" }}>
@@ -19705,7 +19705,7 @@ JSON:
               const polyline = points.map(p=>`${p.x},${p.y}`).join(" ");
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Tendances Performance</div>
                     <div style={{ fontSize:9,fontWeight:800,color:trendColor }}>{trendLabel}</div>
@@ -20245,7 +20245,7 @@ JSON:
               const gain = sorted.length > 1 ? Math.round((last.vma - first.vma)*10)/10 : null;
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Progression VMA</div>
                     <button onClick={()=>setShowAdd(v=>!v)} style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,cursor:"pointer" }}>{showAdd?"Annuler":"+ Test"}</button>
@@ -20652,7 +20652,7 @@ JSON:
               }).join(" ");
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Charge d'Entraînement</div>
                     <div style={{ fontSize:9,color:"#8E8E93" }}>Moy. <span style={{ color:"var(--yellow)",fontWeight:700 }}>{avgTrimp} TRIMP</span>/sem</div>
@@ -21541,7 +21541,7 @@ JSON:
               const sevColor = v => SEVERITY.find(s=>s.val===v)?.color || "#636366";
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Journal Blessures / Douleurs</div>
                     <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"#FF453A",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -21945,7 +21945,7 @@ JSON:
               };
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>🏆 Records Personnels</div>
 
                   <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
@@ -22457,7 +22457,7 @@ JSON:
               const totalTrimp = Math.round(Object.values(dayMap).reduce((s, v) => s + v, 0));
 
               return (
-                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
                     <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Heatmap d'Entraînement</div>
                     <div style={{ fontSize:9,color:"#8E8E93" }}>{totalDays} jours · {totalTrimp} TRIMP total</div>
@@ -28465,7 +28465,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         }).join(" ");
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Composition Corporelle</div>
               <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -28657,7 +28657,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
         };
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Carte Athlète</div>
 
             {/* Card preview */}
@@ -30039,7 +30039,7 @@ function TechniqueTab({ profile = {} }) {
         const updateSet = (i, field, val) => setSets(s=>s.map((set,idx)=>idx===i?{...set,[field]:+val}:set));
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Journal Force</div>
 
             {/* Exercise picker */}
@@ -30216,7 +30216,7 @@ function TechniqueTab({ profile = {} }) {
           const isWork = phase==="work";
 
           return (
-            <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
               <div style={{ display:"flex",justifyContent:"space-between",marginBottom:12 }}>
                 <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>{workout.name}</div>
                 <button onClick={()=>{ setMode("list"); setRunState(null); }} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,cursor:"pointer" }}>✕ Stop</button>
@@ -30255,7 +30255,7 @@ function TechniqueTab({ profile = {} }) {
         }
 
         if (mode==="create") return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Nouveau Workout</div>
               <button onClick={()=>setMode("list")} style={{ background:"#2C2C2E",color:"#8E8E93",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,cursor:"pointer" }}>Annuler</button>
@@ -30304,7 +30304,7 @@ function TechniqueTab({ profile = {} }) {
         );
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🏋️ Mes Workouts</div>
               <button onClick={()=>{ setForm({ name:"", exercises:[] }); setMode("create"); }}
@@ -31164,7 +31164,7 @@ function TechniqueTab({ profile = {} }) {
         const circleSize = Math.round(80 * circleScale);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Respiration & Récupération</div>
 
             {!running && !done && (
@@ -31560,7 +31560,7 @@ function TechniqueTab({ profile = {} }) {
         const activeStation = STATIONS.find(s=>s.name===active);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Technique par Station</div>
 
             {/* Station grid */}
@@ -32069,7 +32069,7 @@ function TechniqueTab({ profile = {} }) {
         const W=300, H=50;
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Journal Mental 🧠</div>
               <button onClick={()=>setShowLog(f=>!f)} style={{ background:"var(--bg3)",color:"#BF5AF2",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -32210,7 +32210,7 @@ function TechniqueTab({ profile = {} }) {
         const validDays = last7.filter(Boolean);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🧠 Journal Mental</div>
               {avgScore && <div style={{ fontSize:10,color:"#30D158",fontWeight:700 }}>Moy. 7j: {avgScore}/5</div>}
@@ -33692,7 +33692,7 @@ function TechniqueTab({ profile = {} }) {
         const currentAdvice = tempAdvice(form.temp);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Conditions d'Entraînement 🌡️</div>
               <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"#007AFF",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -33852,7 +33852,7 @@ function TechniqueTab({ profile = {} }) {
         const active = zones.find(z=>z.z===activeZone);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>❤️ Zones Fréquence Cardiaque</div>
 
             {/* Inputs */}
@@ -35515,7 +35515,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const achieved = goals.filter(g=>g.achieved);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🎯 Objectifs Saison</div>
               <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -35682,7 +35682,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         const maxVol = block ? Math.max(...weekVolumes) : 1;
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>📋 Training Block Builder</div>
               <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,cursor:"pointer" }}>
@@ -37024,7 +37024,7 @@ function PlanningTab({ profile, planningWeek, loadingPlanning, setPlanningWeek, 
         };
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🎯 Objectifs Saison</div>
               <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:8,padding:"5px 14px",fontSize:10,fontWeight:800,cursor:"pointer" }}>
@@ -38683,7 +38683,7 @@ JSON: {
             const doneCount = STACK.filter(s=>suppChecked[s.id]).length;
 
             return (
-              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Stack Suppléments HYROX</div>
                   <div style={{ fontSize:10,color:"var(--yellow)",fontWeight:700 }}>{doneCount}/{STACK.length} pris</div>
@@ -39637,7 +39637,7 @@ JSON: {
             const adherenceColor = adherence>=80?"#30D158":adherence>=60?"#FF9F0A":"#FF453A";
 
             return (
-              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Historique Macros</div>
                   <div style={{ fontSize:10,fontWeight:800,color:adherenceColor }}>Adhérence {adherence}%</div>
@@ -39777,7 +39777,7 @@ JSON: {
             const tgtKcal = tgtP*4 + tgtC*4 + tgtF*9;
 
             return (
-              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Planificateur Repas</div>
                   <button onClick={copyYesterday} style={{ background:"var(--bg3)",color:"#8E8E93",border:"none",borderRadius:8,padding:"4px 10px",fontSize:10,cursor:"pointer" }}>
@@ -40112,7 +40112,7 @@ JSON: {
             const waveH = Math.round((1 - pct/100) * 90);
 
             return (
-              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>💧 Hydratation</div>
                   <div style={{ fontSize:9,color:statusColor,fontWeight:700 }}>{statusLabel}</div>
@@ -40327,7 +40327,7 @@ JSON: {
             const waveY = Math.round((1 - pct/100) * 120);
 
             return (
-              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                   <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Hydratation</div>
                   <div style={{ fontSize:9,color:status.color,fontWeight:700 }}>{status.label}</div>
@@ -40761,7 +40761,7 @@ JSON: {
             });
 
             return (
-              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+              <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                 <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Répartition Macros</div>
                 <div style={{ display:"flex",alignItems:"center",gap:16 }}>
                   <svg width={W} height={W} style={{ flexShrink:0 }}>
@@ -43193,7 +43193,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
           : 0;
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>📋 Checklist Pré-Course</div>
             <div style={{ display:"flex",gap:4,marginBottom:12 }}>
               {PHASES.map(p=>{
@@ -43287,7 +43287,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         }).join(" ");
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>🏁 Historique Compétitions</div>
               <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
@@ -44177,7 +44177,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const pct = Math.round(doneCount/totalCount*100);
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
               <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Checklist Jour de Course</div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
@@ -44267,7 +44267,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         const withCum = segments.map(s => { cum += s.sec; return { ...s, cumSec: cum }; });
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>Calculateur de Pacing HYROX</div>
 
             {/* Goal time input */}
@@ -44372,7 +44372,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
         }
 
         return (
-          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,marginBottom:14 }}>
+          <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
             <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:14 }}>⏱️ Pacing Calculator</div>
 
             {/* Target time input */}
