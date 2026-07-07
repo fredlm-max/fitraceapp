@@ -11302,9 +11302,12 @@ JSON:
             {(() => {
               const todayStr = new Date().toISOString().slice(0,10);
               const hydKey = `fitrace_hydration2_${profile.name}_${todayStr}`;
-              const [intake, setIntake] = React.useState(() => {
-                try { return JSON.parse(localStorage.getItem(hydKey) || "[]"); } catch { return []; }
-              });
+              const canonKey = `fitrace_hydration_${profile.name}_${todayStr}`;
+              // Journal détaillé (horodaté) propre à ce widget, réactif.
+              const [intake, setIntake] = useSyncedStorage(hydKey, []);
+              // Total canonique partagé avec TOUS les autres widgets d'hydratation :
+              // boire ici met à jour leur total, et inversement.
+              const [canonMl, setCanonMl] = useSyncedStorage(canonKey, 0);
 
               const weight = parseFloat(profile.poids) || 70;
               const sessions = profile.sessions || [];
@@ -11319,21 +11322,22 @@ JSON:
               const summerBonus = isSummer ? 300 : 0;
               const totalTarget = baseTarget + trainingBonus + summerBonus;
 
-              const totalMl = intake.reduce((s, e) => s + e.ml, 0);
+              // Total = clé canonique partagée (fait foi), jamais inférieur au journal local.
+              const logSum = intake.reduce((s, e) => s + e.ml, 0);
+              const totalMl = Math.max(parseInt(canonMl) || 0, logSum);
               const pct = Math.min(100, Math.round((totalMl / totalTarget) * 100));
 
               const addWater = ml => {
                 const entry = { ml, time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), id: Date.now() };
-                const updated = [...intake, entry];
-                setIntake(updated);
-                syncedStorage.set(hydKey, updated);
+                setIntake(prev => [...prev, entry]);
+                setCanonMl(prev => (parseInt(prev) || 0) + ml);
               };
 
               const removeLastEntry = () => {
                 if (intake.length === 0) return;
-                const updated = intake.slice(0, -1);
-                setIntake(updated);
-                syncedStorage.set(hydKey, updated);
+                const last = intake[intake.length - 1];
+                setIntake(prev => prev.slice(0, -1));
+                setCanonMl(prev => Math.max(0, (parseInt(prev) || 0) - (last?.ml || 0)));
               };
 
               const statusColor = pct >= 100 ? "#30D158" : pct >= 60 ? "var(--yellow)" : pct >= 30 ? "#FF9F0A" : "#FF453A";
@@ -38272,19 +38276,11 @@ JSON: {
             // Clé partagée avec les autres widgets hydratation — unité canonique: ml (pas "verres").
             const hydKey = `fitrace_hydration_${profile.name}_${todayDate}`;
             const GLASS_ML = 250;
-            const [glasses, setGlasses] = React.useState(() => {
-              try { return Math.round((parseInt(localStorage.getItem(hydKey)) || 0) / GLASS_ML); } catch { return 0; }
-            });
-            const addGlass = () => {
-              const next = Math.min(glasses + 1, 20);
-              setGlasses(next);
-              syncedStorage.set(hydKey, next * GLASS_ML);
-            };
-            const removeGlass = () => {
-              const next = Math.max(glasses - 1, 0);
-              setGlasses(next);
-              syncedStorage.set(hydKey, next * GLASS_ML);
-            };
+            // Clé réactive partagée : boire de l'eau dans un widget met à jour tous les autres.
+            const [hydMl, setHydMl] = useSyncedStorage(hydKey, 0);
+            const glasses = Math.round((parseInt(hydMl) || 0) / GLASS_ML);
+            const addGlass = () => setHydMl(Math.min(glasses + 1, 20) * GLASS_ML);
+            const removeGlass = () => setHydMl(Math.max(glasses - 1, 0) * GLASS_ML);
             // 35ml/kg base + 500ml per training day (EFSA 2010)
             const targetL = ((poids * 35) / 1000 + (isTrainingDay ? 0.5 : 0)).toFixed(1);
             const targetGlasses = Math.ceil(parseFloat(targetL) / 0.25);
@@ -40144,7 +40140,9 @@ JSON: {
           {(() => {
             const todayStr = new Date().toISOString().slice(0,10);
             const KEY = `fitrace_hydration_${profile.name}_${todayStr}`;
-            const [ml, setMl] = React.useState(() => { try { return parseInt(localStorage.getItem(KEY)) || 0; } catch { return 0; } });
+            // Clé réactive partagée entre tous les widgets d'hydratation.
+            const [mlRaw, setMlRaw] = useSyncedStorage(KEY, 0);
+            const ml = parseInt(mlRaw) || 0;
 
             const poids = profile.poids || 70;
             // Sessions today
@@ -40161,12 +40159,8 @@ JSON: {
             const glasses = Math.round(ml / 250);
             const remaining = Math.max(0, target - ml);
 
-            const add = (amount) => {
-              const next = Math.min(target + 500, ml + amount);
-              setMl(next);
-              syncedStorage.set(KEY, next);
-            };
-            const reset = () => { setMl(0); syncedStorage.set(KEY, "0"); };
+            const add = (amount) => setMlRaw(Math.min(target + 500, ml + amount));
+            const reset = () => setMlRaw(0);
 
             const statusColor = pct >= 100 ? "#30D158" : pct >= 60 ? "#FF9F0A" : "#FF453A";
             const statusLabel = pct >= 100 ? "Hydraté ✓" : pct >= 60 ? "En cours" : "Attention";
@@ -40368,19 +40362,17 @@ JSON: {
           {(() => {
             const todayStr = new Date().toISOString().slice(0,10);
             const KEY = `fitrace_hydration_${profile.name}_${todayStr}`;
-            const [ml, setMl] = React.useState(() => { try { return parseInt(localStorage.getItem(KEY)) || 0; } catch { return 0; } });
+            // Clé réactive partagée entre tous les widgets d'hydratation.
+            const [mlRaw, setMlRaw] = useSyncedStorage(KEY, 0);
+            const ml = parseInt(mlRaw) || 0;
 
             const poids = profile.poids || 70;
             const goalMl = Math.round(poids * 35); // 35ml/kg
             const pct = Math.min(100, Math.round(ml / goalMl * 100));
             const remaining = Math.max(0, goalMl - ml);
 
-            const add = (amount) => {
-              const next = ml + amount;
-              setMl(next);
-              syncedStorage.set(KEY, next);
-            };
-            const reset = () => { setMl(0); syncedStorage.set(KEY, "0"); };
+            const add = (amount) => setMlRaw(ml + amount);
+            const reset = () => setMlRaw(0);
 
             const status = pct >= 100 ? { label:"Hydraté ✅", color:"#30D158" }
               : pct >= 70 ? { label:"Bon niveau 🟡", color:"#FF9F0A" }
@@ -41458,22 +41450,14 @@ JSON: {
         // Clé partagée avec les autres widgets hydratation — unité canonique: ml (pas "verres").
         const hydKey = `fitrace_hydration_${profile.name}_${today}`;
         const GLASS_ML = 250;
-        const [glasses, setGlasses] = React.useState(() => {
-          try { return Math.round((parseInt(localStorage.getItem(hydKey)) || 0) / GLASS_ML); } catch { return 0; }
-        });
+        // Clé réactive partagée entre tous les widgets d'hydratation.
+        const [hydMl, setHydMl] = useSyncedStorage(hydKey, 0);
+        const glasses = Math.round((parseInt(hydMl) || 0) / GLASS_ML);
         const target = Math.round((parseFloat(profile.poids) || 75) * 0.035);
         const glassesNeeded = Math.ceil(target / 0.25);
         const pct = Math.min(100, (glasses / glassesNeeded) * 100);
-        const addGlass = () => {
-          const next = Math.min(glasses + 1, 20);
-          setGlasses(next);
-          syncedStorage.set(hydKey, next * GLASS_ML);
-        };
-        const removeGlass = () => {
-          const next = Math.max(glasses - 1, 0);
-          setGlasses(next);
-          syncedStorage.set(hydKey, next * GLASS_ML);
-        };
+        const addGlass = () => setHydMl(Math.min(glasses + 1, 20) * GLASS_ML);
+        const removeGlass = () => setHydMl(Math.max(glasses - 1, 0) * GLASS_ML);
         const color = pct >= 100 ? "#30D158" : pct >= 60 ? "#C9A840" : "#FF453A";
         return (
           <div style={{ background: "rgba(28,28,30,0.8)", borderRadius: 18, padding: "16px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
