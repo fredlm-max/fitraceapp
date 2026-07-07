@@ -39,9 +39,9 @@ const GLOBAL_STYLES = `
     --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 20px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
-    --shadow-lg: 0 8px 40px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.28);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.4), 0 8px 28px rgba(0,0,0,0.5);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.45), 0 16px 48px rgba(0,0,0,0.6);
   }
   :root[data-theme="charcoal"] { --bg: #0F0F0F; --bg2: #1A1A1A; --bg3: #252525; }
   :root[data-theme="midnight"] { --bg: #000814; --bg2: #001233; --bg3: #023E8A22; }
@@ -61,10 +61,17 @@ const GLOBAL_STYLES = `
   #root { min-height: 100vh; background: var(--bg); position: relative; }
   #root::before {
     content: ""; position: fixed; top: -140px; left: 50%; transform: translateX(-50%);
-    width: 130vw; height: 380px; pointer-events: none; z-index: 0;
-    background: radial-gradient(ellipse at center top, rgba(201,168,64,0.10) 0%, rgba(201,168,64,0.04) 40%, transparent 70%);
+    width: 130vw; height: 420px; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse at center top, rgba(201,168,64,0.12) 0%, rgba(201,168,64,0.045) 42%, transparent 72%);
   }
   [data-theme="apple"] #root::before { background: radial-gradient(ellipse at center top, rgba(0,122,255,0.07) 0%, transparent 70%); }
+  /* ── Grain filmique subtil : casse le banding des dégradés, texture premium ── */
+  #root::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    opacity: 0.035; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  [data-theme="apple"] #root::after { opacity: 0.02; mix-blend-mode: multiply; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
@@ -6527,9 +6534,24 @@ JSON:
                   </div>
 
                   {/* GRANDE CARTE PARTAGEABLE */}
-                  <div style={{ background:"linear-gradient(145deg,#111 0%,#0a0a0a 100%)", border:"1px solid rgba(201,168,64,0.18)", borderRadius:22, padding:"20px 16px 16px", position:"relative", overflow:"hidden" }}>
+                  <div style={{ background:"linear-gradient(160deg,#16140d 0%,#100f0a 38%,#0a0a08 100%)", border:"1px solid rgba(201,168,64,0.22)", borderRadius:24, padding:"20px 16px 16px", position:"relative", overflow:"hidden", boxShadow:"0 4px 16px rgba(0,0,0,0.45), 0 20px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,168,64,0.12)" }}>
+                    {/* Reflet spéculaire haut */}
+                    <div style={{ position:"absolute", top:0, left:"12%", right:"12%", height:1, background:"linear-gradient(90deg, transparent, rgba(201,168,64,0.5), transparent)", pointerEvents:"none" }}/>
                     {/* Halo déco */}
-                    <div style={{ position:"absolute", top:-40, left:"50%", transform:"translateX(-50%)", width:280, height:140, background:"radial-gradient(ellipse,rgba(201,168,64,0.06) 0%,transparent 70%)", pointerEvents:"none" }}/>
+                    <div style={{ position:"absolute", top:-40, left:"50%", transform:"translateX(-50%)", width:300, height:150, background:"radial-gradient(ellipse,rgba(201,168,64,0.09) 0%,transparent 70%)", pointerEvents:"none" }}/>
+                    {/* Défs dégradés anneaux */}
+                    <svg width="0" height="0" style={{ position:"absolute" }} aria-hidden="true">
+                      <defs>
+                        <linearGradient id="apexRingGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor={tier.color} stopOpacity="0.65"/>
+                          <stop offset="100%" stopColor={tier.color}/>
+                        </linearGradient>
+                        <linearGradient id="fitRingGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"} stopOpacity="0.6"/>
+                          <stop offset="100%" stopColor={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
 
                     {/* Contenu : 2 colonnes */}
                     <div style={{ display:"flex", gap:16, marginBottom:16 }}>
@@ -6540,7 +6562,7 @@ JSON:
                         <div style={{ position:"relative", width:100, height:100, margin:"0 auto 8px" }}>
                           <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform:"rotate(-90deg)" }}>
                             <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" strokeLinecap="round"/>
-                            <circle cx="50" cy="50" r={R} fill="none" stroke={tier.color} strokeWidth="9" strokeLinecap="round"
+                            <circle cx="50" cy="50" r={R} fill="none" stroke="url(#apexRingGrad)" strokeWidth="9" strokeLinecap="round"
                               strokeDasharray={C} strokeDashoffset={C - (apexScore/100)*C}
                               style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${tier.color}70)` }}/>
                           </svg>
@@ -6584,10 +6606,10 @@ JSON:
                           <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform:"rotate(-90deg)" }}>
                             <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" strokeLinecap="round"/>
                             <circle cx="50" cy="50" r={R} fill="none"
-                              stroke={sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}
+                              stroke="url(#fitRingGrad)"
                               strokeWidth="9" strokeLinecap="round"
                               strokeDasharray={C} strokeDashoffset={C - (sc.global/100)*C}
-                              style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)" }}/>
+                              style={{ transition:"stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)", filter:`drop-shadow(0 0 8px ${sc.global >= 75 ? "#39ff80" : sc.global >= 50 ? "#C9A840" : "#ff9a3c"}55)` }}/>
                           </svg>
                           <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
                             <div className="bebas" style={{ fontSize:34, color:"var(--white)", lineHeight:1, letterSpacing:-1 }}>{sc.global}</div>
