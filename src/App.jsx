@@ -9126,12 +9126,13 @@ JSON:
 
             {/* ── RACCOURCIS ESSENTIELS ── */}
             <button onClick={() => { haptic([8]); navigateTo("today"); }}
-              style={{ width:"100%", padding:"16px 20px", background:"var(--yellow)", border:"none", borderRadius:18, display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", marginBottom:10, boxShadow:"0 4px 20px rgba(201,168,64,0.25)" }}>
-              <div style={{ textAlign:"left" }}>
+              style={{ width:"100%", padding:"16px 20px", background:"linear-gradient(145deg, #E0BC52 0%, #C9A840 55%, #B0912F 100%)", border:"none", borderRadius:18, display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", marginBottom:10, boxShadow:"0 6px 22px rgba(201,168,64,0.32), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.15)", position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", top:0, left:0, right:0, height:"45%", background:"linear-gradient(180deg, rgba(255,255,255,0.18), transparent)", pointerEvents:"none" }}/>
+              <div style={{ textAlign:"left", position:"relative" }}>
                 <div className="bebas" style={{ fontSize:18, color:"#000", letterSpacing:2, lineHeight:1 }}>MA SÉANCE DU JOUR</div>
-                <div style={{ fontSize:11, color:"rgba(0,0,0,0.6)", marginTop:3 }}>Générer · Exécuter · Progresser</div>
+                <div style={{ fontSize:11, color:"rgba(0,0,0,0.62)", marginTop:3 }}>Générer · Exécuter · Progresser</div>
               </div>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" style={{ position:"relative" }}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </button>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:16 }}>
               {[
@@ -14633,9 +14634,9 @@ JSON:
             )}
 
             {/* CTA séance — GRAND BOUTON */}
-            <button onClick={() => { haptic([10]); navigateTo("today"); }} style={{ width: "100%", background: "var(--yellow)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(201,168,64,0.25)" }}>
-              {/* Shine effect */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 30%, rgba(0,0,0,0.12) 50%, transparent 70%)", pointerEvents: "none" }} />
+            <button onClick={() => { haptic([10]); navigateTo("today"); }} style={{ width: "100%", background: "linear-gradient(145deg, #E0BC52 0%, #C9A840 55%, #B0912F 100%)", border: "none", borderRadius: 18, padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", marginBottom: 12, position: "relative", overflow: "hidden", boxShadow: "0 6px 22px rgba(201,168,64,0.32), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.15)" }}>
+              {/* Reflet haut */}
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "45%", background: "linear-gradient(180deg, rgba(255,255,255,0.18), transparent)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", right: 60, top: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
               <div style={{ textAlign: "left" }}>
                 <div style={{ fontSize: 10, color: "rgba(0,0,0,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>⚡ Coach IA · Aujourd'hui</div>
