@@ -1526,6 +1526,24 @@ function CountUp({ value, duration = 1100, decimals = 0, className, style }) {
   return <span className={className} style={style}>{shown}</span>;
 }
 
+// État vide illustré — remplace les graphiques/listes vides pour un nouveau compte
+// par un message engageant avec une illustration animée et un appel à l'action optionnel.
+function EmptyState({ icon = "📊", title, subtitle, cta, onCta, accent = "var(--yellow)" }) {
+  return (
+    <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "28px 20px" }}>
+      <div style={{ position: "relative", width: 72, height: 72, marginBottom: 14 }}>
+        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: `radial-gradient(circle, ${accent}22 0%, transparent 70%)`, animation: "pulse 2.6s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, filter: "saturate(1.1)" }}>{icon}</div>
+      </div>
+      <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 0.5, marginBottom: 6 }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 12, color: "#8E8E93", lineHeight: 1.5, maxWidth: 260, marginBottom: cta ? 16 : 0 }}>{subtitle}</div>}
+      {cta && (
+        <button onClick={onCta} style={{ background: `linear-gradient(145deg, ${accent}, ${accent}cc)`, color: "#000", border: "none", borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 16px ${accent}30, inset 0 1px 0 rgba(255,255,255,0.3)` }}>{cta}</button>
+      )}
+    </div>
+  );
+}
+
 function Input({ label, value, onChange, type = "text", placeholder, style, min, max, step }) {
   const [focused, setFocused] = useState(false);
   // Email/mot de passe : évite que Safari iOS auto-capitalise/corrige la 1re lettre,
@@ -17057,6 +17075,17 @@ JSON:
 
         {/* PROGRESSION / FORME — toujours rendu */}
         <div style={{display: tab === "progress" ? "block" : "none"}} className="fade-in">
+
+            {/* ── ÉTAT VIDE : aucune séance encore ── */}
+            {(profile.sessions || []).length === 0 && (
+              <EmptyState
+                icon="📈"
+                title="TA PROGRESSION T'ATTEND"
+                subtitle="Enregistre ta première séance pour débloquer tes graphiques, scores et statistiques d'entraînement."
+                cta="Voir ma séance du jour"
+                onCta={() => navigateTo("today")}
+              />
+            )}
 
             {/* ── ACHIEVEMENT BADGES ── Nike Training Club style ── */}
             {(() => {
