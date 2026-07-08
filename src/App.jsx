@@ -7045,8 +7045,6 @@ JSON:
               const [meals, setMeals] = useSyncedStorage(MEAL_KEY, []);
               // Eau : même source unique que tous les autres compteurs (clé ml canonique),
               // affichée ici en litres. Boire ici met à jour l'app entière, et inversement.
-              const [hydMlNutri, setHydMlNutri] = useSyncedStorage(`fitrace_hydration_${profile.name}_${todayStr}`, 0);
-              const eau = (parseInt(hydMlNutri) || 0) / 1000;
               const openNutriAdd = () => {
                 localStorage.setItem("fitrace_open_nutri_add", "1");
                 navigateTo("nutri");
@@ -7058,19 +7056,13 @@ JSON:
                 prot: profile.proteines || Math.round(poids * 1.8),
                 gluc: profile.glucides || Math.round(poids * 4.5),
                 lip: profile.lipides || Math.round(poids * 1.0),
-                eau: 3
               };
               const totals = getMealsTotal(meals);
               const pctCal  = Math.min(100, Math.round((totals.cal / target.cal) * 100));
               const pctProt = Math.min(100, Math.round((totals.prot / target.prot) * 100));
               const pctGluc = Math.min(100, Math.round((totals.gluc / target.gluc) * 100));
               const pctLip  = Math.min(100, Math.round((totals.lip / target.lip) * 100));
-              const pctEau  = Math.min(100, Math.round((eau / target.eau) * 100));
               const restCal = Math.max(0, target.cal - totals.cal);
-
-              const saveEau = (v) => {
-                setHydMlNutri(Math.max(0, Math.round(v * 1000)));
-              };
 
               const removeMeal = (id) => {
                 setMeals(prev => prev.filter(m=>m.id!==id));
@@ -7115,18 +7107,11 @@ JSON:
                         { label:"Protéines", val:Math.round(totals.prot), target:target.prot, unit:"g", color:"#39ff80", pct:pctProt },
                         { label:"Glucides",  val:Math.round(totals.gluc), target:target.gluc, unit:"g", color:"#FF9F0A", pct:pctGluc },
                         { label:"Lipides",   val:Math.round(totals.lip),  target:target.lip,  unit:"g", color:"#a78bfa", pct:pctLip  },
-                        { label:"Eau",       val:eau.toFixed(1),          target:target.eau,  unit:"L", color:"#007AFF", pct:pctEau, isEau:true },
                       ].map(n=>(
                         <div key={n.label}>
                           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3 }}>
                             <span style={{ fontSize:9,color:"#8E8E93" }}>{n.label}</span>
                             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                              {n.isEau && (
-                                <>
-                                  <button onClick={()=>saveEau(Math.max(0,+(eau-0.25).toFixed(2)))} style={{background:"rgba(255,255,255,0.06)",border:"none",borderRadius:4,width:18,height:18,color:"#8E8E93",fontSize:12,cursor:"pointer",lineHeight:"18px",padding:0}}>−</button>
-                                  <button onClick={()=>saveEau(+(eau+0.25).toFixed(2))} style={{background:"rgba(0,122,255,0.15)",border:"none",borderRadius:4,width:18,height:18,color:"#007AFF",fontSize:12,cursor:"pointer",lineHeight:"16px",padding:0}}>+</button>
-                                </>
-                              )}
                               <span style={{ fontSize:9,color:n.color,fontWeight:700 }}>{n.val}<span style={{color:"#8E8E93",fontWeight:400}}>/{n.target}{n.unit}</span></span>
                             </div>
                           </div>
