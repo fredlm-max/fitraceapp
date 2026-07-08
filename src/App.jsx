@@ -818,7 +818,7 @@ function RPELineChart({ profile }) {
   const data = sessions.slice(-20).map((s, i) => ({
     x: i,
     y: s.difficulte || 5,
-    label: new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
+    label: s.date ? new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : `S${i+1}`,
     ressenti: s.ressenti,
     titre: s.titre,
   }));
@@ -946,6 +946,7 @@ function TrainingHeatmap({ profile }) {
   };
 
   const totalSeances = sessions.filter(s => {
+    if (!s.date || isNaN(new Date(s.date).getTime())) return false;
     const d = new Date(s.date);
     return (today - d) <= 84 * 24 * 60 * 60 * 1000;
   }).length;
@@ -1218,7 +1219,7 @@ function buildWeeklySummary(profile) {
   const sessions = profile.sessions || [];
   const now = new Date();
   const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-  const thisWeek = sessions.filter(s => new Date(s.date) >= weekAgo);
+  const thisWeek = sessions.filter(s => s.date && !isNaN(new Date(s.date).getTime()) && new Date(s.date) >= weekAgo);
 
   const bien = thisWeek.filter(s => s.ressenti === "bien").length;
   const dur = thisWeek.filter(s => s.ressenti === "dur").length;
@@ -1288,9 +1289,10 @@ function calcPMC(sessions) {
     return Math.round((rpe / 10) * durMin * 10 * typeMultiplier);
   };
 
-  // Index sessions par date
+  // Index sessions par date (skip si pas de date valide)
   const loadByDate = {};
   sorted.forEach(s => {
+    if (!s.date || isNaN(new Date(s.date).getTime())) return; // saute les séances sans date valide
     const d = new Date(s.date).toISOString().split("T")[0];
     loadByDate[d] = (loadByDate[d] || 0) + sessionLoad(s);
   });
