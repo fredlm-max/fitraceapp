@@ -18830,7 +18830,8 @@ JSON:
 
             {/* ── HEART RATE ZONE TRAINER ── */}
             {(() => {
-              const maxHR = profile.age ? Math.round(208 - 0.7 * profile.age) : 190;
+              // Utilise fcMax rentrée par l'utilisateur, ou estime à partir de l'âge sinon.
+              const maxHR = profile.fcMax || (profile.age ? Math.round(208 - 0.7 * profile.age) : 190);
               const ZONES = [
                 { id:1, name:"Zone 1", label:"Récup active", pct:[50,60], color:"#8E8E93" },
                 { id:2, name:"Zone 2", label:"Aérobie base", pct:[60,70], color:"#30D158" },
