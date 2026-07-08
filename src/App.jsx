@@ -5524,8 +5524,11 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
       return `  S${num}: "${s.titre}" | RPE:${s.difficulte || "?"}/10 | ${s.ressenti} | énergie:${s.energie || "?"}/5 | douleurs:${s.douleurs || "aucune"} | charges: ${s.charges || "?"}`;
     }).join("\n");
 
-    const adaptsFb = allAdaptationsFb.map((a, i) =>
-      `  A${i + 1} (${new Date(a.date).toLocaleDateString("fr-FR")}): ${a.adaptation}`
+    // Plafonné aux 4 dernières adaptations : au-delà, le prompt grossissait sans
+    // limite à chaque séance → analyse de plus en plus lente. Les 4 dernières
+    // suffisent largement à assurer la cohérence de la progression.
+    const adaptsFb = allAdaptationsFb.slice(-4).map((a, i) =>
+      `  A${i + 1} (${new Date(a.date).toLocaleDateString("fr-FR")}): ${(a.adaptation || "").slice(0, 220)}`
     ).join("\n");
 
     // Détection gravité douleur
@@ -5535,8 +5538,59 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
     const rpeExcessif = feedbackData.difficulte >= 9 && feedbackData.energie <= 2;
     const deuxFoisDur = allSessionsFb.slice(-2).every(s => s.ressenti === "dur");
 
+    // ── ENREGISTREMENT IMMÉDIAT (sans attendre l'IA) ──
+    // Calories, TRIMP, PRs, streak sont calculés localement et sauvegardés tout de
+    // suite : ta séance compte instantanément, tu n'es plus bloqué·e à attendre
+    // l'analyse. L'IA affine ensuite en arrière-plan (avec un timeout).
+    const MET_MAP = { running_zone2: 7.5, running_qualite: 11.0, force_stations: 5.5, hybride_compromis: 9.5 };
+    const met = MET_MAP[session?.type] || 7.0;
+    const dureeH = (parseInt(feedbackData.temps) || parseInt(session?.duree) || 45) / 60;
+    const poids_kg = parseFloat(profile.poids) || 75;
+    const caloriesBrulees = Math.round(met * poids_kg * dureeH);
+    const trimp = Math.round(dureeH * 60 * (feedbackData.difficulte || 6) / 10);
+    const sessionData = {
+      date: new Date().toISOString(),
+      titre: session?.titre, type: session?.type || "général",
+      ressenti: feedbackData.ressenti, difficulte: feedbackData.difficulte, rpe: feedbackData.difficulte,
+      exercicesLog: feedbackData.exercicesLog || [], charges: feedbackData.charges,
+      photoAnalyse: feedbackData._photoAnalyse || null, tempsReel: feedbackData.temps,
+      dureeReelle: feedbackData.temps || session?.duree, douleurs: feedbackData.douleurs,
+      energie: feedbackData.energie, notes: feedbackData.notes,
+      calories: caloriesBrulees, trimp,
+      summary: `${session?.titre} — RPE ${feedbackData.difficulte}/10 — ${feedbackData.ressenti}`,
+      prochaineSéance: null,
+    };
+    // Détection Personal Records (local, instantané)
+    try {
+      const prKey = `fitrace_prs_${profile.name}`;
+      let prs = {}; try { prs = JSON.parse(localStorage.getItem(prKey) || "{}"); } catch {}
+      const newPRs = [];
+      (feedbackData.exercicesLog || []).forEach(e => {
+        if (!e.charge || !e.nom) return;
+        const charge = parseFloat(e.charge); const reps = parseInt(e.reps) || 1;
+        const est1RM = reps > 1 ? Math.round(charge * (1 + reps / 30)) : charge;
+        const key = e.nom.toLowerCase().replace(/\s+/g, "_");
+        if (!prs[key] || est1RM > prs[key].value) {
+          if (prs[key]) newPRs.push({ nom: e.nom, value: est1RM, prev: prs[key].value });
+          prs[key] = { value: est1RM, date: new Date().toISOString(), nom: e.nom };
+        }
+      });
+      syncedStorage.set(prKey, prs);
+      if (newPRs.length > 0) setTimeout(() => { newPRs.forEach((pr, i) => setTimeout(() => showToast(`🏆 PR ${pr.nom} ! ${pr.prev || "?"}→${pr.value}kg`, "badge"), i * 1200)); }, 1000);
+    } catch {}
+    const baseProfile = { ...profile, sessions: [...(profile.sessions || []), sessionData], email: profile.email || user?.email };
+    onUpdateProfile(baseProfile);
+    setTimeout(() => calcStreak(), 300);
+    setShowFeedback(false);
+    haptic([10, 30, 10]);
+    showToast("Séance enregistrée ! +50 XP 💪", "success");
+    setFeedback({ analyse: "", _pending: true, calories: caloriesBrulees, trimp });
+    setLoadingFeedback(false); // libère l'UI — l'analyse IA continue en arrière-plan
+
     setFeedbackStreamText("🔍 Analyse de tes performances...");
-    const raw = await callClaudeStream(
+    // Course entre l'IA et un timeout de 30s : l'utilisateur n'est jamais bloqué
+    // indéfiniment (la séance est de toute façon déjà enregistrée).
+    const raw = await Promise.race([callClaudeStream(
       `Tu es un coach HYROX expert et bienveillant. Tu analyses PRÉCISÉMENT chaque donnée du feedback pour individualiser le programme.
 Tu connais la science de l'entraînement : surcompensation, fenêtre anabolique, RPE, périodisation.
 Tu détectes les signaux d'alarme : surmenage, blessure, stagnation, régression.
@@ -5615,7 +5669,7 @@ JSON:
   "niveauAlerte": "${douloursGraves ? "blessure" : rpeExcessif || deuxFoisDur ? "surmenage" : "info"}",
   "raisonAlerte": ""
 }`,
-      2000,
+      1400,
       (chunk) => {
         // Extraire des infos de l'analyse en cours pour afficher à l'athlète
         const analyseMatch = chunk.match(/"analyse"\s*:\s*"([^"]{20,})/);
@@ -5624,109 +5678,48 @@ JSON:
         else if (chunk.includes('"adaptation"')) setFeedbackStreamText("⚡ Calcul de la prochaine séance...");
         else if (chunk.length > 100) setFeedbackStreamText("🤖 Coach IA analyse ta séance...");
       }
-    );
+    ), new Promise(res => setTimeout(() => res("__ERROR__timeout"), 30000))]);
 
     try {
       const fbCleaned = raw?.replace(/```json|```/g, "").trim() || "{}";
       const fbMatch = fbCleaned.match(/\{[\s\S]*\}/);
       const adapt = JSON.parse(fbMatch ? fbMatch[0] : "{}");
 
-      // Calcul calories MET (Compendium of Physical Activities)
-      const MET_MAP = { running_zone2: 7.5, running_qualite: 11.0, force_stations: 5.5, hybride_compromis: 9.5 };
-      const met = MET_MAP[session?.type] || 7.0;
-      const dureeH = (parseInt(feedbackData.temps) || parseInt(session?.duree) || 45) / 60;
-      const poids_kg = parseFloat(profile.poids) || 75;
-      const caloriesBrulees = Math.round(met * poids_kg * dureeH);
-      const trimp = Math.round(dureeH * 60 * (feedbackData.difficulte || 6) / 10);
+      // Si l'IA n'a rien renvoyé d'exploitable, la séance est DÉJÀ enregistrée :
+      // on affiche juste un message neutre, sans bloquer ni perdre de données.
+      if (!adapt.analyse && !adapt.adaptation && !adapt.prochaine_seance) {
+        setFeedback({ analyse: "Séance enregistrée ✅ — l'analyse détaillée du coach sera disponible un peu plus tard.", progressions: [], prochaine_seance: null });
+        setFeedbackStreamText("");
+        return;
+      }
 
-      // Sauvegarder session complète
-      const sessionData = {
-        date: new Date().toISOString(),
-        titre: session?.titre,
-        type: session?.type || "général",
-        ressenti: feedbackData.ressenti,
-        difficulte: feedbackData.difficulte,
-        rpe: feedbackData.difficulte,
-        exercicesLog: feedbackData.exercicesLog || [],
-        charges: feedbackData.charges,
-        photoAnalyse: feedbackData._photoAnalyse || null,
-        tempsReel: feedbackData.temps,
-        dureeReelle: feedbackData.temps || session?.duree,
-        douleurs: feedbackData.douleurs,
-        energie: feedbackData.energie,
-        notes: feedbackData.notes,
-        calories: caloriesBrulees,
-        trimp,
-        summary: `${session?.titre} — RPE ${feedbackData.difficulte}/10 — ${feedbackData.ressenti}`,
-        // Sauvegarder aussi la prochaine séance générée
-        prochaineSéance: adapt.prochaine_seance || null,
-      };
+      // On enrichit la séance déjà sauvegardée avec l'adaptation IA (append only).
+      const sessionsUpd = [...(baseProfile.sessions || [])];
+      if (sessionsUpd.length) sessionsUpd[sessionsUpd.length - 1] = { ...sessionsUpd[sessionsUpd.length - 1], prochaineSéance: adapt.prochaine_seance || null };
 
-      const newSessions = [...(profile.sessions || []), sessionData];
-      const newAdaptations = [...(profile.adaptations || []), {
-        ...adapt,
-        date: new Date().toISOString(),
-        adaptation: adapt.adaptation,
-        progressions: adapt.progressions || [],
+      const newAdaptations = [...(baseProfile.adaptations || []), {
+        ...adapt, date: new Date().toISOString(), adaptation: adapt.adaptation, progressions: adapt.progressions || [],
       }];
-
-      // Alertes avec niveaux de gravité
       const newAlerts = adapt.alerteCoach
-        ? [...(profile.alerts || []), {
-            type: adapt.niveauAlerte || "info",
-            athlete: profile.name,
+        ? [...(baseProfile.alerts || []), {
+            type: adapt.niveauAlerte || "info", athlete: profile.name,
             message: adapt.raisonAlerte || "Alerte post-séance",
             details: `RPE:${feedbackData.difficulte} | Douleurs:${feedbackData.douleurs} | Énergie:${feedbackData.energie}/5`,
-            date: new Date().toISOString(),
-            read: false,
-            urgent: adapt.niveauAlerte === "blessure",
+            date: new Date().toISOString(), read: false, urgent: adapt.niveauAlerte === "blessure",
           }]
-        : (profile.alerts || []);
+        : (baseProfile.alerts || []);
 
-      const updated = { ...profile, sessions: newSessions, adaptations: newAdaptations, alerts: newAlerts, email: profile.email || user?.email };
-      onUpdateProfile(updated);
-      setTimeout(() => calcStreak(), 500);
+      onUpdateProfile({ ...baseProfile, sessions: sessionsUpd, adaptations: newAdaptations, alerts: newAlerts });
 
       // ── Détection Level Up ──
       try {
         const oldLevel = profile.level || 1;
         const newLevel = adapt.niveau || oldLevel;
-        if (newLevel > oldLevel && newLevel <= 4) {
-          setTimeout(() => setLevelUpData({ oldLevel, newLevel }), 1200);
-        }
-      } catch {}
-
-      // ── Détection Personal Records ──
-      try {
-        const prKey = `fitrace_prs_${profile.name}`;
-        let prs = {};
-        try { prs = JSON.parse(localStorage.getItem(prKey) || "{}"); } catch {}
-        const newPRs = [];
-        (feedbackData.exercicesLog || []).forEach(e => {
-          if (!e.charge || !e.nom) return;
-          const charge = parseFloat(e.charge);
-          const reps = parseInt(e.reps) || 1;
-          const est1RM = reps > 1 ? Math.round(charge * (1 + reps / 30)) : charge;
-          const key = e.nom.toLowerCase().replace(/\s+/g, "_");
-          if (!prs[key] || est1RM > prs[key].value) {
-            if (prs[key]) newPRs.push({ nom: e.nom, value: est1RM, prev: prs[key].value });
-            prs[key] = { value: est1RM, date: new Date().toISOString(), nom: e.nom };
-          }
-        });
-        syncedStorage.set(prKey, prs);
-        if (newPRs.length > 0) {
-          setTimeout(() => {
-            newPRs.forEach((pr, i) => setTimeout(() =>
-              showToast(`🏆 PR ${pr.nom} ! ${pr.prev || "?"}→${pr.value}kg`, "badge"), i * 1200));
-          }, 1000);
-        }
+        if (newLevel > oldLevel && newLevel <= 4) setTimeout(() => setLevelUpData({ oldLevel, newLevel }), 800);
       } catch {}
 
       setFeedback(adapt);
-      setShowFeedback(false);
-      haptic([10, 30, 10]);
-      showToast("Séance enregistrée ! +50 XP 💪", "success");
-    } catch (e) { console.error(e, raw); }
+    } catch (e) { console.error(e, raw); setFeedback(f => (f && f._pending ? { analyse: "Séance enregistrée ✅", progressions: [], prochaine_seance: null } : f)); }
     setFeedbackStreamText("");
     setLoadingFeedback(false);
   }
