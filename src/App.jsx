@@ -5545,14 +5545,16 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
     const poids_kg = parseFloat(profile.poids) || 75;
     const caloriesBrulees = Math.round(met * poids_kg * dureeH);
     const trimp = Math.round(dureeH * 60 * (feedbackData.difficulte || 6) / 10);
+    // Crée une date ISO valide — jamais vide, jamais "Invalid Date"
+    const validDate = new Date().toISOString();
     const sessionData = {
-      date: new Date().toISOString(), titre: session?.titre, type: session?.type || "général",
-      ressenti: feedbackData.ressenti, difficulte: feedbackData.difficulte, rpe: feedbackData.difficulte,
-      exercicesLog: feedbackData.exercicesLog || [], charges: feedbackData.charges,
-      photoAnalyse: feedbackData._photoAnalyse || null, tempsReel: feedbackData.temps,
-      dureeReelle: feedbackData.temps || session?.duree, douleurs: feedbackData.douleurs,
-      energie: feedbackData.energie, notes: feedbackData.notes, calories: caloriesBrulees, trimp,
-      summary: `${session?.titre} — RPE ${feedbackData.difficulte}/10 — ${feedbackData.ressenti}`, prochaineSéance: null,
+      date: validDate, titre: session?.titre || "Séance", type: session?.type || "général",
+      ressenti: feedbackData.ressenti || "bien", difficulte: feedbackData.difficulte || 5, rpe: feedbackData.difficulte || 5,
+      exercicesLog: feedbackData.exercicesLog || [], charges: feedbackData.charges || null,
+      photoAnalyse: feedbackData._photoAnalyse || null, tempsReel: feedbackData.temps || 45,
+      dureeReelle: feedbackData.temps || session?.duree || 45, douleurs: feedbackData.douleurs || "aucune",
+      energie: feedbackData.energie || 3, notes: feedbackData.notes || "", calories: caloriesBrulees || 0, trimp: trimp || 0,
+      summary: `${session?.titre || "Séance"} — RPE ${feedbackData.difficulte || 5}/10 — ${feedbackData.ressenti || "bien"}`, prochaineSéance: null,
     };
     // PRs localement
     try {
