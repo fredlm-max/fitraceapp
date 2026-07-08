@@ -5538,10 +5538,7 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
     const rpeExcessif = feedbackData.difficulte >= 9 && feedbackData.energie <= 2;
     const deuxFoisDur = allSessionsFb.slice(-2).every(s => s.ressenti === "dur");
 
-    // ── ENREGISTREMENT IMMÉDIAT (sans attendre l'IA) ──
-    // Calories, TRIMP, PRs, streak sont calculés localement et sauvegardés tout de
-    // suite : ta séance compte instantanément, tu n'es plus bloqué·e à attendre
-    // l'analyse. L'IA affine ensuite en arrière-plan (avec un timeout).
+    // ── ENREGISTREMENT INSTANTANÉ (local) ──
     const MET_MAP = { running_zone2: 7.5, running_qualite: 11.0, force_stations: 5.5, hybride_compromis: 9.5 };
     const met = MET_MAP[session?.type] || 7.0;
     const dureeH = (parseInt(feedbackData.temps) || parseInt(session?.duree) || 45) / 60;
@@ -5549,18 +5546,15 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
     const caloriesBrulees = Math.round(met * poids_kg * dureeH);
     const trimp = Math.round(dureeH * 60 * (feedbackData.difficulte || 6) / 10);
     const sessionData = {
-      date: new Date().toISOString(),
-      titre: session?.titre, type: session?.type || "général",
+      date: new Date().toISOString(), titre: session?.titre, type: session?.type || "général",
       ressenti: feedbackData.ressenti, difficulte: feedbackData.difficulte, rpe: feedbackData.difficulte,
       exercicesLog: feedbackData.exercicesLog || [], charges: feedbackData.charges,
       photoAnalyse: feedbackData._photoAnalyse || null, tempsReel: feedbackData.temps,
       dureeReelle: feedbackData.temps || session?.duree, douleurs: feedbackData.douleurs,
-      energie: feedbackData.energie, notes: feedbackData.notes,
-      calories: caloriesBrulees, trimp,
-      summary: `${session?.titre} — RPE ${feedbackData.difficulte}/10 — ${feedbackData.ressenti}`,
-      prochaineSéance: null,
+      energie: feedbackData.energie, notes: feedbackData.notes, calories: caloriesBrulees, trimp,
+      summary: `${session?.titre} — RPE ${feedbackData.difficulte}/10 — ${feedbackData.ressenti}`, prochaineSéance: null,
     };
-    // Détection Personal Records (local, instantané)
+    // PRs localement
     try {
       const prKey = `fitrace_prs_${profile.name}`;
       let prs = {}; try { prs = JSON.parse(localStorage.getItem(prKey) || "{}"); } catch {}
@@ -5576,20 +5570,21 @@ RÈGLES JSON: series=nombre ex "4", reps=reps ou durée ex "8" ou "30s" ou "500m
         }
       });
       syncedStorage.set(prKey, prs);
-      if (newPRs.length > 0) setTimeout(() => { newPRs.forEach((pr, i) => setTimeout(() => showToast(`🏆 PR ${pr.nom} ! ${pr.prev || "?"}→${pr.value}kg`, "badge"), i * 1200)); }, 1000);
+      if (newPRs.length > 0) setTimeout(() => newPRs.forEach((pr, i) => setTimeout(() => showToast(`🏆 PR ${pr.nom} ! ${pr.prev || "?"}→${pr.value}kg`, "badge"), i * 1200)), 1000);
     } catch {}
-    const baseProfile = { ...profile, sessions: [...(profile.sessions || []), sessionData], email: profile.email || user?.email };
-    onUpdateProfile(baseProfile);
-    setTimeout(() => calcStreak(), 300);
+    // ── FERME LE MODAL et met à jour l'état React (instantané) ──
     setShowFeedback(false);
+    setFeedback({ analyse: "", _pending: true, calories: caloriesBrulees, trimp });
     haptic([10, 30, 10]);
     showToast("Séance enregistrée ! +50 XP 💪", "success");
-    setFeedback({ analyse: "", _pending: true, calories: caloriesBrulees, trimp });
-    setLoadingFeedback(false); // libère l'UI — l'analyse IA continue en arrière-plan
+    setLoadingFeedback(false);
+
+    // ── Mise à jour cloud + IA en arrière-plan (non-bloquant) ──
+    const baseProfile = { ...profile, sessions: [...(profile.sessions || []), sessionData], email: profile.email || user?.email };
+    onUpdateProfile(baseProfile); // async, sera complétée en arrière-plan
+    setTimeout(() => calcStreak(), 300);
 
     setFeedbackStreamText("🔍 Analyse de tes performances...");
-    // Course entre l'IA et un timeout de 30s : l'utilisateur n'est jamais bloqué
-    // indéfiniment (la séance est de toute façon déjà enregistrée).
     const raw = await Promise.race([callClaudeStream(
       `Tu es un coach HYROX expert et bienveillant. Tu analyses PRÉCISÉMENT chaque donnée du feedback pour individualiser le programme.
 Tu connais la science de l'entraînement : surcompensation, fenêtre anabolique, RPE, périodisation.
