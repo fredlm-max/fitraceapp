@@ -2648,6 +2648,10 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
   function saveTestResult(testId, data) {
     const newResults = { ...results, [testId]: { ...data, date: new Date().toISOString() } };
     setResults(newResults);
+    // Si c'est le test VMA avec FC max/min, mets à jour le profil aussi.
+    if (testId === "vma" && (data.fcMax || data.fcMin)) {
+      setProfile(p => ({ ...p, fcMax: data.fcMax || null, fcMin: data.fcMin || null }));
+    }
     setActiveTest(null);
   }
 
