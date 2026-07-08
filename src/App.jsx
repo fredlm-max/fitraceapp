@@ -17862,7 +17862,7 @@ JSON:
               const sessions = profile.sessions || [];
               const age = profile.age || 30;
               const sex = profile.sexe === "F" ? 0 : 1;
-              const fcRest = profile.fcRepos || 60;
+              const fcRest = profile.fcMin || profile.fcRepos || 60;
               const fcMax = profile.fcMax || Math.round(sex ? (208 - 0.7 * age) : (206 - 0.88 * age));
 
               // Karvonen zones boundaries as % of HRR
@@ -20531,7 +20531,7 @@ JSON:
               const age = parseInt(profile.age) || 30;
               const sex = profile.sexe === "F" ? "F" : "H";
               const fcMax = parseInt(profile.fcMax) || Math.round(208 - 0.7 * age);
-              const fcRest = parseInt(profile.fcRepos) || null;
+              const fcRest = parseInt(profile.fcMin || profile.fcRepos) || null;
               const sessions = profile.sessions || [];
               const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
 
@@ -24775,7 +24775,7 @@ const sessions = profile.sessions || [];
               if (!profile.vmaKmh) return null;
               const vma = parseFloat(profile.vmaKmh);
               const fcMax = profile.fcMax || (220 - (parseInt(profile.age) || 30));
-              const fcRepos = profile.fcRepos || 55;
+              const fcRepos = profile.fcMin || profile.fcRepos || 55;
               const fcRes = fcMax - fcRepos;
 
               const ZONES = [
@@ -26317,7 +26317,7 @@ const sessions = profile.sessions || [];
                         <div className="bebas" style={{ fontSize: 18, color: "var(--white)", letterSpacing: 1 }}>❤️ ZONES FC PERSONNALISÉES</div>
                         <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>
                           FCmax: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{fcMax} bpm</span>
-                          {profile.fcRest ? <> · Repos: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{profile.fcRest} bpm</span></> : null}
+                          {(profile.fcMin || profile.fcRest) ? <> · Repos: <span style={{ color: "var(--yellow)", fontWeight: 700 }}>{profile.fcMin || profile.fcRest} bpm</span></> : null}
                           {" "}· Méthode: <span style={{ color: "#aaa" }}>{method}</span>
                         </div>
                       </div>
@@ -27811,7 +27811,7 @@ function ProfilTab({ profile, onUpdateProfile, onLogout, installPrompt, isInstal
 
         const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
         const vo2max = Math.round(vma * 3.5);
-        const fcRest = parseInt(profile.fcRest) || 60;
+        const fcRest = parseInt(profile.fcMin || profile.fcRest) || 60;
         const sessions7d = (profile.sessions || []).filter(s => s.date && (Date.now() - new Date(s.date)) < 7 * 86400000).length;
 
         // Fitness age estimation based on HUNT Fitness Study (Nes et al. 2013)
