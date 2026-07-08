@@ -662,6 +662,11 @@ function withDerivedTests(profile) {
     if (!profile.squat1RM_final && t.squat?.poids && t.squat?.reps) patch.squat1RM_final = epley1RM(t.squat.poids, t.squat.reps);
     if (!profile.deadlift1RM_final && t.deadlift?.poids && t.deadlift?.reps) patch.deadlift1RM_final = epley1RM(t.deadlift.poids, t.deadlift.reps);
     if (!profile.bench1RM_final && t.bench?.poids && t.bench?.reps) patch.bench1RM_final = epley1RM(t.bench.poids, t.bench.reps);
+    // FC max/repos saisies dans le test VMA 6' : les remonter au niveau profil si
+    // elles n'y sont pas (cas d'un test refait sans persistance du champ top-level).
+    // Garantit que les zones FC (Karvonen) s'adaptent aux vraies valeurs de l'athlète.
+    if (!profile.fcMax && t.vma?.fcMax) patch.fcMax = t.vma.fcMax;
+    if (!profile.fcMin && t.vma?.fcMin) patch.fcMin = t.vma.fcMin;
   }
   // Répare les dates corrompues (séances, adaptations, alertes) qui font planter
   // le rendu ("RangeError: Invalid time value") à chaque chargement de l'app.
