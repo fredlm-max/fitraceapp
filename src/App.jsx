@@ -609,6 +609,22 @@ function getCitationDuJour() {
 
 function calcVMA(distanceMeters) { return parseFloat((distanceMeters / 100).toFixed(1)); }
 function epley1RM(weight, reps) { return Math.round(weight * (1 + reps / 30)); }
+
+// Rattrapage pur : si les tests bruts (profile.tests) existent mais que les champs
+// dérivés (VMA, 1RM) manquent — cas des comptes dont l'analyse IA avait échoué —,
+// on les recalcule à partir des saisies. Appliqué AU CHARGEMENT du profil (avant le
+// rendu) pour que les widgets s'affichent d'emblée avec les bonnes valeurs, sans
+// modification mid-session (qui perturberait l'ordre des hooks de certains widgets).
+function withDerivedTests(profile) {
+  if (!profile || !profile.tests) return profile;
+  const t = profile.tests;
+  const patch = {};
+  if (!profile.vmaKmh && t.vma?.distance) patch.vmaKmh = calcVMA(t.vma.distance);
+  if (!profile.squat1RM_final && t.squat?.poids && t.squat?.reps) patch.squat1RM_final = epley1RM(t.squat.poids, t.squat.reps);
+  if (!profile.deadlift1RM_final && t.deadlift?.poids && t.deadlift?.reps) patch.deadlift1RM_final = epley1RM(t.deadlift.poids, t.deadlift.reps);
+  if (!profile.bench1RM_final && t.bench?.poids && t.bench?.reps) patch.bench1RM_final = epley1RM(t.bench.poids, t.bench.reps);
+  return Object.keys(patch).length ? { ...profile, ...patch } : profile;
+}
 function paceFromVMA(vmaKmh, pct) {
   const speed = vmaKmh * (pct / 100);
   const minPerKm = 60 / speed;
@@ -47042,12 +47058,15 @@ export default function App() {
   async function loadAthleteSession(authUser) {
     const email = authUser.email;
     const name = authUser.user_metadata?.name || "";
-    const existing = await athleteBackend.getProfile(email);
+    const existingRaw = await athleteBackend.getProfile(email);
+    const existing = withDerivedTests(existingRaw);
     if (existing) {
       await hydrateFromCloud(email);
       setProfile(existing);
       setNeedTests(!existing.onboardingComplete);
       setUser({ role: "athlete", name: name || existing.name, email });
+      // Persiste les champs dérivés recalculés (une seule fois) si besoin.
+      if (existing !== existingRaw && email) { try { await athleteBackend.saveProfile(email, existing); } catch {} }
     } else {
       // Compte Supabase Auth existant mais onboarding jamais terminé — relancer l'onboarding
       setUser({ role: "athlete", name, email });
@@ -47096,11 +47115,13 @@ export default function App() {
       return;
     }
     try {
-      const existing = email ? await athleteBackend.getProfile(email) : null;
+      const existingRaw = email ? await athleteBackend.getProfile(email) : null;
+      const existing = withDerivedTests(existingRaw);
       if (existing) {
         if (email) await hydrateFromCloud(email);
         setProfile(existing);
         setNeedTests(!existing.onboardingComplete);
+        if (existing !== existingRaw && email) { try { await athleteBackend.saveProfile(email, existing); } catch {} }
       }
       if (globalSaveError) setGlobalSaveError("");
     } catch (e) {
