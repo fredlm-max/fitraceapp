@@ -18842,15 +18842,23 @@ JSON:
 
             {/* ── HEART RATE ZONE TRAINER ── */}
             {(() => {
-              // Utilise fcMax rentrée par l'utilisateur, ou estime à partir de l'âge sinon.
+              // Utilise fcMax + fcMin (FC repos) rentrées dans le test VMA 6'.
+              // Si la FC repos est connue → méthode Karvonen (FC réserve), plus précise et personnalisée.
+              // Sinon → % FCmax simple.
               const maxHR = profile.fcMax || (profile.age ? Math.round(208 - 0.7 * profile.age) : 190);
+              const restHR = profile.fcMin || null;
+              const useKarvonen = !!(restHR && maxHR > restHR);
               const ZONES = [
-                { id:1, name:"Zone 1", label:"Récup active", pct:[50,60], color:"#8E8E93" },
-                { id:2, name:"Zone 2", label:"Aérobie base", pct:[60,70], color:"#30D158" },
-                { id:3, name:"Zone 3", label:"Tempo", pct:[70,80], color:"#FF9F0A" },
-                { id:4, name:"Zone 4", label:"Seuil", pct:[80,90], color:"#FF453A" },
-                { id:5, name:"Zone 5", label:"VO₂max", pct:[90,100], color:"#BF5AF2" },
+                { id:1, name:"Zone 1", label:"Récup active", pct:[50,60], karvo:[30,45], color:"#8E8E93" },
+                { id:2, name:"Zone 2", label:"Aérobie base", pct:[60,70], karvo:[45,62], color:"#30D158" },
+                { id:3, name:"Zone 3", label:"Tempo", pct:[70,80], karvo:[62,75], color:"#FF9F0A" },
+                { id:4, name:"Zone 4", label:"Seuil", pct:[80,90], karvo:[75,88], color:"#FF453A" },
+                { id:5, name:"Zone 5", label:"VO₂max", pct:[90,100], karvo:[88,100], color:"#BF5AF2" },
               ];
+              // Calcule les bornes bpm d'une zone selon la méthode disponible
+              const zoneBpm = (z) => useKarvonen
+                ? [Math.round(restHR + (maxHR - restHR) * z.karvo[0] / 100), Math.round(restHR + (maxHR - restHR) * z.karvo[1] / 100)]
+                : [Math.round(maxHR * z.pct[0] / 100), Math.round(maxHR * z.pct[1] / 100)];
 
               const KEY = `fitrace_hr_zones_${profile.name}`;
               const [hrZoneSessions, setHrZoneSessions] = React.useState(() => {
@@ -18876,7 +18884,7 @@ JSON:
               return (
                 <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
-                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Zones FC · FCmax {maxHR}</div>
+                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Zones FC · FCmax {maxHR}{useKarvonen ? ` · Repos ${restHR} · Karvonen` : ""}</div>
                     <button onClick={()=>setHrZoneView(hrZoneView==="log"?"stats":"log")} style={{ background:"var(--bg3)",color:"var(--yellow)",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
                       {hrZoneView==="log"?"← Stats":"+ Log séance"}
                     </button>
@@ -18884,8 +18892,7 @@ JSON:
 
                   <div style={{ display:"flex",gap:4,marginBottom:12 }}>
                     {ZONES.map(z=>{
-                      const lo = Math.round(maxHR*z.pct[0]/100);
-                      const hi = Math.round(maxHR*z.pct[1]/100);
+                      const [lo, hi] = zoneBpm(z);
                       return (
                         <div key={z.id} style={{ flex:1,background:"var(--bg3)",borderRadius:8,padding:"6px 4px",textAlign:"center" }}>
                           <div style={{ fontSize:10,fontWeight:800,color:z.color }}>Z{z.id}</div>
@@ -21057,14 +21064,18 @@ JSON:
               const [form, setForm] = React.useState({ date: new Date().toISOString().slice(0,10), duration:30, z1:0, z2:0, z3:0, z4:0, z5:0, label:"" });
 
               const age = profile.age ? parseInt(profile.age) : 30;
-              const hrMax = hrData.hrMax ? parseInt(hrData.hrMax) : 220 - age;
+              // Priorité : réglage manuel du widget > FC max du test VMA 6' > estimation par l'âge
+              const hrMax = hrData.hrMax ? parseInt(hrData.hrMax) : (profile.fcMax || (220 - age));
+              // FC repos du test VMA 6' → méthode Karvonen (plus personnalisée) si dispo
+              const hrRest = profile.fcMin || null;
+              const useKarvo = !!(hrRest && hrMax > hrRest);
 
               const zones = [
-                { n:"Z1", name:"Récupération", pct:[50,60], color:"#30D158" },
-                { n:"Z2", name:"Endurance", pct:[60,70], color:"#64D2FF" },
-                { n:"Z3", name:"Aérobie", pct:[70,80], color:"var(--yellow)" },
-                { n:"Z4", name:"Seuil", pct:[80,90], color:"#FF9F0A" },
-                { n:"Z5", name:"VO₂max", pct:[90,100], color:"#FF453A" },
+                { n:"Z1", name:"Récupération", pct:[50,60], karvo:[30,45], color:"#30D158" },
+                { n:"Z2", name:"Endurance", pct:[60,70], karvo:[45,62], color:"#64D2FF" },
+                { n:"Z3", name:"Aérobie", pct:[70,80], karvo:[62,75], color:"var(--yellow)" },
+                { n:"Z4", name:"Seuil", pct:[80,90], karvo:[75,88], color:"#FF9F0A" },
+                { n:"Z5", name:"VO₂max", pct:[90,100], karvo:[88,100], color:"#FF453A" },
               ];
 
               const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - period);
@@ -21114,7 +21125,7 @@ JSON:
                   <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, background:"var(--bg3)", borderRadius:12, padding:"10px 14px" }}>
                     <span style={{ fontSize:20 }}>💓</span>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:11, color:"#98989D" }}>FC Max estimée</div>
+                      <div style={{ fontSize:11, color:"#98989D" }}>{hrData.hrMax ? "FC Max (réglée)" : profile.fcMax ? "FC Max (test VMA)" : "FC Max estimée"}{useKarvo ? ` · Repos ${hrRest} · Karvonen` : ""}</div>
                       <div style={{ fontSize:15, fontWeight:700, color:"#FF453A" }}>{hrMax} bpm</div>
                     </div>
                     <div>
@@ -21128,8 +21139,8 @@ JSON:
                   {/* Zone definitions */}
                   <div style={{ marginBottom:16 }}>
                     {zones.map((z,i) => {
-                      const lo = Math.round(hrMax * z.pct[0] / 100);
-                      const hi = Math.round(hrMax * z.pct[1] / 100);
+                      const lo = useKarvo ? Math.round(hrRest + (hrMax - hrRest) * z.karvo[0] / 100) : Math.round(hrMax * z.pct[0] / 100);
+                      const hi = useKarvo ? Math.round(hrRest + (hrMax - hrRest) * z.karvo[1] / 100) : Math.round(hrMax * z.pct[1] / 100);
                       const mins = totals[i];
                       const pct = totalMin > 0 ? Math.round(mins/totalMin*100) : 0;
                       return (
