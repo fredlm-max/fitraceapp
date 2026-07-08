@@ -26930,7 +26930,9 @@ const sessions = profile.sessions || [];
         <div style={{
           pointerEvents: "auto",
           maxWidth: 480, margin: "0 auto",
-          background: appTheme === "apple" ? "rgba(255,255,255,0.78)" : "rgba(18,18,20,0.82)",
+          // Fond quasi opaque : la barre reste visible même si le navigateur mobile
+          // ne peint pas le backdrop-filter (bug connu sur certains iPhone/Android).
+          background: appTheme === "apple" ? "rgba(248,248,250,0.97)" : "rgba(18,18,20,0.97)",
           backdropFilter: "blur(40px) saturate(1.8)",
           WebkitBackdropFilter: "blur(40px) saturate(1.8)",
           border: appTheme === "apple" ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.09)",
