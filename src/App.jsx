@@ -26930,11 +26930,13 @@ const sessions = profile.sessions || [];
         <div style={{
           pointerEvents: "auto",
           maxWidth: 480, margin: "0 auto",
-          // Fond quasi opaque : la barre reste visible même si le navigateur mobile
-          // ne peint pas le backdrop-filter (bug connu sur certains iPhone/Android).
-          background: appTheme === "apple" ? "rgba(248,248,250,0.97)" : "rgba(18,18,20,0.97)",
-          backdropFilter: "blur(40px) saturate(1.8)",
-          WebkitBackdropFilter: "blur(40px) saturate(1.8)",
+          // Fond 100% SOLIDE (pas de backdrop-filter) : sur iOS Safari, le flou
+          // translucide n'était pas peint au premier rendu → barre invisible tant
+          // qu'un redraw n'était pas forcé (ex: ouverture d'un modal). Un fond solide
+          // + transform:translateZ(0) (couche GPU dédiée) garantit un affichage immédiat.
+          background: appTheme === "apple" ? "#F4F4F6" : "#161618",
+          transform: "translateZ(0)",
+          WebkitTransform: "translateZ(0)",
           border: appTheme === "apple" ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.09)",
           borderRadius: 28,
           display: "flex", justifyContent: "space-around", alignItems: "center",
