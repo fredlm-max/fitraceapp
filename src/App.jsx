@@ -615,15 +615,60 @@ function epley1RM(weight, reps) { return Math.round(weight * (1 + reps / 30)); }
 // on les recalcule à partir des saisies. Appliqué AU CHARGEMENT du profil (avant le
 // rendu) pour que les widgets s'affichent d'emblée avec les bonnes valeurs, sans
 // modification mid-session (qui perturberait l'ordre des hooks de certains widgets).
+// Vrai/faux : une valeur est-elle une date exploitable ?
+function isValidDate(v) {
+  if (!v) return false;
+  const t = new Date(v).getTime();
+  return !isNaN(t);
+}
+
+// Parse une date en objet Date valide (midi local), qu'elle soit au format
+// "YYYY-MM-DD" OU un ISO complet "YYYY-MM-DDTHH:mm:ss.sssZ". Le .slice(0,10)
+// normalise les deux cas ; renvoie null si invalide/absente. Évite le bug
+// "date + 'T12:00:00'" qui produisait "...ZT12:00:00" → RangeError.
+function parseLocalDate(v) {
+  if (!v) return null;
+  const d = new Date(String(v).slice(0, 10) + "T12:00:00");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Répare les dates manquantes/invalides d'une liste d'entrées horodatées.
+// Une entrée sans date valide reçoit une date de repli (échelonnée dans le passé
+// selon sa position) pour ne jamais faire planter les calculs (toISOString, tri...).
+function repairDatedList(list) {
+  if (!Array.isArray(list) || !list.length) return { list, changed: false };
+  let changed = false;
+  const n = list.length;
+  const repaired = list.map((item, i) => {
+    if (item && isValidDate(item.date)) return item;
+    changed = true;
+    // repli : échelonné dans le passé pour préserver un ordre plausible
+    const fallback = new Date(Date.now() - (n - i) * 86400000).toISOString();
+    return { ...(item || {}), date: fallback };
+  });
+  return { list: changed ? repaired : list, changed };
+}
+
 function withDerivedTests(profile) {
-  if (!profile || !profile.tests) return profile;
-  const t = profile.tests;
+  if (!profile) return profile;
+  let next = profile;
   const patch = {};
-  if (!profile.vmaKmh && t.vma?.distance) patch.vmaKmh = calcVMA(t.vma.distance);
-  if (!profile.squat1RM_final && t.squat?.poids && t.squat?.reps) patch.squat1RM_final = epley1RM(t.squat.poids, t.squat.reps);
-  if (!profile.deadlift1RM_final && t.deadlift?.poids && t.deadlift?.reps) patch.deadlift1RM_final = epley1RM(t.deadlift.poids, t.deadlift.reps);
-  if (!profile.bench1RM_final && t.bench?.poids && t.bench?.reps) patch.bench1RM_final = epley1RM(t.bench.poids, t.bench.reps);
-  return Object.keys(patch).length ? { ...profile, ...patch } : profile;
+  const t = profile.tests;
+  if (t) {
+    if (!profile.vmaKmh && t.vma?.distance) patch.vmaKmh = calcVMA(t.vma.distance);
+    if (!profile.squat1RM_final && t.squat?.poids && t.squat?.reps) patch.squat1RM_final = epley1RM(t.squat.poids, t.squat.reps);
+    if (!profile.deadlift1RM_final && t.deadlift?.poids && t.deadlift?.reps) patch.deadlift1RM_final = epley1RM(t.deadlift.poids, t.deadlift.reps);
+    if (!profile.bench1RM_final && t.bench?.poids && t.bench?.reps) patch.bench1RM_final = epley1RM(t.bench.poids, t.bench.reps);
+  }
+  // Répare les dates corrompues (séances, adaptations, alertes) qui font planter
+  // le rendu ("RangeError: Invalid time value") à chaque chargement de l'app.
+  const sess = repairDatedList(profile.sessions);
+  const adapts = repairDatedList(profile.adaptations);
+  const alerts = repairDatedList(profile.alerts);
+  if (sess.changed) patch.sessions = sess.list;
+  if (adapts.changed) patch.adaptations = adapts.list;
+  if (alerts.changed) patch.alerts = alerts.list;
+  return Object.keys(patch).length ? { ...next, ...patch } : next;
 }
 function paceFromVMA(vmaKmh, pct) {
   const speed = vmaKmh * (pct / 100);
@@ -3107,7 +3152,7 @@ function AchievementsCard({ profile }) {
     return Math.max(0, ...Object.values(w));
   })();
   const streak = (() => {
-    const weeks = new Set(sessions.map(s => { const d = new Date(s.date); d.setDate(d.getDate() + 4 - (d.getDay()||7)); return d.toISOString().slice(0,10); }));
+    const weeks = new Set(sessions.filter(s => s.date && !isNaN(new Date(s.date).getTime())).map(s => { const d = new Date(s.date); d.setDate(d.getDate() + 4 - (d.getDay()||7)); return d.toISOString().slice(0,10); }));
     return weeks.size;
   })();
 
@@ -9678,7 +9723,7 @@ JSON:
                         {/* Day labels */}
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingLeft: 2, paddingRight: 2 }}>
                           {last7Logs.map((l, i) => {
-                            const d = new Date(l.date + "T12:00:00");
+                            const d = parseLocalDate(l.date) || new Date();
                             const dow = d.getDay();
                             const labels = ["D","L","M","M","J","V","S"];
                             const isToday = l.date === todayStr;
@@ -10653,7 +10698,7 @@ JSON:
                   {/* Last measurement date */}
                   {logs.length > 0 && (
                     <div style={{ fontSize:9, color:"#8E8E93", textAlign:"right", marginTop:6 }}>
-                      {logs.length} mesure{logs.length>1?"s":" "} · Dernière : {new Date(logs[logs.length-1].date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"})}
+                      {logs.length} mesure{logs.length>1?"s":" "} · Dernière : {parseLocalDate(logs[logs.length-1].date)?.toLocaleDateString("fr-FR",{day:"numeric",month:"long"}) || "—"}
                     </div>
                   )}
                 </div>
@@ -13537,7 +13582,8 @@ JSON:
               // Best week
               const weekMap = {};
               sessions.forEach(s => {
-                const dt = new Date(s.date+"T12:00:00");
+                const dt = parseLocalDate(s.date);
+                if (!dt) return;
                 const ws = new Date(dt); ws.setDate(dt.getDate() - dt.getDay() + 1);
                 const wk = ws.toISOString().slice(0,10);
                 weekMap[wk] = (weekMap[wk]||0) + 1;
@@ -17985,7 +18031,7 @@ JSON:
                           const barH = Math.round((e.dur/10)*H);
                           const x = i*(W/7)+2;
                           const y = H-barH;
-                          const day = new Date(e.date+"T12:00:00").toLocaleDateString("fr",{weekday:"short"}).slice(0,1).toUpperCase();
+                          const day = (parseLocalDate(e.date)?.toLocaleDateString("fr",{weekday:"short"}) || "").slice(0,1).toUpperCase();
                           return (
                             <g key={i}>
                               <rect x={x} y={y} width={barW} height={barH} rx={3} fill={durColor(e.dur)} opacity={0.8}/>
@@ -18429,7 +18475,7 @@ JSON:
               const MONTH_LABELS = [];
               days.forEach((d, i) => {
                 if (i % 7 === 0) {
-                  const month = new Date(d.date + "T12:00:00").toLocaleDateString("fr",{month:"short"});
+                  const month = parseLocalDate(d.date)?.toLocaleDateString("fr",{month:"short"}) || "";
                   const lastMonth = MONTH_LABELS[MONTH_LABELS.length - 1];
                   if (!lastMonth || lastMonth.label !== month) {
                     MONTH_LABELS.push({ label: month, col: Math.floor(i / 7) });
@@ -22133,7 +22179,8 @@ JSON:
               // By week – best week
               const weekMap = {};
               yearSess.forEach(s => {
-                const d = new Date(s.date+"T12:00:00");
+                const d = parseLocalDate(s.date);
+                if (!d) return;
                 const weekStart = new Date(d);
                 weekStart.setDate(d.getDate() - d.getDay() + 1);
                 const wk = weekStart.toISOString().slice(0,10);
@@ -46438,7 +46485,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                     <div>
                       <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Meilleur temps</div>
                       <div className="bebas" style={{ fontSize: 28, color: "var(--yellow)", lineHeight: 1 }}>{bestTime.totalTime}</div>
-                      <div style={{ fontSize: 11, color: "#8E8E93" }}>{bestTime.location} · {new Date(bestTime.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93" }}>{bestTime.location} · {parseLocalDate(bestTime.date)?.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) || "—"}</div>
                     </div>
                   </div>
                 )}
@@ -46451,7 +46498,7 @@ Pour checklist: 5 items essentiels J-1/J de course (matériel, nutrition, échau
                           <span style={{ fontSize: 10, color: "#8E8E93" }}>{r.location || "HYROX"}</span>
                         </div>
                         <div className="bebas" style={{ fontSize: 24, color: r.id === bestTime?.id ? "var(--yellow)" : "var(--white)", lineHeight: 1 }}>{r.totalTime}</div>
-                        <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>{new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 2 }}>{parseLocalDate(r.date)?.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) || "—"}</div>
                       </div>
                       {r.rank && r.totalParticipants && (
                         <div style={{ textAlign: "center", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 10, padding: "8px 12px" }}>
