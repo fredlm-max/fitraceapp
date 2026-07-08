@@ -1326,10 +1326,16 @@ function calcPMC(sessions) {
 
   // Training Stress Score simplifié: RPE × durée_minutes × facteur_type
   const sessionLoad = (s) => {
-    const rpe = s.difficulte || 5;
-    const durMin = s.tempsReel
-      ? parseInt(s.tempsReel.split(":")[0] || 0) * 60 + parseInt(s.tempsReel.split(":")[1] || 0)
-      : 50;
+    const rpe = s.difficulte || s.rpe || 5;
+    // Durée robuste : accepte un nombre (minutes), "MM", "HH:MM" — sinon dureeReelle/duree.
+    const durMin = (() => {
+      const t = s.tempsReel ?? s.dureeReelle ?? s.duree;
+      if (t == null || t === "") return 50;
+      if (typeof t === "number") return t || 50;
+      const str = String(t);
+      if (str.includes(":")) { const p = str.split(":"); return (parseInt(p[0]) || 0) * 60 + (parseInt(p[1]) || 0); }
+      return parseInt(str) || 50;
+    })();
     const typeMultiplier = s.type === "running_qualite" ? 1.2 : s.type === "hybride_compromis" ? 1.15 : 1.0;
     return Math.round((rpe / 10) * durMin * 10 * typeMultiplier);
   };
@@ -6670,8 +6676,10 @@ JSON:
               // Charge d'entraînement (ATL sur 7j)
               const allSessions = profile.sessions || [];
               const now = Date.now();
-              const chargeSem = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; })
-                .reduce((sum,s) => sum + (s.duree||0) * ((s.rpe||5)/10), 0);
+              const chargeSem = allSessions.filter(s => { const d = parseLocalDate(s.date); return d && now - d.getTime() < 7*86400000; })
+                // durée : les séances loggées stockent dureeReelle/tempsReel (pas duree),
+                // intensité : rpe ou difficulte. On prend le premier disponible.
+                .reduce((sum,s) => sum + (parseInt(s.dureeReelle || s.tempsReel || s.duree || 45)) * ((s.rpe || s.difficulte || 5)/10), 0);
               const chargeMax = 600;
               const chargePct = Math.min(100, Math.round((chargeSem / chargeMax) * 100));
               const chargeLabel = chargePct >= 80 ? "Élevée" : chargePct >= 50 ? "Optimale" : chargePct >= 20 ? "Légère" : "Faible";
