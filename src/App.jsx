@@ -7,6 +7,8 @@ class ErrorBoundary extends Component {
   componentDidCatch(error, info) { console.error("APP CRASH:", error, info); }
   render() {
     if (this.state.error) {
+      // Fallback compact (ex : contenu d'un onglet) qui préserve la navigation.
+      if (this.props.fallback) return this.props.fallback(this.state.error, () => this.setState({ error: null }));
       return (
         <div style={{ minHeight:"100vh", background:"#080808", color:"#f0f0f0", fontFamily:"monospace", padding:"24px", overflowY:"auto" }}>
           <div style={{ color:"#ff4747", fontSize:18, fontWeight:700, marginBottom:16 }}>💥 Erreur détectée</div>
@@ -6654,6 +6656,14 @@ JSON:
 
       <div ref={mainScrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch" }}>
       <div style={{ padding: "20px 16px 100px", maxWidth: 480, margin: "0 auto" }}>
+      <ErrorBoundary fallback={(err, reset) => (
+        <div style={{ padding: "40px 8px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>😕</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--white)", marginBottom: 8 }}>Cet écran a rencontré un souci</div>
+          <div style={{ fontSize: 13, color: "#8E8E93", marginBottom: 20, lineHeight: 1.5 }}>Tes données sont en sécurité. Utilise les onglets en bas pour naviguer, ou réessaie.</div>
+          <button onClick={reset} style={{ padding: "10px 24px", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>Réessayer</button>
+        </div>
+      )}>
 
         {/* HOME — toujours rendu, caché si inactif (fix hooks) */}
         <div style={{display: tab === "home" ? "block" : "none"}}>
@@ -26873,6 +26883,7 @@ const sessions = profile.sessions || [];
         {/* PROFIL */}
         {tab === "profil" && <ProfilTab profile={profile} onUpdateProfile={onUpdateProfile} onLogout={onLogout} installPrompt={installPrompt} isInstalled={isInstalled} isIOS={isIOS} triggerInstall={triggerInstall} notifGranted={notifGranted} requestNotifPermission={requestNotifPermission} appTheme={appTheme} setAppTheme={setAppTheme} />}
 
+      </ErrorBoundary>
       </div>
       </div>
 
