@@ -6759,6 +6759,53 @@ JSON:
 
                   {/* GRANDE CARTE PARTAGEABLE */}
                   <div style={{ background:"linear-gradient(160deg,#16140d 0%,#100f0a 38%,#0a0a08 100%)", border:"1px solid rgba(201,168,64,0.22)", borderRadius:24, padding:"20px 16px 16px", position:"relative", overflow:"hidden", boxShadow:"0 4px 16px rgba(0,0,0,0.45), 0 20px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,168,64,0.12)" }}>
+                    {/* Bouton Partager */}
+                    <button onClick={() => {
+                      // Génère une image PNG simple du score
+                      const canvas = document.createElement("canvas");
+                      canvas.width = 600; canvas.height = 700;
+                      const ctx = canvas.getContext("2d");
+                      ctx.fillStyle = "#0a0a08"; ctx.fillRect(0, 0, 600, 700);
+                      // Dégradé fond
+                      const grad = ctx.createLinearGradient(0, 0, 600, 700);
+                      grad.addColorStop(0, "#16140d"); grad.addColorStop(0.5, "#100f0a");
+                      ctx.fillStyle = grad; ctx.fillRect(0, 0, 600, 700);
+                      // Titre
+                      ctx.font = "bold 40px Bebas, sans-serif"; ctx.fillStyle = "#C9A840"; ctx.textAlign = "center";
+                      ctx.fillText("MY APEX SCORE", 300, 80);
+                      // Score principal
+                      ctx.font = "bold 120px Bebas, sans-serif"; ctx.fillStyle = tier.color;
+                      ctx.fillText(apexScore.toString(), 300, 220);
+                      ctx.font = "20px sans-serif"; ctx.fillStyle = "#8E8E93";
+                      ctx.fillText("/ 100", 300, 250);
+                      // Tier
+                      ctx.font = "bold 24px sans-serif"; ctx.fillStyle = tier.color;
+                      ctx.fillText(tier.label, 300, 300);
+                      // Stats
+                      ctx.font = "14px sans-serif"; ctx.fillStyle = "#AEAEB2"; ctx.textAlign = "left";
+                      const stats = [
+                        `💪 Fitness: ${sc.global}/100`,
+                        `🌙 Sommeil: ${sleepScore}%`,
+                        `🥗 Nutrition: ${nutPct}%`,
+                        `⚡ Charge: ${chargeLabel}`,
+                      ];
+                      stats.forEach((s, i) => ctx.fillText(s, 60, 380 + i*50));
+                      // Footer
+                      ctx.font = "12px sans-serif"; ctx.fillStyle = "#555"; ctx.textAlign = "center";
+                      ctx.fillText("🏃 FitRace HYROX Coach", 300, 680);
+                      canvas.toBlob(blob => {
+                        const txt = `🏆 Mon score APEX FitRace : ${apexScore}/100 — ${tier.label}\\n💪 Score Fitness : ${sc.global}/100\\n🌙 Sommeil : ${sleepScore}% · 🥗 Nutrition : ${nutPct}% · ⚡ Charge : ${chargeLabel}\\n#HYROX #FitRace #APEX`;
+                        if (navigator.share) {
+                          navigator.share({ files: [new File([blob], "apex.png", {type:"image/png"})], text: txt, title: "Mon score APEX FitRace" }).catch(()=>showToast("Partage annulé", "info"));
+                        } else {
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url; a.download = "apex.png"; a.click();
+                          URL.revokeObjectURL(url);
+                          showToast("Image téléchargée ✓", "success");
+                        }
+                      }, "image/png");
+                    }} style={{ position:"absolute", top:12, right:12, background:"rgba(201,168,64,0.2)", color:"var(--yellow)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:8, padding:"6px 10px", fontSize:10, fontWeight:700, cursor:"pointer", zIndex:10 }}>📱 PARTAGER</button>
                     {/* Reflet spéculaire haut */}
                     <div style={{ position:"absolute", top:0, left:"12%", right:"12%", height:1, background:"linear-gradient(90deg, transparent, rgba(201,168,64,0.5), transparent)", pointerEvents:"none" }}/>
                     {/* Halo déco */}
