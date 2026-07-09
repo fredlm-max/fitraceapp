@@ -47358,25 +47358,10 @@ export default function App() {
         @keyframes splashFade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes splashPulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
       `}</style>
-      {/* Logo animé */}
-      <div style={{ position: "relative", marginBottom: 24 }}>
-        <svg width="120" height="120" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="50" fill="rgba(201,168,64,0.06)" />
-          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(201,168,64,0.08)" strokeWidth="6"/>
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#C9A840" strokeWidth="6" strokeLinecap="round"
-            strokeDasharray="352" strokeDashoffset="352"
-            transform="rotate(-90 60 60)"
-            style={{ animation: "splashRing 1.4s cubic-bezier(0.16,1,0.3,1) 0.2s forwards" }}/>
-        </svg>
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, color: "#C9A840", letterSpacing: 6, lineHeight: 1, animation: "splashFade 0.6s 0.5s both" }}>APEX</div>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#39ff80", marginTop: 4, animation: "splashPulse 1.2s 0.8s ease-in-out infinite" }}/>
-        </div>
-      </div>
-      {/* Tagline */}
-      <div style={{ fontSize: 13, color: "#8E8E93", letterSpacing: "0.08em", animation: "splashFade 0.6s 0.9s both" }}>
-        Ton coach HYROX IA
-      </div>
+      {/* Logo APEX Performance officiel */}
+      <img src="/apex-logo.png" alt="APEX Performance"
+        style={{ width: 240, maxWidth: "80%", height: "auto", marginBottom: 18, mixBlendMode: "screen", animation: "splashFade 0.7s 0.2s both" }} />
+      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#39ff80", animation: "splashPulse 1.2s 0.8s ease-in-out infinite" }}/>
     </div>
   );
 
