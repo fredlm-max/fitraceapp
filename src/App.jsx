@@ -19623,6 +19623,189 @@ JSON:
               );
             })()}
 
+            {/* ── SWEAT RATE CALCULATOR ── */}
+            {(() => {
+              const poids = parseFloat(profile.poids) || 70;
+              const [temp, setTemp] = React.useState(20);
+              const [duree, setDuree] = React.useState(60);
+              const [intensity, setIntensity] = React.useState("modérée");
+
+              const baseSweat = { "légère": 0.5, "modérée": 0.9, "intense": 1.4, "HYROX": 1.8 }[intensity];
+              const tempFactor = 1 + Math.max(0, (temp - 15) * 0.04);
+              const sweatRateL = Math.round(baseSweat * (poids / 70) * tempFactor * 10) / 10;
+              const totalSweat = Math.round(sweatRateL * (duree / 60) * 10) / 10;
+              const drinkBeforeL = 0.5;
+              const drinkDuringL = Math.round(totalSweat * 0.7 * 10) / 10;
+              const drinkAfterL = Math.round(totalSweat * 1.5 * 10) / 10;
+              const electrolytes = totalSweat > 0.8;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Calculateur Sudation</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <span style={{ fontSize: 10, color: "#8E8E93" }}>Température</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: temp > 25 ? "#FF453A" : "var(--fg)" }}>{temp}°C</span>
+                      </div>
+                      <input type="range" min={-5} max={40} value={temp} onChange={e => setTemp(Number(e.target.value))} style={{ width: "100%" }} />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <span style={{ fontSize: 10, color: "#8E8E93" }}>Durée</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--fg)" }}>{duree} min</span>
+                      </div>
+                      <input type="range" min={15} max={180} step={5} value={duree} onChange={e => setDuree(Number(e.target.value))} style={{ width: "100%" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 4 }}>Intensité</div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {["légère", "modérée", "intense", "HYROX"].map(i => (
+                          <button key={i} onClick={() => setIntensity(i)} style={{ flex: 1, padding: "4px 2px", borderRadius: 8, border: "none", fontSize: 9, fontWeight: 600, cursor: "pointer", background: intensity === i ? "var(--yellow)" : "#3A3A3C", color: intensity === i ? "#000" : "var(--fg)" }}>{i}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#1C1C1E", borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Taux de sudation estimé</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "#007AFF" }}>{sweatRateL} L/h</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Pertes totales</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: totalSweat > 1.5 ? "#FF453A" : "#FF9F0A" }}>{totalSweat} L</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {[
+                      { label: "Avant (J-2h)", val: `${drinkBeforeL}L`, icon: "💧", color: "#007AFF" },
+                      { label: "Pendant (toutes les 20 min)", val: `${Math.round(drinkDuringL / (duree / 20) * 100) / 100}L`, icon: "🚰", color: "#30D158" },
+                      { label: "Après (récupération)", val: `${drinkAfterL}L`, icon: "🍶", color: "#FF9F0A" },
+                    ].map(item => (
+                      <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid #2C2C2E" }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span>{item.icon}</span>
+                          <span style={{ fontSize: 10, color: "#8E8E93" }}>{item.label}</span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: item.color }}>{item.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {electrolytes && <div style={{ marginTop: 8, padding: 6, background: "#FF9F0A18", borderRadius: 8, fontSize: 10, color: "#FF9F0A" }}>⚡ Pertes importantes — ajouter électrolytes (sodium, potassium)</div>}
+                </div>
+              );
+            })()}
+
+            {/* ── CALORIE BURN ESTIMATOR ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const poids = parseFloat(profile.poids) || 75;
+              const sessions = profile.sessions || [];
+              const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
+              const recent = sessions.filter(s => s.date && new Date(s.date) >= cutoff);
+              if (recent.length === 0) return null;
+
+              // MET values by session type (Compendium of Physical Activities 2011)
+              const MET = {
+                running_zone2:     7.0,
+                running_qualite:   10.0,
+                force_stations:    6.5,
+                hybride_compromis: 9.0,
+                mobilite:          3.0,
+                coach:             8.0,
+                perso:             6.0,
+              };
+              // Calories = MET × weight(kg) × duration(h)
+              const calcCal = s => {
+                const met = MET[s.type] || 6.0;
+                const rpeBonus = ((s.difficulte || 5) - 5) * 0.05; // RPE adjustment
+                const effectiveMet = met * (1 + rpeBonus);
+                return Math.round(effectiveMet * poids * ((s.duree || 45) / 60));
+              };
+
+              const sessionsWithCal = recent.map(s => ({ ...s, cal: calcCal(s) }));
+              const totalCal = sessionsWithCal.reduce((a, s) => a + s.cal, 0);
+              const avgCal = Math.round(totalCal / sessionsWithCal.length);
+              const maxCal = Math.max(...sessionsWithCal.map(s => s.cal));
+
+              // Group by week (last 4 weeks)
+              const now = new Date();
+              const weekCals = Array.from({ length: 4 }, (_, w) => {
+                const wStart = new Date(now); wStart.setDate(now.getDate() - (3 - w) * 7 - ((now.getDay() + 6) % 7));
+                wStart.setHours(0,0,0,0);
+                const wEnd = new Date(wStart); wEnd.setDate(wStart.getDate() + 7);
+                const wSessions = sessionsWithCal.filter(s => s.date && new Date(s.date) >= wStart && new Date(s.date) < wEnd);
+                return { cal: wSessions.reduce((a, s) => a + s.cal, 0), count: wSessions.length, w };
+              });
+              const maxWeekCal = Math.max(...weekCals.map(w => w.cal), 1);
+
+              // Equiv foods
+              const totalKg = (totalCal / 7700).toFixed(2);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🔥 CALORIES BRÛLÉES</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>28 derniers jours · méthode MET</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div className="bebas" style={{ fontSize: 26, color: "#FF9F0A", lineHeight: 1 }}>{totalCal.toLocaleString("fr")}</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>kcal total</div>
+                    </div>
+                  </div>
+
+                  {/* Weekly bars */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 64, marginBottom: 12 }}>
+                    {weekCals.map((w, i) => {
+                      const h = w.cal > 0 ? Math.max(8, Math.round((w.cal / maxWeekCal) * 56)) : 4;
+                      const isCurrent = i === 3;
+                      return (
+                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          {w.cal > 0 && <div style={{ fontSize: 9, color: isCurrent ? "#FF9F0A" : "#636366" }}>{w.cal > 999 ? `${(w.cal/1000).toFixed(1)}k` : w.cal}</div>}
+                          <div style={{ width: "100%", height: h, borderRadius: 5, background: isCurrent ? "#FF9F0A" : "rgba(255,159,10,0.3)" }} />
+                          <div style={{ fontSize: 9, color: isCurrent ? "var(--white)" : "#636366" }}>S{i + 1}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Stats row */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                    {[
+                      { l: "Moy./séance", v: `${avgCal}`, u: "kcal" },
+                      { l: "Max séance", v: `${maxCal}`, u: "kcal" },
+                      { l: "Équiv. graisse", v: totalKg, u: "kg" },
+                    ].map(s => (
+                      <div key={s.l} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>{s.l}</div>
+                        <div className="bebas" style={{ fontSize: 16, color: "#FF9F0A" }}>{s.v}</div>
+                        <div style={{ fontSize: 9, color: "#8E8E93" }}>{s.u}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Last 5 sessions */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {sessionsWithCal.slice(-5).reverse().map((s, i) => {
+                      const barW = Math.round((s.cal / maxCal) * 100);
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ fontSize: 10, color: "#8E8E93", minWidth: 65 }}>{s.date ? new Date(s.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div>
+                          <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 99 }}>
+                            <div style={{ width: `${barW}%`, height: "100%", background: "#FF9F0A", borderRadius: 99 }} />
+                          </div>
+                          <div style={{ fontSize: 10, color: "#FF9F0A", fontWeight: 700, minWidth: 45, textAlign: "right" }}>{s.cal} kcal</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING VOLUME PYRAMID ── */}
             {(profile.sessions||[]).length >= 3 && (() => {
               const sessions = profile.sessions || [];
@@ -19695,6 +19878,94 @@ JSON:
                       </div>
                     ))}
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── POWER OUTPUT ESTIMATOR ── */}
+            {(() => {
+              const poids = parseFloat(profile.poids) || 70;
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const sessions = profile.sessions || [];
+              const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+
+              const bestPaceMinKm = runs.length > 0
+                ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+                : vma ? 60 / vma : null;
+
+              if (!bestPaceMinKm) return null;
+
+              // Running power estimation (Stryd-like formula)
+              // P (W) ≈ poids × g × v × (Cr + grade_factor)
+              // Cr ≈ 0.98 J/kg/m for flat running (running cost)
+              // Simplified: P ≈ poids × speedMs × 3.6 (empirical multiplier)
+              const speedMs = (1000 / bestPaceMinKm) / 60;
+              const powerW = Math.round(poids * speedMs * 3.8); // ~W
+              const powerKg = Math.round((powerW / poids) * 10) / 10; // W/kg
+
+              // FTP estimate (≈ 95% of best 20min effort)
+              const ftp = Math.round(powerW * 0.95);
+              const ftpKg = Math.round((ftp / poids) * 10) / 10;
+
+              // Power zones from FTP
+              const POWER_ZONES = [
+                { name: "Z1 · Récup", pct: [0, 55], color: "#8E8E93" },
+                { name: "Z2 · Endurance", pct: [56, 75], color: "#007AFF" },
+                { name: "Z3 · Tempo", pct: [76, 90], color: "#30D158" },
+                { name: "Z4 · Seuil", pct: [91, 105], color: "#FF9F0A" },
+                { name: "Z5 · VO2max", pct: [106, 120], color: "#FF6B35" },
+                { name: "Z6 · Anaérobie", pct: [121, 150], color: "#FF453A" },
+              ];
+
+              const getPowerLevel = (wkg) => {
+                if (wkg >= 5.0) return { label: "Elite", color: "#FFD60A" };
+                if (wkg >= 4.0) return { label: "Avancé", color: "#30D158" };
+                if (wkg >= 3.0) return { label: "Intermédiaire", color: "#FF9F0A" };
+                return { label: "Débutant", color: "#FF453A" };
+              };
+              const level = getPowerLevel(ftpKg);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Puissance de Course</div>
+                    <div style={{ fontSize: 10, color: level.color, fontWeight: 700 }}>{level.label}</div>
+                  </div>
+
+                  {/* Main metrics */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    {[
+                      { label: "Puissance estimée", val: `${powerW}W`, sub: `À ${Math.floor(bestPaceMinKm)}:${String(Math.round((bestPaceMinKm%1)*60)).padStart(2,"0")}/km`, color: "#FF9F0A" },
+                      { label: "FTP estimé", val: `${ftp}W`, sub: "Functional Threshold Power", color: "#007AFF" },
+                      { label: "W/kg", val: ftpKg, sub: level.label, color: level.color },
+                    ].map(m => (
+                      <div key={m.label} style={{ flex: 1, background: `${m.color}12`, borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 17, fontWeight: 900, color: m.color }}>{m.val}</div>
+                        <div style={{ fontSize: 7, color: "#8E8E93", marginTop: 2 }}>{m.sub}</div>
+                        <div style={{ fontSize: 7, color: "#7C7C80", textTransform: "uppercase", marginTop: 2 }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Power zones */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 6, textTransform: "uppercase" }}>Zones de puissance (FTP {ftp}W)</div>
+                    {POWER_ZONES.map(z => {
+                      const wLow = Math.round(ftp * z.pct[0] / 100);
+                      const wHigh = Math.round(ftp * z.pct[1] / 100);
+                      return (
+                        <div key={z.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2C2C2E" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: 2, background: z.color }} />
+                            <span style={{ fontSize: 10, color: "var(--fg)" }}>{z.name}</span>
+                          </div>
+                          <span style={{ fontSize: 10, color: z.color, fontWeight: 600 }}>{wLow}–{wHigh}W</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 6, fontSize: 9, color: "#8E8E93", textAlign: "center" }}>Estimation basée sur allure et poids · Stryd pour mesure précise</div>
                 </div>
               );
             })()}
@@ -20389,6 +20660,191 @@ JSON:
                   {sorted.length === 0 && !showAdd && (
                     <div style={{ textAlign:"center",fontSize:11,color:"#8E8E93",padding:12 }}>Enregistre tes tests VMA pour suivre ta progression</div>
                   )}
+                </div>
+              );
+            })()}
+
+            {/* ── LACTATE THRESHOLD ESTIMATOR ── */}
+            {(() => {
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const age = parseInt(profile.age) || 30;
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const fcMax = parseInt(profile.fcMax) || Math.round(208 - 0.7 * age);
+              const fcRest = parseInt(profile.fcMin || profile.fcRepos) || null;
+              const sessions = profile.sessions || [];
+              const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+
+              if (!vma && runs.length === 0) return null;
+
+              // LT1 (aerobic threshold) ≈ 65-75% VMA, FC ≈ 75% FCmax
+              // LT2 (anaerobic threshold / FTP) ≈ 80-90% VMA, FC ≈ 88% FCmax
+              const lt1Pct = 0.70; // % of VMA
+              const lt2Pct = 0.85;
+
+              const lt1Kmh = vma ? Math.round(vma * lt1Pct * 10) / 10 : null;
+              const lt2Kmh = vma ? Math.round(vma * lt2Pct * 10) / 10 : null;
+
+              const kmhToPace = (kmh) => {
+                if (!kmh) return null;
+                const minKm = 60 / kmh;
+                return `${Math.floor(minKm)}:${String(Math.round((minKm % 1) * 60)).padStart(2, "0")}/km`;
+              };
+
+              const lt1Fc = Math.round(fcMax * 0.75);
+              const lt2Fc = Math.round(fcMax * 0.88);
+
+              // Training zones based on LT2
+              const ZONES = [
+                { name: "Z1 · Récup active", pctVma: [0, 0.60], pctFc: [0, 0.72], color: "#8E8E93", desc: "Footing très facile, conversation aisée" },
+                { name: "Z2 · Endurance fond", pctVma: [0.60, 0.75], pctFc: [0.72, 0.82], color: "#30D158", desc: "Aérobie, brûle les graisses, base cardio" },
+                { name: "Z3 · Tempo (LT1→LT2)", pctVma: [0.75, 0.88], pctFc: [0.82, 0.91], color: "#FF9F0A", desc: "Confortable-difficile, allure semi/marathon" },
+                { name: "Z4 · Seuil (autour LT2)", pctVma: [0.88, 0.95], pctFc: [0.91, 0.96], color: "#FF6B35", desc: "Difficile, 20-60min max, allure 10km" },
+                { name: "Z5 · VO2max", pctVma: [0.95, 1.10], pctFc: [0.96, 1.0], color: "#FF453A", desc: "Très difficile, intervalles courts, 3-8min" },
+              ];
+
+              // Best estimate for LT2 from training data
+              const bestPace = runs.length > 0
+                ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+                : null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Seuils Lactiques & Zones</div>
+
+                  {/* LT1 / LT2 cards */}
+                  {vma && (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      {[
+                        { label: "LT1 · Seuil aérobie", kmh: lt1Kmh, fc: lt1Fc, color: "#30D158", desc: "Début accumulation lactate", pct: "70% VMA" },
+                        { label: "LT2 · Seuil anaérobie", kmh: lt2Kmh, fc: lt2Fc, color: "#FF9F0A", desc: "Max lactate steady-state", pct: "85% VMA" },
+                      ].map(lt => (
+                        <div key={lt.label} style={{ flex: 1, background: `${lt.color}12`, border: `1px solid ${lt.color}30`, borderRadius: 12, padding: "10px 10px" }}>
+                          <div style={{ fontSize: 8, color: lt.color, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{lt.label}</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: lt.color }}>{lt.kmh} <span style={{ fontSize: 10 }}>km/h</span></div>
+                          <div style={{ fontSize: 11, color: "#8E8E93" }}>{kmhToPace(lt.kmh)}</div>
+                          <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 3 }}>FC ~{lt.fc} bpm</div>
+                          <div style={{ fontSize: 8, color: "#7C7C80", marginTop: 2 }}>{lt.pct} · {lt.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Zones */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    {ZONES.map(z => {
+                      const speedLow = vma ? Math.round(vma * z.pctVma[0] * 10) / 10 : null;
+                      const speedHigh = vma ? Math.round(vma * z.pctVma[1] * 10) / 10 : null;
+                      const fcLow = Math.round(fcMax * z.pctFc[0]);
+                      const fcHigh = Math.round(fcMax * z.pctFc[1]);
+                      return (
+                        <div key={z.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: `${z.color}10`, borderRadius: 8, borderLeft: `3px solid ${z.color}` }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: z.color }}>{z.name}</div>
+                            <div style={{ fontSize: 8, color: "#8E8E93" }}>{z.desc}</div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            {speedLow !== null && <div style={{ fontSize: 9, color: "#8E8E93" }}>{speedLow}–{speedHigh} km/h</div>}
+                            <div style={{ fontSize: 9, color: "#8E8E93" }}>{fcLow}–{fcHigh} bpm</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 8, fontSize: 9, color: "#8E8E93", textAlign: "center" }}>
+                    Basé sur VMA {vma || "--"} km/h · FCmax {fcMax} bpm · Méthode % VMA (Billat)
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── RUNNING ECONOMY CALCULATOR ── */}
+            {(() => {
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const age = parseInt(profile.age) || 30;
+              const poids = parseFloat(profile.poids) || 70;
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const fcMax = profile.fcMax || Math.round(208 - 0.7 * age);
+              const sessions = profile.sessions || [];
+              const runs = sessions.filter(s => s.type === "Course" && s.distance && s.duree);
+
+              if (!vma && runs.length === 0) return null;
+
+              // Best run pace (min/km)
+              const bestPaceMinKm = runs.length > 0
+                ? Math.min(...runs.map(s => s.duree / parseFloat(s.distance)))
+                : vma ? 60 / vma : null;
+
+              // Cadence target by pace
+              const cadence = bestPaceMinKm ? Math.round(Math.max(160, Math.min(185, 180 - (bestPaceMinKm - 5) * 5))) : 175;
+
+              // Stride length (m) = speed(m/s) / (cadence/2/60)
+              const speedMs = bestPaceMinKm ? (1000 / bestPaceMinKm) / 60 : null;
+              const strideLen = speedMs ? Math.round((speedMs / (cadence / 2 / 60)) * 100) / 100 : null;
+
+              // Running Economy score (VO2 at submaximal pace)
+              // RE = VO2 at 10 km/h (lower = better for endurance)
+              const reScore = vma ? Math.round(210 / vma * 10) / 10 : null; // simplified
+
+              // Training effect on economy
+              const longRuns = runs.filter(s => parseFloat(s.distance) >= 8).length;
+              const tempoRuns = runs.filter(s => (s.rpe || 0) >= 7 && parseFloat(s.distance) >= 4).length;
+
+              const METRICS = [
+                bestPaceMinKm && { label: "Meilleure allure", value: `${Math.floor(bestPaceMinKm)}:${String(Math.round((bestPaceMinKm % 1) * 60)).padStart(2, "0")}`, unit: "/km", color: "#FF9F0A", icon: "⚡" },
+                { label: "Cadence cible", value: cadence, unit: "pas/min", color: "#007AFF", icon: "👟" },
+                strideLen && { label: "Foulée", value: strideLen, unit: "m", color: "#30D158", icon: "📏" },
+                vma && { label: "VMA", value: `${vma.toFixed(1)}`, unit: "km/h", color: "#BF5AF2", icon: "🏃" },
+              ].filter(Boolean);
+
+              const getEcoLevel = (pace) => {
+                if (!pace) return null;
+                if (sex === "H") {
+                  if (pace < 4) return { label: "Élite", color: "#30D158" };
+                  if (pace < 5) return { label: "Avancé", color: "#34C759" };
+                  if (pace < 6) return { label: "Intermédiaire", color: "#FF9F0A" };
+                  return { label: "Débutant", color: "#FF453A" };
+                } else {
+                  if (pace < 4.5) return { label: "Élite", color: "#30D158" };
+                  if (pace < 5.5) return { label: "Avancé", color: "#34C759" };
+                  if (pace < 6.5) return { label: "Intermédiaire", color: "#FF9F0A" };
+                  return { label: "Débutant", color: "#FF453A" };
+                }
+              };
+              const ecoLevel = getEcoLevel(bestPaceMinKm);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Économie de Course</div>
+                    {ecoLevel && <div style={{ fontSize: 10, color: ecoLevel.color, fontWeight: 700 }}>{ecoLevel.label}</div>}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6, marginBottom: 12 }}>
+                    {METRICS.map(m => (
+                      <div key={m.label} style={{ background: `${m.color}10`, border: `1px solid ${m.color}25`, borderRadius: 10, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 12 }}>{m.icon}</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: m.color }}>{m.value}</div>
+                        <div style={{ fontSize: 8, color: "#8E8E93" }}>{m.unit}</div>
+                        <div style={{ fontSize: 8, color: "#7C7C80", fontWeight: 700, textTransform: "uppercase" }}>{m.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tips */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Améliorez votre économie</div>
+                    {[
+                      { check: longRuns < 4, tip: `Sorties longues : ${longRuns}/4 · Visez 1 sortie ≥8km/semaine`, color: longRuns >= 4 ? "#30D158" : "#FF9F0A" },
+                      { check: tempoRuns < 2, tip: `Tempos : ${tempoRuns} · Ajoutez des séances RPE 7-8 sur 4+ km`, color: tempoRuns >= 2 ? "#30D158" : "#FF9F0A" },
+                      { check: cadence < 175, tip: `Cadence ${cadence} spm → Ciblez 175-180 spm pour plus d'efficacité`, color: cadence >= 175 ? "#30D158" : "#007AFF" },
+                    ].map((t, i) => (
+                      <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 4 }}>
+                        <span style={{ color: t.color, fontSize: 10 }}>{t.check ? "⚠" : "✓"}</span>
+                        <span style={{ fontSize: 10, color: t.check ? "var(--fg)" : "#636366" }}>{t.tip}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })()}
@@ -24270,6 +24726,118 @@ const sessions = profile.sessions || [];
                     })}
                   </div>
                   <div style={{ marginTop: 10, fontSize: 10, color: "#48484A" }}>Basé sur tes {Math.min(7, sessions.length)} dernières séances • Décroissance sur 48h</div>
+                </div>
+              );
+            })()}
+
+            {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
+            {(() => {
+              const [expandedZone, setExpandedZone] = React.useState(null);
+              if (!profile.vmaKmh) return null;
+              const vma = parseFloat(profile.vmaKmh);
+              const fcMax = profile.fcMax || (220 - (parseInt(profile.age) || 30));
+              const fcRepos = profile.fcMin || profile.fcRepos || 55;
+              const fcRes = fcMax - fcRepos;
+
+              const ZONES = [
+                {
+                  z: "Z1", label: "Récupération active", pctVma: [50, 60], pctFc: [50, 60],
+                  color: "#8E8E93", desc: "Footing très lent, récupération entre séances",
+                  workout: "20-40 min continu · après station lourde",
+                },
+                {
+                  z: "Z2", label: "Endurance aérobie", pctVma: [60, 75], pctFc: [60, 75],
+                  color: "#30D158", desc: "Tu peux parler — base aérobie HYROX",
+                  workout: "45-90 min · 3-4×/semaine · base HYROX run",
+                },
+                {
+                  z: "Z3", label: "Tempo / Seuil bas", pctVma: [75, 83], pctFc: [75, 85],
+                  color: "#C9A840", desc: "Effort contrôlé — allure de course HYROX",
+                  workout: "2×20 min · allure objectif HYROX",
+                },
+                {
+                  z: "Z4", label: "Seuil lactique", pctVma: [83, 93], pctFc: [85, 95],
+                  color: "#FF9F0A", desc: "Parole difficile — développe le seuil",
+                  workout: "4-6×5 min r:2 min · ou 3×10 min r:3 min",
+                },
+                {
+                  z: "Z5", label: "VO2max / VMA", pctVma: [95, 105], pctFc: [95, 100],
+                  color: "#FF453A", desc: "Très intense — améliore la VMA",
+                  workout: "10-15×30s r:30s · ou 6×2 min r:3 min",
+                },
+              ];
+
+              function paceStr(kmh) {
+                const secPerKm = 3600 / kmh;
+                const m = Math.floor(secPerKm / 60);
+                const s = Math.round(secPerKm % 60);
+                return `${m}:${String(s).padStart(2,"0")}`;
+              }
+              function fcRange(lo, hi) {
+                return `${Math.round(fcRepos + fcRes * lo / 100)}–${Math.round(fcRepos + fcRes * hi / 100)}`;
+              }
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>⚡ Zones d'entraînement</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>Basées sur VMA {vma} km/h · FCmax {fcMax} bpm</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {ZONES.map((zone) => {
+                      const loKmh = vma * zone.pctVma[0] / 100;
+                      const hiKmh = vma * zone.pctVma[1] / 100;
+                      const isOpen = expandedZone === zone.z;
+                      return (
+                        <div key={zone.z}
+                          onClick={() => setExpandedZone(isOpen ? null : zone.z)}
+                          style={{ background: isOpen ? `${zone.color}10` : "rgba(255,255,255,0.025)", border: `1px solid ${isOpen ? zone.color + "40" : "rgba(255,255,255,0.06)"}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", transition: "all 0.2s" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {/* Zone badge */}
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${zone.color}20`, border: `1.5px solid ${zone.color}60`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <span className="bebas" style={{ fontSize: 14, color: zone.color, lineHeight: 1 }}>{zone.z}</span>
+                            </div>
+                            {/* Label + pace */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600, marginBottom: 1 }}>{zone.label}</div>
+                              <div style={{ fontSize: 10, color: "#8E8E93" }}>{zone.desc}</div>
+                            </div>
+                            {/* Pace range */}
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div style={{ fontSize: 13, color: zone.color, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{paceStr(hiKmh)}–{paceStr(loKmh)}</div>
+                              <div style={{ fontSize: 9, color: "#8E8E93" }}>min/km</div>
+                            </div>
+                          </div>
+
+                          {isOpen && (
+                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${zone.color}25`, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                              <div style={{ flex: 1, minWidth: 120 }}>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Vitesses</div>
+                                <div style={{ fontSize: 12, color: zone.color, fontWeight: 700 }}>{loKmh.toFixed(1)}–{hiKmh.toFixed(1)} km/h</div>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>{zone.pctVma[0]}–{zone.pctVma[1]}% VMA</div>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 120 }}>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Fréquence cardiaque</div>
+                                <div style={{ fontSize: 12, color: zone.color, fontWeight: 700 }}>{fcRange(zone.pctFc[0], zone.pctFc[1])} bpm</div>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>{zone.pctFc[0]}–{zone.pctFc[1]}% FCréserve</div>
+                              </div>
+                              <div style={{ width: "100%" }}>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.08em" }}>💡 Workout type HYROX</div>
+                                <div style={{ fontSize: 11, color: "var(--white)", background: `${zone.color}0A`, border: `1px solid ${zone.color}25`, borderRadius: 8, padding: "6px 10px" }}>{zone.workout}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 10, fontSize: 9, color: "#8E8E93", textAlign: "center" }}>
+                    Touche une zone pour voir FC cible · workout · allure détaillés
+                  </div>
                 </div>
               );
             })()}
