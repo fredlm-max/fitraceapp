@@ -2653,9 +2653,17 @@ JSON: {"level":1,"objectif":"","analyse":"","pointsForts":[],"axesTravail":[],"v
   function saveTestResult(testId, data) {
     const newResults = { ...results, [testId]: { ...data, date: new Date().toISOString() } };
     setResults(newResults);
-    // Si c'est le test VMA avec FC max/min, mets à jour le profil aussi.
+    // Construit le profil mis à jour : tests + FC max/repos si test VMA.
+    const patch = { tests: { ...(profile.tests || {}), ...newResults } };
     if (testId === "vma" && (data.fcMax || data.fcMin)) {
-      setProfile(p => ({ ...p, fcMax: data.fcMax || null, fcMin: data.fcMin || null }));
+      patch.fcMax = data.fcMax || null;
+      patch.fcMin = data.fcMin || null;
+    }
+    const updated = { ...profile, ...patch };
+    setProfile(updated);
+    // Persiste vers Supabase pour que le résultat survive à un rechargement / autre appareil.
+    if (profile.email) {
+      athleteBackend.saveProfile(profile.email, updated).catch(e => console.error("Sauvegarde test échouée:", e));
     }
     setActiveTest(null);
   }

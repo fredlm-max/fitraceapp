@@ -1,10 +1,48 @@
+// Origines autorisées à appeler le proxy (bloque l'usage depuis d'autres sites).
+const ALLOWED_ORIGINS = [
+  "https://fitrace-lemon.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5199",
+];
+
+// Rate-limit simple en mémoire (par instance serverless) : limite l'abus/emballement.
+// Best-effort — pour une limite stricte multi-instances, il faudrait un store (KV/Redis).
+const RATE = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT = 40;             // requêtes max
+const RATE_WINDOW = 60 * 1000;     // par minute
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const entry = RATE.get(ip);
+  if (!entry || now > entry.resetAt) {
+    RATE.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > RATE_LIMIT;
+}
+
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
+  res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Refuse les origines inconnues (navigateur d'un autre site).
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
+
+  // Rate-limit par IP.
+  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
+  if (rateLimited(ip)) {
+    return res.status(429).json({ error: "Trop de requêtes — réessaie dans une minute." });
+  }
 
   const isStream = req.body?.stream === true;
 
