@@ -5840,9 +5840,8 @@ JSON:
   // ── Swipe gesture state — useRef pour éviter les re-renders sur chaque toucher ──
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
-  const [showSwipeHint, setShowSwipeHint] = useState(() => {
-    try { return !localStorage.getItem("fitrace_swipe_hint_seen"); } catch { return false; }
-  });
+  // Navigation par swipe désactivée — on garde uniquement le clic sur les onglets.
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
   // Auto-masquer le hint après 6s (sinon il reste affiché pour toujours sans swipe)
   useEffect(() => {
     if (!showSwipeHint) return;
@@ -5878,8 +5877,7 @@ JSON:
   }
 
   return (
-    <div style={{ height: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", overflow: "hidden" }}
-      onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div style={{ height: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <style>{GLOBAL_STYLES}</style>
 
       {/* ── Streak milestone celebration ── */}
