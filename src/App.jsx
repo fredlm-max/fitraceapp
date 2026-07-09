@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, Component } from "react";
 import { supabase } from "./supabaseClient";
 import { toBlob } from "html-to-image";
+import { enablePushNotifications, pushSupported, pushPermission } from "./pushNotifications";
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -6938,6 +6939,19 @@ JSON:
                             ☀️ Compléter mon check-in du matin →
                           </button>
                         )}
+                        {/* Activer les rappels quotidiens (push) — visible une fois, disparaît après */}
+                        {(() => {
+                          const [pushState, setPushState] = React.useState(pushSupported() ? pushPermission() : "unsupported");
+                          if (pushState !== "default") return null;
+                          return (
+                            <button data-no-share="1" onClick={async () => {
+                              try { await enablePushNotifications(profile.email); setPushState("granted"); showToast("🔔 Rappels quotidiens activés !", "success"); }
+                              catch (e) { setPushState(pushPermission()); showToast("Rappels non activés", "info"); }
+                            }} style={{ width:"100%", marginBottom:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, padding:"8px 10px", color:"#AEAEB2", fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                              🔔 Activer un rappel quotidien
+                            </button>
+                          );
+                        })()}
                         {/* 3 indicateurs : Sommeil / Nutrition / Charge */}
                         <div style={{ display:"flex", flexDirection:"column", gap:6, textAlign:"left" }}>
                           {[
