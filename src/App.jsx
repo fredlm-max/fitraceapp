@@ -47382,7 +47382,7 @@ export default function App() {
             style={{ animation: "splashRing 1.4s cubic-bezier(0.16,1,0.3,1) 0.2s forwards" }}/>
         </svg>
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, color: "#C9A840", letterSpacing: 3, lineHeight: 1, animation: "splashFade 0.6s 0.5s both" }}>FIT<span style={{ color: "#f0f0f0" }}>RACE</span></div>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 36, color: "#C9A840", letterSpacing: 6, lineHeight: 1, animation: "splashFade 0.6s 0.5s both" }}>APEX</div>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#39ff80", marginTop: 4, animation: "splashPulse 1.2s 0.8s ease-in-out infinite" }}/>
         </div>
       </div>
