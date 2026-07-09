@@ -6744,9 +6744,21 @@ JSON:
               const targetCalToday = profile.calories || Math.round((parseFloat(profile.poids)||75) * 33);
               const nutPct = Math.min(100, Math.round((totalCalToday / targetCalToday) * 100));
 
-              // Score APEX final — sommeil, fatigue, VFC, hydratation, nutrition & forme globale
+              // Score APEX = PRÉPARATION (readiness) : mesure la récupération, PAS la
+              // consommation du jour. On n'inclut que les signaux réellement disponibles
+              // (ne pas pénaliser une VFC/fatigue non renseignée, ni la nutrition/hydratation
+              // pas encore prises le matin). La fraîcheur de charge récompense une charge
+              // récente faible (ex : petite séance hier = frais et disponible).
+              const loadFreshness = Math.max(0, 100 - chargePct);
+              const readinessSignals = [
+                { v: sleepScore,    w: 0.35 }, // sommeil = signal de récup n°1
+                { v: loadFreshness, w: 0.25 }, // charge récente faible = frais
+              ];
+              if (dailyData.fatigue != null) readinessSignals.push({ v: fatigueScore, w: 0.25 }); // fatigue subjective si check-in fait
+              if (hrvRaw > 0)                readinessSignals.push({ v: hrvScore,     w: 0.20 }); // VFC si mesurée
+              const _rTotW = readinessSignals.reduce((a, s) => a + s.w, 0);
               const apexScore = Math.max(0, Math.min(100,
-                Math.round(sleepScore * 0.20 + fatigueScore * 0.25 + hrvScore * 0.15 + hydraScore * 0.10 + nutPct * 0.15 + sc.global * 0.15)
+                Math.round(readinessSignals.reduce((a, s) => a + s.v * s.w, 0) / _rTotW)
               ));
               const tier = apexScore >= 85 ? { label: "Prêt à tout donner", color: "#30D158" }
                 : apexScore >= 60 ? { label: "Prêt avec modération", color: "#C9A840" }
@@ -6927,14 +6939,16 @@ JSON:
                     {(() => {
                       // Chaque facteur : score /100 et son poids dans l'APEX. On cherche celui qui
                       // fait perdre le plus de points = (100 - score) × poids → plus grande marge de gain.
+                      // Reflète la formule readiness : uniquement les signaux réellement inclus,
+                      // poids normalisés pour l'affichage.
                       const factors = [
-                        { key:"Sommeil",    score:sleepScore,  w:0.20, tip:"Vise 8-9h. Couche-toi 30 min plus tôt ce soir." },
-                        { key:"Fatigue",    score:fatigueScore,w:0.25, tip:"Repos ou séance légère aujourd'hui. Renseigne ton check-in du matin." },
-                        { key:"VFC",        score:hrvScore,    w:0.15, tip:"Mesure ta VFC au réveil. Respiration lente 5 min pour la faire monter." },
-                        { key:"Hydratation",score:hydraScore,  w:0.10, tip:"Bois régulièrement : objectif ~3 L répartis sur la journée." },
-                        { key:"Nutrition",  score:nutPct,      w:0.15, tip:"Logge tes repas — tu es en dessous de ta cible calorique." },
-                        { key:"Forme",      score:sc.global,   w:0.15, tip:"Enchaîne les séances régulières pour faire monter ta condition." },
+                        { key:"Sommeil",   score:sleepScore,    w:0.35, tip:"Vise 8-9h : c'est le premier levier de récupération." },
+                        { key:"Fraîcheur", score:loadFreshness, w:0.25, tip:"Charge récente élevée — repos ou séance légère pour récupérer." },
                       ];
+                      if (dailyData.fatigue != null) factors.push({ key:"Fatigue", score:fatigueScore, w:0.25, tip:"Fais ton check-in du matin ; si la fatigue est haute, allège." });
+                      if (hrvRaw > 0)                factors.push({ key:"VFC",     score:hrvScore,     w:0.20, tip:"Mesure ta VFC au réveil ; respiration lente 5 min pour la monter." });
+                      const _fTw = factors.reduce((a,f) => a + f.w, 0);
+                      factors.forEach(f => { f.w = f.w / _fTw; }); // normalise pour que la somme = 100%
                       const weak = factors.slice().sort((a,b) => (100-b.score)*b.w - (100-a.score)*a.w)[0];
                       const [showDetail, setShowDetail] = React.useState(false);
                       return (
