@@ -13919,6 +13919,190 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING DIARY ── */}
+            {(() => {
+              const KEY = `fitrace_diary_${profile.name}`;
+              const [entries, setEntries] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [editing, setEditing] = React.useState(null); // session id or "new"
+              const [search, setSearch] = React.useState("");
+              const [form, setForm] = React.useState({ date:"", title:"", body:"", mood:3, highlights:"", nextsteps:"" });
+
+              const MOODS = ["😴","😔","😐","🙂","🔥"];
+              const sessions = profile.sessions || [];
+
+              // Find sessions that don't have diary entries yet (last 7 days)
+              const recent = sessions.slice(0,10);
+              const hasDiary = (sid) => entries.some(e => e.sessionId === sid || e.date === sid);
+
+              const openNew = (sess) => {
+                setForm({
+                  date: sess.date,
+                  title: `${sess.type || "Séance"} · ${sess.date}`,
+                  body: "",
+                  mood: 3,
+                  highlights: "",
+                  nextsteps: "",
+                  sessionId: sess.id,
+                  type: sess.type,
+                  duration: sess.duration,
+                  distance: sess.distance,
+                  rpe: sess.rpe,
+                });
+                setEditing("new");
+              };
+
+              const saveEntry = () => {
+                const entry = { ...form, id: Date.now(), createdAt: new Date().toISOString() };
+                const filtered = entries.filter(e => e.id !== editing);
+                const next = [entry, ...filtered].slice(0, 100).sort((a,b) => b.date.localeCompare(a.date));
+                setEntries(next);
+                syncedStorage.set(KEY, next);
+                setEditing(null);
+              };
+
+              const deleteEntry = (id) => {
+                const next = entries.filter(e => e.id !== id);
+                setEntries(next);
+                syncedStorage.set(KEY, next);
+              };
+
+              const editEntry = (e) => {
+                setForm({ ...e });
+                setEditing(e.id);
+              };
+
+              const filtered = entries.filter(e =>
+                !search || e.title?.toLowerCase().includes(search.toLowerCase()) ||
+                e.body?.toLowerCase().includes(search.toLowerCase()) ||
+                e.type?.toLowerCase().includes(search.toLowerCase())
+              );
+
+              if (editing !== null) {
+                return (
+                  <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:"var(--yellow)", marginBottom:12 }}>
+                      ✏️ {editing === "new" ? "Nouvelle entrée" : "Modifier entrée"}
+                    </div>
+
+                    <input value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))}
+                      placeholder="Titre de la séance..."
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:14, fontWeight:700, marginBottom:10, boxSizing:"border-box" }}/>
+
+                    {/* Session stats preview */}
+                    {form.duration && (
+                      <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                        {[
+                          {v:`${form.duration}min`, label:"Durée"},
+                          form.distance && {v:`${form.distance}km`, label:"Distance"},
+                          form.rpe && {v:`RPE ${form.rpe}`, label:"Intensité"},
+                        ].filter(Boolean).map((s,i) => (
+                          <div key={i} style={{ background:"var(--bg3)", borderRadius:8, padding:"4px 10px", fontSize:11, color:"#aaa" }}>
+                            <span style={{ color:"var(--yellow)", fontWeight:700 }}>{s.v}</span> {s.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Mood */}
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, color:"#98989D", marginBottom:6 }}>HUMEUR / ÉTAT</div>
+                      <div style={{ display:"flex", gap:8 }}>
+                        {MOODS.map((m,i) => (
+                          <button key={i} onClick={() => setForm(f=>({...f,mood:i}))}
+                            style={{ flex:1, background: form.mood===i?"var(--bg3)":"transparent", border:`2px solid ${form.mood===i?"var(--yellow)":"transparent"}`, borderRadius:10, padding:"8px 0", fontSize:22, cursor:"pointer" }}>
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <textarea value={form.body} onChange={e => setForm(f=>({...f,body:e.target.value}))}
+                      placeholder="Comment s'est passée la séance ? Sensations, contexte, météo..."
+                      rows={4}
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"10px 14px", color:"#fff", fontSize:13, resize:"vertical", marginBottom:8, boxSizing:"border-box", lineHeight:1.6 }}/>
+
+                    <input value={form.highlights} onChange={e => setForm(f=>({...f,highlights:e.target.value}))}
+                      placeholder="✨ Points positifs / PBs"
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, marginBottom:8, boxSizing:"border-box" }}/>
+
+                    <input value={form.nextsteps} onChange={e => setForm(f=>({...f,nextsteps:e.target.value}))}
+                      placeholder="📋 Points à améliorer / prochaines étapes"
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, marginBottom:12, boxSizing:"border-box" }}/>
+
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={() => setEditing(null)}
+                        style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>Annuler</button>
+                      <button onClick={saveEntry}
+                        style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"11px 0", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Sauvegarder</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#98989D" }}>STRAVA · JOURNAL D'ENTRAÎNEMENT</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>📔 Training Diary</div>
+                    </div>
+                    <button onClick={() => { setForm({date:new Date().toISOString().slice(0,10),title:"",body:"",mood:3,highlights:"",nextsteps:""}); setEditing("new"); }}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"7px 14px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      + Entrée
+                    </button>
+                  </div>
+
+                  {/* Quick-log recent sessions without diary */}
+                  {recent.filter(s => !hasDiary(s.id || s.date)).slice(0,3).length > 0 && (
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:10, color:"#98989D", marginBottom:6 }}>SÉANCES SANS JOURNAL</div>
+                      {recent.filter(s => !hasDiary(s.id || s.date)).slice(0,3).map((s,i) => (
+                        <button key={i} onClick={() => openNew(s)}
+                          style={{ width:"100%", background:"rgba(201,168,64,0.08)", border:"1px dashed rgba(201,168,64,0.3)", borderRadius:10, padding:"8px 14px", color:"var(--yellow)", fontSize:12, cursor:"pointer", textAlign:"left", marginBottom:4, display:"flex", justifyContent:"space-between" }}>
+                          <span>📝 {s.type || "Séance"} · {s.date}</span>
+                          <span style={{ color:"#98989D" }}>{s.duration}min{s.distance?` · ${s.distance}km`:""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Search */}
+                  {entries.length > 3 && (
+                    <input value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="🔍 Rechercher dans le journal..."
+                      style={{ width:"100%", background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 14px", color:"#fff", fontSize:12, marginBottom:12, boxSizing:"border-box" }}/>
+                  )}
+
+                  {/* Entries */}
+                  {filtered.slice(0,5).map(e => (
+                    <div key={e.id} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:2 }}>{MOODS[e.mood||3]} {e.title}</div>
+                          <div style={{ fontSize:10, color:"#98989D" }}>{e.date}</div>
+                        </div>
+                        <div style={{ display:"flex", gap:6 }}>
+                          <button onClick={() => editEntry(e)} style={{ background:"transparent", border:"none", color:"#888", fontSize:13, cursor:"pointer" }}>✏️</button>
+                          <button onClick={() => deleteEntry(e.id)} style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:13, cursor:"pointer" }}>✕</button>
+                        </div>
+                      </div>
+                      {e.body && <div style={{ fontSize:12, color:"#aaa", lineHeight:1.5, marginBottom:6 }}>{e.body.slice(0,120)}{e.body.length>120?"…":""}</div>}
+                      {e.highlights && <div style={{ fontSize:11, color:"#30D158" }}>✨ {e.highlights}</div>}
+                      {e.nextsteps && <div style={{ fontSize:11, color:"#64D2FF", marginTop:2 }}>📋 {e.nextsteps}</div>}
+                    </div>
+                  ))}
+
+                  {entries.length === 0 && (
+                    <div style={{ textAlign:"center", padding:"20px 0", color:"#98989D", fontSize:13 }}>
+                      Commence à documenter tes séances pour suivre ta progression 📔
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── TRAINING STREAK CALENDAR ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -19191,6 +19375,126 @@ JSON:
               );
             })()}
 
+            {/* ── PERSONAL RECORDS BOARD ── */}
+            {(() => {
+              const PR_DEFS = [
+                { key:"run_1km",    label:"Run 1km",        unit:"min:sec", icon:"🏃", lowerIsBetter:true  },
+                { key:"skierg",     label:"SkiErg 1000m",   unit:"min:sec", icon:"⛷️", lowerIsBetter:true  },
+                { key:"row",        label:"Rowing 500m",    unit:"min:sec", icon:"🚣", lowerIsBetter:true  },
+                { key:"wall_ball",  label:"Wall Ball (rep)", unit:"reps",   icon:"🏀", lowerIsBetter:false },
+                { key:"burpee",     label:"Burpee BJ (rep)", unit:"reps",  icon:"💥", lowerIsBetter:false },
+                { key:"sled_push",  label:"Sled Push (kg)", unit:"kg",     icon:"🛷", lowerIsBetter:false },
+                { key:"sandbag",    label:"Sandbag Carry",  unit:"kg",     icon:"💼", lowerIsBetter:false },
+                { key:"farmers",    label:"Farmer Carry",   unit:"kg/main",icon:"🏋️", lowerIsBetter:false },
+              ];
+
+              const KEY = `fitrace_prs_${profile.name}`;
+              const [prs, setPrs] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } });
+              const [editKey, setEditKey] = React.useState(null);
+              const [editVal, setEditVal] = React.useState("");
+
+              const savePR = (prKey) => {
+                const val = parseFloat(editVal);
+                if (isNaN(val) || val <= 0) return;
+                const def = PR_DEFS.find(d=>d.key===prKey);
+                const existing = prs[prKey];
+                const isBetter = !existing || (def.lowerIsBetter ? val < existing.val : val > existing.val);
+                const next = { ...prs, [prKey]: isBetter ? { val, date: new Date().toISOString().slice(0,10) } : existing };
+                if (!isBetter && existing) {
+                  // Still log attempt even if not PR
+                }
+                setPrs(next);
+                syncedStorage.set(KEY, next);
+                setEditKey(null);
+                setEditVal("");
+              };
+
+              const fmtVal = (def, val) => {
+                if (!val) return "–";
+                if (def.unit === "min:sec") {
+                  const m = Math.floor(val); const s = Math.round((val - m) * 60);
+                  return `${m}:${String(s).padStart(2,"0")}`;
+                }
+                return `${val} ${def.unit}`;
+              };
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>🏆 Records Personnels</div>
+
+                  <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+                    {PR_DEFS.map(def => {
+                      const pr = prs[def.key];
+                      const isEditing = editKey === def.key;
+                      return (
+                        <div key={def.key} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:10,padding:"8px 10px" }}>
+                          <span style={{ fontSize:16 }}>{def.icon}</span>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:11,color:"#8E8E93",fontWeight:600 }}>{def.label}</div>
+                            {pr && <div style={{ fontSize:8,color:"#8E8E93" }}>{pr.date}</div>}
+                          </div>
+                          {isEditing ? (
+                            <div style={{ display:"flex",gap:4,alignItems:"center" }}>
+                              <input type="number" step="0.1" value={editVal} onChange={e=>setEditVal(e.target.value)}
+                                autoFocus
+                                style={{ width:64,background:"#2C2C2E",border:"none",borderRadius:6,padding:"4px 6px",color:"var(--white)",fontSize:12,textAlign:"center" }}/>
+                              <button onClick={()=>savePR(def.key)}
+                                style={{ background:"var(--yellow)",color:"#000",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,fontWeight:800,cursor:"pointer" }}>✓</button>
+                              <button onClick={()=>setEditKey(null)}
+                                style={{ background:"#3A3A3C",color:"#8E8E93",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,cursor:"pointer" }}>✕</button>
+                            </div>
+                          ) : (
+                            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                              <div style={{ textAlign:"right" }}>
+                                <div style={{ fontSize:13,fontWeight:900,color:pr?"var(--yellow)":"#3A3A3C" }}>{pr ? fmtVal(def, pr.val) : "–"}</div>
+                              </div>
+                              <button onClick={()=>{ setEditKey(def.key); setEditVal(pr?String(pr.val):""); }}
+                                style={{ background:"#3A3A3C",color:"#8E8E93",border:"none",borderRadius:6,padding:"4px 8px",fontSize:10,cursor:"pointer" }}>✏️</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ fontSize:9,color:"#8E8E93",textAlign:"center",marginTop:8 }}>
+                    {Object.keys(prs).length}/{PR_DEFS.length} records enregistrés
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── PERSONAL RECORDS ── */}
+            {(() => {
+              let prs = {};
+              try { prs = JSON.parse(localStorage.getItem(`fitrace_prs_${profile.name}`) || "{}"); } catch {}
+              const prList = Object.values(prs).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+              if (prList.length === 0) return null;
+              return (
+                <div style={{ background: "linear-gradient(145deg, #0a0800 0%, #080808 60%)", border: "1px solid rgba(191,90,242,0.2)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 18 }}>🏆</span>
+                    <div className="bebas" style={{ fontSize: 18, color: "#BF5AF2", letterSpacing: 1 }}>RECORDS PERSONNELS</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93", marginLeft: "auto" }}>{prList.length} exercice{prList.length > 1 ? "s" : ""}</div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {prList.map((pr, i) => (
+                      <div key={i} style={{ background: "rgba(191,90,242,0.06)", border: "1px solid rgba(191,90,242,0.15)", borderRadius: 10, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pr.nom}</div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                          <div className="bebas" style={{ fontSize: 24, color: "#BF5AF2", lineHeight: 1 }}>{pr.value}</div>
+                          <div style={{ fontSize: 10, color: "#8E8E93" }}>kg</div>
+                        </div>
+                        <div style={{ fontSize: 9, color: "#8E8E93", marginTop: 2 }}>
+                          {pr.date ? new Date(pr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ACHIEVEMENTS ── */}
             <AchievementsCard profile={profile} />
 
@@ -19222,6 +19526,87 @@ JSON:
                           </div>
                           {s.rpe && <div style={{ fontSize: 11, fontWeight: 700, color: s.rpe >= 8 ? "var(--red)" : s.rpe >= 6 ? "var(--orange)" : "var(--green)" }}>RPE {s.rpe}</div>}
                         </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── SESSION COMPARISON ── */}
+            {(() => {
+              const [compareType, setCompareType] = React.useState("running_zone2");
+              const sessions = profile.sessions || [];
+              if (sessions.length < 4) return null;
+              const TYPE_CONF = {
+                running_zone2: { label: "Zone 2", color: "#30D158", icon: "🏃" },
+                force_stations: { label: "Force", color: "#C9A840", icon: "🏋️" },
+                running_qualite: { label: "Qualité", color: "#FF9F0A", icon: "⚡" },
+                hybride_compromis: { label: "Hybride", color: "#BF5AF2", icon: "🔀" },
+              };
+              const SESSION_TYPES = Object.keys(TYPE_CONF);
+
+              const typeSessions = sessions.filter(s => s.type === compareType).slice(-2);
+              if (typeSessions.length < 2) return null;
+
+              const [older, newer] = typeSessions;
+              const METRICS = [
+                { key: "difficulte", label: "RPE", unit: "/10", better: "lower" },
+                { key: "trimp", label: "TRIMP", unit: "", better: "higher", fallback: (s) => Math.round((s.duration||45)*(s.difficulte||5)/10) },
+                { key: "tempsReel", label: "Durée", unit: "min", better: "higher", transform: v => parseInt(v)||45 },
+              ];
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>⚖️ Comparaison Séances</div>
+
+                  {/* Type selector */}
+                  <div style={{ display: "flex", gap: 5, marginBottom: 12, overflowX: "auto" }}>
+                    {SESSION_TYPES.filter(t => sessions.filter(s => s.type === t).length >= 2).map(t => {
+                      const c = TYPE_CONF[t];
+                      return (
+                        <button key={t} onClick={() => setCompareType(t)}
+                          style={{ background: compareType === t ? `${c.color}15` : "rgba(255,255,255,0.04)", border: `1.5px solid ${compareType === t ? c.color : "transparent"}`, borderRadius: 16, padding: "4px 10px", fontSize: 10, color: compareType === t ? c.color : "#636366", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>
+                          {c.icon} {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Comparison grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center" }}>
+                    {/* Older session header */}
+                    <div style={{ textAlign: "center", fontSize: 9, color: "#8E8E93", fontWeight: 700 }}>
+                      {new Date(older.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#48484A", textAlign: "center" }}>vs</div>
+                    <div style={{ textAlign: "center", fontSize: 9, color: "#C9A840", fontWeight: 700 }}>
+                      {new Date(newer.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} ✓
+                    </div>
+
+                    {METRICS.map(m => {
+                      const vOld = m.fallback ? m.fallback(older) : m.transform ? m.transform(older[m.key]) : parseFloat(older[m.key]) || 0;
+                      const vNew = m.fallback ? m.fallback(newer) : m.transform ? m.transform(newer[m.key]) : parseFloat(newer[m.key]) || 0;
+                      const improved = m.better === "higher" ? vNew > vOld : vNew < vOld;
+                      const same = vNew === vOld;
+                      const deltaColor = same ? "#636366" : improved ? "#30D158" : "#FF453A";
+                      const delta = vOld > 0 ? Math.round((vNew - vOld) / vOld * 100) : 0;
+
+                      return (
+                        <React.Fragment key={m.key}>
+                          <div style={{ textAlign: "center", padding: "8px 4px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+                            <div className="bebas" style={{ fontSize: 20, color: "#AEAEB2", lineHeight: 1 }}>{vOld}{m.unit}</div>
+                            <div style={{ fontSize: 8, color: "#48484A" }}>{m.label}</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: 10, color: deltaColor, fontWeight: 800 }}>{same ? "=" : improved ? "↑" : "↓"}</div>
+                            {!same && <div style={{ fontSize: 8, color: deltaColor }}>{delta > 0 ? "+" : ""}{delta}%</div>}
+                          </div>
+                          <div style={{ textAlign: "center", padding: "8px 4px", background: `${deltaColor}08`, border: `1px solid ${deltaColor}20`, borderRadius: 8 }}>
+                            <div className="bebas" style={{ fontSize: 20, color: deltaColor, lineHeight: 1 }}>{vNew}{m.unit}</div>
+                            <div style={{ fontSize: 8, color: "#48484A" }}>{m.label}</div>
+                          </div>
+                        </React.Fragment>
                       );
                     })}
                   </div>
