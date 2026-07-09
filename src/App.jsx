@@ -7004,6 +7004,9 @@ JSON:
               );
             })()}
 
+            {/* Vision APEX "1 score, 1 réponse" : Countdown + Nutrition repliés dans les détails
+               pour laisser le Score APEX + la séance du jour dominer le héros. */}
+            <div style={{ display: showAllHome ? "block" : "none" }}>
             {/* ── RACE COUNTDOWN + PHASE ENTRAÎNEMENT ── */}
             {(() => {
               if (!profile.raceDate) return null;
@@ -7219,6 +7222,8 @@ JSON:
                 </div>
               );
             })()}
+            </div>
+            {/* fin bloc replié Countdown+Nutrition */}
             {/* ── SÉANCE DU JOUR — Smart Card (Nike Training + Garmin Coach style) ── */}
             {(()=>{
               const todayStr = new Date().toISOString().slice(0,10);
