@@ -13920,7 +13920,7 @@ JSON:
             })()}
 
             {/* ── TRAINING DIARY ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_diary_${profile.name}`;
               const [entries, setEntries] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
@@ -17474,7 +17474,7 @@ JSON:
             )}
 
             {/* ── ACHIEVEMENT BADGES ── Nike Training Club style ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const today = new Date().toISOString().slice(0,10);
 
@@ -17839,7 +17839,7 @@ JSON:
             })()}
 
             {/* ── PMC — PERFORMANCE MANAGEMENT CHART ── */}
-            {(profile.sessions||[]).length >= 3 && (() => {
+            {false && (profile.sessions||[]).length >= 3 && (() => {
               const pmcPts = calcPMC(profile.sessions || []);
               if (pmcPts.length < 7) return null;
 
@@ -18294,7 +18294,7 @@ JSON:
             <div style={{ display: showAllProgress ? "block" : "none" }}>
 
             {/* ── WELLNESS HISTORY CHART ── */}
-            {(() => {
+            {false && (() => {
               const wellKey = `fitrace_wellness_${profile.name}`;
               const wellLog = (() => { try { return JSON.parse(localStorage.getItem(wellKey) || "[]"); } catch { return []; } })();
               if (wellLog.length < 3) return null;
@@ -18355,7 +18355,7 @@ JSON:
             })()}
 
             {/* ── HYROX STATION SPLIT TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const sex = profile.sexe === "F" ? "F" : "H";
               const splitsKey = `fitrace_station_splits_${profile.name}`;
               const [splits, setSplits] = React.useState(() => { try { return JSON.parse(localStorage.getItem(splitsKey) || "[]"); } catch { return []; } });
@@ -18460,7 +18460,7 @@ JSON:
             })()}
 
             {/* ── STATION WEAKNESS RADAR ── */}
-            {(() => {
+            {false && (() => {
               const sex = profile.sexe === "F" ? "F" : "H";
               const splitsKey = `fitrace_station_splits_${profile.name}`;
               const splits = (() => { try { return JSON.parse(localStorage.getItem(splitsKey) || "[]"); } catch { return []; } })();
@@ -18553,7 +18553,7 @@ JSON:
             })()}
 
             {/* ── TRAINING CALENDAR HEATMAP ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -18663,7 +18663,7 @@ JSON:
             })()}
 
             {/* ── BENCHMARK TEST TRACKER ── */}
-            {(() => {
+            {false && (() => {
               // Clé distincte de `fitrace_benchmarks_` (temps stations HYROX) — même préfixe
               // par erreur historiquement, ce qui mélangeait deux jeux de données incompatibles
               // (ici : tests Cooper/Ruffier/Plank, tableau brut).
@@ -18843,7 +18843,7 @@ JSON:
             })()}
 
             {/* ── HEART RATE RECOVERY TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const hrrKey = `fitrace_hrr_${profile.name}`;
               const [hrrLog, setHrrLog] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(hrrKey) || "[]"); } catch { return []; }
@@ -19214,7 +19214,7 @@ JSON:
             })()}
 
             {/* ── BODY COMPOSITION TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_body_${profile.name}`;
               const [entries, setEntries] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
@@ -19481,7 +19481,7 @@ JSON:
             })()}
 
             {/* ── HYDRATION TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_hydration_${profile.name}`;
               const today = new Date().toISOString().slice(0,10);
 
@@ -19807,7 +19807,7 @@ JSON:
             })()}
 
             {/* ── TRAINING VOLUME PYRAMID ── */}
-            {(profile.sessions||[]).length >= 3 && (() => {
+            {false && (profile.sessions||[]).length >= 3 && (() => {
               const sessions = profile.sessions || [];
               const now = Date.now();
               const recent = sessions.filter(s => s.date && (now - new Date(s.date)) < 28 * 86400000);
@@ -19971,7 +19971,7 @@ JSON:
             })()}
 
             {/* ── PERFORMANCE TRENDS ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 5) return null;
 
@@ -20116,7 +20116,7 @@ JSON:
             })()}
 
             {/* ── TRAINING LOAD FORECASTER ── */}
-            {(() => {
+            {false && (() => {
               const PLAN_KEY = `fitrace_planned_${profile.name}`;
               const CFG_KEY = `fitrace_forecast_cfg_${profile.name}`;
 
@@ -20281,7 +20281,7 @@ JSON:
 
 
             {/* ── VO2MAX ESTIMATOR ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_vo2max_${profile.name}`;
 
               const [tests, setTests] = React.useState(() => {
@@ -20665,7 +20665,7 @@ JSON:
             })()}
 
             {/* ── LACTATE THRESHOLD ESTIMATOR ── */}
-            {(() => {
+            {false && (() => {
               const vma = parseFloat(profile.vmaKmh) || null;
               const age = parseInt(profile.age) || 30;
               const sex = profile.sexe === "F" ? "F" : "H";
@@ -20952,7 +20952,7 @@ JSON:
             })()}
 
             {/* ── WEEKLY TRAINING LOAD ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -21038,7 +21038,7 @@ JSON:
             })()}
 
             {/* ── POLARIZED TRAINING ANALYZER ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const [weeks, setWeeks] = React.useState(8);
 
@@ -21189,7 +21189,7 @@ JSON:
 
 
             {/* ── RPE DISTRIBUTION CHART ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -21244,7 +21244,7 @@ JSON:
             })()}
 
             {/* ── TRAINING LOAD DISTRIBUTION ── */}
-            {(profile.sessions||[]).length >= 4 && (() => {
+            {false && (profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
               const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
               const recent = sessions.filter(s => s.date && new Date(s.date) >= cutoff);
@@ -21339,7 +21339,7 @@ JSON:
             })()}
 
             {/* ── MONTHLY STATS SUMMARY ── */}
-            {(profile.sessions||[]).length >= 1 && (() => {
+            {false && (profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
               const now = new Date();
               const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
@@ -21394,7 +21394,7 @@ JSON:
             })()}
 
             {/* ── YEAR CONSISTENCY CALENDAR ── */}
-            {(profile.sessions||[]).length >= 3 && (() => {
+            {false && (profile.sessions||[]).length >= 3 && (() => {
               const sessions = profile.sessions || [];
               const sessMap = {};
               sessions.forEach(s => {
@@ -21559,7 +21559,7 @@ JSON:
             })()}
 
             {/* ── STRENGTH STANDARDS ── */}
-            {(() => {
+            {false && (() => {
               let prs = {};
               try { prs = JSON.parse(localStorage.getItem(`fitrace_prs_${profile.name}`) || "{}"); } catch {}
               const poids = parseFloat(profile.poids) || 75;
@@ -21664,7 +21664,7 @@ JSON:
             })()}
 
             {/* ── INJURY & PAIN LOG ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_injuries_${profile.name}`;
               const [injuries, setInjuries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
               const [showForm, setShowForm] = React.useState(false);
@@ -21783,7 +21783,7 @@ JSON:
             })()}
 
             {/* ── MOBILITY PROGRESS TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const mobKey = `fitrace_mobility_${profile.name}`;
               const [tests, setTests] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(mobKey) || "{}"); } catch { return {}; }
@@ -21850,7 +21850,7 @@ JSON:
             })()}
 
             {/* ── ACHIEVEMENT BADGES ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const totalSessions = sessions.length;
               const totalKm = sessions.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0);
@@ -21947,7 +21947,7 @@ JSON:
             })()}
 
             {/* ── PERFORMANCE CHALLENGES ── */}
-            {(() => {
+            {false && (() => {
               const chalKey = `fitrace_challenges_${profile.name}`;
               const sessions = profile.sessions || [];
               const [challenges, setChallenges] = React.useState(() => {
@@ -22066,7 +22066,7 @@ JSON:
             })()}
 
             {/* ── PERSONAL RECORDS BOARD ── */}
-            {(() => {
+            {false && (() => {
               const PR_DEFS = [
                 { key:"run_1km",    label:"Run 1km",        unit:"min:sec", icon:"🏃", lowerIsBetter:true  },
                 { key:"skierg",     label:"SkiErg 1000m",   unit:"min:sec", icon:"⛷️", lowerIsBetter:true  },
@@ -22155,7 +22155,7 @@ JSON:
             })()}
 
             {/* ── YEAR IN REVIEW ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const today = new Date();
               const [selectedYear, setSelectedYear] = React.useState(today.getFullYear());
@@ -22355,7 +22355,7 @@ JSON:
             })()}
 
             {/* ── GEAR & SHOE TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_gear_${profile.name}`;
               const ASSIGN_KEY = `fitrace_gear_assign_${profile.name}`;
 
@@ -22562,7 +22562,7 @@ JSON:
             })()}
 
             {/* ── ANNUAL TRAINING HEATMAP ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -22686,7 +22686,7 @@ JSON:
             })()}
 
             {/* ── MONTHLY STATS SUMMARY ── */}
-            {(() => {
+            {false && (() => {
 const sessions = profile.sessions || [];
               if (sessions.length < 2) return null;
 
@@ -22747,7 +22747,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── MONTHLY TRAINING CALENDAR ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const now = new Date();
               const [viewYear, setViewYear] = React.useState(now.getFullYear());
@@ -22851,7 +22851,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── DISTANCE PRs BY ACTIVITY TYPE ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -22893,7 +22893,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── BODY COMPOSITION TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const bcKey = `fitrace_body_${profile.name}`;
               const [log, setLog] = React.useState(() => {
                 try { return JSON.parse(localStorage.getItem(bcKey) || "[]"); } catch { return []; }
@@ -22999,7 +22999,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── STRENGTH STANDARDS CHECKER ── */}
-            {(() => {
+            {false && (() => {
               const sex = profile.sexe === "F" ? "F" : "H";
               const poids = parseFloat(profile.poids) || 70;
               const vma = parseFloat(profile.vmaKmh) || null;
@@ -23155,7 +23155,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── PERSONAL RECORDS ── */}
-            {(() => {
+            {false && (() => {
               let prs = {};
               try { prs = JSON.parse(localStorage.getItem(`fitrace_prs_${profile.name}`) || "{}"); } catch {}
               const prList = Object.values(prs).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
@@ -23224,7 +23224,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── SESSION COMPARISON ── */}
-            {(() => {
+            {false && (() => {
               const [compareType, setCompareType] = React.useState("running_zone2");
               const sessions = profile.sessions || [];
               if (sessions.length < 4) return null;
@@ -23305,7 +23305,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── TRAINING DIARY ── */}
-            {(() => {
+            {false && (() => {
               if ((profile.sessions||[]).length < 1) return null;
               const diaryKey = `fitrace_diary_${profile.name}`;
               const [diary, setDiary] = React.useState(() => {
@@ -23516,7 +23516,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── SCORE SEMAINE ── */}
-            {(profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
+            {false && (profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
             {/* ── RPE TREND + VOLUME ── */}
             {(profile.sessions||[]).length >= 3 && (() => {
@@ -23698,7 +23698,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── HEATMAP CHARGE JOURNALIÈRE ── */}
-            {(() => {
+            {false && (() => {
               const [hoveredCell, setHoveredCell] = React.useState(null);
               const sessions = profile.sessions || [];
               if (sessions.length < 1) return null;
@@ -23849,7 +23849,7 @@ const sessions = profile.sessions || [];
             <TrainingMixChart profile={profile} />
 
             {/* ── STATION RPE HISTORY ── */}
-            {(profile.sessions||[]).some(s => (s.exercicesLog||[]).some(e => e.rpe)) && (() => {
+            {false && (profile.sessions||[]).some(s => (s.exercicesLog||[]).some(e => e.rpe)) && (() => {
               const STATION_KEYS = [
                 { key: "ski", label: "SkiErg", color: "#C9A840", match: /ski/i },
                 { key: "sled_push", label: "Sled Push", color: "#FF9F0A", match: /sled.push|sled push/i },
@@ -23996,7 +23996,7 @@ const sessions = profile.sessions || [];
             {buildWeeklySummary(profile).count > 0 && <WeeklySummaryCard profile={profile} />}
 
             {/* ── COMPARAISON SEMAINE N vs N-1 ── */}
-            {(profile.sessions||[]).length >= 2 && (() => {
+            {false && (profile.sessions||[]).length >= 2 && (() => {
               const now = new Date();
               const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Mon=1 ... Sun=7
               const startThisWeek = new Date(now); startThisWeek.setDate(now.getDate() - dayOfWeek + 1); startThisWeek.setHours(0,0,0,0);
@@ -24067,7 +24067,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── GRAPHIQUE CHARGE HEBDO ── */}
-            {(profile.sessions||[]).length >= 3 && (() => {
+            {false && (profile.sessions||[]).length >= 3 && (() => {
               // Groupe les sessions par semaine (ISO week)
               const getWeekKey = (date) => {
                 const d = new Date(date); d.setHours(0,0,0,0);
@@ -24125,7 +24125,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── RECORDS DE SÉANCE ── */}
-            {(profile.sessions||[]).length >= 2 && (() => {
+            {false && (profile.sessions||[]).length >= 2 && (() => {
               const sessions = profile.sessions || [];
               const bestRPE = sessions.reduce((best, s) => s.difficulte < (best?.difficulte||10) ? s : best, null);
               const worstRPE = sessions.reduce((best, s) => s.difficulte > (best?.difficulte||0) ? s : best, null);
@@ -24156,7 +24156,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── BODY METRICS 30 JOURS ── */}
-            {(()=>{
+            {false && (()=>{
               const [bodyLogs, setBodyLogs] = React.useState([]);
               React.useEffect(() => {
                 const loads = [];
@@ -24395,7 +24395,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── OBJECTIF VS RÉEL ── */}
-            {(profile.sessions||[]).length >= 2 && profile.seancesParSemaine && (() => {
+            {false && (profile.sessions||[]).length >= 2 && profile.seancesParSemaine && (() => {
               const target = parseInt(profile.seancesParSemaine) || 4;
               // Last 8 weeks
               const getWeekNum = (date) => {
@@ -24677,7 +24677,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── MUSCLE FATIGUE HEATMAP ── */}
-            {(profile.sessions||[]).length >= 1 && (() => {
+            {false && (profile.sessions||[]).length >= 1 && (() => {
               const sessions = profile.sessions || [];
               const now = Date.now();
               // muscle groups and which session types stress them (weight = intensity 0-1)
@@ -24731,7 +24731,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── ZONES D'ENTRAÎNEMENT VMA ── */}
-            {(() => {
+            {false && (() => {
               const [expandedZone, setExpandedZone] = React.useState(null);
               if (!profile.vmaKmh) return null;
               const vma = parseFloat(profile.vmaKmh);
@@ -24843,7 +24843,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── WEEKLY COMPARISON ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const now = new Date();
               const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0

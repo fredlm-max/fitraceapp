@@ -9,19 +9,21 @@ const isSib = (l) => /^ {12}\{\/\* ── /.test(l);
 // après l'accolade ouvrante de l'expression qui suit le commentaire.
 // Aucune ligne retirée, aucun <div> touché → zéro risque de casser le nesting.
 function hideBlock(name) {
-  const start = lines.findIndex((l) => isSib(l) && l.includes(name));
-  if (start < 0) { console.log("SKIP introuvable: " + name); return; }
-  // Ligne d'expression = première ligne non vide après le commentaire.
-  let i = start + 1;
-  while (i < lines.length && lines[i].trim() === "") i++;
-  const line = lines[i];
-  if (!line.trimStart().startsWith("{")) { console.log("SKIP (pas une expression {): " + name); return; }
-  const idx = line.indexOf("{");
-  const after = line.slice(idx + 1);
-  if (after.startsWith("false && ")) { console.log("DÉJÀ masqué: " + name); return; }
-  // Insère "false && " juste après la 1re accolade — préserve le reste (y compris \r).
-  lines[i] = line.slice(0, idx + 1) + "false && " + after;
-  console.log("OK masqué: " + name);
+  let found = 0;
+  for (let start = 0; start < lines.length; start++) {
+    if (!(isSib(lines[start]) && lines[start].includes(name))) continue;
+    // Ligne d'expression = première ligne non vide après le commentaire.
+    let i = start + 1;
+    while (i < lines.length && lines[i].trim() === "") i++;
+    const line = lines[i];
+    if (!line.trimStart().startsWith("{")) { console.log("SKIP (pas une expression {): " + name); continue; }
+    const idx = line.indexOf("{");
+    const after = line.slice(idx + 1);
+    if (after.startsWith("false && ")) { continue; }
+    lines[i] = line.slice(0, idx + 1) + "false && " + after;
+    found++;
+  }
+  console.log((found ? "OK masqué x" + found : "rien à masquer") + ": " + name);
 }
 
 const names = (process.argv[2] || "").split("|").filter(Boolean);
