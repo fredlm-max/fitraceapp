@@ -5173,6 +5173,27 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
       else if (fatigueVal === 4 && sleepH >= 7.5) { intensityModifier = "LÉGÈREMENT AUGMENTÉE"; intensityNote = "Forme optimale → possibilité de pousser"; }
     }
 
+    // ── SCORE APEX (readiness) PILOTE L'INTENSITÉ ──────────────────────
+    // Même formule que le widget d'accueil : récupération (sommeil + fraîcheur de
+    // charge + fatigue + VFC), sans pénaliser nutrition/hydratation. On laisse APEX
+    // ajuster l'intensité, SAUF drapeau VFC rouge/jaune (récup prioritaire, on ne pousse pas).
+    const _sleepScoreR = Math.min(100, Math.round((sleepH / 9) * 100));
+    const _fatigueScoreR = Math.round(((5 - fatigueVal) / 4) * 100);
+    const _hrvScoreR = hrv ? (hrv >= 80 ? 100 : hrv >= 60 ? 80 : hrv >= 40 ? 60 : 40) : null;
+    const _load7 = allSessions
+      .filter(s => { const d = s.date ? new Date(s.date).getTime() : 0; return d && Date.now() - d < 7 * 86400000; })
+      .reduce((sum, s) => sum + (parseInt(s.dureeReelle || s.tempsReel || s.duree || 45)) * ((s.rpe || s.difficulte || 5) / 10), 0);
+    const _loadFreshnessR = Math.max(0, 100 - Math.min(100, Math.round((_load7 / 600) * 100)));
+    const _rSig = [{ v: _sleepScoreR, w: 0.35 }, { v: _loadFreshnessR, w: 0.25 }, { v: _fatigueScoreR, w: 0.25 }];
+    if (_hrvScoreR != null) _rSig.push({ v: _hrvScoreR, w: 0.20 });
+    const apexReadiness = Math.round(_rSig.reduce((a, s) => a + s.v * s.w, 0) / _rSig.reduce((a, s) => a + s.w, 0));
+    const _vfcCaution = vfcAnalysis.zone === "red" || vfcAnalysis.zone === "yellow" || (hrv !== null && hrv < 40);
+    if (!_vfcCaution) {
+      if (apexReadiness >= 82) { intensityModifier = "AUGMENTÉE +10%"; intensityNote = `Score APEX ${apexReadiness}/100 — excellente préparation → pousse l'intensité et le volume (séance exigeante)`; }
+      else if (apexReadiness >= 65) { if (intensityModifier === "NORMALE") intensityNote = intensityNote || `Score APEX ${apexReadiness}/100 — bonne préparation → séance normale à soutenue`; }
+      else if (apexReadiness < 45) { intensityModifier = "RÉDUITE -20%"; intensityNote = `Score APEX ${apexReadiness}/100 — préparation faible → allège le volume, garde la qualité technique`; }
+    }
+
     // Calculs charges précises basées sur les 1RM
     const deadliftWork = profile.deadlift1RM_final ? Math.round(profile.deadlift1RM_final * 0.72) : null;
     const squatWork = profile.squat1RM_final ? Math.round(profile.squat1RM_final * 0.70) : null;
