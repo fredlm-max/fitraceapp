@@ -6804,6 +6804,12 @@ JSON:
               const apexDelta = _prevEntry ? apexScore - _prevEntry.score : null;
               // Points pour la sparkline : jusqu'à 6 jours passés + le score du jour
               const apexSpark = [...apexHistory.filter(h => h.date < todayStr).slice(-6).map(h => h.score), apexScore];
+              // Check-in du matin fait aujourd'hui ? (sinon on propose de le compléter → score plus précis)
+              const _checkinDone = (() => { try {
+                const s = (JSON.parse(localStorage.getItem(`fitrace_sleep_unified_${profile.name}`)) || {})[todayStr];
+                const c = (JSON.parse(localStorage.getItem(`fitrace_checkin_${profile.name}`)) || {})[todayStr];
+                return !!(s || c);
+              } catch { return false; } })();
 
               // Évolution séances
               const w1 = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; }).length;
@@ -6924,6 +6930,13 @@ JSON:
                               );
                             })()}
                           </div>
+                        )}
+                        {/* Rappel check-in si pas fait aujourd'hui → score plus précis */}
+                        {!_checkinDone && (
+                          <button onClick={() => setShowMorningCheckin(true)} data-no-share="1"
+                            style={{ width:"100%", marginBottom:10, background:"rgba(201,168,64,0.1)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:10, padding:"8px 10px", color:"var(--yellow)", fontSize:10.5, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                            ☀️ Compléter mon check-in du matin →
+                          </button>
                         )}
                         {/* 3 indicateurs : Sommeil / Nutrition / Charge */}
                         <div style={{ display:"flex", flexDirection:"column", gap:6, textAlign:"left" }}>
