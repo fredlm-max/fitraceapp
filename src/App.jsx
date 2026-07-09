@@ -20049,6 +20049,143 @@ JSON:
               );
             })()}
 
+            {/* ── MONTHLY STATS SUMMARY ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              const now = new Date();
+              const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+              const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+              const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,"0")}`;
+
+              const thisMonth = sessions.filter(s => s.date && s.date.startsWith(monthStr));
+              const lastMonth = sessions.filter(s => s.date && s.date.startsWith(prevMonthStr));
+
+              const calcStats = (arr) => ({
+                count: arr.length,
+                trimp: arr.reduce((a, s) => a + (s.trimp || Math.round((s.duration||45)*(s.difficulte||5)/10)), 0),
+                duration: arr.reduce((a, s) => a + (parseInt(s.tempsReel || s.duree || 45)), 0),
+                calories: arr.reduce((a, s) => a + (parseInt(s.calories) || 0), 0),
+              });
+
+              const cur = calcStats(thisMonth);
+              const prev = calcStats(lastMonth);
+              const monthName = now.toLocaleDateString("fr-FR", { month: "long" }).charAt(0).toUpperCase() + now.toLocaleDateString("fr-FR", { month: "long" }).slice(1);
+
+              const delta = (c, p) => p > 0 ? Math.round((c - p) / p * 100) : null;
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.6)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div className="bebas" style={{ fontSize: 16, color: "#F2F2F7", letterSpacing: 1 }}>BILAN {monthName.toUpperCase()}</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>vs {prevDate.toLocaleDateString("fr-FR", { month: "long" })}</div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+                    {[
+                      { label: "Séances", val: cur.count, prev: prev.count, color: "#C9A840", unit: "" },
+                      { label: "TRIMP", val: cur.trimp, prev: prev.trimp, color: "#30D158", unit: "" },
+                      { label: "Durée", val: Math.round(cur.duration/60), prev: Math.round(prev.duration/60), color: "#38bdf8", unit: "h" },
+                      { label: "kcal", val: cur.calories || "—", prev: prev.calories, color: "#FF453A", unit: "" },
+                    ].map(item => {
+                      const d = typeof item.val === "number" && item.prev > 0 ? delta(item.val, item.prev) : null;
+                      return (
+                        <div key={item.label} style={{ background: `${item.color}08`, border: `1px solid ${item.color}20`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+                          <div className="bebas" style={{ fontSize: 20, color: item.color, lineHeight: 1 }}>{item.val}{item.unit}</div>
+                          <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase", marginTop: 2 }}>{item.label}</div>
+                          {d !== null && (
+                            <div style={{ fontSize: 8, color: d > 0 ? "#30D158" : "#FF9F0A", fontWeight: 700, marginTop: 2 }}>
+                              {d > 0 ? "▲" : "▼"}{Math.abs(d)}%
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── YEAR CONSISTENCY CALENDAR ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = profile.sessions || [];
+              const sessMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                if (!sessMap[s.date]) sessMap[s.date] = { rpe: s.difficulte || 5, count: 0 };
+                sessMap[s.date].count++;
+                if ((s.difficulte || 5) > sessMap[s.date].rpe) sessMap[s.date].rpe = s.difficulte;
+              });
+
+              const now = new Date();
+              // Show last 26 weeks (6 months)
+              const WEEKS = 26;
+              const today = now.toISOString().slice(0, 10);
+              const dow = (now.getDay() + 6) % 7; // Monday = 0
+              const cells = Array.from({ length: WEEKS * 7 }, (_, i) => {
+                const d = new Date(now);
+                d.setDate(now.getDate() - (WEEKS * 7 - 1 - i) + (6 - dow));
+                const ds = d.toISOString().slice(0, 10);
+                return { ds, data: sessMap[ds] || null, isToday: ds === today, isFuture: ds > today };
+              });
+
+              const totalDays = cells.filter(c => c.data).length;
+              const maxStreak = (() => {
+                let max = 0, cur = 0;
+                cells.forEach(c => { if (c.data) { cur++; max = Math.max(max, cur); } else cur = 0; });
+                return max;
+              })();
+
+              const getColor = (cell) => {
+                if (cell.isFuture) return "transparent";
+                if (!cell.data) return "rgba(255,255,255,0.04)";
+                const rpe = cell.data.rpe;
+                if (rpe >= 9) return "#FF453A";
+                if (rpe >= 7) return "#FF9F0A";
+                if (rpe >= 5) return "#C9A840";
+                return "rgba(201,168,64,0.4)";
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📅 CONSISTANCE 6 MOIS</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{totalDays} jours actifs · streak max {maxStreak}j</div>
+                    </div>
+                  </div>
+                  {/* Day labels */}
+                  <div style={{ display: "flex", gap: 3, marginBottom: 4, paddingLeft: 2 }}>
+                    {["L","M","M","J","V","S","D"].map((d, i) => (
+                      <div key={i} style={{ width: 10, fontSize: 7, color: "#8E8E93", textAlign: "center" }}>{d}</div>
+                    ))}
+                  </div>
+                  {/* Grid: rows = days of week, cols = weeks */}
+                  <div style={{ display: "flex", gap: 2 }}>
+                    {Array.from({ length: WEEKS }, (_, w) => (
+                      <div key={w} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {cells.slice(w * 7, w * 7 + 7).map((cell, d) => (
+                          <div key={d} style={{
+                            width: 10, height: 10, borderRadius: 2,
+                            background: getColor(cell),
+                            border: cell.isToday ? "1px solid #C9A840" : "none",
+                          }} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Legend */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                    <div style={{ fontSize: 9, color: "#8E8E93" }}>Intensité:</div>
+                    {[{ c: "rgba(201,168,64,0.4)", l: "Légère" }, { c: "#C9A840", l: "Modérée" }, { c: "#FF9F0A", l: "Intense" }, { c: "#FF453A", l: "Max" }].map(l => (
+                      <div key={l.l} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: l.c }} />
+                        <div style={{ fontSize: 9, color: "#8E8E93" }}>{l.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PR PROGRESSION CHART ── */}
             {(() => {
               const [selEx, setSelEx] = React.useState(0);
@@ -20356,6 +20493,73 @@ JSON:
               );
             })()}
 
+            {/* ── MOBILITY PROGRESS TRACKER ── */}
+            {(() => {
+              const mobKey = `fitrace_mobility_${profile.name}`;
+              const [tests, setTests] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(mobKey) || "{}"); } catch { return {}; }
+              });
+
+              const TESTS = [
+                { id: "sit_reach", name: "Sit & Reach", unit: "cm", min: -10, max: 30, good: 10, desc: "Souplesse ischio-jambiers" },
+                { id: "shoulder_rot", name: "Rotation épaule", unit: "°", min: 0, max: 90, good: 60, desc: "Mobilité gléno-humérale" },
+                { id: "ankle_mob", name: "Flexion cheville", unit: "cm", min: 0, max: 15, good: 9, desc: "Dorsiflexion mur" },
+                { id: "hip_flex", name: "Flexion hanche", unit: "°", min: 0, max: 120, good: 90, desc: "Lunge test" },
+                { id: "thoracic", name: "Rotation thoracique", unit: "°", min: 0, max: 50, good: 35, desc: "Rotation assis" },
+              ];
+
+              const update = (id, val) => {
+                const updated = { ...tests, [id]: parseFloat(val) || 0 };
+                setTests(updated);
+                syncedStorage.set(mobKey, updated);
+              };
+
+              const score = TESTS.reduce((s, t) => {
+                const v = tests[t.id] || 0;
+                return s + (v >= t.good ? 1 : v >= t.good * 0.6 ? 0.5 : 0);
+              }, 0);
+              const totalScore = Math.round((score / TESTS.length) * 100);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Mobilité & Flexibilité</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: totalScore >= 70 ? "#30D158" : totalScore >= 40 ? "#FF9F0A" : "#FF453A" }}>{totalScore}%</div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {TESTS.map(t => {
+                      const val = tests[t.id] || "";
+                      const numVal = parseFloat(val) || 0;
+                      const pct = Math.min(100, Math.round((numVal / t.max) * 100));
+                      const isGood = numVal >= t.good;
+                      const color = isGood ? "#30D158" : numVal >= t.good * 0.6 ? "#FF9F0A" : "#636366";
+                      return (
+                        <div key={t.id}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                            <div>
+                              <span style={{ fontSize: 10, fontWeight: 600, color: "var(--fg)" }}>{t.name}</span>
+                              <span style={{ fontSize: 9, color: "#8E8E93", marginLeft: 6 }}>{t.desc}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <input type="number" value={val} onChange={e => update(t.id, e.target.value)} placeholder={`/${t.max}`} style={{ background: "#1C1C1E", color: isGood ? "#30D158" : "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 6, padding: "2px 6px", fontSize: 11, width: 52, textAlign: "right" }} />
+                              <span style={{ fontSize: 9, color: "#8E8E93" }}>{t.unit}</span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ flex: 1, height: 4, background: "#2C2C2E", borderRadius: 2 }}>
+                              <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2 }} />
+                            </div>
+                            <div style={{ fontSize: 8, color: "#8E8E93", width: 30 }}>min: {t.good}{t.unit}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── ACHIEVEMENT BADGES ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -20453,6 +20657,125 @@ JSON:
               );
             })()}
 
+            {/* ── PERFORMANCE CHALLENGES ── */}
+            {(() => {
+              const chalKey = `fitrace_challenges_${profile.name}`;
+              const sessions = profile.sessions || [];
+              const [challenges, setChallenges] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(chalKey) || "[]"); } catch { return []; }
+              });
+              const [showAdd, setShowAdd] = React.useState(false);
+              const [form, setForm] = React.useState({ name: "", target: "", unit: "séances", deadline: "", type: "count" });
+
+              // Default challenges from presets
+              const PRESETS = [
+                { name: "100 séances", target: 100, unit: "séances", type: "count", deadline: "" },
+                { name: "50h d'entraînement", target: 3000, unit: "minutes", type: "duration", deadline: "" },
+                { name: "30 jours streak", target: 30, unit: "jours consécutifs", type: "streak", deadline: "" },
+                { name: "Objectif pré-course", target: 60, unit: "séances", type: "count", deadline: profile.raceDate || "" },
+              ];
+
+              const saveChallenges = c => { setChallenges(c); syncedStorage.set(chalKey, c); };
+
+              const getProgress = c => {
+                if (c.type === "count") return sessions.length;
+                if (c.type === "duration") return sessions.reduce((s, x) => s + (x.duree || 0), 0);
+                if (c.type === "streak") {
+                  // max streak
+                  const dates = [...new Set(sessions.map(s => s.date))].sort();
+                  let max = 0, cur = 0, prev = null;
+                  dates.forEach(d => {
+                    const diff = prev ? Math.round((new Date(d) - new Date(prev)) / 86400000) : 1;
+                    cur = diff === 1 ? cur + 1 : 1;
+                    if (cur > max) max = cur;
+                    prev = d;
+                  });
+                  return max;
+                }
+                return 0;
+              };
+
+              const addChallenge = (preset) => {
+                const c = preset || { ...form, id: Date.now(), target: parseFloat(form.target), createdAt: new Date().toISOString() };
+                if (!c.id) c.id = Date.now();
+                if (!c.createdAt) c.createdAt = new Date().toISOString();
+                saveChallenges([...challenges, c]);
+                setShowAdd(false);
+                setForm({ name: "", target: "", unit: "séances", deadline: "", type: "count" });
+              };
+
+              const removeChallenge = id => saveChallenges(challenges.filter(c => c.id !== id));
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🎯 CHALLENGES PERSO</div>
+                    <button onClick={() => setShowAdd(s => !s)} style={{ background: showAdd ? "#636366" : "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {showAdd ? "Annuler" : "+ Ajouter"}
+                    </button>
+                  </div>
+
+                  {showAdd && (
+                    <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 8 }}>Défis prédéfinis :</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                        {PRESETS.map(p => (
+                          <button key={p.name} onClick={() => addChallenge({ ...p, id: Date.now(), createdAt: new Date().toISOString() })} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "5px 10px", color: "var(--white)", fontSize: 11, cursor: "pointer" }}>
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 6 }}>Ou personnalisé :</div>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <input placeholder="Nom du défi" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <input type="number" placeholder="Objectif" value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--yellow)", fontSize: 14, fontWeight: 700 }} />
+                          <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value, unit: e.target.value === "count" ? "séances" : e.target.value === "duration" ? "minutes" : "jours consécutifs" }))} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }}>
+                            <option value="count">Nombre séances</option>
+                            <option value="duration">Volume (min)</option>
+                            <option value="streak">Streak jours</option>
+                          </select>
+                        </div>
+                        <input type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} style={{ background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 7, padding: "7px 9px", color: "var(--white)", fontSize: 12 }} />
+                        <button onClick={() => addChallenge()} disabled={!form.name || !form.target} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: 8, fontWeight: 700, cursor: "pointer", opacity: (!form.name || !form.target) ? 0.5 : 1 }}>Créer le défi</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {challenges.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "16px 0", color: "#8E8E93", fontSize: 12 }}>Aucun défi · Lance-toi un objectif !</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {challenges.map(c => {
+                        const progress = getProgress(c);
+                        const pct = Math.min(100, Math.round((progress / c.target) * 100));
+                        const done = pct >= 100;
+                        const daysLeft = c.deadline ? Math.ceil((new Date(c.deadline) - new Date()) / 86400000) : null;
+                        const displayVal = c.type === "duration" ? `${Math.round(progress / 60)}h/${Math.round(c.target / 60)}h` : `${progress}/${c.target} ${c.unit}`;
+                        return (
+                          <div key={c.id} style={{ background: done ? "#30D15810" : "var(--bg3)", border: `1px solid ${done ? "#30D158" : "#3A3A3C"}`, borderRadius: 10, padding: 10 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: done ? "#30D158" : "var(--white)" }}>{done ? "✅ " : ""}{c.name}</div>
+                                <div style={{ fontSize: 10, color: "#8E8E93", marginTop: 1 }}>{displayVal}{daysLeft !== null ? ` · ${daysLeft > 0 ? daysLeft + "j restants" : "Terminé !"}` : ""}</div>
+                              </div>
+                              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                <span style={{ fontSize: 14, fontWeight: 900, color: done ? "#30D158" : "var(--yellow)" }}>{pct}%</span>
+                                <button onClick={() => removeChallenge(c.id)} style={{ background: "none", border: "none", color: "#8E8E93", fontSize: 14, cursor: "pointer" }}>✕</button>
+                              </div>
+                            </div>
+                            <div style={{ height: 6, background: "#3A3A3C", borderRadius: 99, overflow: "hidden" }}>
+                              <div style={{ width: `${pct}%`, height: "100%", background: done ? "#30D158" : "var(--yellow)", borderRadius: 99, transition: "width 0.5s" }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── PERSONAL RECORDS BOARD ── */}
             {(() => {
               const PR_DEFS = [
@@ -20537,6 +20860,744 @@ JSON:
 
                   <div style={{ fontSize:9,color:"#8E8E93",textAlign:"center",marginTop:8 }}>
                     {Object.keys(prs).length}/{PR_DEFS.length} records enregistrés
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── YEAR IN REVIEW ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const today = new Date();
+              const [selectedYear, setSelectedYear] = React.useState(today.getFullYear());
+
+              const yearSess = sessions.filter(s => s.date?.startsWith(String(selectedYear)));
+              if (yearSess.length === 0 && selectedYear === today.getFullYear() && sessions.length === 0) return null;
+
+              // Aggregate stats
+              const totalSess = yearSess.length;
+              const totalMin = yearSess.reduce((s,x) => s + (parseFloat(x.duration)||0), 0);
+              const totalKm = yearSess.reduce((s,x) => s + (parseFloat(x.distance)||0), 0);
+              const totalTrimp = yearSess.reduce((s,x) => s + (x.duration && x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const avgRpe = totalSess > 0 ? yearSess.reduce((s,x) => s + (parseFloat(x.rpe)||0), 0) / totalSess : 0;
+
+              // By month
+              const byMonth = Array.from({length:12}, (_,i) => ({
+                month: i,
+                sess: yearSess.filter(s => parseInt(s.date?.slice(5,7)) === i+1).length,
+                km: yearSess.filter(s => parseInt(s.date?.slice(5,7)) === i+1).reduce((s,x) => s + (parseFloat(x.distance)||0), 0),
+                trimp: yearSess.filter(s => parseInt(s.date?.slice(5,7)) === i+1).reduce((s,x) => s + (x.duration && x.rpe ? x.duration*(x.rpe/10) : 0), 0),
+              }));
+              const bestMonth = [...byMonth].sort((a,b) => b.sess - a.sess)[0];
+
+              // By week – best week
+              const weekMap = {};
+              yearSess.forEach(s => {
+                const d = parseLocalDate(s.date);
+                if (!d) return;
+                const weekStart = new Date(d);
+                weekStart.setDate(d.getDate() - d.getDay() + 1);
+                const wk = weekStart.toISOString().slice(0,10);
+                if (!weekMap[wk]) weekMap[wk] = { sess:0, km:0, min:0 };
+                weekMap[wk].sess++;
+                weekMap[wk].km += parseFloat(s.distance)||0;
+                weekMap[wk].min += parseFloat(s.duration)||0;
+              });
+              const bestWeek = Object.entries(weekMap).sort((a,b) => b[1].sess - a[1].sess)[0];
+
+              // By type
+              const typeMap = {};
+              yearSess.forEach(s => {
+                const t = s.type || "Autre";
+                typeMap[t] = (typeMap[t] || 0) + 1;
+              });
+              const topTypes = Object.entries(typeMap).sort((a,b) => b[1]-a[1]).slice(0,4);
+
+              // PRs this year
+              const prs = [];
+              yearSess.forEach(s => {
+                if (!s.distance || !s.duration) return;
+                const pace = s.duration / s.distance;
+                const prevBest = sessions.filter(o => o.type === s.type && o.distance === s.distance && o.date < s.date && !o.date?.startsWith(String(selectedYear)));
+                if (prevBest.length > 0) {
+                  const best = Math.min(...prevBest.map(o => o.duration / o.distance));
+                  if (pace < best) prs.push(s);
+                }
+              });
+
+              // SVG monthly bar chart
+              const W = 320, H = 80, PAD = {l:6, r:6, t:10, b:20};
+              const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+              const maxSess = Math.max(...byMonth.map(m => m.sess), 1);
+              const barW = cW / 12;
+              const monthAbbr = ["J","F","M","A","M","J","J","A","S","O","N","D"];
+
+              const typeColors = ["var(--yellow)","#30D158","#BF5AF2","#FF9F0A","#FF453A","#5AC8FA"];
+              const availableYears = [...new Set(sessions.map(s => s.date?.slice(0,4)).filter(Boolean))].sort().reverse();
+              if (!availableYears.includes(String(selectedYear))) availableYears.unshift(String(selectedYear));
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Année en revue</div>
+                      <div style={{ fontSize:11, color:"#666", marginTop:2 }}>{totalSess} séance{totalSess!==1?"s":""} · Strava-style recap</div>
+                    </div>
+                    <div style={{ display:"flex", gap:4 }}>
+                      {availableYears.slice(0,3).map(y => (
+                        <button key={y} onClick={() => setSelectedYear(parseInt(y))}
+                          style={{ background: selectedYear===parseInt(y) ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:8, padding:"5px 10px",
+                            color: selectedYear===parseInt(y) ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                          {y}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {totalSess === 0 ? (
+                    <div style={{ textAlign:"center", color:"#98989D", fontSize:13, padding:"20px 0" }}>Aucune séance en {selectedYear}</div>
+                  ) : (
+                    <>
+                      {/* Big stats */}
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10, marginBottom:16 }}>
+                        {[
+                          { label:"Séances", val:totalSess, unit:"", color:"var(--yellow)", emoji:"🏋️" },
+                          { label:"Heures", val:(totalMin/60).toFixed(0), unit:"h", color:"#30D158", emoji:"⏱️" },
+                          { label:"Distance", val:totalKm.toFixed(0), unit:"km", color:"#BF5AF2", emoji:"📍" },
+                          { label:"Charge (TRIMP)", val:Math.round(totalTrimp), unit:"", color:"#FF6B35", emoji:"⚡" },
+                        ].map(s => (
+                          <div key={s.label} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:24 }}>{s.emoji}</span>
+                            <div>
+                              <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.val}<span style={{ fontSize:13, fontWeight:400 }}>{s.unit}</span></div>
+                              <div style={{ fontSize:10, color:"#666" }}>{s.label}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Monthly chart */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:8 }}>Séances par mois</div>
+                        <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W }}>
+                          {byMonth.map((m, i) => {
+                            const bh = (m.sess / maxSess) * cH;
+                            const x = PAD.l + i * barW + barW*0.1;
+                            const bWidth = barW * 0.8;
+                            const isCurMonth = selectedYear === today.getFullYear() && i === today.getMonth();
+                            return (
+                              <g key={i}>
+                                <rect x={x} y={PAD.t + cH - bh} width={bWidth} height={bh}
+                                  fill={isCurMonth ? "var(--yellow)" : m.month === bestMonth.month ? "#30D158" : "#2C2C2E"}
+                                  rx="2"/>
+                                {m.sess > 0 && <text x={x + bWidth/2} y={PAD.t + cH - bh - 2} textAnchor="middle" fontSize="8" fill={m.month === bestMonth.month ? "#30D158" : "#666"}>{m.sess}</text>}
+                                <text x={x + bWidth/2} y={H - 4} textAnchor="middle" fontSize="9" fill={isCurMonth ? "var(--yellow)" : "#555"}>{monthAbbr[i]}</text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      </div>
+
+                      {/* Highlights */}
+                      <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+                        {bestMonth.sess > 0 && (
+                          <div style={{ background:"rgba(48,209,88,0.12)", border:"1px solid #30D15844", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:20 }}>🏆</span>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#30D158" }}>Meilleur mois</div>
+                              <div style={{ fontSize:11, color:"#999" }}>
+                                {["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"][bestMonth.month]} · {bestMonth.sess} séances · {bestMonth.km.toFixed(0)} km
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {bestWeek && (
+                          <div style={{ background:"rgba(0,122,255,0.12)", border:"1px solid rgba(0,122,255,0.3)", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:20 }}>🔥</span>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"var(--yellow)" }}>Meilleure semaine</div>
+                              <div style={{ fontSize:11, color:"#999" }}>
+                                Sem. du {bestWeek[0].slice(5)} · {bestWeek[1].sess} séances · {bestWeek[1].km.toFixed(0)} km · {Math.round(bestWeek[1].min/60)}h
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {prs.length > 0 && (
+                          <div style={{ background:"rgba(191,90,242,0.12)", border:"1px solid rgba(191,90,242,0.3)", borderRadius:12, padding:"10px 14px", display:"flex", gap:10, alignItems:"center" }}>
+                            <span style={{ fontSize:20 }}>⭐</span>
+                            <div>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#BF5AF2" }}>Records personnels</div>
+                              <div style={{ fontSize:11, color:"#999" }}>{prs.length} PR{prs.length>1?"s":""} cette année</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Top activity types */}
+                      {topTypes.length > 0 && (
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#888", marginBottom:8 }}>Activités favorites</div>
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                            {topTypes.map(([type, count], i) => (
+                              <div key={type} style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", display:"flex", gap:6, alignItems:"center" }}>
+                                <div style={{ width:8, height:8, borderRadius:"50%", background:typeColors[i] }}/>
+                                <span style={{ fontSize:12, color:"var(--white)", fontWeight:600 }}>{type}</span>
+                                <span style={{ fontSize:11, color:"#666" }}>×{count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* RPE average */}
+                      {avgRpe > 0 && (
+                        <div style={{ marginTop:12, background:"var(--bg3)", borderRadius:12, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div style={{ fontSize:12, color:"#888" }}>Intensité moyenne</div>
+                          <div style={{ fontSize:16, fontWeight:800, color: avgRpe >= 7 ? "#FF453A" : avgRpe >= 5 ? "#FF9F0A" : "#30D158" }}>
+                            RPE {avgRpe.toFixed(1)}/10
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── GEAR & SHOE TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_gear_${profile.name}`;
+              const ASSIGN_KEY = `fitrace_gear_assign_${profile.name}`;
+
+              const [gear, setGear] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [assign, setAssign] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(ASSIGN_KEY) || "{}"); } catch { return {}; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ name:"", brand:"", model:"", type:"shoe", startKm:0, maxKm:700, color:"#FF6B35", acquired:"", notes:"" });
+
+              const GEAR_TYPES = [
+                { id:"shoe", label:"Chaussures de course", emoji:"👟", maxKm:700 },
+                { id:"shoe_hyrox", label:"Chaussures HYROX", emoji:"🏋️", maxKm:400 },
+                { id:"wetsuit", label:"Combinaison", emoji:"🩱", maxKm:0 },
+                { id:"shorts", label:"Short/Cuissard", emoji:"🩲", maxKm:0 },
+                { id:"watch", label:"Montre GPS", emoji:"⌚", maxKm:0 },
+                { id:"bag", label:"Sac HYROX", emoji:"🎒", maxKm:0 },
+              ];
+
+              const sessions = profile.sessions || [];
+
+              // Calculate km per gear from sessions
+              const gearKm = (gearId) => {
+                return sessions
+                  .filter(s => assign[s.id || s.date] === gearId || assign[s.date] === gearId)
+                  .reduce((s,x) => s + (parseFloat(x.distance)||0), 0);
+              };
+
+              const totalKm = (g) => (g.startKm || 0) + gearKm(g.id);
+
+              const wearPct = (g) => g.maxKm > 0 ? Math.min(100, Math.round(totalKm(g)/g.maxKm*100)) : 0;
+              const wearColor = (pct) => pct >= 90 ? "#FF453A" : pct >= 70 ? "#FF9F0A" : "#30D158";
+
+              const saveGear = () => {
+                const entry = { ...form, id: Date.now(), addedAt: new Date().toISOString().slice(0,10) };
+                const next = [...gear, entry];
+                setGear(next);
+                syncedStorage.set(KEY, next);
+                setShowForm(false);
+                setForm({ name:"", brand:"", model:"", type:"shoe", startKm:0, maxKm:700, color:"#FF6B35", acquired:"", notes:"" });
+              };
+
+              const retireGear = (id) => {
+                const next = gear.map(g => g.id === id ? {...g, retired:true} : g);
+                setGear(next);
+                syncedStorage.set(KEY, next);
+              };
+
+              const activeGear = gear.filter(g => !g.retired);
+              const retiredGear = gear.filter(g => g.retired);
+
+              const [showRetired, setShowRetired] = React.useState(false);
+
+              // Latest session - assign gear
+              const latestSession = sessions[0];
+              const [defaultGear, setDefaultGear] = React.useState(() => assign.default || null);
+
+              const setDefault = (gearId) => {
+                const next = { ...assign, default: gearId };
+                setAssign(next);
+                syncedStorage.set(ASSIGN_KEY, next);
+                setDefaultGear(gearId);
+              };
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#98989D" }}>STRAVA · ÉQUIPEMENT</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>👟 Gear Tracker</div>
+                    </div>
+                    <button onClick={() => setShowForm(true)}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"7px 14px", color:"#000", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      + Gear
+                    </button>
+                  </div>
+
+                  {/* Wear alerts */}
+                  {activeGear.filter(g => g.maxKm > 0 && wearPct(g) >= 70).map(g => (
+                    <div key={g.id} style={{ background:"rgba(255,69,58,0.1)", border:"1px solid rgba(255,69,58,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:10, fontSize:11 }}>
+                      {wearPct(g) >= 90
+                        ? <span style={{ color:"#FF453A" }}>⛔ <strong>{g.name}</strong> — remplacement requis ! ({Math.round(totalKm(g))}km / {g.maxKm}km)</span>
+                        : <span style={{ color:"#FF9F0A" }}>⚠️ <strong>{g.name}</strong> — fin de vie proche ({Math.round(totalKm(g))}km / {g.maxKm}km)</span>
+                      }
+                    </div>
+                  ))}
+
+                  {/* Active gear */}
+                  {activeGear.length === 0 && !showForm && (
+                    <div style={{ textAlign:"center", padding:"16px 0", color:"#98989D", fontSize:12 }}>
+                      Ajoute tes chaussures pour suivre leur kilométrage 👟
+                    </div>
+                  )}
+
+                  {activeGear.map(g => {
+                    const km = Math.round(totalKm(g));
+                    const pct = wearPct(g);
+                    const typeInfo = GEAR_TYPES.find(t => t.id === g.type) || GEAR_TYPES[0];
+                    const isDefault = defaultGear === g.id;
+                    return (
+                      <div key={g.id} style={{ background:"var(--bg3)", borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                            <div style={{ width:40, height:40, background:`${g.color}22`, border:`2px solid ${g.color}`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                              {typeInfo.emoji}
+                            </div>
+                            <div>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>{g.name}</div>
+                              <div style={{ fontSize:10, color:"#666" }}>{g.brand} {g.model} {g.acquired ? `· depuis ${g.acquired}` : ""}</div>
+                              {isDefault && <div style={{ fontSize:9, color:"var(--yellow)", fontWeight:700 }}>★ Principal</div>}
+                            </div>
+                          </div>
+                          <div style={{ textAlign:"right" }}>
+                            <div style={{ fontSize:18, fontWeight:900, color: g.maxKm > 0 ? wearColor(pct) : "var(--yellow)" }}>{km} km</div>
+                            {g.maxKm > 0 && <div style={{ fontSize:9, color:"#98989D" }}>/ {g.maxKm}km</div>}
+                          </div>
+                        </div>
+
+                        {g.maxKm > 0 && (
+                          <div style={{ marginBottom:8 }}>
+                            <div style={{ height:8, background:"var(--bg2)", borderRadius:4, overflow:"hidden" }}>
+                              <div style={{ height:"100%", width:`${pct}%`, background:wearColor(pct), borderRadius:4, transition:"width 0.4s" }}/>
+                            </div>
+                            <div style={{ fontSize:9, color:"#98989D", marginTop:2, textAlign:"right" }}>{pct}% usé · ~{Math.max(0,g.maxKm-km)}km restants</div>
+                          </div>
+                        )}
+
+                        <div style={{ display:"flex", gap:6 }}>
+                          <button onClick={() => setDefault(isDefault ? null : g.id)}
+                            style={{ flex:1, background: isDefault?"rgba(201,168,64,0.2)":"var(--bg2)", border:`1px solid ${isDefault?"var(--yellow)":"#333"}`, borderRadius:8, padding:"5px 0", color: isDefault?"var(--yellow)":"#666", fontSize:11, cursor:"pointer" }}>
+                            ★ {isDefault ? "Principal" : "Définir"}
+                          </button>
+                          <button onClick={() => retireGear(g.id)}
+                            style={{ flex:1, background:"var(--bg2)", border:"1px solid #333", borderRadius:8, padding:"5px 0", color:"#888", fontSize:11, cursor:"pointer" }}>
+                            Retirer
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add form */}
+                  {showForm && (
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:14, marginBottom:8 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:12 }}>Nouveau gear</div>
+
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
+                        {GEAR_TYPES.map(t => (
+                          <button key={t.id} onClick={() => setForm(f=>({...f, type:t.id, maxKm:t.maxKm}))}
+                            style={{ background: form.type===t.id?"var(--yellow)":"var(--bg2)", border:"none", borderRadius:8, padding:"5px 10px", color: form.type===t.id?"#000":"#888", fontSize:11, cursor:"pointer", fontWeight: form.type===t.id?700:400 }}>
+                            {t.emoji} {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                        <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Nom (ex: Nike Vomero 17)"
+                          style={{ gridColumn:"1/-1", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:12 }}/>
+                        <input value={form.brand} onChange={e=>setForm(f=>({...f,brand:e.target.value}))} placeholder="Marque"
+                          style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                        <input value={form.model} onChange={e=>setForm(f=>({...f,model:e.target.value}))} placeholder="Modèle"
+                          style={{ background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                        <div>
+                          <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>Km déjà parcourus</div>
+                          <input type="number" min="0" value={form.startKm} onChange={e=>setForm(f=>({...f,startKm:parseInt(e.target.value)||0}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>Alerte usure (km)</div>
+                          <input type="number" min="0" value={form.maxKm} onChange={e=>setForm(f=>({...f,maxKm:parseInt(e.target.value)||0}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12, boxSizing:"border-box" }}/>
+                        </div>
+                        <input type="date" value={form.acquired} onChange={e=>setForm(f=>({...f,acquired:e.target.value}))}
+                          style={{ gridColumn:"1/-1", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"7px 10px", color:"#fff", fontSize:12 }}/>
+                      </div>
+
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button onClick={() => setShowForm(false)}
+                          style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>
+                        <button onClick={saveGear} disabled={!form.name}
+                          style={{ flex:2, background:form.name?"var(--yellow)":"#333", border:"none", borderRadius:10, padding:"10px 0", color:form.name?"#000":"#555", fontSize:12, fontWeight:800, cursor:"pointer" }}>
+                          Ajouter le gear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {retiredGear.length > 0 && (
+                    <button onClick={() => setShowRetired(r => !r)}
+                      style={{ width:"100%", background:"transparent", border:"none", color:"#98989D", fontSize:11, cursor:"pointer", marginTop:4 }}>
+                      {showRetired ? "▲" : "▼"} {retiredGear.length} gear(s) retirés
+                    </button>
+                  )}
+                  {showRetired && retiredGear.map(g => (
+                    <div key={g.id} style={{ background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginTop:4, opacity:0.5, display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ fontSize:12, color:"#888" }}>{g.name}</span>
+                      <span style={{ fontSize:11, color:"#666" }}>{Math.round(totalKm(g))}km total</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ── ANNUAL TRAINING HEATMAP ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const now = new Date();
+              // Build 26-week grid (6 months)
+              const WEEKS = 26;
+              const startDate = new Date(now);
+              startDate.setDate(startDate.getDate() - WEEKS * 7 + 1);
+
+              // Map: date string → TRIMP
+              const dayMap = {};
+              sessions.forEach(s => {
+                const trimp = (s.duration || 30) * ((s.rpe || 5) / 10);
+                dayMap[s.date] = (dayMap[s.date] || 0) + trimp;
+              });
+
+              const maxTrimp = Math.max(...Object.values(dayMap), 1);
+
+              // Build weeks array: each week = 7 days
+              const weeks = [];
+              for (let w = 0; w < WEEKS; w++) {
+                const week = [];
+                for (let d = 0; d < 7; d++) {
+                  const dt = new Date(startDate);
+                  dt.setDate(dt.getDate() + w * 7 + d);
+                  const str = dt.toISOString().slice(0, 10);
+                  week.push({ date: str, trimp: dayMap[str] || 0, future: dt > now });
+                }
+                weeks.push(week);
+              }
+
+              const [tooltip, setTooltip] = React.useState(null);
+              const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+
+              // Month labels: find first week of each month
+              const monthLabels = [];
+              weeks.forEach((week, wi) => {
+                const firstDay = new Date(week[0].date);
+                if (wi === 0 || firstDay.getDate() <= 7) {
+                  if (!monthLabels.find(m => m.month === firstDay.getMonth())) {
+                    monthLabels.push({ wi, month: firstDay.getMonth() });
+                  }
+                }
+              });
+
+              const getCellColor = (trimp, future) => {
+                if (future) return "transparent";
+                if (trimp === 0) return "#2C2C2E";
+                const intensity = trimp / maxTrimp;
+                if (intensity < 0.25) return "#1C3A24";
+                if (intensity < 0.5) return "#30D15860";
+                if (intensity < 0.75) return "#30D158";
+                return "#007AFF";
+              };
+
+              const totalDays = Object.keys(dayMap).length;
+              const totalTrimp = Math.round(Object.values(dayMap).reduce((s, v) => s + v, 0));
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Heatmap d'Entraînement</div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>{totalDays} jours · {totalTrimp} TRIMP total</div>
+                  </div>
+
+                  {/* Month labels */}
+                  <div style={{ display:"flex",marginBottom:2,paddingLeft:12 }}>
+                    {weeks.map((_, wi) => {
+                      const ml = monthLabels.find(m => m.wi === wi);
+                      return (
+                        <div key={wi} style={{ flex:1,fontSize:7,color:"#8E8E93",textAlign:"center" }}>
+                          {ml ? MONTHS[ml.month] : ""}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Day labels + grid */}
+                  <div style={{ display:"flex",gap:1 }}>
+                    {/* Day labels */}
+                    <div style={{ display:"flex",flexDirection:"column",gap:1,marginRight:2 }}>
+                      {["L","M","M","J","V","S","D"].map((d,i) => (
+                        <div key={i} style={{ height:9,fontSize:6,color:"#8E8E93",lineHeight:"9px" }}>{i%2===0?d:""}</div>
+                      ))}
+                    </div>
+                    {/* Weeks */}
+                    {weeks.map((week, wi) => (
+                      <div key={wi} style={{ flex:1,display:"flex",flexDirection:"column",gap:1 }}>
+                        {week.map((day, di) => (
+                          <div key={di}
+                            onClick={() => !day.future && day.trimp > 0 && setTooltip(tooltip?.date===day.date ? null : day)}
+                            style={{ height:9,borderRadius:1,background:getCellColor(day.trimp, day.future),cursor:day.trimp>0?"pointer":"default",transition:"opacity 0.15s" }}
+                            title={day.trimp > 0 ? `${day.date}: ${Math.round(day.trimp)} TRIMP` : ""}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tooltip */}
+                  {tooltip && (
+                    <div style={{ background:"var(--bg3)",borderRadius:10,padding:"8px 12px",marginTop:10,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontSize:10,fontWeight:700,color:"var(--white)" }}>{tooltip.date}</div>
+                        <div style={{ fontSize:9,color:"#8E8E93" }}>TRIMP: <span style={{ color:"#30D158",fontWeight:700 }}>{Math.round(tooltip.trimp)}</span></div>
+                      </div>
+                      <button onClick={()=>setTooltip(null)} style={{ background:"transparent",color:"#8E8E93",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+                    </div>
+                  )}
+
+                  {/* Legend */}
+                  <div style={{ display:"flex",alignItems:"center",gap:4,marginTop:8,justifyContent:"flex-end" }}>
+                    <div style={{ fontSize:8,color:"#8E8E93" }}>Moins</div>
+                    {["#2C2C2E","#1C3A24","#30D15860","#30D158","#007AFF"].map((c,i) => (
+                      <div key={i} style={{ width:9,height:9,borderRadius:2,background:c }}/>
+                    ))}
+                    <div style={{ fontSize:8,color:"#8E8E93" }}>Plus</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── MONTHLY STATS SUMMARY ── */}
+            {(() => {
+const sessions = profile.sessions || [];
+              if (sessions.length < 2) return null;
+
+              const now = new Date();
+              const thisMonth = now.toISOString().slice(0, 7);
+              const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+              const lastMonth = lastMonthDate.toISOString().slice(0, 7);
+
+              const monthSessions = (ym) => sessions.filter(s => s.date.slice(0, 7) === ym);
+              const stats = (slist) => ({
+                count: slist.length,
+                km: Math.round(slist.reduce((s, x) => s + (parseFloat(x.distance) || 0), 0) * 10) / 10,
+                time: Math.round(slist.reduce((s, x) => s + (x.duree || 0), 0)),
+                trimp: slist.reduce((s, x) => s + Math.round((x.duree || 0) * (x.rpe || 5) / 10), 0),
+                avgRPE: slist.length ? (slist.reduce((s, x) => s + (parseFloat(x.rpe) || 5), 0) / slist.length).toFixed(1) : 0,
+              });
+
+              const cur = stats(monthSessions(thisMonth));
+              const prev = stats(monthSessions(lastMonth));
+
+              const pct = (a, b) => b === 0 ? null : Math.round((a - b) / b * 100);
+              const arrow = (v) => v === null ? "" : v > 0 ? `+${v}%` : `${v}%`;
+              const arrowColor = (v) => v === null ? "#636366" : v > 0 ? "#30D158" : "#FF453A";
+
+              const METRICS = [
+                { label: "Sessions", cur: cur.count, prev: prev.count, unit: "" },
+                { label: "Distance", cur: cur.km, prev: prev.km, unit: "km" },
+                { label: "Temps", cur: `${Math.floor(cur.time/60)}h${String(cur.time%60).padStart(2,"0")}`, prev: prev.time, prevFmt: `${Math.floor(prev.time/60)}h`, unit: "" },
+                { label: "TRIMP", cur: cur.trimp, prev: prev.trimp, unit: "" },
+                { label: "RPE moyen", cur: cur.avgRPE, prev: prev.avgRPE, unit: "" },
+              ];
+
+              const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Stats du Mois</div>
+                  <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 12, textTransform: "capitalize" }}>{monthLabel}</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                    {METRICS.map(m => {
+                      const chg = typeof m.cur === "number" && typeof m.prev === "number" ? pct(m.cur, m.prev) : null;
+                      return (
+                        <div key={m.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #2C2C2E" }}>
+                          <span style={{ fontSize: 10, color: "#8E8E93" }}>{m.label}</span>
+                          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            {chg !== null && <span style={{ fontSize: 9, color: arrowColor(chg) }}>{arrow(chg)}</span>}
+                            <span style={{ fontSize: 12, fontWeight: 800, color: "var(--fg)" }}>{m.cur}{m.unit}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {prev.count === 0 && <div style={{ marginTop: 6, fontSize: 9, color: "#8E8E93", textAlign: "center" }}>Pas de données le mois dernier pour comparer</div>}
+                </div>
+              );
+            })()}
+
+            {/* ── MONTHLY TRAINING CALENDAR ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const now = new Date();
+              const [viewYear, setViewYear] = React.useState(now.getFullYear());
+              const [viewMonth, setViewMonth] = React.useState(now.getMonth());
+
+              const monthStart = new Date(viewYear, viewMonth, 1);
+              const monthEnd = new Date(viewYear, viewMonth + 1, 0);
+              const firstDow = (monthStart.getDay() + 6) % 7; // Mon=0
+              const daysInMonth = monthEnd.getDate();
+
+              // Build session map for current month
+              const sessionMap = {};
+              sessions.forEach(s => {
+                const d = new Date(s.date);
+                if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
+                  const day = d.getDate();
+                  if (!sessionMap[day]) sessionMap[day] = [];
+                  sessionMap[day].push(s);
+                }
+              });
+
+              const TYPE_COLORS = {
+                "Course": "#FF9F0A", "HYROX Complet": "#C9A840", "Force": "#FF453A",
+                "Vélo": "#007AFF", "Natation": "#5AC8FA", "Mobilité": "#30D158",
+                "Récupération": "#636366",
+              };
+              const getColor = (sessions) => {
+                if (!sessions || sessions.length === 0) return null;
+                return TYPE_COLORS[sessions[0].type] || "#C9A840";
+              };
+              const getIntensity = (sessions) => {
+                if (!sessions) return 0;
+                const maxRpe = Math.max(...sessions.map(s => s.rpe || 5));
+                return maxRpe / 10;
+              };
+
+              const DAYS_LABELS = ["L", "M", "M", "J", "V", "S", "D"];
+              const MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+              const totalSessions = Object.values(sessionMap).reduce((s, arr) => s + arr.length, 0);
+              const activeDays = Object.keys(sessionMap).length;
+
+              const cells = [];
+              for (let i = 0; i < firstDow; i++) cells.push(null);
+              for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }}
+                      style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "4px 10px", color: "var(--fg)", cursor: "pointer", fontSize: 16 }}>‹</button>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--fg)" }}>{MONTHS[viewMonth]} {viewYear}</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>{totalSessions} séance{totalSessions > 1 ? "s" : ""} · {activeDays} jour{activeDays > 1 ? "s" : ""} actif{activeDays > 1 ? "s" : ""}</div>
+                    </div>
+                    <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }}
+                      style={{ background: "var(--bg3)", border: "none", borderRadius: 8, padding: "4px 10px", color: "var(--fg)", cursor: "pointer", fontSize: 16 }}>›</button>
+                  </div>
+
+                  {/* Day labels */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 3 }}>
+                    {DAYS_LABELS.map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 9, color: "#8E8E93", fontWeight: 700 }}>{d}</div>)}
+                  </div>
+
+                  {/* Calendar grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+                    {cells.map((day, i) => {
+                      if (!day) return <div key={`e-${i}`} />;
+                      const daySessions = sessionMap[day];
+                      const color = getColor(daySessions);
+                      const intensity = getIntensity(daySessions);
+                      const isToday = viewYear === now.getFullYear() && viewMonth === now.getMonth() && day === now.getDate();
+                      return (
+                        <div key={day} style={{
+                          aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
+                          background: color ? `${color}${Math.round(20 + intensity * 35).toString(16).padStart(2, "0")}` : "var(--bg3)",
+                          border: isToday ? "1px solid var(--yellow)" : "none",
+                          position: "relative",
+                        }}>
+                          <span style={{ fontSize: 10, fontWeight: isToday ? 800 : 400, color: color || "#8E8E93" }}>{day}</span>
+                          {daySessions && daySessions.length > 1 && (
+                            <div style={{ position: "absolute", top: 2, right: 3, fontSize: 7, color: color, fontWeight: 800 }}>{daySessions.length}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    {Object.entries(TYPE_COLORS).map(([type, color]) => (
+                      <div key={type} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                        <span style={{ fontSize: 8, color: "#8E8E93" }}>{type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── DISTANCE PRs BY ACTIVITY TYPE ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const types = ["Course", "HYROX Complet", "Vélo", "Natation"];
+              const typeIcons = { "Course": "🏃", "HYROX Complet": "🏆", "Vélo": "🚴", "Natation": "🏊" };
+              const typeColors = { "Course": "#30D158", "HYROX Complet": "#C9A840", "Vélo": "#FF9F0A", "Natation": "#007AFF" };
+
+              const prs = types.map(type => {
+                const typeSessions = sessions.filter(s => s.type === type && parseFloat(s.distance) > 0)
+                  .sort((a, b) => parseFloat(b.distance) - parseFloat(a.distance));
+                if (typeSessions.length === 0) return null;
+                const best = typeSessions[0];
+                const pace = best.duree && best.distance ? `${Math.floor(best.duree / best.distance)}:${String(Math.round((best.duree / best.distance % 1) * 60)).padStart(2,"0")}/km` : null;
+                return { type, dist: parseFloat(best.distance), date: best.date, duree: best.duree, pace, count: typeSessions.length };
+              }).filter(Boolean);
+
+              if (prs.length === 0) return null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Records de Distance</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {prs.map(pr => (
+                      <div key={pr.type} style={{ display: "flex", alignItems: "center", gap: 10, background: `${typeColors[pr.type]}12`, borderRadius: 10, padding: "8px 12px" }}>
+                        <span style={{ fontSize: 20 }}>{typeIcons[pr.type]}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: typeColors[pr.type] }}>{pr.type}</div>
+                          <div style={{ fontSize: 9, color: "#8E8E93" }}>{pr.date} · {pr.count} session{pr.count > 1 ? "s" : ""}</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 16, fontWeight: 900, color: "var(--fg)" }}>{pr.dist}km</div>
+                          {pr.pace && <div style={{ fontSize: 9, color: "#8E8E93" }}>{pr.pace}</div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -20644,6 +21705,162 @@ JSON:
                     return <div style={{ fontSize: 10, color: bmiStatus.color, textAlign: "center" }}>IMC {last.bmi} — {bmiStatus.label}</div>;
                   })()}
                   {log.length === 0 && <div style={{ textAlign: "center", fontSize: 11, color: "#8E8E93" }}>Aucun enregistrement — loggez votre premier poids</div>}
+                </div>
+              );
+            })()}
+
+            {/* ── STRENGTH STANDARDS CHECKER ── */}
+            {(() => {
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const poids = parseFloat(profile.poids) || 70;
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const stdKey = `fitrace_strength_std_${profile.name}`;
+              const [perf, setPerf] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(stdKey) || "{}"); } catch { return {}; }
+              });
+              const [editing, setEditing] = React.useState(null);
+              const [inputVal, setInputVal] = React.useState("");
+
+              const savePerf = (id, val) => {
+                const updated = { ...perf, [id]: parseFloat(val) };
+                setPerf(updated); syncedStorage.set(stdKey, updated);
+                setEditing(null); setInputVal("");
+              };
+
+              // Standards by sex (in seconds for timed, reps for counted, kg for weighted)
+              const STANDARDS = [
+                {
+                  id: "skierg_1000",
+                  name: "SkiErg 1000m",
+                  unit: "sec",
+                  icon: "⛷️",
+                  color: "#5AC8FA",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes (ex: 240 = 4:00)",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 190 }, { label: "Pro", max: 230 }, { label: "Avancé", max: 270 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 220 }, { label: "Pro", max: 265 }, { label: "Avancé", max: 310 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "wallballs_100",
+                  name: "Wall Balls 100 reps",
+                  unit: "sec",
+                  icon: "🎯",
+                  color: "#C9A840",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 280 }, { label: "Pro", max: 360 }, { label: "Avancé", max: 450 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 300 }, { label: "Pro", max: 390 }, { label: "Avancé", max: 480 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "rowing_1000",
+                  name: "Rowing 1000m",
+                  unit: "sec",
+                  icon: "🚣",
+                  color: "#007AFF",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 200 }, { label: "Pro", max: 240 }, { label: "Avancé", max: 280 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 230 }, { label: "Pro", max: 270 }, { label: "Avancé", max: 320 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "burpee_80m",
+                  name: "Burpee BJ 80m",
+                  unit: "sec",
+                  icon: "🤸",
+                  color: "#FF453A",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 240 }, { label: "Pro", max: 300 }, { label: "Avancé", max: 380 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 270 }, { label: "Pro", max: 340 }, { label: "Avancé", max: 420 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+                {
+                  id: "run_1km",
+                  name: "1km run",
+                  unit: "sec",
+                  icon: "🏃",
+                  color: "#FF9F0A",
+                  display: (v) => `${Math.floor(v/60)}:${String(Math.round(v%60)).padStart(2,"0")}`,
+                  placeholder: "Temps en secondes",
+                  levels: sex === "H"
+                    ? [{ label: "Elite", max: 200 }, { label: "Pro", max: 240 }, { label: "Avancé", max: 290 }, { label: "Débutant", max: 999 }]
+                    : [{ label: "Elite", max: 230 }, { label: "Pro", max: 270 }, { label: "Avancé", max: 320 }, { label: "Débutant", max: 999 }],
+                  lower: true,
+                },
+              ];
+
+              const getLevel = (std, val) => {
+                if (!val) return null;
+                for (const lv of std.levels) {
+                  if (std.lower ? val <= lv.max : val >= lv.max) return lv.label;
+                }
+                return std.levels[std.levels.length - 1].label;
+              };
+              const LEVEL_COLORS = { Elite: "#FFD60A", Pro: "#30D158", Avancé: "#007AFF", Débutant: "#636366" };
+
+              const getBarPct = (std, val) => {
+                if (!val) return 0;
+                const elite = std.levels[0].max;
+                const debut = std.levels[std.levels.length - 2].max;
+                if (std.lower) return Math.min(100, Math.max(0, Math.round(((debut - val) / (debut - elite)) * 100)));
+                return Math.min(100, Math.max(0, Math.round(((val - debut) / (elite - debut)) * 100)));
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Standards HYROX · {sex === "H" ? "Homme" : "Femme"}</div>
+
+                  {STANDARDS.map(std => {
+                    const val = perf[std.id] || null;
+                    const level = getLevel(std, val);
+                    const levelColor = level ? LEVEL_COLORS[level] : "#636366";
+                    const barPct = getBarPct(std, val);
+
+                    return (
+                      <div key={std.id} style={{ marginBottom: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 14 }}>{std.icon}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg)" }}>{std.name}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {val && <span style={{ fontSize: 11, fontWeight: 800, color: levelColor }}>{std.display(val)} · {level}</span>}
+                            <button onClick={() => { setEditing(editing === std.id ? null : std.id); setInputVal(val ? String(val) : ""); }}
+                              style={{ background: "var(--bg3)", border: "none", borderRadius: 6, padding: "3px 8px", color: "var(--fg)", cursor: "pointer", fontSize: 10 }}>
+                              {editing === std.id ? "✕" : val ? "✏" : "+ Saisir"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Progress bar showing level */}
+                        <div style={{ position: "relative", height: 6, background: "#2C2C2E", borderRadius: 3, marginBottom: 2 }}>
+                          <div style={{ height: "100%", width: `${barPct}%`, background: levelColor, borderRadius: 3, transition: "width 0.5s" }} />
+                          {/* Level markers */}
+                          {[33, 66].map((pct, i) => (
+                            <div key={i} style={{ position: "absolute", top: -1, left: `${pct}%`, width: 1, height: 8, background: "#2C2C2E" }} />
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#7C7C80" }}>
+                          {std.levels.map(l => <span key={l.label} style={{ color: LEVEL_COLORS[l.label] }}>{l.label}</span>)}
+                        </div>
+
+                        {editing === std.id && (
+                          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                            <input type="number" value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder={std.placeholder}
+                              style={{ flex: 1, background: "var(--bg3)", border: `1px solid ${std.color}50`, borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12 }} />
+                            <button onClick={() => savePerf(std.id, inputVal)} style={{ background: std.color, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontWeight: 700, cursor: "pointer" }}>✓</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })()}
