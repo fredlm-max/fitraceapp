@@ -19623,6 +19623,658 @@ JSON:
               );
             })()}
 
+            {/* ── TRAINING VOLUME PYRAMID ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              const sessions = profile.sessions || [];
+              const now = Date.now();
+              const recent = sessions.filter(s => s.date && (now - new Date(s.date)) < 28 * 86400000);
+
+              // Classify sessions into polarized zones
+              const classify = s => {
+                if (["mobilite"].includes(s.type)) return "recovery";
+                if (["running_zone2"].includes(s.type)) return "z1z2";
+                if (["running_qualite", "hybride_compromis", "coach"].includes(s.type)) return "z3plus";
+                if (["force_stations"].includes(s.type)) return "strength";
+                return "z1z2";
+              };
+
+              const counts = { z1z2: 0, z3plus: 0, strength: 0, recovery: 0 };
+              recent.forEach(s => { const c = classify(s); counts[c]++; });
+              const total = recent.length || 1;
+
+              const pz1z2 = Math.round((counts.z1z2 / total) * 100);
+              const pz3 = Math.round((counts.z3plus / total) * 100);
+              const pstr = Math.round((counts.strength / total) * 100);
+              const prec = Math.round((counts.recovery / total) * 100);
+
+              const ideal80 = pz1z2 >= 70; // 80/20 rule approximation
+              const idealStr = pstr >= 20 && pstr <= 40; // HYROX needs strength
+
+              const LAYERS = [
+                { label: "Récupération active", pct: prec, color: "#30D158", idealRange: "10-20%", icon: "🌿", width: "40%" },
+                { label: "Zone 1-2 (aérobie)", pct: pz1z2, color: "#007AFF", idealRange: "50-70%", icon: "🏃", width: "65%" },
+                { label: "Force / Stations", pct: pstr, color: "#BF5AF2", idealRange: "20-35%", icon: "💪", width: "80%" },
+                { label: "Zone 3+ (haute int.)", pct: pz3, color: "#FF453A", idealRange: "10-20%", icon: "🔥", width: "100%" },
+              ];
+
+              return (
+                <div style={{ marginBottom: 16, background: "var(--bg2)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>📐 PYRAMIDE D'ENTRAÎNEMENT</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>28 derniers jours · {recent.length} séances</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: ideal80 ? "#30D158" : "#FF9F0A", marginBottom: 14, fontWeight: 600 }}>
+                    {ideal80 ? "✅ Polarisation correcte (méthode 80/20)" : "⚠️ Augmente le volume Z1-Z2 pour optimiser"}
+                  </div>
+
+                  {/* Pyramid SVG */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, marginBottom: 14 }}>
+                    {LAYERS.map((l, i) => (
+                      <div key={l.label} style={{ width: l.width, background: l.color + "22", border: `1px solid ${l.color}40`, borderRadius: 6, padding: "6px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 11, color: "var(--white)", fontWeight: 600 }}>{l.icon} {l.label}</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 12, color: l.color, fontWeight: 800 }}>{l.pct}%</span>
+                          <span style={{ fontSize: 9, color: "#8E8E93" }}>/{l.idealRange}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Balance score */}
+                  <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 10 }}>
+                    <div style={{ fontSize: 11, color: "#8E8E93", marginBottom: 8 }}>DISTRIBUTION RÉELLE vs IDÉALE HYROX</div>
+                    {LAYERS.slice().reverse().map(l => (
+                      <div key={l.label} style={{ marginBottom: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                          <span style={{ fontSize: 10, color: "#AEAEB2" }}>{l.label}</span>
+                          <span style={{ fontSize: 10, color: l.color, fontWeight: 700 }}>{l.pct}%</span>
+                        </div>
+                        <div style={{ height: 5, background: "#3A3A3C", borderRadius: 99 }}>
+                          <div style={{ width: `${l.pct}%`, height: "100%", background: l.color, borderRadius: 99 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── PERFORMANCE TRENDS ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 5) return null;
+
+              const now = Date.now();
+              // Last 8 weeks, grouped
+              const weeks = Array.from({length:8},(_,i)=>{
+                const start = new Date(now-(7-i)*7*86400000).toISOString().slice(0,10);
+                const end   = new Date(now-(7-i-1)*7*86400000).toISOString().slice(0,10);
+                const wSess = sessions.filter(s=>s.date>=start&&s.date<end);
+                const runs = wSess.filter(s=>s.km>0&&s.duration>0);
+                const avgPace = runs.length ? runs.reduce((s,e)=>s+(e.duration/e.km),0)/runs.length : null; // min/km
+                const avgRpe = wSess.length ? wSess.reduce((s,e)=>s+(e.rpe||5),0)/wSess.length : null;
+                const vol = wSess.reduce((s,e)=>s+(e.km||0),0);
+                return { label:`S${i+1}`, avgPace, avgRpe, vol, count:wSess.length };
+              });
+
+              const METRICS = [
+                {
+                  key:"avgPace", label:"Allure moy.", unit:"min/km", icon:"⚡",
+                  color:"#007AFF", lowerBetter:true,
+                  fmt:(v)=>v?`${Math.floor(v)}:${String(Math.round((v%1)*60)).padStart(2,"0")}`:"–",
+                },
+                {
+                  key:"avgRpe", label:"RPE moyen", unit:"/10", icon:"💥",
+                  color:"#FF9F0A", lowerBetter:false,
+                  fmt:(v)=>v?v.toFixed(1):"–",
+                },
+                {
+                  key:"vol", label:"Volume", unit:"km", icon:"📏",
+                  color:"#30D158", lowerBetter:false,
+                  fmt:(v)=>v?v.toFixed(1)+"km":"–",
+                },
+              ];
+
+              const [activeMet, setActiveMet] = React.useState("avgPace");
+              const met = METRICS.find(m=>m.key===activeMet);
+
+              const validWeeks = weeks.filter(w=>w[activeMet]!==null&&w[activeMet]!==0);
+              const vals = validWeeks.map(w=>w[activeMet]);
+              const minV = Math.min(...vals), maxV = Math.max(...vals,minV+0.01);
+
+              // Linear trend (least squares)
+              const n = vals.length;
+              let trend = null;
+              if (n >= 3) {
+                const xMean = (n-1)/2;
+                const yMean = vals.reduce((s,v)=>s+v,0)/n;
+                const num = vals.reduce((s,v,i)=>s+(i-xMean)*(v-yMean),0);
+                const den = vals.reduce((s,_,i)=>s+(i-xMean)**2,0);
+                const slope = den ? num/den : 0;
+                trend = slope;
+              }
+
+              const improving = trend !== null && (met.lowerBetter ? trend < -0.001 : trend > 0.001);
+              const regressing = trend !== null && (met.lowerBetter ? trend > 0.001 : trend < -0.001);
+              const trendColor = improving ? "#30D158" : regressing ? "#FF453A" : "#FF9F0A";
+              const trendLabel = improving ? "↗ En progression" : regressing ? "↘ En régression" : "→ Stable";
+
+              const W=300,H=80,PL=4,PR=4,PT=8,PB=16;
+              const cW=W-PL-PR, cH=H-PT-PB;
+
+              const points = validWeeks.map((w,i)=>{
+                const idx = weeks.indexOf(w);
+                const x = PL + (idx/7)*cW;
+                const y = PT + cH - ((w[activeMet]-minV)/(maxV-minV))*cH;
+                return { x, y, w };
+              });
+
+              const polyline = points.map(p=>`${p.x},${p.y}`).join(" ");
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Tendances Performance</div>
+                    <div style={{ fontSize:9,fontWeight:800,color:trendColor }}>{trendLabel}</div>
+                  </div>
+
+                  {/* Metric selector */}
+                  <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                    {METRICS.map(m=>(
+                      <button key={m.key} onClick={()=>setActiveMet(m.key)}
+                        style={{ flex:1,background:activeMet===m.key?m.color+"30":"var(--bg3)",color:activeMet===m.key?m.color:"#8E8E93",border:`1px solid ${activeMet===m.key?m.color+"60":"transparent"}`,borderRadius:8,padding:"6px 4px",fontSize:9,fontWeight:activeMet===m.key?800:400,cursor:"pointer",textAlign:"center" }}>
+                        {m.icon} {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Chart */}
+                  {points.length >= 2 ? (
+                    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ marginBottom:8 }}>
+                      {/* Grid */}
+                      {[0,0.5,1].map(f=>(
+                        <line key={f} x1={PL} x2={W-PR} y1={PT+cH*(1-f)} y2={PT+cH*(1-f)} stroke="#2C2C2E" strokeWidth={0.5}/>
+                      ))}
+                      {/* Area */}
+                      <defs>
+                        <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={met.color} stopOpacity="0.3"/>
+                          <stop offset="100%" stopColor={met.color} stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      {points.length>=2 && (
+                        <polygon
+                          points={`${points[0].x},${PT+cH} ${polyline} ${points[points.length-1].x},${PT+cH}`}
+                          fill="url(#trendGrad)"/>
+                      )}
+                      {/* Line */}
+                      <polyline points={polyline} fill="none" stroke={met.color} strokeWidth={2} strokeLinejoin="round"/>
+                      {/* Dots */}
+                      {points.map((p,i)=>(
+                        <g key={i}>
+                          <circle cx={p.x} cy={p.y} r={3} fill={met.color}/>
+                          <text x={p.x} y={H-2} textAnchor="middle" fill="#8E8E93" fontSize={7}>{p.w.label}</text>
+                        </g>
+                      ))}
+                      {/* Trend line (dashed) */}
+                      {trend !== null && points.length>=2 && (
+                        <line
+                          x1={points[0].x} y1={PT+cH-((vals[0]-minV)/(maxV-minV))*cH}
+                          x2={points[points.length-1].x} y2={PT+cH-((vals[vals.length-1]-minV)/(maxV-minV))*cH}
+                          stroke={trendColor} strokeWidth={1} strokeDasharray="4 3" opacity={0.7}/>
+                      )}
+                    </svg>
+                  ) : (
+                    <div style={{ textAlign:"center",color:"#8E8E93",fontSize:10,padding:"16px 0" }}>Pas assez de données (min. 5 séances)</div>
+                  )}
+
+                  {/* Weekly values */}
+                  <div style={{ display:"flex",gap:3 }}>
+                    {weeks.map((w,i)=>{
+                      const v = w[activeMet];
+                      const isLast = i===7;
+                      return (
+                        <div key={i} style={{ flex:1,textAlign:"center" }}>
+                          <div style={{ fontSize:8,fontWeight:isLast?800:400,color:isLast?met.color:"#8E8E93",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{v?met.fmt(v):"–"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── TRAINING LOAD FORECASTER ── */}
+            {(() => {
+              const PLAN_KEY = `fitrace_planned_${profile.name}`;
+              const CFG_KEY = `fitrace_forecast_cfg_${profile.name}`;
+
+              const [cfg, setCfg] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(CFG_KEY) || "{}"); } catch { return {}; }
+              });
+              const [horizon, setHorizon] = React.useState(28);
+
+              const sessions = profile.sessions || [];
+              const plannedSessions = (() => { try { return JSON.parse(localStorage.getItem(PLAN_KEY) || "{}"); } catch { return {}; }})();
+              const today = new Date().toISOString().slice(0,10);
+
+              const kATL = 1 - Math.exp(-1/7);
+              const kCTL = 1 - Math.exp(-1/42);
+
+              // Bootstrap from 84 days of history
+              let atl = 0, ctl = 0;
+              const histStart = new Date(today); histStart.setDate(histStart.getDate()-84);
+              for (let i=0; i<=84; i++) {
+                const d = new Date(histStart); d.setDate(d.getDate()+i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = sessions.filter(s=>s.date===ds).reduce((s,x)=>s+(x.duration&&x.rpe?x.duration*(x.rpe/10):0),0);
+                atl = atl + kATL*(trimp-atl);
+                ctl = ctl + kCTL*(trimp-ctl);
+              }
+
+              // Planned TRIMP from calendar planner
+              const getPlannedTrimp = (ds) => {
+                const ps = plannedSessions[ds];
+                if (!ps) return cfg.defaultLoad || 0;
+                const arr = Array.isArray(ps) ? ps : [ps];
+                return arr.reduce((s,p) => s + (p.duration && p.rpe ? p.duration*(p.rpe/10) : (p.duration || 0)*0.5), 0);
+              };
+
+              // Forecast
+              const forecast = [];
+              let fAtl = atl, fCtl = ctl;
+              for (let i=1; i<=horizon; i++) {
+                const d = new Date(today); d.setDate(d.getDate()+i);
+                const ds = d.toISOString().slice(0,10);
+                const trimp = getPlannedTrimp(ds);
+                fAtl = fAtl + kATL*(trimp-fAtl);
+                fCtl = fCtl + kCTL*(trimp-fCtl);
+                const tsb = fCtl - fAtl;
+                forecast.push({ date:ds, day:i, atl:Math.round(fAtl*10)/10, ctl:Math.round(fCtl*10)/10, tsb:Math.round(tsb*10)/10, trimp });
+              }
+
+              // Find optimal peak (highest TSB while CTL still growing or stable)
+              const peakDay = forecast.reduce((best, f, i) => {
+                if (f.tsb > (forecast[best]?.tsb||0) && f.tsb > -5) return i;
+                return best;
+              }, 0);
+
+              // Chart
+              const W = 300, H = 90;
+              const allVals = [...forecast.map(f=>f.ctl), ...forecast.map(f=>f.atl), ...forecast.map(f=>f.tsb)];
+              const minV = Math.min(...allVals)-5, maxV = Math.max(...allVals)+5;
+              const toX = i => (i/(horizon-1))*W;
+              const toY = v => H - ((v-minV)/(maxV-minV))*H;
+
+              const peakForecast = forecast[peakDay];
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#98989D" }}>TRAININGPEAKS · PRÉDICTION DE FORME</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🔭 Load Forecaster</div>
+                    </div>
+                    <div style={{ display:"flex", gap:6 }}>
+                      {[14,28,42].map(h => (
+                        <button key={h} onClick={() => setHorizon(h)}
+                          style={{ background:horizon===h?"var(--yellow)":"var(--bg3)", border:"none", borderRadius:8, padding:"4px 10px", color:horizon===h?"#000":"#888", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          {h}j
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Current state */}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+                    {[
+                      { label:"CTL actuel", val:Math.round(ctl), color:"#64D2FF", desc:"Forme" },
+                      { label:"ATL actuel", val:Math.round(atl), color:"#FF9F0A", desc:"Fatigue" },
+                      { label:"TSB actuel", val:Math.round(ctl-atl), color: (ctl-atl)>=0?"#30D158":"#FF453A", desc:"Fraîcheur" },
+                    ].map((s,i) => (
+                      <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                        <div style={{ fontSize:16, fontWeight:900, color:s.color }}>{s.val > 0 ? "+" : ""}{s.val}</div>
+                        <div style={{ fontSize:10, color:"#aaa", fontWeight:600 }}>{s.label}</div>
+                        <div style={{ fontSize:9, color:"#98989D" }}>{s.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Forecast chart */}
+                  <div style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:10, color:"#98989D", marginBottom:6 }}>PRÉVISION {horizon} JOURS</div>
+                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", height:H, overflow:"visible" }}>
+                      {/* TSB zero line */}
+                      <line x1="0" y1={toY(0)} x2={W} y2={toY(0)} stroke="#333" strokeWidth="0.5" strokeDasharray="3,3"/>
+
+                      {/* CTL line */}
+                      <polyline points={forecast.map((f,i)=>`${toX(i)},${toY(f.ctl)}`).join(" ")}
+                        fill="none" stroke="#64D2FF" strokeWidth="1.5" strokeLinejoin="round"/>
+                      {/* ATL line */}
+                      <polyline points={forecast.map((f,i)=>`${toX(i)},${toY(f.atl)}`).join(" ")}
+                        fill="none" stroke="#FF9F0A" strokeWidth="1.5" strokeLinejoin="round"/>
+                      {/* TSB line */}
+                      <polyline points={forecast.map((f,i)=>`${toX(i)},${toY(f.tsb)}`).join(" ")}
+                        fill="none" stroke="#30D158" strokeWidth="2" strokeLinejoin="round"/>
+
+                      {/* Peak marker */}
+                      {peakForecast && (
+                        <g>
+                          <line x1={toX(peakDay)} y1={0} x2={toX(peakDay)} y2={H} stroke="var(--yellow)" strokeWidth="1" strokeDasharray="3,3"/>
+                          <circle cx={toX(peakDay)} cy={toY(peakForecast.tsb)} r="4" fill="var(--yellow)"/>
+                        </g>
+                      )}
+                    </svg>
+                    <div style={{ display:"flex", gap:12, marginTop:4, fontSize:9, color:"#666" }}>
+                      <span style={{ color:"#64D2FF" }}>── CTL Forme</span>
+                      <span style={{ color:"#FF9F0A" }}>── ATL Fatigue</span>
+                      <span style={{ color:"#30D158" }}>── TSB Fraîcheur</span>
+                    </div>
+                  </div>
+
+                  {/* Peak window */}
+                  {peakForecast && (
+                    <div style={{ background:"rgba(201,168,64,0.12)", border:"1px solid rgba(201,168,64,0.4)", borderRadius:12, padding:"10px 14px", marginBottom:12 }}>
+                      <div style={{ fontSize:10, color:"var(--yellow)", fontWeight:700, marginBottom:4 }}>🏆 FENÊTRE DE PERFORMANCE OPTIMALE</div>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:800, color:"#fff" }}>{peakForecast.date}</div>
+                          <div style={{ fontSize:11, color:"#888" }}>J+{peakForecast.day} · TSB: <strong style={{ color:"#30D158" }}>+{peakForecast.tsb}</strong></div>
+                        </div>
+                        <div style={{ fontSize:11, color:"#888", textAlign:"right" }}>
+                          <div>CTL: {peakForecast.ctl}</div>
+                          <div>ATL: {peakForecast.atl}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Daily load input */}
+                  <div style={{ background:"var(--bg3)", borderRadius:10, padding:"10px 14px" }}>
+                    <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>CHARGE QUOTIDIENNE PAR DÉFAUT (si pas de séance planifiée)</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <input type="range" min="0" max="100" value={cfg.defaultLoad||0}
+                        onChange={e => {
+                          const next = { ...cfg, defaultLoad:parseInt(e.target.value) };
+                          setCfg(next);
+                          localStorage.setItem(CFG_KEY, JSON.stringify(next));
+                        }}
+                        style={{ flex:1, accentColor:"var(--yellow)" }}/>
+                      <span style={{ fontSize:13, fontWeight:700, color:"var(--yellow)", minWidth:40, textAlign:"right" }}>{cfg.defaultLoad||0} TRIMP</span>
+                    </div>
+                    <div style={{ fontSize:10, color:"#98989D", marginTop:4 }}>Utilise le Planificateur pour définir des séances précises → le forecaster les prend en compte automatiquement</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+
+            {/* ── VO2MAX ESTIMATOR ── */}
+            {(() => {
+              const KEY = `fitrace_vo2max_${profile.name}`;
+
+              const [tests, setTests] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+              });
+              const [method, setMethod] = React.useState("cooper");
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ date: new Date().toISOString().slice(0,10), cooperDist:2800, paceSec:300, hrRest:55, hrMax:185, notes:"" });
+
+              const age = parseInt(profile.age) || 30;
+              const sex = (profile.sexe || "M").toUpperCase();
+              const bw = parseFloat(profile.poids) || 70;
+
+              // VO2max estimation formulas
+              const estimateCooper = (distM) => Math.round((distM - 504.9) / 44.73);
+              const estimatePace = (paceSec) => {
+                const vms = 1000 / paceSec; // m/s
+                const vmMin = vms * 60; // m/min
+                const vo2 = 0.2*vmMin + 3.5;
+                return Math.round(vo2 * 10) / 10;
+              };
+              const estimateHR = (hrRest, hrMax) => Math.round(15 * (hrMax / hrRest) * 10) / 10;
+
+              const calcVo2 = (f) => {
+                if (f.method === "cooper") return estimateCooper(f.cooperDist);
+                if (f.method === "pace") return estimatePace(f.paceSec);
+                if (f.method === "hr") return estimateHR(f.hrRest, f.hrMax);
+                return 0;
+              };
+
+              // Live estimate from current form
+              const liveVo2 = method === "cooper" ? estimateCooper(form.cooperDist)
+                : method === "pace" ? estimatePace(form.paceSec)
+                : estimateHR(form.hrRest, form.hrMax);
+
+              // Auto-estimate from best run sessions
+              const sessions = profile.sessions || [];
+              const runSess = sessions.filter(s => s.type?.toLowerCase().includes("run") && s.distance && s.duration);
+              const autoVo2 = runSess.length > 0
+                ? (() => {
+                    const best = Math.min(...runSess.map(s => (s.duration*60)/parseFloat(s.distance)));
+                    return estimatePace(best);
+                  })()
+                : null;
+
+              const currentVo2 = tests.length > 0 ? calcVo2(tests[0]) : autoVo2;
+
+              // Norms by age/sex
+              const NORMS = sex === "F"
+                ? [
+                    { label:"Excellent", min:52, color:"#30D158" },
+                    { label:"Bon", min:44, color:"#64D2FF" },
+                    { label:"Au-dessus moy.", min:37, color:"var(--yellow)" },
+                    { label:"Moyen", min:30, color:"#FF9F0A" },
+                    { label:"En-dessous moy.", min:0, color:"#FF453A" },
+                  ]
+                : [
+                    { label:"Excellent", min:56, color:"#30D158" },
+                    { label:"Bon", min:49, color:"#64D2FF" },
+                    { label:"Au-dessus moy.", min:43, color:"var(--yellow)" },
+                    { label:"Moyen", min:36, color:"#FF9F0A" },
+                    { label:"En-dessous moy.", min:0, color:"#FF453A" },
+                  ];
+
+              const categoryFor = (v) => NORMS.find(n => v >= n.min) || NORMS[NORMS.length-1];
+              const cat = currentVo2 ? categoryFor(currentVo2) : null;
+
+              const saveTest = () => {
+                const entry = { ...form, method, id: Date.now() };
+                const next = [entry, ...tests].slice(0,20);
+                setTests(next);
+                syncedStorage.set(KEY, next);
+                setShowForm(false);
+              };
+
+              const fmtPace = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}/km`;
+
+              // SVG trend chart
+              const chartTests = tests.slice(0,10).reverse();
+              const chartW = 280, chartH = 80;
+              const vo2Values = chartTests.map(t => calcVo2(t));
+              const allVals = [...vo2Values, autoVo2||0].filter(Boolean);
+              const minV = Math.max(0, Math.min(...allVals)-5);
+              const maxV = Math.max(...allVals)+5;
+              const xStep = chartTests.length > 1 ? chartW/(chartTests.length-1) : chartW;
+              const toY = v => chartH - ((v-minV)/(maxV-minV))*chartH;
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#98989D" }}>GARMIN · ESTIMATION VO₂MAX</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>🫁 VO₂max Tracker</div>
+                    </div>
+                    {currentVo2 && (
+                      <div style={{ textAlign:"center" }}>
+                        <div style={{ fontSize:30, fontWeight:900, color:cat?.color||"var(--yellow)" }}>{currentVo2}</div>
+                        <div style={{ fontSize:9, color:cat?.color||"#666", fontWeight:700 }}>{cat?.label}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current status */}
+                  {currentVo2 && (
+                    <>
+                      {/* Scale bar */}
+                      <div style={{ marginBottom:14 }}>
+                        <div style={{ display:"flex", height:10, borderRadius:5, overflow:"hidden", marginBottom:4 }}>
+                          {NORMS.slice().reverse().map((n,i) => (
+                            <div key={i} style={{ flex:1, background:n.color, opacity:0.7 }}/>
+                          ))}
+                        </div>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#98989D" }}>
+                          <span>Faible</span><span>Moyen</span><span>Bon</span><span>Excellent</span>
+                        </div>
+                        {/* Indicator */}
+                        <div style={{ position:"relative", height:6, marginTop:4 }}>
+                          <div style={{ position:"absolute", left:`${Math.min(95, Math.max(2, ((currentVo2-25)/(80-25))*100))}%`,
+                            width:3, height:12, background:"#fff", borderRadius:2, top:-3, transform:"translateX(-50%)" }}/>
+                        </div>
+                      </div>
+
+                      {/* Fitness equivalents */}
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+                        {[
+                          { label:"5km estimé", val:`${Math.round(((108.845-1.0567*currentVo2)/1000)*5000/60)}:${String(Math.round(((108.845-1.0567*currentVo2)/1000)*5000)%60).padStart(2,"0")}`, icon:"🏃" },
+                          { label:"10km estimé", val:`${Math.floor(((108.845-1.0567*currentVo2)/1000)*10000/60)}:${String(Math.round(((108.845-1.0567*currentVo2)/1000)*10000)%60).padStart(2,"0")}`, icon:"🛤️" },
+                          { label:"VMA≈", val:`${(currentVo2/3.5).toFixed(1)} km/h`, icon:"⚡" },
+                        ].map((s,i) => (
+                          <div key={i} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px", textAlign:"center" }}>
+                            <div style={{ fontSize:18 }}>{s.icon}</div>
+                            <div style={{ fontSize:13, fontWeight:800, color:"var(--yellow)" }}>{s.val}</div>
+                            <div style={{ fontSize:9, color:"#666" }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Auto estimate notice */}
+                  {autoVo2 && tests.length === 0 && (
+                    <div style={{ background:"rgba(201,168,64,0.1)", border:"1px solid rgba(201,168,64,0.3)", borderRadius:10, padding:"8px 12px", marginBottom:12, fontSize:11, color:"#888" }}>
+                      📊 Estimé automatiquement depuis tes sessions run. Ajoute un test Cooper pour plus de précision.
+                    </div>
+                  )}
+
+                  {/* Trend chart */}
+                  {chartTests.length >= 2 && (
+                    <div style={{ marginBottom:14 }}>
+                      <div style={{ fontSize:10, color:"#98989D", marginBottom:6 }}>PROGRESSION</div>
+                      <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width:"100%", height:chartH }}>
+                        <defs>
+                          <linearGradient id="vo2grad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--yellow)" stopOpacity="0.3"/>
+                            <stop offset="100%" stopColor="var(--yellow)" stopOpacity="0"/>
+                          </linearGradient>
+                        </defs>
+                        <polyline points={vo2Values.map((v,i)=>`${i*xStep},${toY(v)}`).join(" ")}
+                          fill="none" stroke="var(--yellow)" strokeWidth="2" strokeLinejoin="round"/>
+                        {vo2Values.map((v,i) => (
+                          <circle key={i} cx={i*xStep} cy={toY(v)} r="4" fill="var(--yellow)"/>
+                        ))}
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* Form */}
+                  {showForm ? (
+                    <div style={{ background:"var(--bg3)", borderRadius:14, padding:14 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#fff", marginBottom:10 }}>Nouveau test VO₂max</div>
+
+                      {/* Method selector */}
+                      <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+                        {[
+                          { id:"cooper", label:"Cooper 12min", emoji:"🏃" },
+                          { id:"pace", label:"Allure best", emoji:"⚡" },
+                          { id:"hr", label:"FC repos/max", emoji:"❤️" },
+                        ].map(m => (
+                          <button key={m.id} onClick={() => setMethod(m.id)}
+                            style={{ flex:1, background: method===m.id?"var(--yellow)":"var(--bg2)", border:"none", borderRadius:8, padding:"6px 4px", color: method===m.id?"#000":"#888", fontSize:10, fontWeight: method===m.id?700:400, cursor:"pointer" }}>
+                            {m.emoji}<br/>{m.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <input type="date" value={form.date} onChange={e => setForm(f=>({...f,date:e.target.value}))}
+                        style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:12, marginBottom:10, boxSizing:"border-box" }}/>
+
+                      {method === "cooper" && (
+                        <div>
+                          <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>Distance parcourue en 12min (mètres)</div>
+                          <input type="number" min="1000" max="5000" step="50" value={form.cooperDist}
+                            onChange={e => setForm(f=>({...f,cooperDist:parseInt(e.target.value)||2800}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:14, textAlign:"center", fontWeight:700, boxSizing:"border-box" }}/>
+                        </div>
+                      )}
+                      {method === "pace" && (
+                        <div>
+                          <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>Meilleure allure récente (sec/km)</div>
+                          <input type="number" min="180" max="600" value={form.paceSec}
+                            onChange={e => setForm(f=>({...f,paceSec:parseInt(e.target.value)||300}))}
+                            style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"8px 10px", color:"#fff", fontSize:14, textAlign:"center", fontWeight:700, boxSizing:"border-box" }}/>
+                          <div style={{ fontSize:10, color:"#666", marginTop:4, textAlign:"center" }}>{fmtPace(form.paceSec)}</div>
+                        </div>
+                      )}
+                      {method === "hr" && (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          <div>
+                            <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>FC repos (bpm)</div>
+                            <input type="number" min="30" max="100" value={form.hrRest}
+                              onChange={e => setForm(f=>({...f,hrRest:parseInt(e.target.value)||55}))}
+                              style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:13, textAlign:"center", boxSizing:"border-box" }}/>
+                          </div>
+                          <div>
+                            <div style={{ fontSize:10, color:"#98989D", marginBottom:4 }}>FC max (bpm)</div>
+                            <input type="number" min="140" max="220" value={form.hrMax}
+                              onChange={e => setForm(f=>({...f,hrMax:parseInt(e.target.value)||185}))}
+                              style={{ width:"100%", background:"var(--bg2)", border:"1px solid #444", borderRadius:8, padding:"6px 8px", color:"#fff", fontSize:13, textAlign:"center", boxSizing:"border-box" }}/>
+                          </div>
+                        </div>
+                      )}
+
+                      {liveVo2 > 0 && (
+                        <div style={{ textAlign:"center", margin:"10px 0", fontSize:13, color:"var(--yellow)", fontWeight:700 }}>
+                          VO₂max estimé: {liveVo2} mL/kg/min — {categoryFor(liveVo2)?.label}
+                        </div>
+                      )}
+
+                      <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                        <button onClick={() => setShowForm(false)}
+                          style={{ flex:1, background:"var(--bg2)", border:"none", borderRadius:10, padding:"10px 0", color:"#888", fontSize:12, cursor:"pointer" }}>Annuler</button>
+                        <button onClick={saveTest}
+                          style={{ flex:2, background:"var(--yellow)", border:"none", borderRadius:10, padding:"10px 0", color:"#000", fontSize:12, fontWeight:800, cursor:"pointer" }}>Sauvegarder</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowForm(true)}
+                      style={{ width:"100%", background:"var(--bg3)", border:"1px dashed #444", borderRadius:12, padding:"11px 0", color:"#888", fontSize:13, cursor:"pointer" }}>
+                      + Ajouter un test VO₂max
+                    </button>
+                  )}
+
+                  {/* History */}
+                  {tests.slice(0,3).map((t,i) => {
+                    const v = calcVo2(t);
+                    const c = categoryFor(v);
+                    return (
+                      <div key={t.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--bg3)", borderRadius:10, padding:"8px 12px", marginTop:6 }}>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:"#fff" }}>{t.date}</div>
+                          <div style={{ fontSize:10, color:"#666" }}>{t.method === "cooper" ? `Cooper ${t.cooperDist}m` : t.method === "pace" ? fmtPace(t.paceSec) : `FC ${t.hrRest}/${t.hrMax}`}</div>
+                        </div>
+                        <div style={{ textAlign:"right" }}>
+                          <div style={{ fontSize:16, fontWeight:900, color:c?.color }}>{v}</div>
+                          <div style={{ fontSize:9, color:c?.color }}>mL/kg/min</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── VMA PROGRESSION CHART ── */}
             {(() => {
               const vmaKey = `fitrace_vma_history_${profile.name}`;
@@ -19843,6 +20495,92 @@ JSON:
               );
             })()}
 
+            {/* ── WEEKLY TRAINING LOAD ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const now = Date.now();
+              // Build 8 weeks of data
+              const weeks = Array.from({ length: 8 }, (_, i) => {
+                const weekAgo = 7 - i; // i=0 = oldest, i=7 = current
+                const start = new Date(now - (7 - i) * 7 * 86400000);
+                const end = new Date(now - (7 - i - 1) * 7 * 86400000);
+                const startStr = start.toISOString().slice(0,10);
+                const endStr = end.toISOString().slice(0,10);
+                const weekSessions = sessions.filter(s => s.date >= startStr && s.date < endStr);
+                const trimp = weekSessions.reduce((s, sess) => s + (sess.duration||30) * ((sess.rpe||5)/10), 0);
+                const label = `S-${7-i}`;
+                return { label: i===7?"Cette sem":label, trimp: Math.round(trimp), count: weekSessions.length };
+              });
+
+              // CTL as rolling 6-week avg (simplified for display)
+              const maxTrimp = Math.max(...weeks.map(w=>w.trimp), 1);
+              const avgTrimp = Math.round(weeks.reduce((s,w)=>s+w.trimp,0)/8);
+
+              // SVG dims
+              const W = 320, H = 120, PAD = { t:10, b:24, l:30, r:10 };
+              const chartW = W - PAD.l - PAD.r;
+              const chartH = H - PAD.t - PAD.b;
+              const barW = Math.floor(chartW / 8) - 3;
+
+              // CTL line points (6-week rolling avg)
+              const ctlPoints = weeks.map((_, i) => {
+                const slice = weeks.slice(Math.max(0, i-5), i+1);
+                const avg = slice.reduce((s,w)=>s+w.trimp,0)/slice.length;
+                const x = PAD.l + i * (chartW/8) + barW/2 + 1.5;
+                const y = PAD.t + chartH - (avg/maxTrimp)*chartH;
+                return `${x},${y}`;
+              }).join(" ");
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
+                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Charge d'Entraînement</div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>Moy. <span style={{ color:"var(--yellow)",fontWeight:700 }}>{avgTrimp} TRIMP</span>/sem</div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible" }}>
+                    {/* Grid lines */}
+                    {[0.25,0.5,0.75,1].map(f=>(
+                      <line key={f} x1={PAD.l} x2={W-PAD.r} y1={PAD.t+chartH*(1-f)} y2={PAD.t+chartH*(1-f)} stroke="#2C2C2E" strokeWidth={0.5}/>
+                    ))}
+                    {/* Y label */}
+                    <text x={PAD.l-4} y={PAD.t+chartH*(1-0.5)} textAnchor="end" fill="#8E8E93" fontSize={7} dominantBaseline="middle">{Math.round(maxTrimp*0.5)}</text>
+                    <text x={PAD.l-4} y={PAD.t} textAnchor="end" fill="#8E8E93" fontSize={7} dominantBaseline="middle">{maxTrimp}</text>
+
+                    {/* Bars */}
+                    {weeks.map((w,i)=>{
+                      const barH = w.trimp > 0 ? Math.max(2, (w.trimp/maxTrimp)*chartH) : 0;
+                      const x = PAD.l + i*(chartW/8) + 1.5;
+                      const y = PAD.t + chartH - barH;
+                      const isCurrent = i === 7;
+                      return (
+                        <g key={i}>
+                          <rect x={x} y={y} width={barW} height={barH} rx={2}
+                            fill={isCurrent ? "var(--yellow)" : w.trimp > avgTrimp ? "#30D158" : "#3A3A3C"} opacity={0.85}/>
+                          <text x={x+barW/2} y={H-PAD.b+8} textAnchor="middle" fill="#8E8E93" fontSize={7}>{w.label}</text>
+                          {w.trimp > 0 && (
+                            <text x={x+barW/2} y={y-3} textAnchor="middle" fill={isCurrent?"var(--yellow)":"#8E8E93"} fontSize={7}>{w.trimp}</text>
+                          )}
+                        </g>
+                      );
+                    })}
+                    {/* CTL trend line */}
+                    {weeks.some(w=>w.trimp>0) && (
+                      <polyline points={ctlPoints} fill="none" stroke="#BF5AF2" strokeWidth={1.5} strokeDasharray="3 2" opacity={0.8}/>
+                    )}
+                    {/* Legend */}
+                    <circle cx={W-PAD.r-50} cy={PAD.t+5} r={3} fill="#BF5AF2" opacity={0.8}/>
+                    <text x={W-PAD.r-45} y={PAD.t+9} fill="#8E8E93" fontSize={7}>CTL (6 sem)</text>
+                  </svg>
+                  <div style={{ display:"flex",gap:10,marginTop:4 }}>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>🟢 <span style={{ color:"#8E8E93" }}>Charge élevée</span></div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>🟡 <span style={{ color:"#8E8E93" }}>Semaine actuelle</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── POLARIZED TRAINING ANALYZER ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -20045,6 +20783,101 @@ JSON:
                       <div style={{ fontSize: 11, fontWeight: 700, color: Math.abs(zone80 - 80) < 10 ? "#30D158" : "#FF9F0A" }}>{Math.abs(zone80 - 80) < 10 ? "✓ Optimal" : "Ajuster"}</div>
                     </div>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── TRAINING LOAD DISTRIBUTION ── */}
+            {(profile.sessions||[]).length >= 4 && (() => {
+              const sessions = profile.sessions || [];
+              const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
+              const recent = sessions.filter(s => s.date && new Date(s.date) >= cutoff);
+              if (recent.length < 4) return null;
+
+              const TYPE_CONF = {
+                running_zone2:     { label: "Zone 2",   color: "#30D158", icon: "🏃" },
+                running_qualite:   { label: "Qualité",  color: "#FF9F0A", icon: "⚡" },
+                force_stations:    { label: "Force",    color: "#C9A840", icon: "🏋️" },
+                hybride_compromis: { label: "Hybride",  color: "#BF5AF2", icon: "🔀" },
+                mobilite:          { label: "Mobilité", color: "#38bdf8", icon: "🧘" },
+                perso:             { label: "Perso",    color: "#8E8E93", icon: "✏️" },
+                coach:             { label: "Coach",    color: "#C9A840", icon: "📋" },
+              };
+              const counts = {};
+              recent.forEach(s => {
+                const k = s.type || "perso";
+                counts[k] = (counts[k] || 0) + 1;
+              });
+              const total = recent.length;
+              const slices = Object.entries(counts)
+                .map(([k, v]) => ({ ...TYPE_CONF[k] || { label: k, color: "#8E8E93", icon: "•" }, count: v, pct: v / total }))
+                .sort((a, b) => b.count - a.count);
+
+              // SVG donut
+              const R = 48, CX = 60, CY = 60, strokeW = 18;
+              const circ = 2 * Math.PI * R;
+              let cumPct = 0;
+              const donutSlices = slices.map(s => {
+                const offset = circ * (1 - cumPct);
+                const dashLen = circ * s.pct;
+                cumPct += s.pct;
+                return { ...s, offset, dashLen };
+              });
+
+              // 80/20 check
+              const aerobicPct = Math.round(((counts.running_zone2 || 0) / total) * 100);
+              const ratio8020ok = aerobicPct >= 65;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div>
+                      <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1 }}>🥧 RÉPARTITION CHARGE</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>28 derniers jours · {total} séances</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: ratio8020ok ? "#30D158" : "#FF9F0A" }}>{ratio8020ok ? "✅" : "⚠️"} Règle 80/20</div>
+                      <div style={{ fontSize: 9, color: "#8E8E93" }}>Zone2: {aerobicPct}% / cible: 70%+</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    {/* Donut */}
+                    <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+                      <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={strokeW} />
+                      {donutSlices.map((s, i) => (
+                        <circle key={i} cx={CX} cy={CY} r={R} fill="none"
+                          stroke={s.color} strokeWidth={strokeW}
+                          strokeDasharray={`${s.dashLen} ${circ - s.dashLen}`}
+                          strokeDashoffset={s.offset}
+                          transform={`rotate(-90 ${CX} ${CY})`}
+                        />
+                      ))}
+                      <text x={CX} y={CY - 6} textAnchor="middle" fontFamily="'Bebas Neue',sans-serif" fontSize="18" fill="var(--white)">{total}</text>
+                      <text x={CX} y={CY + 10} textAnchor="middle" fontSize="9" fill="#8E8E93">séances</text>
+                    </svg>
+                    {/* Legend */}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
+                      {slices.map((s, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                              <div style={{ fontSize: 11, color: "var(--white)" }}>{s.icon} {s.label}</div>
+                              <div style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.count} <span style={{ color: "#8E8E93", fontWeight: 400 }}>({Math.round(s.pct*100)}%)</span></div>
+                            </div>
+                            <div style={{ height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, marginTop: 3 }}>
+                              <div style={{ width: `${Math.round(s.pct*100)}%`, height: "100%", background: s.color, borderRadius: 99 }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {!ratio8020ok && (
+                    <div style={{ marginTop: 12, padding: "8px 10px", background: "rgba(255,159,10,0.1)", borderRadius: 8, fontSize: 11, color: "#FF9F0A" }}>
+                      💡 Augmente le volume en Zone 2 — la recherche recommande 70–80% des séances en endurance fondamentale pour progresser en HYROX
+                    </div>
+                  )}
                 </div>
               );
             })()}
