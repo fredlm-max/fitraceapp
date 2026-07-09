@@ -15871,6 +15871,31 @@ JSON:
                     {/* Titre */}
                     <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.05, letterSpacing: 0.5, marginBottom: 6 }}>{session.titre}</div>
                     <div style={{ fontSize: 12, color: "#AEAEB2", lineHeight: 1.55, marginBottom: 14 }}>{session.explication?.slice(0, 110)}{(session.explication?.length || 0) > 110 ? "…" : ""}</div>
+                    {/* Pourquoi cette séance — rend visible la boucle d'adaptation APEX (état du jour → séance) */}
+                    {(() => {
+                      const sh = dailyData.sleepHours; const fat = dailyData.fatigue; const hrv = parseInt(dailyData.hrv) || 0;
+                      const signals = [];
+                      if (sh) signals.push({ icon: "😴", txt: `${sh}h`, tone: sh >= 7.5 ? "ok" : sh >= 6 ? "mid" : "low" });
+                      if (fat) signals.push({ icon: "💪", txt: fat <= 2 ? "Fraîche" : fat === 3 ? "Modérée" : "Fatigue élevée", tone: fat <= 2 ? "ok" : fat === 3 ? "mid" : "low" });
+                      if (hrv) signals.push({ icon: "❤️", txt: `VFC ${hrv}`, tone: hrv >= 60 ? "ok" : hrv >= 40 ? "mid" : "low" });
+                      if (!signals.length) return null;
+                      const toneColor = { ok: "#30D158", mid: "#FF9F0A", low: "#FF453A" };
+                      return (
+                        <div onClick={(e) => e.stopPropagation()} style={{ background: "rgba(0,0,0,0.28)", border: "1px solid rgba(201,168,64,0.15)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
+                          <div style={{ fontSize: 9, color: "rgba(201,168,64,0.8)", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 7 }}>⚡ Pourquoi cette séance</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                            {signals.map((s, i) => (
+                              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--white)", background: `${toneColor[s.tone]}18`, border: `1px solid ${toneColor[s.tone]}35`, borderRadius: 8, padding: "3px 8px" }}>
+                                <span>{s.icon}</span>{s.txt}
+                              </span>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1.45 }}>
+                            APEX a lu ton état du jour et a ajusté <span style={{ color: "var(--white)" }}>l'intensité et le volume</span> en conséquence.
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {/* Tuiles stats */}
                     <div style={{ display: "grid", gridTemplateColumns: z0 ? "1fr 1fr 1fr" : "1fr 1fr", gap: 8, marginBottom: 14 }}>
                       <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "10px 8px", textAlign: "center" }}>
