@@ -18935,6 +18935,51 @@ JSON:
               );
             })()}
 
+            {/* ── ZONES D'ALLURE COURSE (VMA) ── */}
+            {(() => {
+              const vma = parseFloat(profile.vmaKmh) || null;
+              const zones = [
+                { n:"Z1", name:"Récupération", vma:[50,60],  color:"#8E8E93" },
+                { n:"Z2", name:"Endurance",    vma:[60,70],  color:"#30D158" },
+                { n:"Z3", name:"Tempo",        vma:[75,83],  color:"#FF9F0A" },
+                { n:"Z4", name:"Seuil",        vma:[83,92],  color:"#FF453A" },
+                { n:"Z5", name:"VO₂max",       vma:[92,105], color:"#BF5AF2" },
+              ];
+              // Allure = min/km. % VMA plus élevé → plus rapide → min/km plus petit.
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12 }}>
+                    🏃 Zones d'allure · {vma ? `VMA ${vma} km/h` : "VMA non testée"}
+                  </div>
+                  {vma ? (
+                    <>
+                      <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+                        {zones.map(z=>(
+                          <div key={z.n} style={{ flex:1,background:"var(--bg3)",borderRadius:8,padding:"6px 3px",textAlign:"center" }}>
+                            <div style={{ fontSize:10,fontWeight:800,color:z.color }}>{z.n}</div>
+                            <div style={{ fontSize:9,color:"var(--white)",fontWeight:700,marginTop:2 }}>{paceFromVMA(vma,z.vma[1]).replace("/km","")}</div>
+                            <div style={{ fontSize:7,color:"#8E8E93" }}>min/km</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display:"flex",flexDirection:"column",gap:7 }}>
+                        {zones.map(z=>(
+                          <div key={z.n} style={{ display:"flex",alignItems:"center",gap:8 }}>
+                            <div style={{ width:8,height:8,borderRadius:"50%",background:z.color,flexShrink:0 }}/>
+                            <div style={{ fontSize:11,color:"var(--white)",fontWeight:600,flex:1 }}>{z.n} <span style={{color:"#8E8E93",fontWeight:400}}>{z.name}</span></div>
+                            <div style={{ fontSize:11,color:z.color,fontWeight:700 }}>{paceFromVMA(vma,z.vma[1]).replace("/km","")}–{paceFromVMA(vma,z.vma[0])}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:9,color:"#8E8E93",marginTop:10,lineHeight:1.4 }}>Allures calculées depuis ta VMA. Z2 = base aérobie (~80% du volume), Z4 = seuil, Z5 = intervalles courts.</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize:12,color:"#8E8E93",lineHeight:1.5,textAlign:"center",padding:"8px 0" }}>Fais le test VMA 6 min pour débloquer tes zones d'allure personnalisées.</div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── HEART RATE ZONE TRAINER ── */}
             {(() => {
               // Zones FC TOUJOURS calculées avec la méthode Karvonen (FC réserve).
