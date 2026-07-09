@@ -1921,6 +1921,23 @@ function LoginScreen({ onLogin }) {
                 ))}
               </div>
 
+              {/* Proposition de valeur — 3 bénéfices concrets */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "6px 0 10px" }}>
+                {[
+                  { icon: "🎯", title: "Un plan adapté à ton niveau", desc: "L'IA analyse tes tests (VMA, force) et génère ta séance du jour, ajustée à ta fatigue et ta course cible." },
+                  { icon: "📈", title: "Tous tes indicateurs au même endroit", desc: "Score de forme, zones FC personnalisées, nutrition, sommeil, records HYROX — suivis automatiquement." },
+                  { icon: "🏁", title: "Prêt le jour J", desc: "Simulateur de temps de course, plan par phases, et un coach IA qui répond à tes questions 24h/24." },
+                ].map(b => (
+                  <div key={b.title} style={{ display: "flex", gap: 10, alignItems: "flex-start", textAlign: "left" }}>
+                    <span style={{ fontSize: 18, lineHeight: 1.2, flexShrink: 0 }}>{b.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, color: "var(--white)", fontWeight: 600, lineHeight: 1.3 }}>{b.title}</div>
+                      <div style={{ fontSize: 11, color: "#8E8E93", lineHeight: 1.45, marginTop: 2 }}>{b.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <div style={{ height: 1, background: "rgba(255,255,255,0.08)", marginBottom: 4 }} />
 
               <button onClick={() => setMode("register")} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 14, padding: "16px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: "0.04em" }}>
