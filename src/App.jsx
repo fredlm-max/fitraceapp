@@ -1903,23 +1903,10 @@ function LoginScreen({ onLogin }) {
       <div style={{ position: "relative", padding: "60px 24px 40px", textAlign: "center", flexShrink: 0 }}>
         {/* Glow behind logo */}
         <div style={{ position: "absolute", top: 40, left: "50%", transform: "translateX(-50%)", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,213,0,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-        {/* Logo sommet APEX (A doré) */}
-        <div className="fade-in" style={{ position: "relative", width: 72, height: 60, margin: "0 auto 6px" }}>
-          <svg viewBox="0 0 72 60" width="72" height="60" aria-hidden="true">
-            <defs>
-              <linearGradient id="apexLogoGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#F4D57A"/>
-                <stop offset="55%" stopColor="#C9A840"/>
-                <stop offset="100%" stopColor="#8A6D1E"/>
-              </linearGradient>
-            </defs>
-            <path d="M36 2 L70 58 L50 58 L36 30 L22 58 L2 58 Z" fill="url(#apexLogoGrad)"/>
-            <path d="M36 24 L47 46 L36 40 L30 52 Z" fill="#0a0a08"/>
-          </svg>
-        </div>
-        <div className="bebas fade-in" style={{ fontSize: 76, color: "var(--yellow)", lineHeight: 0.85, letterSpacing: 8, position: "relative" }}>APEX</div>
-        <div style={{ marginTop: 12, color: "#8E8E93", fontSize: 11, letterSpacing: "0.22em", textTransform: "uppercase", position: "relative" }}>Entraîne · Récupère · Progresse</div>
-        <div style={{ marginTop: 18, color: "var(--white)", fontSize: 17, fontWeight: 700, lineHeight: 1.35, position: "relative", maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
+        {/* Logo APEX Performance officiel */}
+        <img src="/apex-logo.png" alt="APEX Performance" className="fade-in"
+          style={{ display: "block", width: 300, maxWidth: "88%", height: "auto", margin: "0 auto", position: "relative", mixBlendMode: "screen" }} />
+        <div style={{ marginTop: 6, color: "var(--white)", fontSize: 17, fontWeight: 700, lineHeight: 1.35, position: "relative", maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
           Ton corps change chaque jour.<br/><span style={{ color: "var(--yellow)" }}>Ton entraînement aussi.</span>
         </div>
       </div>
