@@ -18293,6 +18293,555 @@ JSON:
             </button>
             <div style={{ display: showAllProgress ? "block" : "none" }}>
 
+            {/* ── WELLNESS HISTORY CHART ── */}
+            {(() => {
+              const wellKey = `fitrace_wellness_${profile.name}`;
+              const wellLog = (() => { try { return JSON.parse(localStorage.getItem(wellKey) || "[]"); } catch { return []; } })();
+              if (wellLog.length < 3) return null;
+
+              const last14 = [];
+              for (let i = 13; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().slice(0, 10);
+                const entry = wellLog.find(e => e.date === dateStr);
+                last14.push({ dateStr, entry, dayLabel: d.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 2) });
+              }
+
+              const maxScore = 5;
+              const getScore = (e) => e ? Math.round(((e.mood || 3) + (6 - (e.stress || 3)) + (e.energy || 3)) / 3 * 10) / 10 : null;
+
+              const scores = last14.map(d => getScore(d.entry));
+              const validScores = scores.filter(s => s !== null);
+              const avg = validScores.length > 0 ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1) : null;
+
+              const W = 280, H = 60;
+              const points = last14.map((d, i) => {
+                const s = getScore(d.entry);
+                const x = 10 + (i / 13) * (W - 20);
+                const y = s !== null ? H - 5 - ((s - 1) / 4) * (H - 15) : null;
+                return { x, y, s };
+              });
+
+              const pathD = points.reduce((d, p, i) => {
+                if (p.y === null) return d;
+                const prev = points.slice(0, i).reverse().find(pp => pp.y !== null);
+                if (!prev) return `M${p.x},${p.y}`;
+                return d + ` L${p.x},${p.y}`;
+              }, "");
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Historique Bien-être (14j)</div>
+                    {avg && <div style={{ fontSize: 12, fontWeight: 800, color: parseFloat(avg) >= 3.5 ? "#30D158" : "#FF9F0A" }}>Moy: {avg}/5</div>}
+                  </div>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H, overflow: "visible" }}>
+                    {[1, 2, 3, 4, 5].map(v => {
+                      const y = H - 5 - ((v - 1) / 4) * (H - 15);
+                      return <line key={v} x1={0} y1={y} x2={W} y2={y} stroke="#2C2C2E" strokeWidth={0.5} />;
+                    })}
+                    {pathD && <path d={pathD} fill="none" stroke="#C9A840" strokeWidth={1.5} strokeLinejoin="round" />}
+                    {points.map((p, i) => p.y !== null && (
+                      <circle key={i} cx={p.x} cy={p.y} r={3} fill={p.s >= 3.5 ? "#30D158" : p.s >= 2.5 ? "#FF9F0A" : "#FF453A"} />
+                    ))}
+                  </svg>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                    {last14.filter((_, i) => i % 2 === 0).map(d => (
+                      <span key={d.dateStr} style={{ fontSize: 8, color: "#8E8E93" }}>{d.dayLabel}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── HYROX STATION SPLIT TRACKER ── */}
+            {(() => {
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const splitsKey = `fitrace_station_splits_${profile.name}`;
+              const [splits, setSplits] = React.useState(() => { try { return JSON.parse(localStorage.getItem(splitsKey) || "[]"); } catch { return []; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [formDate, setFormDate] = React.useState(new Date().toISOString().slice(0,10));
+              const [formVals, setFormVals] = React.useState({});
+
+              const STATIONS = [
+                { id: "run1", label: "Run 1", unit: "sec", ref: { H: 270, F: 300 }, icon: "🏃" },
+                { id: "skierg", label: "SkiErg 1000m", unit: "sec", ref: { H: 240, F: 280 }, icon: "⛷️" },
+                { id: "run2", label: "Run 2", unit: "sec", ref: { H: 275, F: 305 }, icon: "🏃" },
+                { id: "sled_push", label: "Sled Push 50m", unit: "sec", ref: { H: 150, F: 170 }, icon: "🛷" },
+                { id: "run3", label: "Run 3", unit: "sec", ref: { H: 280, F: 310 }, icon: "🏃" },
+                { id: "sled_pull", label: "Sled Pull 50m", unit: "sec", ref: { H: 160, F: 180 }, icon: "🛷" },
+                { id: "run4", label: "Run 4", unit: "sec", ref: { H: 285, F: 315 }, icon: "🏃" },
+                { id: "burpee", label: "Burpee BJ 80m", unit: "sec", ref: { H: 300, F: 330 }, icon: "💪" },
+                { id: "run5", label: "Run 5", unit: "sec", ref: { H: 290, F: 320 }, icon: "🏃" },
+                { id: "rowing", label: "Rowing 1000m", unit: "sec", ref: { H: 225, F: 255 }, icon: "🚣" },
+                { id: "run6", label: "Run 6", unit: "sec", ref: { H: 295, F: 325 }, icon: "🏃" },
+                { id: "farmers", label: "Farmer's Carry 200m", unit: "sec", ref: { H: 120, F: 140 }, icon: "🏋️" },
+                { id: "run7", label: "Run 7", unit: "sec", ref: { H: 300, F: 330 }, icon: "🏃" },
+                { id: "sandbag", label: "Sandbag Lunges 100m", unit: "sec", ref: { H: 240, F: 270 }, icon: "🎒" },
+                { id: "run8", label: "Run 8", unit: "sec", ref: { H: 305, F: 335 }, icon: "🏃" },
+                { id: "wallballs", label: "Wall Balls 100 reps", unit: "sec", ref: { H: 360, F: 420 }, icon: "🏀" },
+              ];
+
+              const fmt = (s) => s ? `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` : "--";
+              const parseMmSs = (str) => {
+                if (!str) return null;
+                const parts = str.split(":");
+                if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                return parseInt(str) || null;
+              };
+
+              const saveSession = () => {
+                const entry = { date: formDate, splits: {} };
+                STATIONS.forEach(s => { const v = parseMmSs(formVals[s.id]); if (v) entry.splits[s.id] = v; });
+                entry.total = Object.values(entry.splits).reduce((a,b) => a+b, 0);
+                const updated = [entry, ...splits].slice(0, 20);
+                setSplits(updated);
+                syncedStorage.set(splitsKey, updated);
+                setShowForm(false); setFormVals({});
+              };
+
+              const lastSession = splits[0];
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Splits par Station HYROX</div>
+                    <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>{showForm ? "Annuler" : "+ Saisir splits"}</button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ marginBottom: 12 }}>
+                      <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} style={{ background: "#1C1C1E", color: "var(--fg)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 10px", fontSize: 11, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+                      <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 6 }}>Format mm:ss (ex: 4:30) ou secondes (ex: 270)</div>
+                      {STATIONS.map(s => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 12 }}>{s.icon}</span>
+                          <span style={{ fontSize: 10, color: "#8E8E93", flex: 1 }}>{s.label}</span>
+                          <span style={{ fontSize: 9, color: "#8E8E93", width: 40 }}>Réf: {fmt(s.ref[sex])}</span>
+                          <input
+                            type="text" placeholder="--:--" value={formVals[s.id] || ""}
+                            onChange={e => setFormVals(v => ({ ...v, [s.id]: e.target.value }))}
+                            style={{ width: 55, background: "#1C1C1E", color: "var(--yellow)", border: "1px solid #3A3A3C", borderRadius: 6, padding: "4px 6px", fontSize: 12, textAlign: "center" }}
+                          />
+                        </div>
+                      ))}
+                      <button onClick={saveSession} style={{ width: "100%", background: "#30D158", color: "#000", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 13, fontWeight: 800, cursor: "pointer", marginTop: 8 }}>Sauvegarder ✓</button>
+                    </div>
+                  )}
+
+                  {lastSession && !showForm && (
+                    <div>
+                      <div style={{ fontSize: 10, color: "#8E8E93", marginBottom: 8 }}>Dernière session : {lastSession.date} · Total {fmt(lastSession.total)}</div>
+                      {STATIONS.map(s => {
+                        const v = lastSession.splits[s.id];
+                        if (!v) return null;
+                        const ref = s.ref[sex];
+                        const diff = v - ref;
+                        const pct = Math.round((v / ref) * 100);
+                        const col = pct <= 100 ? "#30D158" : pct <= 115 ? "#FF9F0A" : "#FF453A";
+                        return (
+                          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                            <span style={{ fontSize: 11 }}>{s.icon}</span>
+                            <span style={{ fontSize: 10, flex: 1, color: "#8E8E93" }}>{s.label}</span>
+                            <span style={{ fontSize: 9, color: "#8E8E93" }}>Réf {fmt(ref)}</span>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: col }}>{fmt(v)}</span>
+                            <span style={{ fontSize: 9, color: col, width: 36, textAlign: "right" }}>{diff > 0 ? `+${diff}s` : `${diff}s`}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {splits.length === 0 && !showForm && (
+                    <div style={{ textAlign: "center", fontSize: 11, color: "#8E8E93", padding: 12 }}>Saisir tes splits pour identifier tes stations faibles</div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── STATION WEAKNESS RADAR ── */}
+            {(() => {
+              const sex = profile.sexe === "F" ? "F" : "H";
+              const splitsKey = `fitrace_station_splits_${profile.name}`;
+              const splits = (() => { try { return JSON.parse(localStorage.getItem(splitsKey) || "[]"); } catch { return []; } })();
+              if (splits.length === 0) return null;
+
+              const lastSession = splits[0];
+              const STATIONS_RADAR = [
+                { id: "skierg", label: "SkiErg", ref: { H: 240, F: 280 } },
+                { id: "sled_push", label: "Sled Push", ref: { H: 150, F: 170 } },
+                { id: "sled_pull", label: "Sled Pull", ref: { H: 160, F: 180 } },
+                { id: "burpee", label: "Burpee BJ", ref: { H: 300, F: 330 } },
+                { id: "rowing", label: "Rowing", ref: { H: 225, F: 255 } },
+                { id: "farmers", label: "Farmer's", ref: { H: 120, F: 140 } },
+                { id: "sandbag", label: "Sandbag", ref: { H: 240, F: 270 } },
+                { id: "wallballs", label: "Wall Balls", ref: { H: 360, F: 420 } },
+              ];
+
+              // Score per station: 100 = reference, >100 = faster, <100 = slower
+              const scores = STATIONS_RADAR.map(s => {
+                const v = lastSession.splits[s.id];
+                if (!v) return { ...s, score: 50, v: null };
+                const score = Math.min(130, Math.round((s.ref[sex] / v) * 100));
+                return { ...s, score, v };
+              });
+
+              const N = scores.length;
+              const cx = 110, cy = 110, maxR = 85;
+              const angleStep = (2 * Math.PI) / N;
+              const getXY = (i, r) => ({
+                x: cx + r * Math.sin(i * angleStep),
+                y: cy - r * Math.cos(i * angleStep),
+              });
+
+              const radarPath = scores.map((s, i) => {
+                const r = (s.score / 130) * maxR;
+                const p = getXY(i, r);
+                return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+              }).join(" ") + " Z";
+
+              const refPath = scores.map((_, i) => {
+                const p = getXY(i, (100/130) * maxR);
+                return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+              }).join(" ") + " Z";
+
+              const weakest = scores.filter(s => s.v).sort((a,b) => a.score - b.score).slice(0, 3);
+              const fmt = (s) => s ? `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}` : "--";
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Radar Faiblesses Stations</div>
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <svg width="220" height="220" viewBox="0 0 220 220">
+                      {[25, 50, 75, 100].map(pct => {
+                        const r = (pct / 130) * maxR;
+                        const pts = scores.map((_, i) => { const p = getXY(i, r); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; }).join(" ");
+                        return <polygon key={pct} points={pts} fill="none" stroke="#2C2C2E" strokeWidth="1" />;
+                      })}
+                      {scores.map((_, i) => {
+                        const outer = getXY(i, maxR);
+                        return <line key={i} x1={cx} y1={cy} x2={outer.x.toFixed(1)} y2={outer.y.toFixed(1)} stroke="#2C2C2E" strokeWidth="1" />;
+                      })}
+                      <path d={refPath} fill="#C9A84015" stroke="#C9A840" strokeWidth="1" strokeDasharray="4,3" />
+                      <path d={radarPath} fill="#007AFF25" stroke="#007AFF" strokeWidth="2" />
+                      {scores.map((s, i) => {
+                        const lp = getXY(i, maxR + 14);
+                        const col = s.score >= 100 ? "#30D158" : s.score >= 85 ? "#FF9F0A" : "#FF453A";
+                        return (
+                          <g key={i}>
+                            <text x={lp.x.toFixed(1)} y={lp.y.toFixed(1)} textAnchor="middle" fill={col} fontSize="9" fontWeight="700">{s.label}</text>
+                          </g>
+                        );
+                      })}
+                      <circle cx={cx} cy={cy} r={3} fill="#007AFF" />
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 9, color: "#8E8E93", textAlign: "center", marginBottom: 10 }}>--- Référence niveau · bleu = toi</div>
+                  <div style={{ fontSize: 10, color: "#FF453A", fontWeight: 700, marginBottom: 6 }}>🎯 Stations à travailler en priorité :</div>
+                  {weakest.map(s => {
+                    const ref = s.ref[sex];
+                    const lost = s.v - ref;
+                    return (
+                      <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 8px", background: "#FF453A12", borderRadius: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, color: "var(--fg)" }}>{s.label}</span>
+                        <span style={{ fontSize: 10, color: "#FF453A", fontWeight: 700 }}>+{lost}s vs référence</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* ── TRAINING CALENDAR HEATMAP ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              // Build a map of date → {rpe, count}
+              const dateMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                if (!dateMap[s.date]) dateMap[s.date] = { totalRpe: 0, count: 0 };
+                dateMap[s.date].totalRpe += (s.rpe || 5);
+                dateMap[s.date].count++;
+              });
+
+              // 16 weeks back from today
+              const WEEKS = 16;
+              const now = new Date();
+              const dayOfWeek = now.getDay(); // 0=Sun
+              // Start from the Sunday WEEKS weeks ago
+              const startDate = new Date(now);
+              startDate.setDate(now.getDate() - dayOfWeek - (WEEKS - 1) * 7);
+
+              const days = [];
+              for (let i = 0; i < WEEKS * 7; i++) {
+                const d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
+                const dateStr = d.toISOString().slice(0, 10);
+                const entry = dateMap[dateStr];
+                const avgRpe = entry ? entry.totalRpe / entry.count : 0;
+                days.push({ date: dateStr, avgRpe, hasSession: !!entry, count: entry?.count || 0 });
+              }
+
+              const rpeColor = rpe => {
+                if (rpe === 0) return "#1C1C1E";
+                if (rpe <= 3) return "#1C3A24";
+                if (rpe <= 5) return "#30D158";
+                if (rpe <= 7) return "#FF9F0A";
+                if (rpe <= 9) return "#FF453A";
+                return "#BF5AF2";
+              };
+
+              const CELL = 14, GAP = 2;
+              const W = WEEKS * (CELL + GAP);
+              const H = 7 * (CELL + GAP);
+              const DAY_LABELS = ["D","L","M","M","J","V","S"];
+              const MONTH_LABELS = [];
+              days.forEach((d, i) => {
+                if (i % 7 === 0) {
+                  const month = parseLocalDate(d.date)?.toLocaleDateString("fr",{month:"short"}) || "";
+                  const lastMonth = MONTH_LABELS[MONTH_LABELS.length - 1];
+                  if (!lastMonth || lastMonth.label !== month) {
+                    MONTH_LABELS.push({ label: month, col: Math.floor(i / 7) });
+                  }
+                }
+              });
+
+              const totalSessions = sessions.length;
+              const activeDays = Object.keys(dateMap).length;
+              const avgRpeAll = sessions.length ? (sessions.reduce((s,e)=>s+(e.rpe||5),0)/sessions.length).toFixed(1) : 0;
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4 }}>
+                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Calendrier d'Entraînement</div>
+                    <div style={{ fontSize:9,color:"#8E8E93" }}>{totalSessions} séances · {activeDays} jours actifs</div>
+                  </div>
+
+                  <div style={{ overflowX:"auto", paddingBottom:4 }}>
+                    <svg width={W + 20} height={H + 28} style={{ display:"block" }}>
+                      {/* Day labels */}
+                      {[0,1,2,3,4,5,6].map(d=>(
+                        <text key={d} x={16} y={d*(CELL+GAP)+CELL/2+3} textAnchor="end" fill="#8E8E93" fontSize={7}>{DAY_LABELS[d]}</text>
+                      ))}
+                      {/* Month labels */}
+                      {MONTH_LABELS.map((m,i)=>(
+                        <text key={i} x={20 + m.col*(CELL+GAP)} y={H+16} fill="#8E8E93" fontSize={7}>{m.label}</text>
+                      ))}
+                      {/* Cells */}
+                      {days.map((d,i) => {
+                        const col = Math.floor(i / 7);
+                        const row = i % 7;
+                        const x = 20 + col * (CELL + GAP);
+                        const y = row * (CELL + GAP);
+                        return (
+                          <rect key={i} x={x} y={y} width={CELL} height={CELL} rx={2}
+                            fill={rpeColor(d.avgRpe)}
+                            opacity={d.hasSession ? 1 : 0.5}
+                          >
+                            <title>{d.date}{d.hasSession ? ` · ${d.count} séance${d.count>1?"s":""} · RPE ${d.avgRpe.toFixed(1)}` : ""}</title>
+                          </rect>
+                        );
+                      })}
+                    </svg>
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{ display:"flex",gap:6,alignItems:"center",marginTop:4 }}>
+                    <span style={{ fontSize:8,color:"#8E8E93" }}>RPE:</span>
+                    {[[0,"Repos"],[2,"Facile"],[5,"Modéré"],[7,"Dur"],[9,"Max"]].map(([rpe,lbl])=>(
+                      <div key={rpe} style={{ display:"flex",alignItems:"center",gap:3 }}>
+                        <div style={{ width:8,height:8,borderRadius:2,background:rpeColor(rpe) }}/>
+                        <span style={{ fontSize:7,color:"#8E8E93" }}>{lbl}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginLeft:"auto",fontSize:8,color:"#8E8E93" }}>RPE moy: <span style={{ color:"var(--yellow)",fontWeight:700 }}>{avgRpeAll}</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── BENCHMARK TEST TRACKER ── */}
+            {(() => {
+              // Clé distincte de `fitrace_benchmarks_` (temps stations HYROX) — même préfixe
+              // par erreur historiquement, ce qui mélangeait deux jeux de données incompatibles
+              // (ici : tests Cooper/Ruffier/Plank, tableau brut).
+              const benchKey = `fitrace_fitness_tests_${profile.name}`;
+              const [log, setLog] = React.useState(() => {
+                try {
+                  const current = JSON.parse(localStorage.getItem(benchKey) || "null");
+                  if (current) return current;
+                  // Repli one-shot sur l'ancienne clé partagée, pour ne pas perdre l'historique déjà saisi.
+                  const legacy = JSON.parse(localStorage.getItem(`fitrace_benchmarks_${profile.name}`) || "[]");
+                  return Array.isArray(legacy) ? legacy : [];
+                } catch { return []; }
+              });
+              const [activeTest, setActiveTest] = React.useState(null);
+              const [inputVal, setInputVal] = React.useState("");
+
+              const age = parseInt(profile.age) || 30;
+              const sex = profile.sexe === "F" ? "F" : "H";
+
+              const TESTS = [
+                {
+                  id: "cooper",
+                  name: "Cooper 12 min",
+                  icon: "🏃",
+                  unit: "m",
+                  placeholder: "Distance en mètres (ex: 2800)",
+                  color: "#FF9F0A",
+                  getLevel: (v) => {
+                    const d = parseInt(v);
+                    if (sex === "H") {
+                      if (d >= 3000) return "Excellent";
+                      if (d >= 2700) return "Très bon";
+                      if (d >= 2400) return "Bon";
+                      if (d >= 2000) return "Moyen";
+                      return "Insuffisant";
+                    } else {
+                      if (d >= 2700) return "Excellent";
+                      if (d >= 2400) return "Très bon";
+                      if (d >= 2100) return "Bon";
+                      if (d >= 1800) return "Moyen";
+                      return "Insuffisant";
+                    }
+                  },
+                  getVma: (v) => Math.round(((parseInt(v) / 1000) - 0.3) / 0.025 * 10) / 10,
+                  desc: "Courez 12min, mesurez la distance. VO2max estimé via formule Cooper.",
+                },
+                {
+                  id: "ruffier",
+                  name: "Test de Ruffier",
+                  icon: "❤️",
+                  unit: "indice",
+                  placeholder: "P0 (repos) + P1 (après 30 squats) + P2 (1min après)",
+                  color: "#FF453A",
+                  getLevel: (v) => {
+                    const idx = parseFloat(v);
+                    if (idx < 0) return "Excellent";
+                    if (idx < 5) return "Très bon";
+                    if (idx < 10) return "Bon";
+                    if (idx < 15) return "Moyen";
+                    return "Insuffisant";
+                  },
+                  desc: "R = (P0 + P1 + P2 - 200) / 10. Mesures FC en bpm.",
+                },
+                {
+                  id: "plank",
+                  name: "Gainage ventral",
+                  icon: "💪",
+                  unit: "sec",
+                  placeholder: "Durée en secondes",
+                  color: "#30D158",
+                  getLevel: (v) => {
+                    const s = parseInt(v);
+                    if (s >= 180) return "Excellent";
+                    if (s >= 120) return "Très bon";
+                    if (s >= 60) return "Bon";
+                    if (s >= 30) return "Moyen";
+                    return "Insuffisant";
+                  },
+                  desc: "Position planche sur les coudes, corps aligné. Mesurez la durée max.",
+                },
+                {
+                  id: "burpee1min",
+                  name: "Burpees 1 min",
+                  icon: "🤸",
+                  unit: "reps",
+                  placeholder: "Nombre de burpees",
+                  color: "#BF5AF2",
+                  getLevel: (v) => {
+                    const r = parseInt(v);
+                    if (sex === "H") {
+                      if (r >= 30) return "Excellent"; if (r >= 22) return "Très bon";
+                      if (r >= 15) return "Bon"; if (r >= 10) return "Moyen"; return "Insuffisant";
+                    } else {
+                      if (r >= 25) return "Excellent"; if (r >= 18) return "Très bon";
+                      if (r >= 12) return "Bon"; if (r >= 8) return "Moyen"; return "Insuffisant";
+                    }
+                  },
+                  desc: "Burpees complets (chest-to-floor + saut) pendant 1 minute.",
+                },
+              ];
+
+              const getLevelColor = (level) => ({ "Excellent": "#30D158", "Très bon": "#34C759", "Bon": "#FF9F0A", "Moyen": "#FF6B35", "Insuffisant": "#FF453A" }[level] || "#636366");
+
+              const save = (l) => { setLog(l); syncedStorage.set(benchKey, l); };
+
+              const addResult = (testId) => {
+                if (!inputVal) return;
+                const entry = { testId, value: inputVal, date: new Date().toISOString().slice(0, 10), id: Date.now() };
+                save([entry, ...log].slice(0, 50));
+                setActiveTest(null); setInputVal("");
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>Tests de Référence</div>
+
+                  {TESTS.map(t => {
+                    const testLog = log.filter(e => e.testId === t.id);
+                    const latest = testLog[0];
+                    const prev = testLog[1];
+                    const level = latest ? t.getLevel(latest.value) : null;
+                    const levelColor = level ? getLevelColor(level) : "#636366";
+                    const improved = latest && prev ? parseFloat(latest.value) > parseFloat(prev.value) : null;
+                    // Special handling: Ruffier lower = better
+                    const isInverse = t.id === "ruffier";
+                    const reallyImproved = isInverse ? !improved : improved;
+
+                    return (
+                      <div key={t.id} style={{ marginBottom: 8 }}>
+                        <button onClick={() => setActiveTest(activeTest === t.id ? null : t.id)}
+                          style={{ width: "100%", background: activeTest === t.id ? `${t.color}15` : "var(--bg3)", border: `1px solid ${activeTest === t.id ? t.color : "#2C2C2E"}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 18 }}>{t.icon}</span>
+                          <div style={{ flex: 1, textAlign: "left" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)" }}>{t.name}</div>
+                            {latest
+                              ? <div style={{ fontSize: 10, color: levelColor }}>{latest.value} {t.unit} · {level} {improved !== null ? (reallyImproved ? "↑" : "↓") : ""}</div>
+                              : <div style={{ fontSize: 10, color: "#8E8E93" }}>Pas encore testé</div>}
+                          </div>
+                          {latest && <div style={{ fontSize: 9, color: "#8E8E93" }}>{latest.date}</div>}
+                          <span style={{ color: "#8E8E93", fontSize: 11 }}>{activeTest === t.id ? "▲" : "+"}</span>
+                        </button>
+
+                        {activeTest === t.id && (
+                          <div style={{ background: `${t.color}08`, borderRadius: 8, padding: 12, marginTop: 2 }}>
+                            <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 6 }}>{t.desc}</div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <input value={inputVal} onChange={e => setInputVal(e.target.value)} placeholder={t.placeholder}
+                                style={{ flex: 1, background: "var(--bg2)", border: `1px solid ${t.color}50`, borderRadius: 8, padding: "7px 8px", color: "var(--fg)", fontSize: 12 }} />
+                              <button onClick={() => addResult(t.id)} style={{ background: t.color, color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>✓</button>
+                            </div>
+                            {testLog.length > 0 && (
+                              <div style={{ marginTop: 8 }}>
+                                <div style={{ fontSize: 9, color: "#8E8E93", marginBottom: 3 }}>Historique</div>
+                                {testLog.slice(0, 4).map(e => {
+                                  const lv = t.getLevel(e.value);
+                                  return (
+                                    <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8E8E93", padding: "2px 0" }}>
+                                      <span>{e.date}</span>
+                                      <span style={{ color: getLevelColor(lv) }}>{e.value} {t.unit} · {lv}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {t.id === "cooper" && inputVal && (
+                              <div style={{ marginTop: 6, fontSize: 10, color: "#FF9F0A" }}>
+                                VMA estimée : ~{t.getVma(inputVal)} km/h
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ── HEART RATE RECOVERY TRACKER ── */}
             {(() => {
               const hrrKey = `fitrace_hrr_${profile.name}`;
@@ -18660,6 +19209,416 @@ JSON:
                       </div>
                     );
                   })}
+                </div>
+              );
+            })()}
+
+            {/* ── BODY COMPOSITION TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_body_${profile.name}`;
+              const [entries, setEntries] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+              });
+              const [weight, setWeight] = React.useState("");
+              const [bodyFat, setBodyFat] = React.useState("");
+              const [muscleMass, setMuscleMass] = React.useState("");
+              const [targetW, setTargetW] = React.useState(() => parseFloat(profile.poids) || 70);
+              const [tab, setTab] = React.useState("chart");
+
+              const save = (arr) => { setEntries(arr); syncedStorage.set(KEY, arr); };
+
+              const addEntry = () => {
+                if (!weight) return;
+                const entry = {
+                  date: new Date().toISOString().slice(0,10),
+                  weight: parseFloat(weight),
+                  bodyFat: bodyFat ? parseFloat(bodyFat) : null,
+                  muscleMass: muscleMass ? parseFloat(muscleMass) : null,
+                };
+                const updated = [...entries.filter(e => e.date !== entry.date), entry].sort((a,b) => a.date.localeCompare(b.date));
+                save(updated);
+                setWeight(""); setBodyFat(""); setMuscleMass("");
+              };
+
+              const last30 = entries.slice(-30);
+              const latest = entries[entries.length - 1];
+              const first = entries[0];
+              const totalChange = latest && first && entries.length > 1 ? (latest.weight - first.weight).toFixed(1) : null;
+
+              // Height from profile
+              const heightCm = parseFloat(profile.taille) || 175;
+              const bmi = latest ? (latest.weight / ((heightCm/100)**2)).toFixed(1) : null;
+              const bmiLabel = bmi ? (bmi < 18.5 ? "Insuffisant" : bmi < 25 ? "Normal" : bmi < 30 ? "Surpoids" : "Obésité") : null;
+              const bmiColor = bmi ? (bmi < 18.5 ? "#FF9F0A" : bmi < 25 ? "#30D158" : bmi < 30 ? "#FF9F0A" : "#FF453A") : "#888";
+
+              // SVG weight chart
+              const W = 320, H = 130, PAD = {t:12,r:12,b:28,l:40};
+              const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+              let weightPath = "", fatPath = "", targetLine = null;
+              if (last30.length >= 2) {
+                const wVals = last30.map(e => e.weight);
+                const wMin = Math.min(...wVals, targetW) - 1;
+                const wMax = Math.max(...wVals, targetW) + 1;
+                const xS = (i) => PAD.l + (i/(last30.length-1))*cW;
+                const yS = (v) => PAD.t + cH - ((v-wMin)/(wMax-wMin))*cH;
+                weightPath = last30.map((e,i) => `${i===0?"M":"L"}${xS(i)},${yS(e.weight)}`).join(" ");
+                // target dashed line
+                const ty = yS(targetW);
+                targetLine = { y: ty };
+                // body fat if available
+                const fatEntries = last30.filter(e => e.bodyFat !== null);
+                if (fatEntries.length >= 2) {
+                  const fIdxs = fatEntries.map(e => last30.indexOf(e));
+                  const fVals = fatEntries.map(e => e.bodyFat);
+                  const fMin = Math.min(...fVals) - 1, fMax = Math.max(...fVals) + 1;
+                  const fyS = (v) => PAD.t + cH - ((v-fMin)/(fMax-fMin))*cH;
+                  fatPath = fIdxs.map((idx,i) => `${i===0?"M":"L"}${xS(idx)},${fyS(fatEntries[i].bodyFat)}`).join(" ");
+                }
+              }
+
+              const tabs = ["chart","log","goal"];
+              const tabLabels = {chart:"Courbe", log:"Entrées", goal:"Objectif"};
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                    <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Composition corporelle</div>
+                    {latest && (
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:22, fontWeight:800, color:"var(--yellow)" }}>{latest.weight} kg</div>
+                        {bmi && <div style={{ fontSize:11, color:bmiColor }}>IMC {bmi} · {bmiLabel}</div>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Add */}
+                  <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                    <input type="number" value={weight} onChange={e=>setWeight(e.target.value)}
+                      placeholder="Poids (kg)" step="0.1"
+                      style={{ flex:2, minWidth:90, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:14 }} />
+                    <input type="number" value={bodyFat} onChange={e=>setBodyFat(e.target.value)}
+                      placeholder="% graisse" step="0.1"
+                      style={{ flex:1, minWidth:70, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:14 }} />
+                    <input type="number" value={muscleMass} onChange={e=>setMuscleMass(e.target.value)}
+                      placeholder="Muscle (kg)" step="0.1"
+                      style={{ flex:1, minWidth:70, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:14 }} />
+                    <button onClick={addEntry}
+                      style={{ background:"var(--yellow)", border:"none", borderRadius:10, padding:"8px 16px", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>+</button>
+                  </div>
+
+                  {/* Stat pills */}
+                  {latest && (
+                    <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                      {totalChange !== null && (
+                        <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color: parseFloat(totalChange) < 0 ? "#30D158" : parseFloat(totalChange) > 0 ? "#FF453A" : "#888" }}>
+                          {parseFloat(totalChange) > 0 ? "+" : ""}{totalChange} kg total
+                        </div>
+                      )}
+                      {latest.bodyFat && (
+                        <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color:"#BF5AF2" }}>
+                          {latest.bodyFat}% masse grasse
+                        </div>
+                      )}
+                      {latest.muscleMass && (
+                        <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color:"#30D158" }}>
+                          {latest.muscleMass} kg muscle
+                        </div>
+                      )}
+                      <div style={{ background:"var(--bg3)", borderRadius:10, padding:"6px 12px", fontSize:12, color:"var(--yellow)" }}>
+                        {Math.abs(latest.weight - targetW).toFixed(1)} kg de l'objectif
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tabs */}
+                  <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+                    {tabs.map(t => (
+                      <button key={t} onClick={() => setTab(t)}
+                        style={{ flex:1, background: tab===t ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:10, padding:"7px 0", color: tab===t ? "#fff" : "#888", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                        {tabLabels[t]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {tab === "chart" && (
+                    entries.length < 2 ? (
+                      <div style={{ textAlign:"center", color:"#98989D", fontSize:13, padding:"30px 0" }}>
+                        Ajoute au moins 2 pesées pour voir le graphique
+                      </div>
+                    ) : (
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W }}>
+                        {/* Grid */}
+                        {[0,0.5,1].map(f => (
+                          <line key={f} x1={PAD.l} x2={W-PAD.r} y1={PAD.t + f*cH} y2={PAD.t + f*cH} stroke="#2C2C2E" strokeWidth="1"/>
+                        ))}
+                        {/* Target line */}
+                        {targetLine && (
+                          <line x1={PAD.l} x2={W-PAD.r} y1={targetLine.y} y2={targetLine.y} stroke="#30D158" strokeWidth="1.5" strokeDasharray="5,4"/>
+                        )}
+                        {/* Weight gradient fill */}
+                        {last30.length >= 2 && (() => {
+                          const wVals = last30.map(e => e.weight);
+                          const wMin = Math.min(...wVals, targetW) - 1;
+                          const wMax = Math.max(...wVals, targetW) + 1;
+                          const xS = (i) => PAD.l + (i/(last30.length-1))*cW;
+                          const yS = (v) => PAD.t + cH - ((v-wMin)/(wMax-wMin))*cH;
+                          const fillPath = weightPath + ` L${xS(last30.length-1)},${PAD.t+cH} L${PAD.l},${PAD.t+cH} Z`;
+                          return (
+                            <>
+                              <defs>
+                                <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="var(--yellow)" stopOpacity="0.35"/>
+                                  <stop offset="100%" stopColor="var(--yellow)" stopOpacity="0"/>
+                                </linearGradient>
+                              </defs>
+                              <path d={fillPath} fill="url(#bodyGrad)"/>
+                              <path d={weightPath} fill="none" stroke="var(--yellow)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              {/* Dots for last 5 */}
+                              {last30.slice(-5).map((e,i) => {
+                                const idx = last30.length - 5 + i;
+                                return <circle key={i} cx={xS(idx)} cy={yS(e.weight)} r="3" fill="var(--yellow)"/>;
+                              })}
+                              {/* Y labels */}
+                              {[wMin+1, (wMin+wMax)/2, wMax-1].map((v,i) => (
+                                <text key={i} x={PAD.l-4} y={yS(v)+4} textAnchor="end" fontSize="9" fill="#888">{v.toFixed(0)}</text>
+                              ))}
+                            </>
+                          );
+                        })()}
+                        {/* Fat % line */}
+                        {fatPath && <path d={fatPath} fill="none" stroke="#BF5AF2" strokeWidth="1.5" strokeDasharray="4,3"/>}
+                        {/* X labels */}
+                        {last30.length > 0 && [0, Math.floor(last30.length/2), last30.length-1].map(i => (
+                          <text key={i} x={PAD.l + (i/(last30.length-1))*cW} y={H-6} textAnchor="middle" fontSize="9" fill="#666">
+                            {last30[i]?.date.slice(5)}
+                          </text>
+                        ))}
+                        {/* Legend */}
+                        <circle cx={PAD.l+6} cy={PAD.t+4} r="3" fill="var(--yellow)"/>
+                        <text x={PAD.l+12} y={PAD.t+8} fontSize="9" fill="#888">Poids</text>
+                        <line x1={PAD.l+44} x2={PAD.l+58} y1={PAD.t+4} y2={PAD.t+4} stroke="#30D158" strokeWidth="1.5" strokeDasharray="4,3"/>
+                        <text x={PAD.l+62} y={PAD.t+8} fontSize="9" fill="#888">Objectif</text>
+                        {fatPath && <>
+                          <line x1={PAD.l+98} x2={PAD.l+112} y1={PAD.t+4} y2={PAD.t+4} stroke="#BF5AF2" strokeWidth="1.5" strokeDasharray="3,3"/>
+                          <text x={PAD.l+116} y={PAD.t+8} fontSize="9" fill="#888">% graisse</text>
+                        </>}
+                      </svg>
+                    )
+                  )}
+
+                  {tab === "log" && (
+                    <div style={{ maxHeight:200, overflowY:"auto" }}>
+                      {entries.length === 0 ? (
+                        <div style={{ textAlign:"center", color:"#98989D", fontSize:13, padding:"20px 0" }}>Aucune entrée</div>
+                      ) : [...entries].reverse().slice(0,20).map((e, i) => (
+                        <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid #2C2C2E" }}>
+                          <div style={{ fontSize:12, color:"#888" }}>{e.date}</div>
+                          <div style={{ display:"flex", gap:10 }}>
+                            <span style={{ fontSize:14, fontWeight:700, color:"var(--white)" }}>{e.weight} kg</span>
+                            {e.bodyFat && <span style={{ fontSize:12, color:"#BF5AF2" }}>{e.bodyFat}%</span>}
+                            {e.muscleMass && <span style={{ fontSize:12, color:"#30D158" }}>{e.muscleMass} kg 💪</span>}
+                          </div>
+                          <button onClick={() => save(entries.filter((_,j) => entries.length-1-j !== i))}
+                            style={{ background:"none", border:"none", color:"#FF453A", fontSize:14, cursor:"pointer" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {tab === "goal" && (
+                    <div>
+                      <div style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:12, color:"#888", marginBottom:6 }}>Poids cible (kg)</div>
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <input type="number" value={targetW} onChange={e=>setTargetW(parseFloat(e.target.value)||70)} step="0.5"
+                            style={{ flex:1, background:"var(--bg3)", border:"none", borderRadius:10, padding:"8px 12px", color:"var(--white)", fontSize:16, fontWeight:700 }}/>
+                        </div>
+                      </div>
+                      {latest && (
+                        <>
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:8 }}>
+                            {[
+                              { label:"Poids actuel", val:`${latest.weight} kg`, color:"var(--yellow)" },
+                              { label:"Objectif", val:`${targetW} kg`, color:"#30D158" },
+                              { label:"Différence", val:`${(latest.weight - targetW > 0 ? "+" : "")}${(latest.weight - targetW).toFixed(1)} kg`, color: latest.weight > targetW ? "#FF453A" : "#30D158" },
+                              { label:"IMC actuel", val:`${bmi} (${bmiLabel})`, color:bmiColor },
+                            ].map(s => (
+                              <div key={s.label} style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                                <div style={{ fontSize:10, color:"#666" }}>{s.label}</div>
+                                <div style={{ fontSize:14, fontWeight:700, color:s.color, marginTop:3 }}>{s.val}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {entries.length >= 2 && (() => {
+                            // Estimate weeks to goal based on last 4-week trend
+                            const recent = entries.slice(-8);
+                            if (recent.length >= 2) {
+                              const trend = (recent[recent.length-1].weight - recent[0].weight) / (recent.length - 1);
+                              const diff = targetW - latest.weight;
+                              if (Math.abs(trend) > 0.01 && Math.sign(trend) === Math.sign(diff)) {
+                                const weeks = Math.ceil(Math.abs(diff / trend / 7));
+                                return (
+                                  <div style={{ background:"rgba(0,122,255,0.15)", border:"1px solid rgba(0,122,255,0.3)", borderRadius:12, padding:12, marginTop:10 }}>
+                                    <div style={{ fontSize:12, color:"var(--yellow)", fontWeight:700 }}>Projection au rythme actuel</div>
+                                    <div style={{ fontSize:13, color:"var(--white)", marginTop:4 }}>
+                                      ~{weeks} semaine{weeks>1?"s":""} pour atteindre {targetW} kg
+                                    </div>
+                                    <div style={{ fontSize:11, color:"#888", marginTop:2 }}>
+                                      Tendance: {trend > 0 ? "+" : ""}{(trend*7).toFixed(2)} kg/semaine
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── HYDRATION TRACKER ── */}
+            {(() => {
+              const KEY = `fitrace_hydration_${profile.name}`;
+              const today = new Date().toISOString().slice(0,10);
+
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+              });
+              const [viewDate, setViewDate] = React.useState(today);
+
+              const bw = parseFloat(profile.poids) || 70;
+              const dailyGoal = Math.round(bw * 35); // ml: 35ml/kg
+
+              // Sweat loss from today's sessions
+              const todaySessions = (profile.sessions||[]).filter(s => s.date === viewDate);
+              const sweatLoss = todaySessions.reduce((sum, s) => sum + Math.round((s.duration||0) * 0.8 * 10) * 10, 0); // ~800ml/h
+              const totalGoal = dailyGoal + sweatLoss;
+
+              const dayIntake = log[viewDate] || [];
+              const totalMl = dayIntake.reduce((s,e) => s+(e.ml||0), 0);
+              const pct = Math.min(100, Math.round(totalMl/totalGoal*100));
+
+              const DRINKS = [
+                { label:"Verre (200ml)", ml:200, emoji:"🥛" },
+                { label:"Grande bouteille (500ml)", ml:500, emoji:"🍶" },
+                { label:"Bidon (750ml)", ml:750, emoji:"🚰" },
+                { label:"Litre (1L)", ml:1000, emoji:"💧" },
+                { label:"Café/thé (250ml)", ml:250, emoji:"☕" },
+                { label:"Boisson sport (500ml)", ml:500, emoji:"⚡" },
+              ];
+
+              const addDrink = (ml, label) => {
+                const entry = { ml, label, time: new Date().toLocaleTimeString("fr", {hour:"2-digit",minute:"2-digit"}), id: Date.now() };
+                const updated = { ...log, [viewDate]: [...dayIntake, entry] };
+                setLog(updated);
+                syncedStorage.set(KEY, updated);
+              };
+
+              const removeLast = () => {
+                if (!dayIntake.length) return;
+                const updated = { ...log, [viewDate]: dayIntake.slice(0,-1) };
+                setLog(updated);
+                syncedStorage.set(KEY, updated);
+              };
+
+              const prevDay = () => { const d=new Date(viewDate); d.setDate(d.getDate()-1); setViewDate(d.toISOString().slice(0,10)); };
+              const nextDay = () => { const d=new Date(viewDate); d.setDate(d.getDate()+1); if(d.toISOString().slice(0,10)<=today) setViewDate(d.toISOString().slice(0,10)); };
+
+              const statusColor = pct >= 90 ? "#30D158" : pct >= 60 ? "var(--yellow)" : "#FF453A";
+              const statusLabel = pct >= 90 ? "Hydraté ✓" : pct >= 60 ? "En cours" : "Insuffisant ⚠";
+
+              // 7-day history
+              const last7 = Array.from({length:7},(_,i) => {
+                const d = new Date(today); d.setDate(d.getDate()-6+i);
+                const ds = d.toISOString().slice(0,10);
+                const amt = (log[ds]||[]).reduce((s,e)=>s+(e.ml||0),0);
+                return { date:ds, amt, label:d.toLocaleDateString("fr",{weekday:"short"}).slice(0,2) };
+              });
+
+              return (
+                <div style={{ background:"var(--bg2)", border:"1px solid var(--bg3)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  {/* Header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:11, color:"#98989D" }}>GARMIN · HYDRATATION QUOTIDIENNE</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:"var(--yellow)" }}>💧 Suivi hydratation</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <button onClick={prevDay} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:"#888", cursor:"pointer", fontSize:14 }}>‹</button>
+                      <span style={{ fontSize:11, color:"#aaa" }}>{viewDate===today?"Auj.":viewDate.slice(5)}</span>
+                      <button onClick={nextDay} disabled={viewDate===today} style={{ background:"var(--bg3)", border:"none", borderRadius:8, width:28, height:28, color:viewDate===today?"#333":"#888", cursor:"pointer", fontSize:14 }}>›</button>
+                    </div>
+                  </div>
+
+                  {/* Big ring */}
+                  <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:16 }}>
+                    <div style={{ position:"relative", width:90, height:90, flexShrink:0 }}>
+                      <svg viewBox="0 0 90 90">
+                        <circle cx="45" cy="45" r="38" fill="none" stroke="var(--bg3)" strokeWidth="10"/>
+                        <circle cx="45" cy="45" r="38" fill="none"
+                          stroke={statusColor} strokeWidth="10" strokeLinecap="round"
+                          strokeDasharray={`${(pct/100)*238.76} 238.76`}
+                          transform="rotate(-90 45 45)"/>
+                      </svg>
+                      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                        <div style={{ fontSize:18, fontWeight:900, color:statusColor }}>{pct}%</div>
+                        <div style={{ fontSize:8, color:"#666" }}>hydraté</div>
+                      </div>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:22, fontWeight:900, color:"#fff" }}>{(totalMl/1000).toFixed(1)}L</div>
+                      <div style={{ fontSize:11, color:"#666", marginBottom:6 }}>/ {(totalGoal/1000).toFixed(1)}L objectif</div>
+                      <div style={{ fontSize:11, color:statusColor, fontWeight:700 }}>{statusLabel}</div>
+                      {sweatLoss > 0 && <div style={{ fontSize:10, color:"#98989D", marginTop:4 }}>+{(sweatLoss/1000).toFixed(1)}L sueur (séance)</div>}
+                    </div>
+                  </div>
+
+                  {/* Quick add buttons */}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6, marginBottom:12 }}>
+                    {DRINKS.map((d,i) => (
+                      <button key={i} onClick={() => addDrink(d.ml, d.label)}
+                        style={{ background:"var(--bg3)", border:"1px solid #333", borderRadius:10, padding:"9px 6px", color:"#fff", cursor:"pointer", textAlign:"center" }}>
+                        <div style={{ fontSize:18 }}>{d.emoji}</div>
+                        <div style={{ fontSize:10, color:"#aaa", marginTop:2 }}>{d.ml}ml</div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Today's log */}
+                  {dayIntake.length > 0 && (
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 14px", marginBottom:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                        <div style={{ fontSize:10, color:"#98989D" }}>JOURNAL ({dayIntake.length} entrées)</div>
+                        <button onClick={removeLast} style={{ background:"transparent", border:"none", color:"#FF453A", fontSize:11, cursor:"pointer" }}>− Annuler dernier</button>
+                      </div>
+                      {dayIntake.slice(-4).reverse().map((e,i) => (
+                        <div key={e.id} style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#888", marginBottom:2 }}>
+                          <span>{e.time} — {e.label}</span>
+                          <span style={{ color:"#64D2FF", fontWeight:700 }}>+{e.ml}ml</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 7-day bars */}
+                  <div style={{ fontSize:10, color:"#98989D", marginBottom:6 }}>7 DERNIERS JOURS</div>
+                  <div style={{ display:"flex", gap:4, alignItems:"flex-end", height:50 }}>
+                    {last7.map((d,i) => {
+                      const h = Math.min(100, (d.amt/totalGoal)*100);
+                      const c = d.amt>=totalGoal*0.9?"#30D158":d.amt>=totalGoal*0.6?"var(--yellow)":"#FF453A";
+                      const isToday = d.date===today;
+                      return (
+                        <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                          <div style={{ background:c, width:"100%", height:`${Math.max(h,4)}%`, borderRadius:"3px 3px 0 0", opacity: isToday?1:0.6, border: isToday?"1px solid #fff":"none" }}/>
+                          <div style={{ fontSize:8, color: isToday?"#fff":"#555" }}>{d.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })()}
@@ -19278,6 +20237,125 @@ JSON:
               );
             })()}
 
+            {/* ── INJURY & PAIN LOG ── */}
+            {(() => {
+              const KEY = `fitrace_injuries_${profile.name}`;
+              const [injuries, setInjuries] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
+              const [showForm, setShowForm] = React.useState(false);
+              const [form, setForm] = React.useState({ zone:"", severity:3, date: new Date().toISOString().slice(0,10), note:"" });
+
+              const ZONES = ["Genou G","Genou D","Hanche G","Hanche D","Bas du dos","Épaule G","Épaule D","Mollet G","Mollet D","Cheville G","Cheville D","Poignet G","Poignet D","Cou","Autre"];
+              const SEVERITY = [
+                { val:1, label:"Gêne légère", color:"#30D158" },
+                { val:2, label:"Douleur modérée", color:"#FF9F0A" },
+                { val:3, label:"Douleur forte", color:"#FF453A" },
+                { val:4, label:"Incapacitant", color:"#BF5AF2" },
+              ];
+
+              const addInjury = () => {
+                if (!form.zone) return;
+                const next = [{ id: Date.now(), ...form, status:"active" }, ...injuries];
+                setInjuries(next);
+                syncedStorage.set(KEY, next);
+                setShowForm(false);
+                setForm({ zone:"", severity:3, date: new Date().toISOString().slice(0,10), note:"" });
+              };
+
+              const toggleStatus = (id) => {
+                const next = injuries.map(inj => inj.id === id ? { ...inj, status: inj.status==="active"?"recovered":"active" } : inj);
+                setInjuries(next);
+                syncedStorage.set(KEY, next);
+              };
+
+              const removeInj = (id) => {
+                const next = injuries.filter(i=>i.id!==id);
+                setInjuries(next);
+                syncedStorage.set(KEY, next);
+              };
+
+              const active = injuries.filter(i=>i.status==="active");
+              const recovered = injuries.filter(i=>i.status==="recovered");
+
+              const sevColor = v => SEVERITY.find(s=>s.val===v)?.color || "#636366";
+
+              return (
+                <div style={{ background:"var(--bg2)",borderRadius:16,padding:16,boxShadow:"var(--shadow-sm)",marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+                    <div style={{ fontSize:10,color:"#8E8E93",fontWeight:700,letterSpacing:1,textTransform:"uppercase" }}>Journal Blessures / Douleurs</div>
+                    <button onClick={()=>setShowForm(f=>!f)} style={{ background:"var(--bg3)",color:"#FF453A",border:"none",borderRadius:8,padding:"4px 12px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                      {showForm?"Annuler":"+ Ajouter"}
+                    </button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ background:"var(--bg3)",borderRadius:12,padding:12,marginBottom:12 }}>
+                      <select value={form.zone} onChange={e=>setForm(f=>({...f,zone:e.target.value}))}
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"7px 10px",color:"var(--white)",fontSize:12,marginBottom:8 }}>
+                        <option value="">Sélectionner zone...</option>
+                        {ZONES.map(z=><option key={z} value={z}>{z}</option>)}
+                      </select>
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:9,color:"#8E8E93",marginBottom:4 }}>Sévérité:</div>
+                        <div style={{ display:"flex",gap:4 }}>
+                          {SEVERITY.map(s=>(
+                            <button key={s.val} onClick={()=>setForm(f=>({...f,severity:s.val}))}
+                              style={{ flex:1,background:form.severity===s.val?s.color:"#2C2C2E",color:form.severity===s.val?"#000":"#8E8E93",border:"none",borderRadius:6,padding:"5px 4px",fontSize:9,fontWeight:700,cursor:"pointer" }}>
+                              {s.val}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ fontSize:9,color:sevColor(form.severity),marginTop:3 }}>{SEVERITY.find(s=>s.val===form.severity)?.label}</div>
+                      </div>
+                      <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,marginBottom:8,boxSizing:"border-box" }}/>
+                      <input type="text" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder="Note (optionnel)"
+                        style={{ width:"100%",background:"#2C2C2E",border:"none",borderRadius:8,padding:"6px 10px",color:"var(--white)",fontSize:12,marginBottom:8,boxSizing:"border-box" }}/>
+                      <button onClick={addInjury} style={{ width:"100%",background:"#FF453A",color:"#fff",border:"none",borderRadius:10,padding:8,fontSize:13,fontWeight:800,cursor:"pointer" }}>
+                        Enregistrer
+                      </button>
+                    </div>
+                  )}
+
+                  {active.length > 0 && (
+                    <div style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:8,color:"#FF453A",fontWeight:800,letterSpacing:1,marginBottom:6 }}>EN COURS ({active.length})</div>
+                      {active.map(inj=>(
+                        <div key={inj.id} style={{ display:"flex",alignItems:"center",gap:8,background:"#2C1C1C",borderRadius:10,padding:"8px 10px",marginBottom:4,borderLeft:`3px solid ${sevColor(inj.severity)}` }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                              <span style={{ fontSize:12,fontWeight:700,color:sevColor(inj.severity) }}>{inj.zone}</span>
+                              <span style={{ fontSize:9,background:sevColor(inj.severity)+"30",color:sevColor(inj.severity),borderRadius:4,padding:"1px 5px",fontWeight:700 }}>N°{inj.severity}</span>
+                            </div>
+                            <div style={{ fontSize:9,color:"#8E8E93",marginTop:1 }}>{inj.date}{inj.note?" · "+inj.note:""}</div>
+                          </div>
+                          <button onClick={()=>toggleStatus(inj.id)} style={{ background:"#1C3A24",color:"#30D158",border:"none",borderRadius:6,padding:"4px 8px",fontSize:10,cursor:"pointer" }}>✓ Guéri</button>
+                          <button onClick={()=>removeInj(inj.id)} style={{ background:"transparent",color:"#8E8E93",border:"none",fontSize:14,cursor:"pointer" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {recovered.length > 0 && (
+                    <div>
+                      <div style={{ fontSize:8,color:"#30D158",fontWeight:800,letterSpacing:1,marginBottom:6 }}>GUÉRIS ({recovered.length})</div>
+                      {recovered.slice(0,3).map(inj=>(
+                        <div key={inj.id} style={{ display:"flex",alignItems:"center",gap:8,background:"var(--bg3)",borderRadius:10,padding:"6px 10px",marginBottom:3,opacity:0.6 }}>
+                          <span style={{ fontSize:11,color:"#8E8E93",flex:1 }}>✅ {inj.zone} <span style={{ color:"#8E8E93" }}>· {inj.date}</span></span>
+                          <button onClick={()=>removeInj(inj.id)} style={{ background:"transparent",color:"#8E8E93",border:"none",fontSize:12,cursor:"pointer" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {injuries.length === 0 && (
+                    <div style={{ textAlign:"center",color:"#30D158",fontSize:12,padding:"16px 0",fontWeight:700 }}>
+                      Aucune blessure enregistrée ✅
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* ── ACHIEVEMENT BADGES ── */}
             {(() => {
               const sessions = profile.sessions || [];
@@ -19460,6 +20538,112 @@ JSON:
                   <div style={{ fontSize:9,color:"#8E8E93",textAlign:"center",marginTop:8 }}>
                     {Object.keys(prs).length}/{PR_DEFS.length} records enregistrés
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* ── BODY COMPOSITION TRACKER ── */}
+            {(() => {
+              const bcKey = `fitrace_body_${profile.name}`;
+              const [log, setLog] = React.useState(() => {
+                try { return JSON.parse(localStorage.getItem(bcKey) || "[]"); } catch { return []; }
+              });
+              const [showForm, setShowForm] = React.useState(false);
+              const [wt, setWt] = React.useState("");
+              const [bf, setBf] = React.useState("");
+              const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10));
+
+              const height = parseFloat(profile.taille) || null;
+
+              const save = (l) => { setLog(l); syncedStorage.set(bcKey, l); };
+
+              const addEntry = () => {
+                const weight = parseFloat(wt);
+                if (!weight) return;
+                const bmi = height ? Math.round((weight / ((height / 100) ** 2)) * 10) / 10 : null;
+                const entry = { date, weight, bf: parseFloat(bf) || null, bmi, id: Date.now() };
+                const updated = [entry, ...log].slice(0, 60);
+                save(updated); setShowForm(false); setWt(""); setBf("");
+              };
+
+              const last = log[0];
+              const prev = log[1];
+              const delta = last && prev ? (last.weight - prev.weight).toFixed(1) : null;
+              const targetW = parseFloat(profile.poids) || null;
+              const startW = log.length > 1 ? log[log.length - 1].weight : null;
+              const progress = targetW && startW && last ? Math.min(100, Math.max(0, Math.round(Math.abs((last.weight - startW) / (targetW - startW)) * 100))) : null;
+
+              const last10 = log.slice(0, 10).reverse();
+              const wMin = last10.length ? Math.min(...last10.map(e => e.weight)) - 1 : 0;
+              const wMax = last10.length ? Math.max(...last10.map(e => e.weight)) + 1 : 100;
+
+              const getBmiStatus = (bmi) => {
+                if (!bmi) return null;
+                if (bmi < 18.5) return { label: "Insuffisant", color: "#007AFF" };
+                if (bmi < 25) return { label: "Normal", color: "#30D158" };
+                if (bmi < 30) return { label: "Surpoids", color: "#FF9F0A" };
+                return { label: "Obésité", color: "#FF453A" };
+              };
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>Composition Corporelle</div>
+                      {last && <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 2 }}>{last.weight} kg{delta !== null ? ` · ${parseFloat(delta) > 0 ? "+" : ""}${delta} kg` : ""}{last.bmi ? ` · IMC ${last.bmi}` : ""}</div>}
+                    </div>
+                    <button onClick={() => setShowForm(v => !v)} style={{ background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Log</button>
+                  </div>
+
+                  {showForm && (
+                    <div style={{ background: "var(--bg3)", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                        <input type="number" step="0.1" placeholder="Poids (kg)" value={wt} onChange={e => setWt(e.target.value)} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 13 }} />
+                        <input type="number" step="0.1" placeholder="% gras (optionnel)" value={bf} onChange={e => setBf(e.target.value)} style={{ flex: 1, background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 13 }} />
+                      </div>
+                      <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: "100%", background: "var(--bg2)", border: "1px solid #3A3A3C", borderRadius: 8, padding: "6px 8px", color: "var(--fg)", fontSize: 12, marginBottom: 6, boxSizing: "border-box" }} />
+                      <button onClick={addEntry} style={{ width: "100%", background: "var(--yellow)", color: "#000", border: "none", borderRadius: 8, padding: "7px 0", fontWeight: 700, cursor: "pointer" }}>Enregistrer</button>
+                    </div>
+                  )}
+
+                  {last10.length >= 2 && (() => {
+                    const W = 260, H = 60, pad = 4;
+                    const xScale = (i) => pad + i * ((W - 2 * pad) / (last10.length - 1));
+                    const yScale = (w) => H - pad - ((w - wMin) / (wMax - wMin)) * (H - 2 * pad);
+                    const pts = last10.map((e, i) => `${xScale(i)},${yScale(e.weight)}`).join(" ");
+                    const area = `M${xScale(0)},${H} ` + last10.map((e, i) => `L${xScale(i)},${yScale(e.weight)}`).join(" ") + ` L${xScale(last10.length - 1)},${H} Z`;
+                    return (
+                      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ marginBottom: 8, overflow: "visible" }}>
+                        <defs><linearGradient id="wGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#007AFF" stopOpacity="0.3"/><stop offset="100%" stopColor="#007AFF" stopOpacity="0"/></linearGradient></defs>
+                        <path d={area} fill="url(#wGrad)" />
+                        <polyline points={pts} fill="none" stroke="#007AFF" strokeWidth="2" strokeLinejoin="round" />
+                        {last10.map((e, i) => <circle key={i} cx={xScale(i)} cy={yScale(e.weight)} r="3" fill="#007AFF" />)}
+                      </svg>
+                    );
+                  })()}
+
+                  {/* Stats row */}
+                  {last && (
+                    <div style={{ display: "flex", gap: 6, marginBottom: last.bmi ? 8 : 0 }}>
+                      {[
+                        { label: "Actuel", value: `${last.weight} kg`, color: "#007AFF" },
+                        last.bf && { label: "% Gras", value: `${last.bf}%`, color: "#FF9F0A" },
+                        last.bmi && { label: "IMC", value: `${last.bmi}`, color: getBmiStatus(last.bmi)?.color },
+                        progress !== null && { label: "Objectif", value: `${progress}%`, color: "#30D158" },
+                      ].filter(Boolean).map(s => (
+                        <div key={s.label} style={{ flex: 1, background: `${s.color}12`, borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: s.color }}>{s.value}</div>
+                          <div style={{ fontSize: 8, color: "#8E8E93" }}>{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {last && last.bmi && (() => {
+                    const bmiStatus = getBmiStatus(last.bmi);
+                    return <div style={{ fontSize: 10, color: bmiStatus.color, textAlign: "center" }}>IMC {last.bmi} — {bmiStatus.label}</div>;
+                  })()}
+                  {log.length === 0 && <div style={{ textAlign: "center", fontSize: 11, color: "#8E8E93" }}>Aucun enregistrement — loggez votre premier poids</div>}
                 </div>
               );
             })()}
