@@ -6902,6 +6902,55 @@ JSON:
                       </div>
                     </div>
 
+                    {/* Détail du calcul + conseil actionnable — identifie le facteur le plus limitant */}
+                    {(() => {
+                      // Chaque facteur : score /100 et son poids dans l'APEX. On cherche celui qui
+                      // fait perdre le plus de points = (100 - score) × poids → plus grande marge de gain.
+                      const factors = [
+                        { key:"Sommeil",    score:sleepScore,  w:0.20, tip:"Vise 8-9h. Couche-toi 30 min plus tôt ce soir." },
+                        { key:"Fatigue",    score:fatigueScore,w:0.25, tip:"Repos ou séance légère aujourd'hui. Renseigne ton check-in du matin." },
+                        { key:"VFC",        score:hrvScore,    w:0.15, tip:"Mesure ta VFC au réveil. Respiration lente 5 min pour la faire monter." },
+                        { key:"Hydratation",score:hydraScore,  w:0.10, tip:"Bois régulièrement : objectif ~3 L répartis sur la journée." },
+                        { key:"Nutrition",  score:nutPct,      w:0.15, tip:"Logge tes repas — tu es en dessous de ta cible calorique." },
+                        { key:"Forme",      score:sc.global,   w:0.15, tip:"Enchaîne les séances régulières pour faire monter ta condition." },
+                      ];
+                      const weak = factors.slice().sort((a,b) => (100-b.score)*b.w - (100-a.score)*a.w)[0];
+                      const [showDetail, setShowDetail] = React.useState(false);
+                      return (
+                        <div style={{ marginBottom:12 }}>
+                          {/* Conseil du jour */}
+                          <div style={{ display:"flex", gap:8, alignItems:"flex-start", background:`${tier.color}12`, border:`1px solid ${tier.color}30`, borderRadius:12, padding:"10px 12px" }}>
+                            <span style={{ fontSize:15, lineHeight:1.2 }}>💡</span>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:11, color:"var(--white)", fontWeight:600, lineHeight:1.4 }}>
+                                Pour gagner des points : <span style={{ color:tier.color }}>{weak.key}</span> ({weak.score}%)
+                              </div>
+                              <div style={{ fontSize:11, color:"#AEAEB2", lineHeight:1.45, marginTop:2 }}>{weak.tip}</div>
+                            </div>
+                          </div>
+                          {/* Lien détail du calcul */}
+                          <button onClick={() => setShowDetail(v => !v)} data-no-share="1"
+                            style={{ background:"none", border:"none", color:"#8E8E93", fontSize:10, cursor:"pointer", padding:"8px 0 0", display:"flex", alignItems:"center", gap:4 }}>
+                            {showDetail ? "▲ Masquer le détail" : "▼ Comment est calculé mon score ?"}
+                          </button>
+                          {showDetail && (
+                            <div style={{ marginTop:6, background:"rgba(0,0,0,0.25)", borderRadius:10, padding:"10px 12px" }}>
+                              {factors.map(f => (
+                                <div key={f.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:10, color:"#AEAEB2", padding:"3px 0" }}>
+                                  <span>{f.key} <span style={{ color:"#636366" }}>× {Math.round(f.w*100)}%</span></span>
+                                  <span style={{ color:"var(--white)", fontWeight:600 }}>{f.score}% <span style={{ color:"#636366", fontWeight:400 }}>→ +{Math.round(f.score*f.w)}pt</span></span>
+                                </div>
+                              ))}
+                              <div style={{ borderTop:"1px solid rgba(255,255,255,0.08)", marginTop:6, paddingTop:6, display:"flex", justifyContent:"space-between", fontSize:11, fontWeight:700 }}>
+                                <span style={{ color:"#8E8E93" }}>Total APEX</span>
+                                <span style={{ color:tier.color }}>{apexScore}/100</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Ligne bas : watermark + bouton partager */}
                     <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div>
