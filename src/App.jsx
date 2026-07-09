@@ -19624,7 +19624,7 @@ JSON:
             })()}
 
             {/* ── SWEAT RATE CALCULATOR ── */}
-            {(() => {
+            {false && (() => {
               const poids = parseFloat(profile.poids) || 70;
               const [temp, setTemp] = React.useState(20);
               const [duree, setDuree] = React.useState(60);
@@ -19700,7 +19700,7 @@ JSON:
             })()}
 
             {/* ── CALORIE BURN ESTIMATOR ── */}
-            {(profile.sessions||[]).length >= 1 && (() => {
+            {false && (profile.sessions||[]).length >= 1 && (() => {
               const poids = parseFloat(profile.poids) || 75;
               const sessions = profile.sessions || [];
               const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
@@ -19883,7 +19883,7 @@ JSON:
             })()}
 
             {/* ── POWER OUTPUT ESTIMATOR ── */}
-            {(() => {
+            {false && (() => {
               const poids = parseFloat(profile.poids) || 70;
               const vma = parseFloat(profile.vmaKmh) || null;
               const sessions = profile.sessions || [];
@@ -20759,7 +20759,7 @@ JSON:
             })()}
 
             {/* ── RUNNING ECONOMY CALCULATOR ── */}
-            {(() => {
+            {false && (() => {
               const vma = parseFloat(profile.vmaKmh) || null;
               const age = parseInt(profile.age) || 30;
               const poids = parseFloat(profile.poids) || 70;
