@@ -1903,9 +1903,25 @@ function LoginScreen({ onLogin }) {
       <div style={{ position: "relative", padding: "60px 24px 40px", textAlign: "center", flexShrink: 0 }}>
         {/* Glow behind logo */}
         <div style={{ position: "absolute", top: 40, left: "50%", transform: "translateX(-50%)", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,213,0,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div className="bebas fade-in" style={{ fontSize: 80, color: "var(--yellow)", lineHeight: 0.85, letterSpacing: 3, position: "relative" }}>FIT</div>
-        <div className="bebas fade-in" style={{ fontSize: 80, color: "var(--white)", lineHeight: 0.85, letterSpacing: 3, position: "relative" }}>RACE</div>
-        <div style={{ marginTop: 14, color: "#8E8E93", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", position: "relative" }}>Entraînement HYROX · IA Adaptative</div>
+        {/* Logo sommet APEX (A doré) */}
+        <div className="fade-in" style={{ position: "relative", width: 72, height: 60, margin: "0 auto 6px" }}>
+          <svg viewBox="0 0 72 60" width="72" height="60" aria-hidden="true">
+            <defs>
+              <linearGradient id="apexLogoGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#F4D57A"/>
+                <stop offset="55%" stopColor="#C9A840"/>
+                <stop offset="100%" stopColor="#8A6D1E"/>
+              </linearGradient>
+            </defs>
+            <path d="M36 2 L70 58 L50 58 L36 30 L22 58 L2 58 Z" fill="url(#apexLogoGrad)"/>
+            <path d="M36 24 L47 46 L36 40 L30 52 Z" fill="#0a0a08"/>
+          </svg>
+        </div>
+        <div className="bebas fade-in" style={{ fontSize: 76, color: "var(--yellow)", lineHeight: 0.85, letterSpacing: 8, position: "relative" }}>APEX</div>
+        <div style={{ marginTop: 12, color: "#8E8E93", fontSize: 11, letterSpacing: "0.22em", textTransform: "uppercase", position: "relative" }}>Entraîne · Récupère · Progresse</div>
+        <div style={{ marginTop: 18, color: "var(--white)", fontSize: 17, fontWeight: 700, lineHeight: 1.35, position: "relative", maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>
+          Ton corps change chaque jour.<br/><span style={{ color: "var(--yellow)" }}>Ton entraînement aussi.</span>
+        </div>
       </div>
 
       {/* Content card */}
@@ -1921,12 +1937,15 @@ function LoginScreen({ onLogin }) {
                 ))}
               </div>
 
-              {/* Proposition de valeur — 3 bénéfices concrets */}
+              {/* Proposition de valeur — ton du deck APEX */}
+              <div style={{ textAlign: "center", fontSize: 12, color: "#8E8E93", lineHeight: 1.5, margin: "4px 0 2px" }}>
+                Les programmes classiques sont <span style={{ color: "var(--white)", fontWeight: 600 }}>cassés</span> : ils ignorent ton sommeil, ta VFC, ta fatigue. <span style={{ color: "var(--yellow)" }}>APEX s'adapte à toi, chaque jour.</span>
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "6px 0 10px" }}>
                 {[
-                  { icon: "🎯", title: "Un plan adapté à ton niveau", desc: "L'IA analyse tes tests (VMA, force) et génère ta séance du jour, ajustée à ta fatigue et ta course cible." },
-                  { icon: "📈", title: "Tous tes indicateurs au même endroit", desc: "Score de forme, zones FC personnalisées, nutrition, sommeil, records HYROX — suivis automatiquement." },
-                  { icon: "🏁", title: "Prêt le jour J", desc: "Simulateur de temps de course, plan par phases, et un coach IA qui répond à tes questions 24h/24." },
+                  { icon: "🎯", title: "Une séance décidée par ton état du jour", desc: "Sommeil, VFC, fatigue, nutrition → l'IA calcule ton Score APEX et adapte LA séance du jour." },
+                  { icon: "📈", title: "Tous tes signaux au même endroit", desc: "Score de préparation, zones FC personnalisées, nutrition, sommeil, records HYROX — suivis automatiquement." },
+                  { icon: "🏁", title: "Prêt le jour J", desc: "Simulateur de temps de course, plan par phases, et un coach IA qui répond 24h/24." },
                 ].map(b => (
                   <div key={b.title} style={{ display: "flex", gap: 10, alignItems: "flex-start", textAlign: "left" }}>
                     <span style={{ fontSize: 18, lineHeight: 1.2, flexShrink: 0 }}>{b.icon}</span>
@@ -6386,7 +6405,7 @@ JSON:
                   {/* Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
                     <div>
-                      <div style={{ fontSize: 9, color: "rgba(201,168,64,0.5)", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 6 }}>FITRACE · HYROX IA</div>
+                      <div style={{ fontSize: 9, color: "rgba(201,168,64,0.5)", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 6 }}>APEX · HYROX IA</div>
                       <div className="bebas" style={{ fontSize: 34, color: "var(--yellow)", letterSpacing: 2, lineHeight: 1 }}>{profile.name.toUpperCase()}</div>
                       <div style={{ fontSize: 11, color: "#8E8E93", marginTop: 4 }}>
                         {LEVELS[(profile.level||1)-1]?.label} · S{profile.week||1} · {profile.sessions?.length||0} séances
@@ -6770,12 +6789,12 @@ JSON:
                     filter: (el) => !(el?.dataset && el.dataset.noShare === "1"),
                   });
                   if (!blob) throw new Error("blob vide");
-                  const txt = `🏆 Mon score APEX FitRace : ${apexScore}/100 — ${tier.label}\n💪 Score Fitness : ${sc.global}/100\n🌙 Sommeil : ${sleepScore}% · 🥗 Nutrition : ${nutPct}% · ⚡ Charge : ${chargeLabel}\n#HYROX #FitRace #APEX`;
+                  const txt = `🏆 Mon Score APEX : ${apexScore}/100 — ${tier.label}\n💪 Score Fitness : ${sc.global}/100\n🌙 Sommeil : ${sleepScore}% · 🥗 Nutrition : ${nutPct}% · ⚡ Charge : ${chargeLabel}\n#HYROX #APEX #APEXPerformance`;
                   const file = new File([blob], "apex.png", { type: "image/png" });
                   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], text: txt, title: "Mon score APEX FitRace" }).catch(()=>showToast("Partage annulé", "info"));
+                    await navigator.share({ files: [file], text: txt, title: "Mon Score APEX" }).catch(()=>showToast("Partage annulé", "info"));
                   } else if (navigator.share) {
-                    await navigator.share({ text: txt, title: "Mon score APEX FitRace" }).catch(()=>{});
+                    await navigator.share({ text: txt, title: "Mon Score APEX" }).catch(()=>{});
                   } else {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
@@ -6971,7 +6990,7 @@ JSON:
                     {/* Ligne bas : watermark + bouton partager */}
                     <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", paddingTop:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div>
-                        <div className="bebas" style={{ fontSize:14, color:"var(--yellow)", letterSpacing:3, lineHeight:1 }}>FITRACE</div>
+                        <div className="bebas" style={{ fontSize:14, color:"var(--yellow)", letterSpacing:3, lineHeight:1 }}>APEX</div>
                         <div style={{ fontSize:8, color:"#4A4A4E", letterSpacing:"0.1em" }}>HYROX TRAINING</div>
                       </div>
                       <button onClick={doShare} data-no-share="1"
@@ -12371,7 +12390,7 @@ JSON:
                             <div style={{ position:"absolute", top:-20, right:20, width:60, height:60, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
                             {/* Brand */}
                             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"rgba(255,255,255,0.5)", letterSpacing:3 }}>FITRACE</div>
+                              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:14, color:"rgba(255,255,255,0.5)", letterSpacing:3 }}>APEX</div>
                               <div style={{ fontSize:9, color:"rgba(255,255,255,0.4)", fontWeight:600, letterSpacing:1 }}>HYROX TRAINING</div>
                             </div>
                             {/* Session type */}
