@@ -7199,25 +7199,7 @@ JSON:
                     </div>
                   </div>
 
-                  {/* Liste repas du jour */}
-                  {meals.length > 0 && (
-                    <div style={{ marginBottom:10 }}>
-                      <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                        {meals.slice(-4).map(m=>(
-                          <div key={m.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 10px", background:"rgba(255,255,255,0.03)", borderRadius:8 }}>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <span style={{ fontSize:12, color:"var(--white)", fontWeight:600 }}>{m.nom}</span>
-                              <span style={{ fontSize:10, color:"#8E8E93", marginLeft:6 }}>{m.heure}</span>
-                            </div>
-                            <span style={{ fontSize:10, color:"#FF9F0A", fontWeight:700 }}>{m.kcal} kcal</span>
-                            <span style={{ fontSize:10, color:"#39ff80", fontWeight:700 }}>{m.p}g</span>
-                            <button onClick={()=>removeMeal(m.id)} style={{ background:"none",border:"none",color:"#8E8E93",fontSize:14,cursor:"pointer",lineHeight:1,padding:"0 2px" }}>×</button>
-                          </div>
-                        ))}
-                        {meals.length > 4 && <div style={{ fontSize:9, color:"#8E8E93", textAlign:"center" }}>+{meals.length-4} repas · voir Nutrition</div>}
-                      </div>
-                    </div>
-                  )}
+                  {/* Détail des aliments retiré de l'accueil — accessible via "Détail →" (onglet Nutrition) */}
 
                 </div>
               );
