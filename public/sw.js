@@ -1,4 +1,4 @@
-const CACHE_NAME = "fitrace-v5";
+const CACHE_NAME = "fitrace-v6";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
