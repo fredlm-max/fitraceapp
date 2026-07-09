@@ -18700,6 +18700,212 @@ JSON:
               );
             })()}
 
+            {/* ── POLARIZED TRAINING ANALYZER ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              const [weeks, setWeeks] = React.useState(8);
+
+              const today = new Date().toISOString().slice(0,10);
+              const cutoff = new Date(today);
+              cutoff.setDate(cutoff.getDate() - weeks * 7);
+              const cutoffStr = cutoff.toISOString().slice(0,10);
+
+              const recent = sessions.filter(s => s.date >= cutoffStr && s.rpe);
+              if (recent.length < 3) return null;
+
+              // Zone classification by RPE
+              // Z1: RPE 1-4 (easy, recovery)
+              // Z2: RPE 5-6 (aerobic, moderate)
+              // Z3: RPE 7-10 (threshold, VO2max, anaerobic)
+              const byZone = { z1:[], z2:[], z3:[] };
+              recent.forEach(s => {
+                const rpe = parseFloat(s.rpe);
+                if (rpe <= 4) byZone.z1.push(s);
+                else if (rpe <= 6) byZone.z2.push(s);
+                else byZone.z3.push(s);
+              });
+
+              const total = recent.length;
+              const z1Pct = Math.round(byZone.z1.length / total * 100);
+              const z2Pct = Math.round(byZone.z2.length / total * 100);
+              const z3Pct = Math.round(byZone.z3.length / total * 100);
+
+              // By TRIMP (more accurate polarization measure)
+              const z1Trimp = byZone.z1.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const z2Trimp = byZone.z2.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const z3Trimp = byZone.z3.reduce((s,x) => s + (x.duration&&x.rpe ? x.duration*(x.rpe/10) : 0), 0);
+              const totalTrimp = z1Trimp + z2Trimp + z3Trimp;
+
+              const z1TP = totalTrimp > 0 ? Math.round(z1Trimp/totalTrimp*100) : 0;
+              const z2TP = totalTrimp > 0 ? Math.round(z2Trimp/totalTrimp*100) : 0;
+              const z3TP = totalTrimp > 0 ? Math.round(z3Trimp/totalTrimp*100) : 0;
+
+              // Optimal: 80% Z1+Z2, 20% Z3 (polarized model)
+              const lowPct = z1TP + z2TP;
+              const highPct = z3TP;
+              const score = 100 - Math.abs(lowPct - 80) * 1.5 - Math.abs(highPct - 20) * 1.5;
+              const polarScore = Math.max(0, Math.min(100, Math.round(score)));
+              const scoreColor = polarScore >= 80 ? "#30D158" : polarScore >= 60 ? "#FF9F0A" : "#FF453A";
+
+              // Advice
+              const getAdvice = () => {
+                if (highPct > 35) return { msg: "Trop d'intensité élevée. Ajoute 2-3 séances Z1/Z2 (course facile, vélo léger) pour équilibrer.", color:"#FF453A" };
+                if (highPct < 10) return { msg: "Manque de séances intenses. Intègre 1-2 séances seuil ou intervalles par semaine.", color:"#FF9F0A" };
+                if (z1TP < 30) return { msg: "Volume de récupération insuffisant. Les séances faciles construisent la base aérobie — ne les néglige pas.", color:"#FF9F0A" };
+                return { msg: "Distribution polarisée idéale ! Continue à maintenir ce ratio 80/20 pour progresser sans te blesser.", color:"#30D158" };
+              };
+              const advice = getAdvice();
+
+              // SVG donut chart
+              const R = 55, r = 32, CX = 70, CY = 70;
+              const polar = (pct, startAngle) => {
+                const angle = (pct/100) * 2 * Math.PI;
+                const x1 = CX + R * Math.cos(startAngle), y1 = CY + R * Math.sin(startAngle);
+                const x2 = CX + R * Math.cos(startAngle+angle), y2 = CY + R * Math.sin(startAngle+angle);
+                const ix1 = CX + r * Math.cos(startAngle), iy1 = CY + r * Math.sin(startAngle);
+                const ix2 = CX + r * Math.cos(startAngle+angle), iy2 = CY + r * Math.sin(startAngle+angle);
+                const large = angle > Math.PI ? 1 : 0;
+                return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${r} ${r} 0 ${large} 0 ${ix1} ${iy1} Z`;
+              };
+              const a0 = -Math.PI/2;
+              const a1 = a0 + (z1TP/100)*2*Math.PI;
+              const a2 = a1 + (z2TP/100)*2*Math.PI;
+
+              const ZONE_META = [
+                { key:"z1", label:"Zone 1", sub:"RPE 1-4 · Récupération/Base", color:"#30D158", pct:z1TP, count:byZone.z1.length },
+                { key:"z2", label:"Zone 2", sub:"RPE 5-6 · Aérobie modéré", color:"#FF9F0A", pct:z2TP, count:byZone.z2.length },
+                { key:"z3", label:"Zone 3", sub:"RPE 7-10 · Seuil/VO₂max", color:"#FF453A", pct:z3TP, count:byZone.z3.length },
+              ];
+
+              return (
+                <div style={{ background:"var(--bg2)", borderRadius:18, padding:20, marginBottom:20 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"var(--white)" }}>Entraînement polarisé</div>
+                      <div style={{ fontSize:11, color:"#666", marginTop:2 }}>Modèle 80/20 · {recent.length} séances</div>
+                    </div>
+                    <div style={{ display:"flex", gap:4 }}>
+                      {[4,8,12].map(w => (
+                        <button key={w} onClick={() => setWeeks(w)}
+                          style={{ background: weeks===w ? "var(--yellow)" : "var(--bg3)", border:"none", borderRadius:8, padding:"4px 10px",
+                            color: weeks===w ? "#fff" : "#888", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                          {w}S
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display:"flex", gap:16, alignItems:"center", marginBottom:14 }}>
+                    {/* Donut chart */}
+                    <svg width="140" height="140" viewBox="0 0 140 140" style={{ flexShrink:0 }}>
+                      {z1TP > 0 && <path d={polar(z1TP, a0)} fill="#30D158"/>}
+                      {z2TP > 0 && <path d={polar(z2TP, a1)} fill="#FF9F0A"/>}
+                      {z3TP > 0 && <path d={polar(z3TP, a2)} fill="#FF453A"/>}
+                      {/* Inner circle */}
+                      <circle cx={CX} cy={CY} r={r-2} fill="var(--bg2)"/>
+                      <text x={CX} y={CY-8} textAnchor="middle" fontSize="20" fontWeight="800" fill={scoreColor}>{polarScore}</text>
+                      <text x={CX} y={CY+6} textAnchor="middle" fontSize="9" fill="#666">Score</text>
+                      <text x={CX} y={CY+18} textAnchor="middle" fontSize="9" fill="#98989D">Polarisation</text>
+                    </svg>
+
+                    {/* Zone legend */}
+                    <div style={{ flex:1 }}>
+                      {ZONE_META.map(z => (
+                        <div key={z.key} style={{ marginBottom:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:z.color }}>{z.label}</div>
+                            <div style={{ fontSize:13, fontWeight:800, color:z.color }}>{z.pct}%</div>
+                          </div>
+                          <div style={{ height:5, background:"#2C2C2E", borderRadius:3, overflow:"hidden" }}>
+                            <div style={{ height:"100%", width:`${z.pct}%`, background:z.color, borderRadius:3 }}/>
+                          </div>
+                          <div style={{ fontSize:9, color:"#98989D", marginTop:1 }}>{z.sub} · {z.count} séance{z.count!==1?"s":""}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Optimal comparison */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                      <div style={{ fontSize:10, color:"#98989D", marginBottom:2 }}>Ton ratio actuel</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:scoreColor }}>{lowPct}% / {highPct}%</div>
+                      <div style={{ fontSize:9, color:"#666" }}>Z1+Z2 / Z3</div>
+                    </div>
+                    <div style={{ background:"var(--bg3)", borderRadius:12, padding:"10px 12px" }}>
+                      <div style={{ fontSize:10, color:"#98989D", marginBottom:2 }}>Ratio optimal 80/20</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"var(--yellow)" }}>80% / 20%</div>
+                      <div style={{ fontSize:9, color:"#666" }}>Z1+Z2 / Z3</div>
+                    </div>
+                  </div>
+
+                  {/* Advice */}
+                  <div style={{ background:`${advice.color}15`, border:`1px solid ${advice.color}44`, borderRadius:12, padding:"10px 14px" }}>
+                    <div style={{ fontSize:11, color:advice.color, fontWeight:700, marginBottom:3 }}>
+                      {polarScore >= 80 ? "✓" : "💡"} Recommandation
+                    </div>
+                    <div style={{ fontSize:12, color:"#999", lineHeight:1.5 }}>{advice.msg}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+
+            {/* ── RPE DISTRIBUTION CHART ── */}
+            {(() => {
+              const sessions = profile.sessions || [];
+              if (sessions.length < 3) return null;
+
+              const counts = Array(11).fill(0);
+              sessions.forEach(s => { const r = parseInt(s.rpe); if (r >= 1 && r <= 10) counts[r]++; });
+              const max = Math.max(...counts.slice(1));
+              const rpeColors = ["","#30D158","#30D158","#30D158","#30D158","#FF9F0A","#FF9F0A","#FF9F0A","#FF453A","#FF453A","#FF453A"];
+              const rpeLabels = ["","Très facile","Facile","Modéré","Modéré+","Challenging","Challenging+","Difficile","Très difficile","Presque max","Max absolu"];
+
+              const avgRPE = sessions.reduce((s, x) => s + (parseInt(x.rpe) || 5), 0) / sessions.length;
+              const zone80 = sessions.filter(s => parseInt(s.rpe) <= 6).length / sessions.length * 100;
+              const zone20 = sessions.filter(s => parseInt(s.rpe) > 6).length / sessions.length * 100;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Distribution RPE</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: "#8E8E93" }}>RPE moyen: <span style={{ color: "var(--fg)", fontWeight: 700 }}>{avgRPE.toFixed(1)}</span></div>
+                    <div style={{ fontSize: 9, color: "#8E8E93" }}>Zone 80/20: <span style={{ color: "#30D158", fontWeight: 700 }}>{Math.round(zone80)}%</span>/<span style={{ color: "#FF453A", fontWeight: 700 }}>{Math.round(zone20)}%</span></div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 70 }}>
+                    {counts.slice(1).map((c, i) => {
+                      const rpe = i + 1;
+                      const h = max > 0 ? (c / max) * 60 : 0;
+                      return (
+                        <div key={rpe} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                          {c > 0 && <div style={{ fontSize: 8, color: rpeColors[rpe], fontWeight: 700 }}>{c}</div>}
+                          <div title={`RPE ${rpe}: ${c} sessions`} style={{ width: "100%", height: Math.max(h, 2), background: rpeColors[rpe], borderRadius: "3px 3px 0 0", opacity: c === 0 ? 0.15 : 1 }} />
+                          <div style={{ fontSize: 8, color: "#8E8E93" }}>{rpe}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <div style={{ flex: 1, background: "#30D15818", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#8E8E93" }}>Endurance (1-6)</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#30D158" }}>{Math.round(zone80)}%</div>
+                    </div>
+                    <div style={{ flex: 1, background: "#FF453A18", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#8E8E93" }}>Intensif (7-10)</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#FF453A" }}>{Math.round(zone20)}%</div>
+                    </div>
+                    <div style={{ flex: 1, background: "#2C2C2E", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                      <div style={{ fontSize: 9, color: "#8E8E93" }}>Cible 80/20</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: Math.abs(zone80 - 80) < 10 ? "#30D158" : "#FF9F0A" }}>{Math.abs(zone80 - 80) < 10 ? "✓ Optimal" : "Ajuster"}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── PR PROGRESSION CHART ── */}
             {(() => {
               const [selEx, setSelEx] = React.useState(0);
@@ -18778,6 +18984,111 @@ JSON:
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
                     <div style={{ fontSize: 10, color: "#8E8E93" }}>{pts[0].date ? new Date(pts[0].date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div>
                     <div style={{ fontSize: 10, color: "#8E8E93" }}>{pts[pts.length-1].date ? new Date(pts[pts.length-1].date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "Auj."}</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── STRENGTH STANDARDS ── */}
+            {(() => {
+              let prs = {};
+              try { prs = JSON.parse(localStorage.getItem(`fitrace_prs_${profile.name}`) || "{}"); } catch {}
+              const poids = parseFloat(profile.poids) || 75;
+              const isMale = !(profile.sexe === "F" || profile.sexe === "femme");
+
+              // HYROX-relevant strength standards (1RM in kg, by body weight ratio)
+              const STANDARDS = [
+                {
+                  name: "Deadlift",
+                  key: "deadlift",
+                  icon: "🏋️",
+                  color: "#C9A840",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 1.0 }, { l: "Intermédiaire", r: 1.5 }, { l: "Avancé", r: 2.0 }, { l: "Elite", r: 2.5 }]
+                    : [{ l: "Débutant", r: 0.7 }, { l: "Intermédiaire", r: 1.0 }, { l: "Avancé", r: 1.4 }, { l: "Elite", r: 1.8 }],
+                },
+                {
+                  name: "Squat",
+                  key: "squat",
+                  icon: "🦵",
+                  color: "#FF9F0A",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 0.8 }, { l: "Intermédiaire", r: 1.2 }, { l: "Avancé", r: 1.6 }, { l: "Elite", r: 2.0 }]
+                    : [{ l: "Débutant", r: 0.6 }, { l: "Intermédiaire", r: 0.9 }, { l: "Avancé", r: 1.2 }, { l: "Elite", r: 1.6 }],
+                },
+                {
+                  name: "Développé couché",
+                  key: "bench",
+                  icon: "💪",
+                  color: "#38bdf8",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 0.7 }, { l: "Intermédiaire", r: 1.0 }, { l: "Avancé", r: 1.3 }, { l: "Elite", r: 1.6 }]
+                    : [{ l: "Débutant", r: 0.45 }, { l: "Intermédiaire", r: 0.65 }, { l: "Avancé", r: 0.85 }, { l: "Elite", r: 1.1 }],
+                },
+                {
+                  name: "Kettlebell Swing",
+                  key: "kb_swing",
+                  icon: "🔔",
+                  color: "#BF5AF2",
+                  levels: isMale
+                    ? [{ l: "Débutant", r: 0.2 }, { l: "Intermédiaire", r: 0.3 }, { l: "Avancé", r: 0.4 }, { l: "Elite", r: 0.5 }]
+                    : [{ l: "Débutant", r: 0.15 }, { l: "Intermédiaire", r: 0.22 }, { l: "Avancé", r: 0.30 }, { l: "Elite", r: 0.38 }],
+                },
+              ];
+
+              const matched = STANDARDS.map(st => {
+                const prEntry = Object.entries(prs).find(([k]) => k.includes(st.key));
+                const pr1rm = prEntry ? prEntry[1].value : null;
+                const ratio = pr1rm ? pr1rm / poids : null;
+                let levelIdx = -1;
+                if (ratio) {
+                  st.levels.forEach((l, i) => { if (ratio >= l.r) levelIdx = i; });
+                }
+                return { ...st, pr1rm, ratio, levelIdx };
+              }).filter(st => st.pr1rm);
+
+              if (matched.length === 0) return null;
+
+              return (
+                <div style={{ background: "var(--bg2)", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+                  <div className="bebas" style={{ fontSize: 17, color: "var(--white)", letterSpacing: 1, marginBottom: 12 }}>⚡ STANDARDS DE FORCE</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {matched.map((st, i) => {
+                      const levelLabel = st.levelIdx >= 0 ? st.levels[st.levelIdx].l : "En-dessous débutant";
+                      const levelColor = st.levelIdx >= 3 ? "#BF5AF2" : st.levelIdx >= 2 ? "#30D158" : st.levelIdx >= 1 ? "#C9A840" : "#FF9F0A";
+                      const nextLevel = st.levels[st.levelIdx + 1];
+                      const progressPct = nextLevel
+                        ? Math.min(100, Math.round(((st.ratio - st.levels[Math.max(0, st.levelIdx)].r) / (nextLevel.r - st.levels[Math.max(0, st.levelIdx)].r)) * 100))
+                        : 100;
+                      return (
+                        <div key={i}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span>{st.icon}</span>
+                              <div>
+                                <div style={{ fontSize: 12, color: "var(--white)", fontWeight: 600 }}>{st.name}</div>
+                                <div style={{ fontSize: 10, color: "#8E8E93" }}>{st.pr1rm}kg · {st.ratio?.toFixed(2)}× PDC</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: 11, color: levelColor, fontWeight: 700 }}>{levelLabel}</div>
+                              {nextLevel && <div style={{ fontSize: 9, color: "#8E8E93" }}>→ {nextLevel.l} : {Math.round(nextLevel.r * poids)}kg</div>}
+                            </div>
+                          </div>
+                          <div style={{ position: "relative", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 99 }}>
+                            {st.levels.map((l, j) => (
+                              <div key={j} style={{ position: "absolute", left: `${Math.round((j / st.levels.length) * 100)}%`, top: -3, width: 2, height: 12, background: "rgba(255,255,255,0.1)" }} />
+                            ))}
+                            <div style={{ width: `${Math.min(100, Math.round((st.ratio / st.levels[st.levels.length - 1].r) * 100))}%`, height: "100%", background: levelColor, borderRadius: 99 }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                            {st.levels.map((l, j) => (
+                              <div key={j} style={{ fontSize: 8, color: "#8E8E93" }}>{l.l}</div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -19311,6 +19622,154 @@ JSON:
               );
             })()}
 
+            {/* ── HEATMAP CHARGE JOURNALIÈRE ── */}
+            {(() => {
+              const [hoveredCell, setHoveredCell] = React.useState(null);
+              const sessions = profile.sessions || [];
+              if (sessions.length < 1) return null;
+              // Build day → TRIMP map for last 56 days
+              const dayMap = {};
+              sessions.forEach(s => {
+                if (!s.date) return;
+                const dateKey = s.date.slice(0, 10);
+                const dur = parseInt(s.dureeReelle || s.duree || 45);
+                const rpe = parseFloat(s.rpe || s.rpeGlobal || 6);
+                const trimp = Math.round(dur * rpe / 10);
+                dayMap[dateKey] = (dayMap[dateKey] || 0) + trimp;
+              });
+
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              // Start from Monday 8 weeks ago
+              const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1; // 0=Mon
+              const startDay = new Date(today);
+              startDay.setDate(today.getDate() - dayOfWeek - 7 * 11);
+
+              const cells = [];
+              for (let i = 0; i < 84; i++) {
+                const d = new Date(startDay);
+                d.setDate(startDay.getDate() + i);
+                const key = d.toISOString().slice(0, 10);
+                const trimp = dayMap[key] || 0;
+                const isToday = key === today.toISOString().slice(0, 10);
+                const isFuture = d > today;
+                cells.push({ date: d, key, trimp, isToday, isFuture });
+              }
+
+              const maxTrimp = Math.max(...cells.map(c => c.trimp), 1);
+
+              function cellColor(c) {
+                if (c.isFuture) return "rgba(255,255,255,0.03)";
+                if (c.trimp === 0) return "rgba(255,255,255,0.05)";
+                const intensity = c.trimp / maxTrimp;
+                if (intensity < 0.25) return "rgba(201,168,64,0.2)";
+                if (intensity < 0.5) return "rgba(201,168,64,0.45)";
+                if (intensity < 0.75) return "rgba(201,168,64,0.7)";
+                return "rgba(201,168,64,0.95)";
+              }
+
+              function cellGlow(c) {
+                if (c.trimp === 0 || c.isFuture) return "none";
+                const intensity = c.trimp / maxTrimp;
+                if (intensity < 0.5) return "none";
+                return `0 0 6px rgba(201,168,64,${intensity * 0.6})`;
+              }
+
+              const totalTrimp = cells.filter(c => !c.isFuture).reduce((s, c) => s + c.trimp, 0);
+              const activeDays = cells.filter(c => c.trimp > 0).length;
+              const streak = (() => {
+                let s = 0;
+                for (let i = cells.length - 1; i >= 0; i--) {
+                  if (cells[i].trimp > 0 && !cells[i].isFuture) s++;
+                  else if (!cells[i].isFuture) break;
+                }
+                return s;
+              })();
+
+              const DAYS = ["L", "M", "M", "J", "V", "S", "D"];
+              const weeks = Array.from({ length: 12 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+              const weekLabels = weeks.map(w => {
+                const d = w[0].date;
+                return `S${Math.ceil((d.getDate()) / 7)} ${d.toLocaleDateString("fr-FR", { month: "short" })}`;
+              });
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px", marginBottom: 12 }}>
+                  {/* Header */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 3 }}>🗓 Activité — 12 semaines</div>
+                      <div style={{ fontSize: 10, color: "#8E8E93" }}>Charge TRIMP par jour · durée × RPE</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div className="bebas" style={{ fontSize: 20, color: "#C9A840", lineHeight: 1 }}>{activeDays}</div>
+                        <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase" }}>jours actifs</div>
+                      </div>
+                      {streak > 1 && (
+                        <div style={{ textAlign: "center" }}>
+                          <div className="bebas" style={{ fontSize: 20, color: "#FF9F0A", lineHeight: 1 }}>{streak}🔥</div>
+                          <div style={{ fontSize: 8, color: "#8E8E93", textTransform: "uppercase" }}>streak</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Day labels */}
+                  <div style={{ display: "flex", gap: 3, marginBottom: 4, paddingLeft: 28 }}>
+                    {DAYS.map((d, i) => (
+                      <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 8, color: "#8E8E93", fontWeight: 700 }}>{d}</div>
+                    ))}
+                  </div>
+
+                  {/* Grid rows = weeks */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {weeks.map((week, wi) => (
+                      <div key={wi} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ width: 24, fontSize: 7, color: "#8E8E93", flexShrink: 0, textAlign: "right", paddingRight: 4 }}>{weekLabels[wi]}</div>
+                        {week.map((cell, di) => (
+                          <div
+                            key={di}
+                            style={{
+                              flex: 1,
+                              aspectRatio: "1",
+                              borderRadius: 3,
+                              background: cellColor(cell),
+                              boxShadow: cellGlow(cell),
+                              border: cell.isToday ? "1.5px solid rgba(201,168,64,0.8)" : "1px solid rgba(255,255,255,0.04)",
+                              cursor: cell.trimp > 0 ? "pointer" : "default",
+                              position: "relative",
+                              transition: "transform 0.1s",
+                            }}
+                            onMouseEnter={() => setHoveredCell(cell)}
+                            onMouseLeave={() => setHoveredCell(null)}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tooltip */}
+                  {hoveredCell && hoveredCell.trimp > 0 && (
+                    <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(44,44,46,0.95)", border: "1px solid rgba(201,168,64,0.3)", borderRadius: 10, fontSize: 11, color: "var(--white)", display: "flex", justifyContent: "space-between" }}>
+                      <span>{hoveredCell.date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                      <span style={{ color: "#C9A840", fontWeight: 700 }}>TRIMP {hoveredCell.trimp}</span>
+                    </div>
+                  )}
+
+                  {/* Legend */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12 }}>
+                    <span style={{ fontSize: 9, color: "#8E8E93" }}>Moins</span>
+                    {[0.05, 0.2, 0.45, 0.7, 0.95].map((op, i) => (
+                      <div key={i} style={{ width: 12, height: 12, borderRadius: 2, background: op === 0.05 ? "rgba(255,255,255,0.06)" : `rgba(201,168,64,${op})` }} />
+                    ))}
+                    <span style={{ fontSize: 9, color: "#8E8E93" }}>Plus</span>
+                    <div style={{ marginLeft: "auto", fontSize: 9, color: "#8E8E93" }}>Total 8 sem: <span style={{ color: "#C9A840", fontWeight: 700 }}>{totalTrimp} TRIMP</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── MIX ENTRAÎNEMENT ── */}
             <TrainingMixChart profile={profile} />
 
@@ -19527,6 +19986,64 @@ JSON:
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── GRAPHIQUE CHARGE HEBDO ── */}
+            {(profile.sessions||[]).length >= 3 && (() => {
+              // Groupe les sessions par semaine (ISO week)
+              const getWeekKey = (date) => {
+                const d = new Date(date); d.setHours(0,0,0,0);
+                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+                const y = d.getFullYear();
+                const w = Math.ceil(((d - new Date(y,0,1)) / 86400000 + 1) / 7);
+                return `${y}-W${String(w).padStart(2,"0")}`;
+              };
+              const weekMap = {};
+              (profile.sessions||[]).forEach(s => {
+                const wk = getWeekKey(s.date);
+                if (!weekMap[wk]) weekMap[wk] = { count: 0, rpeSum: 0, dur: 0 };
+                weekMap[wk].count++;
+                weekMap[wk].rpeSum += s.difficulte || 5;
+                weekMap[wk].dur += parseInt(s.tempsReel?.split(":")[0]||0)*60 + parseInt(s.tempsReel?.split(":")[1]||0) || 50;
+              });
+              const weeks = Object.entries(weekMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-8);
+              if (weeks.length < 2) return null;
+              const maxCount = Math.max(...weeks.map(([,v]) => v.count));
+              const W = 320; const H = 80; const barW = Math.floor((W - 20) / weeks.length) - 4;
+              return (
+                <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: 16, padding: "16px 16px 10px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>Charge par semaine</div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>{weeks.length} semaines</div>
+                  </div>
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+                    {weeks.map(([wk, v], i) => {
+                      const x = 10 + i * ((W - 20) / weeks.length);
+                      const barH = maxCount > 0 ? Math.max(8, (v.count / maxCount) * (H - 20)) : 8;
+                      const avgRPE = v.rpeSum / v.count;
+                      const col = avgRPE <= 4 ? "#39ff80" : avgRPE <= 7 ? "#C9A840" : "#ff4747";
+                      const isLast = i === weeks.length - 1;
+                      return (
+                        <g key={i}>
+                          <rect x={x} y={H - barH - 16} width={barW} height={barH}
+                            rx="4" fill={isLast ? col : `${col}55`} />
+                          <text x={x + barW/2} y={H - barH - 20} textAnchor="middle"
+                            fontSize="10" fontFamily="'Bebas Neue',sans-serif" fill={isLast ? col : "#444"}>{v.count}</text>
+                          <text x={x + barW/2} y={H - 2} textAnchor="middle"
+                            fontSize="9" fill={isLast ? "#888" : "#2a2a2a"}>{wk.slice(6)}</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                  <div style={{ display: "flex", gap: 10, marginTop: 4, justifyContent: "center" }}>
+                    {[["#39ff80","RPE ≤4"],["#C9A840","RPE 5-7"],["#ff4747","RPE ≥8"]].map(([c,l])=>(
+                      <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#8E8E93" }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -19802,6 +20319,74 @@ JSON:
               );
             })()}
 
+            {/* ── OBJECTIF VS RÉEL ── */}
+            {(profile.sessions||[]).length >= 2 && profile.seancesParSemaine && (() => {
+              const target = parseInt(profile.seancesParSemaine) || 4;
+              // Last 8 weeks
+              const getWeekNum = (date) => {
+                const d = new Date(date); d.setHours(0,0,0,0);
+                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+                const y = d.getFullYear();
+                const w = Math.ceil(((d - new Date(y,0,1)) / 86400000 + 1) / 7);
+                return `${y}-${String(w).padStart(2,"0")}`;
+              };
+              const weekMap = {};
+              (profile.sessions||[]).forEach(s => {
+                const wk = getWeekNum(s.date);
+                weekMap[wk] = (weekMap[wk]||0) + 1;
+              });
+              const weeks = Object.entries(weekMap).sort((a,b) => a[0].localeCompare(b[0])).slice(-8);
+              if (weeks.length < 2) return null;
+
+              const achieved = weeks.map(([,c]) => c);
+              const avgAchieved = (achieved.reduce((a,b) => a+b, 0) / achieved.length).toFixed(1);
+              const compliance = Math.round((achieved.reduce((a,b) => a+b, 0) / (achieved.length * target)) * 100);
+              const complianceColor = compliance >= 85 ? "var(--green)" : compliance >= 65 ? "var(--yellow)" : "var(--orange)";
+
+              return (
+                <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 18, padding: "16px 16px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>🎯 Objectif vs réalisé</div>
+                    <div style={{ display: "flex", align: "center", gap: 6 }}>
+                      <span style={{ fontSize: 10, color: "#8E8E93" }}>Compliance</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: complianceColor }}>{compliance}%</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 64, marginBottom: 8 }}>
+                    {weeks.map(([wk, count], i) => {
+                      const pct = count / Math.max(target, Math.max(...achieved));
+                      const targetPct = target / Math.max(target, Math.max(...achieved));
+                      const overTarget = count >= target;
+                      return (
+                        <div key={wk} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 2, height: "100%", position: "relative" }}>
+                          {/* Target line indicator */}
+                          <div style={{ position: "absolute", bottom: `${Math.round(targetPct * 60)}px`, left: 0, right: 0, height: 1, background: "rgba(201,168,64,0.3)", borderTop: "1px dashed rgba(201,168,64,0.4)" }} />
+                          {/* Bar */}
+                          <div style={{ width: "80%", height: `${Math.round(pct * 60)}px`, background: overTarget ? "var(--green)" : "var(--orange)", borderRadius: "3px 3px 0 0", opacity: i === weeks.length - 1 ? 1 : 0.7, minHeight: 3 }} />
+                          <div style={{ fontSize: 7, color: "#8E8E93" }}>S{i+1}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#8E8E93" }}>
+                        <div style={{ width: 10, height: 3, background: "rgba(201,168,64,0.5)", borderTop: "1px dashed rgba(201,168,64,0.4)" }} />
+                        Objectif {target} séances
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: "#8E8E93" }}>
+                        <div style={{ width: 10, height: 8, background: "var(--green)", borderRadius: 1 }} />
+                        Réalisé
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#8E8E93" }}>Moy. : <span style={{ color: complianceColor, fontWeight: 700 }}>{avgAchieved}/sem</span></div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── COURBE DE POIDS ── */}
             {(() => {
               const [weightData, setWeightData] = React.useState(null);
@@ -20012,6 +20597,60 @@ JSON:
                       </div>
                     </div>
                   )}
+                </div>
+              );
+            })()}
+
+            {/* ── MUSCLE FATIGUE HEATMAP ── */}
+            {(profile.sessions||[]).length >= 1 && (() => {
+              const sessions = profile.sessions || [];
+              const now = Date.now();
+              // muscle groups and which session types stress them (weight = intensity 0-1)
+              const MUSCLE_MAP = {
+                force_stations:    { quads: 0.9, hamstrings: 0.7, glutes: 0.8, shoulders: 0.8, core: 0.7, lats: 0.8, calves: 0.4 },
+                running_zone2:     { quads: 0.5, hamstrings: 0.5, glutes: 0.5, shoulders: 0.1, core: 0.3, lats: 0.1, calves: 0.7 },
+                running_qualite:   { quads: 0.8, hamstrings: 0.7, glutes: 0.7, shoulders: 0.2, core: 0.4, lats: 0.1, calves: 0.9 },
+                hybride_compromis: { quads: 0.8, hamstrings: 0.7, glutes: 0.7, shoulders: 0.6, core: 0.6, lats: 0.5, calves: 0.7 },
+              };
+              const MUSCLES = ["quads", "hamstrings", "glutes", "shoulders", "core", "lats", "calves"];
+              const LABELS = { quads: "Quadriceps", hamstrings: "Ischio-jambiers", glutes: "Fessiers", shoulders: "Épaules", core: "Core", lats: "Dorsaux", calves: "Mollets" };
+
+              // Compute fatigue: EMA decay over 48h per session
+              const fatigue = Object.fromEntries(MUSCLES.map(m => [m, 0]));
+              sessions.slice(-7).forEach(s => {
+                const hoursAgo = (now - new Date(s.date).getTime()) / (1000*60*60);
+                if (hoursAgo > 96) return;
+                const decay = Math.exp(-hoursAgo / 48);
+                const map = MUSCLE_MAP[s.type] || {};
+                const intensity = (s.rpe || 6) / 10;
+                MUSCLES.forEach(m => {
+                  fatigue[m] = Math.min(1, fatigue[m] + (map[m] || 0) * intensity * decay);
+                });
+              });
+
+              const fatigueColor = (v) => v > 0.7 ? "#FF453A" : v > 0.4 ? "#FF9F0A" : v > 0.15 ? "#C9A840" : "#30D158";
+              const sorted = MUSCLES.slice().sort((a,b) => fatigue[b]-fatigue[a]);
+
+              return (
+                <div style={{ background: "rgba(28,28,30,0.8)", borderRadius: 18, padding: "16px", marginBottom: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: 11, color: "#8E8E93", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>💪 Fatigue musculaire (48-96h)</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {sorted.map(m => {
+                      const v = fatigue[m];
+                      const col = fatigueColor(v);
+                      const label = v > 0.7 ? "Fatigué" : v > 0.4 ? "Modéré" : v > 0.15 ? "Léger" : "Récupéré";
+                      return (
+                        <div key={m} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 90, fontSize: 11, color: "#AEAEB2", fontWeight: 600, flexShrink: 0 }}>{LABELS[m]}</div>
+                          <div style={{ flex: 1, height: 8, background: "#2C2C2E", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${Math.max(3, v*100)}%`, background: `linear-gradient(90deg, ${col}88, ${col})`, borderRadius: 4, transition: "width 0.5s ease" }} />
+                          </div>
+                          <div style={{ width: 58, fontSize: 10, color: col, fontWeight: 700, textAlign: "right" }}>{label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 10, color: "#48484A" }}>Basé sur tes {Math.min(7, sessions.length)} dernières séances • Décroissance sur 48h</div>
                 </div>
               );
             })()}
@@ -20700,6 +21339,138 @@ JSON:
                         <div style={{ fontSize:11, fontWeight:700, color:bottleneck.color }}>Point faible : {bottleneck.label}</div>
                         <div style={{ fontSize:10, color:"#8E8E93" }}>{bottleneck.myTime} vs ref {refs[bottleneck.id]} (+{worstDelta}s) — travail prioritaire</div>
                       </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── RACE DAY PACING CALCULATOR ── */}
+            {(()=>{
+              const [targetH, setTargetH] = React.useState("1");
+              const [targetM, setTargetM] = React.useState("15");
+              const [open, setOpen] = React.useState(false);
+
+              const STATIONS = [
+                { id:"ski",      label:"SkiErg",         icon:"⛷️",  weight:1.1, color:"#a78bfa" },
+                { id:"sledpush", label:"Sled Push",      icon:"🛷",  weight:1.3, color:"#C9A840" },
+                { id:"sledpull", label:"Sled Pull",      icon:"🔗",  weight:1.2, color:"#FF9F0A" },
+                { id:"burpee",   label:"Burpee BJ",      icon:"🤸",  weight:1.4, color:"#FF453A" },
+                { id:"rowing",   label:"Rowing",         icon:"🚣",  weight:1.1, color:"#38bdf8" },
+                { id:"farmers",  label:"Farmers Carry",  icon:"🧳",  weight:0.8, color:"#30D158" },
+                { id:"sandbag",  label:"Sandbag Lunges", icon:"🎒",  weight:1.2, color:"#FF9F0A" },
+                { id:"wallball", label:"Wall Balls",     icon:"🏀",  weight:1.0, color:"#C9A840" },
+              ];
+
+              const benchKey = `fitrace_benchmarks_${profile.name}`;
+              const benchmarks = (() => { try { return JSON.parse(localStorage.getItem(benchKey)||"{}"); } catch { return {}; } })();
+
+              const totalSecs = (parseInt(targetH)||0)*3600 + (parseInt(targetM)||0)*60;
+              const secsToStr = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+              // Running: 8×1km = 8km total; target ~50% of total time for top performers
+              // HYROX elite: stations ~45%, running ~55%
+              const runPct = 0.52; // 52% for running (8km segments)
+              const staPct = 0.48; // 48% for 8 stations
+
+              const runTotal = Math.round(totalSecs * runPct);
+              const runPacePerKm = Math.round(runTotal / 8);
+              const staTotal = totalSecs - runTotal;
+
+              // Distribute station time by weight
+              const totalWeight = STATIONS.reduce((a,s)=>a+s.weight,0);
+              const staSplits = STATIONS.map(st => {
+                const alloc = Math.round((st.weight / totalWeight) * staTotal);
+                const pr = benchmarks[st.id]?.time;
+                const prSecs = pr ? (() => { const [m,s]=pr.split(":").map(Number); return m*60+(s||0); })() : null;
+                const gap = prSecs !== null ? alloc - prSecs : null;
+                return { ...st, alloc, pr, prSecs, gap };
+              });
+
+              // Overall feasibility
+              const stationsWithPR = staSplits.filter(s=>s.prSecs!==null);
+              const hardOnes = staSplits.filter(s=>s.gap!==null && s.gap < -10); // need >10s faster than current PR
+              const feasible = stationsWithPR.length === 0 || hardOnes.length === 0;
+
+              return (
+                <div style={{ marginBottom:12 }}>
+                  <div onClick={()=>setOpen(o=>!o)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", userSelect:"none" }}>
+                    <div style={{ fontSize:10, color:"#8E8E93", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em" }}>🎯 Calculateur de splits HYROX</div>
+                    <span style={{ fontSize:12, color:"#8E8E93" }}>{open?"▲":"▼"}</span>
+                  </div>
+
+                  {open && (
+                    <div style={{ marginTop:10, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:18, padding:"16px" }}>
+
+                      {/* Target input */}
+                      <div style={{ fontSize:10, color:"#8E8E93", marginBottom:10 }}>Objectif de temps :</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:9, color:"#8E8E93", marginBottom:4 }}>Heures</div>
+                          <input type="number" min="0" max="3" value={targetH} onChange={e=>setTargetH(e.target.value)}
+                            style={{ width:"100%", background:"var(--bg3,#2C2C2E)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px", color:"var(--white,#fff)", fontSize:20, textAlign:"center", outline:"none", fontFamily:"'Bebas Neue',sans-serif" }}/>
+                        </div>
+                        <div style={{ fontSize:24, color:"#8E8E93", marginTop:12 }}>:</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:9, color:"#8E8E93", marginBottom:4 }}>Minutes</div>
+                          <input type="number" min="0" max="59" value={targetM} onChange={e=>setTargetM(String(Math.min(59,parseInt(e.target.value)||0)))}
+                            style={{ width:"100%", background:"var(--bg3,#2C2C2E)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"10px", color:"var(--white,#fff)", fontSize:20, textAlign:"center", outline:"none", fontFamily:"'Bebas Neue',sans-serif" }}/>
+                        </div>
+                        <div style={{ flex:1.5, textAlign:"center", marginTop:12 }}>
+                          <div style={{ fontSize:28, fontFamily:"'Bebas Neue',sans-serif", color:"#C9A840", lineHeight:1 }}>
+                            {Math.floor(totalSecs/3600)}:{String(Math.floor((totalSecs%3600)/60)).padStart(2,"0")}
+                          </div>
+                          <div style={{ fontSize:9, color: feasible ? "#30D158" : "#FF453A", marginTop:2, fontWeight:700 }}>
+                            {stationsWithPR.length > 0 ? (feasible ? "✅ Objectif atteignable" : `⚠️ ${hardOnes.length} station(s) insuffisante(s)`) : "Renseigne tes benchmarks"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Running split */}
+                      <div style={{ background:"rgba(0,122,255,0.1)", border:"1px solid rgba(0,122,255,0.25)", borderRadius:12, padding:"10px 14px", marginBottom:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#007AFF" }}>🏃 Running 8 × 1km</div>
+                          <div style={{ fontSize:9, color:"#8E8E93" }}>Total : {secsToStr(runTotal)} · {Math.round(runPct*100)}% du temps</div>
+                        </div>
+                        <div style={{ textAlign:"right" }}>
+                          <div className="bebas" style={{ fontSize:22, color:"#007AFF", lineHeight:1 }}>{secsToStr(runPacePerKm)}/km</div>
+                          <div style={{ fontSize:9, color:"#8E8E93" }}>allure cible</div>
+                        </div>
+                      </div>
+
+                      {/* Station splits */}
+                      <div style={{ fontSize:10, color:"#8E8E93", fontWeight:700, marginBottom:8 }}>Splits stations ({Math.round(staPct*100)}% = {secsToStr(staTotal)}) :</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                        {staSplits.map(st=>{
+                          const ok = st.gap === null || st.gap >= -5;
+                          const tight = st.gap !== null && st.gap >= -10 && st.gap < -5;
+                          const hard = st.gap !== null && st.gap < -10;
+                          const statusColor = hard ? "#FF453A" : tight ? "#FF9F0A" : "#30D158";
+                          return (
+                            <div key={st.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:`${st.color}08`, borderRadius:10, border:`1px solid ${st.color}20` }}>
+                              <span style={{ fontSize:16, flexShrink:0 }}>{st.icon}</span>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontSize:11, fontWeight:600, color:"var(--white,#fff)" }}>{st.label}</div>
+                                {st.pr && (
+                                  <div style={{ fontSize:9, color:"#8E8E93" }}>PR actuel : {st.pr} · {st.gap > 0 ? `+${st.gap}s marge` : st.gap < 0 ? `${st.gap}s à gagner` : "pile"}</div>
+                                )}
+                              </div>
+                              <div style={{ textAlign:"right", flexShrink:0 }}>
+                                <div className="bebas" style={{ fontSize:18, color:st.color, lineHeight:1 }}>{secsToStr(st.alloc)}</div>
+                                {st.pr && <div style={{ fontSize:9, color:statusColor, fontWeight:700 }}>{hard?"❌ Insuffisant":tight?"⚡ Limite":"✅ Ok"}</div>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Strategy tip */}
+                      {hardOnes.length > 0 && (
+                        <div style={{ marginTop:10, background:"rgba(255,69,58,0.08)", border:"1px solid rgba(255,69,58,0.2)", borderRadius:10, padding:"8px 12px", fontSize:10, color:"#8E8E93" }}>
+                          <span style={{ color:"#FF453A", fontWeight:700 }}>Stations limitantes : </span>
+                          {hardOnes.map(s=>s.label).join(", ")} — travaille ces stations en priorité ou ajuste ton objectif de temps.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
