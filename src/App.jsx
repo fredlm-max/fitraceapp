@@ -7103,8 +7103,10 @@ JSON:
                 </div>
               );
             })()}
+            </div>
+            {/* fin bloc replié Countdown seul */}
 
-            {/* ── ENCART NUTRITION ── */}
+            {/* ── ENCART NUTRITION (gardé visible sur l'accueil) ── */}
             {(()=>{
               const todayStr = new Date().toISOString().slice(0,10);
               const MEAL_KEY = `nutri_${profile.name}_${todayStr}`;
@@ -7220,8 +7222,6 @@ JSON:
                 </div>
               );
             })()}
-            </div>
-            {/* fin bloc replié Countdown+Nutrition */}
             {/* ── SÉANCE DU JOUR — Smart Card (Nike Training + Garmin Coach style) ── */}
             {(()=>{
               const todayStr = new Date().toISOString().slice(0,10);
