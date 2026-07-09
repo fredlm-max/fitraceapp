@@ -6786,6 +6786,25 @@ JSON:
                 : apexScore >= 40 ? { label: "Méfie-toi", color: "#FF9F0A" }
                 : { label: "Récupère d'abord", color: "#FF453A" };
 
+              // ── Historique quotidien du score APEX (delta vs hier + mini-tendance 7j) ──
+              const APEX_HIST_KEY = `apex_history_${profile.name}`;
+              const apexHistory = (() => { try { return JSON.parse(localStorage.getItem(APEX_HIST_KEY) || "[]"); } catch { return []; } })();
+              React.useEffect(() => {
+                try {
+                  let hist = JSON.parse(localStorage.getItem(APEX_HIST_KEY) || "[]");
+                  const existing = hist.find(h => h.date === todayStr);
+                  if (!existing || existing.score !== apexScore) {
+                    hist = hist.filter(h => h.date !== todayStr);
+                    hist.push({ date: todayStr, score: apexScore });
+                    localStorage.setItem(APEX_HIST_KEY, JSON.stringify(hist.slice(-30)));
+                  }
+                } catch {}
+              }, [apexScore]);
+              const _prevEntry = apexHistory.filter(h => h.date < todayStr).slice(-1)[0];
+              const apexDelta = _prevEntry ? apexScore - _prevEntry.score : null;
+              // Points pour la sparkline : jusqu'à 6 jours passés + le score du jour
+              const apexSpark = [...apexHistory.filter(h => h.date < todayStr).slice(-6).map(h => h.score), apexScore];
+
               // Évolution séances
               const w1 = allSessions.filter(s => { const d = new Date(s.date); return now - d < 7*86400000; }).length;
               const w2 = allSessions.filter(s => { const d = new Date(s.date); return now - d >= 7*86400000 && now - d < 14*86400000; }).length;
@@ -6885,7 +6904,27 @@ JSON:
                           </div>
                         </div>
                         {/* Tier label */}
-                        <div style={{ fontSize:11, fontWeight:700, color:tier.color, marginBottom:12 }}>{tier.label}</div>
+                        <div style={{ fontSize:11, fontWeight:700, color:tier.color, marginBottom:6 }}>{tier.label}</div>
+                        {/* Delta vs hier + mini-tendance 7j */}
+                        {(apexDelta !== null || apexSpark.length > 1) && (
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginBottom:12, minHeight:16 }}>
+                            {apexDelta !== null && (
+                              <span style={{ fontSize:10, fontWeight:700, color: apexDelta > 0 ? "#30D158" : apexDelta < 0 ? "#FF453A" : "#8E8E93" }}>
+                                {apexDelta > 0 ? "▲" : apexDelta < 0 ? "▼" : "="} {apexDelta > 0 ? "+" : ""}{apexDelta} <span style={{ color:"#8E8E93", fontWeight:400 }}>vs hier</span>
+                              </span>
+                            )}
+                            {apexSpark.length > 1 && (() => {
+                              const w = 64, h = 16, min = Math.min(...apexSpark), max = Math.max(...apexSpark), range = max - min || 1;
+                              const pts = apexSpark.map((v, i) => `${(i/(apexSpark.length-1))*w},${h - ((v-min)/range)*h}`).join(" ");
+                              return (
+                                <svg width={w} height={h} style={{ overflow:"visible" }}>
+                                  <polyline points={pts} fill="none" stroke={tier.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+                                  <circle cx={w} cy={h - ((apexSpark[apexSpark.length-1]-min)/range)*h} r="2" fill={tier.color}/>
+                                </svg>
+                              );
+                            })()}
+                          </div>
+                        )}
                         {/* 3 indicateurs : Sommeil / Nutrition / Charge */}
                         <div style={{ display:"flex", flexDirection:"column", gap:6, textAlign:"left" }}>
                           {[
