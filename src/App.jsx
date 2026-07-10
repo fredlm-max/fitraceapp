@@ -17680,7 +17680,7 @@ JSON:
             })()}
 
             {/* ── WEEKLY VOLUME BARS ── */}
-            {false && (profile.sessions||[]).length >= 2 && (() => {
+            {(profile.sessions||[]).length >= 2 && (() => {
               const sessions = profile.sessions || [];
               const WEEKS_COUNT = 8;
               const today = new Date(); today.setHours(0,0,0,0);
@@ -17963,7 +17963,7 @@ JSON:
             })()}
 
             {/* ── VO2MAX PROGRESSION ── */}
-            {false && profile.vmaKmh && (() => {
+            {profile.vmaKmh && (() => {
               // Read VMA history from localStorage (saved on each profile update)
               const vmaHistKey = `fitrace_vma_history_${profile.name}`;
               let vmaHistory = [];
@@ -18054,7 +18054,7 @@ JSON:
 
 
             {/* ── SLEEP TRACKER ── */}
-            {false && (() => {
+            {(() => {
               const KEY = `fitrace_sleep_${profile.name}`;
               const [sleepLog, setSleepLog] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
               const [bedH, setBedH] = React.useState(23);
@@ -18180,7 +18180,7 @@ JSON:
             })()}
 
             {/* ── SESSION HISTORY DETAIL ── */}
-            {false && (() => {
+            {(() => {
               const sessions = [...(profile.sessions || [])].sort((a,b)=>b.date>a.date?1:-1).slice(0,30);
               if (sessions.length === 0) return null;
 
@@ -23189,7 +23189,7 @@ const sessions = profile.sessions || [];
             <AchievementsCard profile={profile} />
 
             {/* ── DERNIÈRES SÉANCES ── */}
-            {false && (profile.sessions||[]).length >= 1 && (() => {
+            {(profile.sessions||[]).length >= 1 && (() => {
               const last5 = (profile.sessions||[]).slice(-5).reverse();
               const typeConf = {
                 running_zone2: { icon: "🏃", color: "var(--green)", label: "Cardio" },
@@ -23519,7 +23519,7 @@ const sessions = profile.sessions || [];
             {false && (profile.sessions||[]).length >= 1 && <WeeklyPerformanceCard profile={profile} />}
 
             {/* ── RPE TREND + VOLUME ── */}
-            {false && (profile.sessions||[]).length >= 3 && (() => {
+            {(profile.sessions||[]).length >= 3 && (() => {
               const sessions = profile.sessions || [];
               const now = new Date();
               // 8 weeks buckets Mon→Sun
@@ -23597,7 +23597,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── CHARGE HEBDOMADAIRE ── */}
-            {false && (profile.sessions||[]).length >= 2 && (() => {
+            {(profile.sessions||[]).length >= 2 && (() => {
               // Compute last 8 weeks of training load (TRIMP-like: duration × RPE)
               const now = new Date();
               const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -24310,7 +24310,7 @@ const sessions = profile.sessions || [];
             </Section>
 
             {/* ── SIMULATEUR DE PROGRESSION ── */}
-            {false && (profile.sessions||[]).length >= 4 && (() => {
+            {(profile.sessions||[]).length >= 4 && (() => {
               const sessions = profile.sessions || [];
               const n = sessions.length;
               // Taux de progression hebdo basé sur les 8 dernières séances
@@ -24463,7 +24463,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── COURBE DE POIDS ── */}
-            {false && (() => {
+            {(() => {
               const [weightData, setWeightData] = React.useState(null);
               React.useEffect(() => {
                 const DAYS = 30;
@@ -24918,7 +24918,7 @@ const sessions = profile.sessions || [];
             </div>
 
             {/* ── JOURNAL DE SÉANCES PREMIUM ── */}
-            {false && (()=>{
+            {(()=>{
               const TYPE_CONF_J = {
                 running_zone2:     { icon: "🏃", label: "Zone 2",    color: "var(--green)",  bg: "rgba(57,255,128,0.08)",  border: "rgba(57,255,128,0.25)" },
                 force_stations:    { icon: "🏋️", label: "Force",     color: "var(--orange)", bg: "rgba(255,154,60,0.08)", border: "rgba(255,154,60,0.25)" },
