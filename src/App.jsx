@@ -4988,11 +4988,12 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     // Au lieu d'une rotation figée par jour, on choisit le type qui MANQUE
     // à la semaine pour respecter la polarisation 80/20 et l'équilibre du bloc.
     // Modèle hebdo idéal par phase (ordre = priorité). Max 2 séances dures/sem.
+    // Priorité au compromised running (hybride) : c'est LA compétence HYROX.
     const weeklyTemplateByPhase = {
-      base:           ["running_zone2", "force_stations", "running_zone2", "force_stations", "running_qualite"],
-      développement:  ["running_qualite", "force_stations", "running_zone2", "hybride_compromis", "running_zone2"],
-      pic:            ["hybride_compromis", "running_qualite", "force_stations", "running_zone2", "hybride_compromis"],
-      affûtage:       ["running_qualite", "hybride_compromis", "running_zone2", "running_zone2"],
+      base:           ["running_zone2", "force_stations", "hybride_compromis", "running_zone2", "force_stations"],
+      développement:  ["hybride_compromis", "force_stations", "running_zone2", "running_qualite", "hybride_compromis"],
+      pic:            ["hybride_compromis", "running_qualite", "hybride_compromis", "force_stations", "running_zone2"],
+      affûtage:       ["hybride_compromis", "running_qualite", "running_zone2", "running_zone2"],
     };
     const template = weeklyTemplateByPhase[phase] || weeklyTemplateByPhase.base;
 
@@ -5144,7 +5145,7 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
   * Romanian Deadlift ou Trap Bar: 4x6-8 @ 70-75% 1RM (Deadlift 1RM: ${profile.deadlift1RM_final || "?"}kg → charge: ${profile.deadlift1RM_final ? Math.round(profile.deadlift1RM_final * 0.72) : "?"}kg)
   * Goblet/Front Squat: 3x10 @ charge modérée
   * Farmer Carry: 3x40m (KB lourdes)
-  * Brick run facile: 800m-1km après la séance de force (RPE 6) pour apprendre à retrouver les jambes
+  * Brick run OBLIGATOIRE: 800m-1km juste après la force, à allure proche course (compromised running) — c'est là que se gagne le temps en compétition
 - Charges: Force HYROX = force RÉPÉTABLE, pas maximale`,
 
       running_qualite: `SESSION RUNNING QUALITÉ (TEMPO/INTERVALLES)
@@ -5153,6 +5154,7 @@ RPE moyen 5 dernières séances: ${avgRPE5}/10
 - ${phase === "développement" || phase === "pic" ? `INTERVALLES 1KM: 4-6x1km au rythme de course (${profile.vmaKmh ? paceFromVMA(profile.vmaKmh, 88) : "??"}/km) récup 2min` : ""}
 - ${phase === "affûtage" ? `INTERVALLES COURTS: 6x400m vifs + récup — volume réduit mais intensité maintenue` : ""}
 - Protocole scientifique: 4x4min à 90-95% FCmax = amélioration VO2max 3x supérieure au steady-state
+- ${phase === "développement" || phase === "pic" ? "FINISHER COMPROMISED: après les intervalles, 2-3 rounds de (1 station courte race-effort + 400m au rythme course) pour transférer la vitesse sous fatigue musculaire" : ""}
 - Échauffement 10min OBLIGATOIRE, retour au calme 10min`,
 
       hybride_compromis: `SESSION HYBRIDE — COMPROMISED RUNNING (compétence clé HYROX)
@@ -18965,6 +18967,11 @@ JSON:
             {/* ── ZONES D'ALLURE COURSE (VMA) ── */}
             {(() => {
               const vma = parseFloat(profile.vmaKmh) || null;
+              // Re-test programmé : la VMA se dégrade/progresse — au-delà de 8 semaines,
+              // les allures ne sont plus à jour → on invite à re-tester.
+              const _vmaDate = profile.tests?.vma?.date ? parseLocalDate(profile.tests.vma.date) : null;
+              const _vmaWeeks = _vmaDate ? Math.floor((Date.now() - _vmaDate.getTime()) / (7 * 86400000)) : null;
+              const vmaStale = vma && (_vmaWeeks === null || _vmaWeeks >= 8);
               const zones = [
                 { n:"Z1", name:"Récupération", vma:[50,60],  color:"#8E8E93" },
                 { n:"Z2", name:"Endurance",    vma:[60,70],  color:"#30D158" },
@@ -18999,6 +19006,11 @@ JSON:
                         ))}
                       </div>
                       <div style={{ fontSize:9,color:"#8E8E93",marginTop:10,lineHeight:1.4 }}>Allures calculées depuis ta VMA. Z2 = base aérobie (~80% du volume), Z4 = seuil, Z5 = intervalles courts.</div>
+                      {vmaStale && (
+                        <button onClick={() => navigateTo("profil")} style={{ width:"100%", marginTop:10, background:"rgba(255,159,10,0.1)", border:"1px solid rgba(255,159,10,0.3)", borderRadius:10, padding:"9px 10px", color:"#FF9F0A", fontSize:10.5, fontWeight:700, cursor:"pointer" }}>
+                          ⏰ Ton test VMA date de {_vmaWeeks ? `${_vmaWeeks} sem.` : "plus de 8 sem."} — re-teste pour des allures à jour →
+                        </button>
+                      )}
                     </>
                   ) : (
                     <div style={{ fontSize:12,color:"#8E8E93",lineHeight:1.5,textAlign:"center",padding:"8px 0" }}>Fais le test VMA 6 min pour débloquer tes zones d'allure personnalisées.</div>
