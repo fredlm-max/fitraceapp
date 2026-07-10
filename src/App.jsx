@@ -15611,7 +15611,7 @@ JSON:
             })()}
 
             {/* ── DERNIERS ENTRAÎNEMENTS ── */}
-            {(()=>{
+            {false && (()=>{
               const lastSessions = [...(profile.sessions||[])].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4);
               if (!lastSessions.length) return null;
               const typeInfo = {
