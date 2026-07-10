@@ -4981,12 +4981,23 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     // On lit le plan de la semaine (clé stable) et on récupère le type prévu
     // aujourd'hui. La récup pourra ensuite l'ajuster (cf. plus bas).
     let planTypeToday = null;
+    let planIsRest = false;
     try {
       const _plan = await storage.get(`planning_current_${profile.name}`);
-      if (_plan?.jours?.length) {
+      // Lundi de la semaine en cours (pour ne PAS utiliser un plan périmé).
+      const _mon = new Date(); _mon.setHours(0, 0, 0, 0);
+      _mon.setDate(_mon.getDate() - ((_mon.getDay() + 6) % 7));
+      const _monISO = _mon.toISOString().slice(0, 10);
+      const _planFresh = _plan && (!_plan._weekMonday || _plan._weekMonday === _monISO);
+      if (_planFresh && _plan?.jours?.length) {
         const _todayName = JOURS_FULL[(new Date().getDay() + 6) % 7];
         const _entry = _plan.jours.find(j => j.jour === _todayName);
-        if (_entry?.type) planTypeToday = _entry.type === "repos" ? "running_zone2" : _entry.type;
+        const _validTypes = ["running_zone2", "force_stations", "running_qualite", "hybride_compromis"];
+        if (_entry?.type === "repos" || _entry?.type === "mobilite") {
+          planIsRest = true; planTypeToday = "running_zone2"; // récup active douce
+        } else if (_entry?.type && _validTypes.includes(_entry.type)) {
+          planTypeToday = _entry.type;
+        }
       }
     } catch {}
 
@@ -5616,7 +5627,7 @@ ${adaptationContext}
 
 ═══ TYPE DE SÉANCE À GÉNÉRER ═══
 ${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
-Temps disponible: ${dailyData.temps} minutes${deferredHard ? `\n⚠️ RÉCUP PRIORITAIRE : une séance ${deferredHard === "running_qualite" ? "qualité" : "hybride"} était prévue mais l'athlète est en récupération insuffisante aujourd'hui → on la reporte. Fais une VRAIE séance de récupération douce (Z2 facile / mobilité), PAS d'intensité. Explique-lui qu'elle reprendra la séance dure une fois reposé.` : ""}
+Temps disponible: ${dailyData.temps} minutes${deferredHard ? `\n⚠️ RÉCUP PRIORITAIRE : une séance ${deferredHard === "running_qualite" ? "qualité" : "hybride"} était prévue mais l'athlète est en récupération insuffisante aujourd'hui → on la reporte. Fais une VRAIE séance de récupération douce (Z2 facile / mobilité), PAS d'intensité. Explique-lui qu'elle reprendra la séance dure une fois reposé.` : ""}${planIsRest ? `\n💚 JOUR DE REPOS PLANIFIÉ : le planning prévoit du repos/mobilité aujourd'hui. Propose une récupération LÉGÈRE et courte (marche/vélo facile 20-30min Z1 + mobilité/étirements), PAS un entraînement. C'est volontaire — la récup fait partie de la progression.` : ""}
 ${weaknessDirective}
 ${racePaceDirective}
 
@@ -35021,7 +35032,10 @@ IMPORTANT: Les champs "exercices" doivent contenir les vraies charges/allures/FC
       setPlanningWeek(data);
       await storage.set(cacheKey, data);
       // Clé stable : la séance du jour lit ce plan directeur pour suivre le planning.
-      await storage.set(`planning_current_${profile.name}`, data);
+      // On tamponne le lundi de la semaine → évite qu'un plan périmé pilote les séances.
+      const _mon = new Date(); _mon.setHours(0, 0, 0, 0);
+      _mon.setDate(_mon.getDate() - ((_mon.getDay() + 6) % 7));
+      await storage.set(`planning_current_${profile.name}`, { ...data, _weekMonday: _mon.toISOString().slice(0, 10) });
     } else {
       throw new Error("JSON sans jours");
     }
