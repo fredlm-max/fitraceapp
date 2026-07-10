@@ -16048,20 +16048,27 @@ JSON:
               const dureeLabel0 = String(session.duree || "").replace(/\s*min.*$/i, "");
               return (
                 <div className="slide-up" onClick={() => setShowSessionModal(true)} style={{ background: `linear-gradient(165deg, ${c0.color}16 0%, var(--bg2) 45%)`, border: `1.5px solid ${c0.color}30`, borderRadius: 22, overflow: "hidden", marginBottom: 14, cursor: "pointer", boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 2px 8px ${c0.color}15`, position: "relative" }}>
+                  {/* Barre d'accent premium en haut */}
+                  <div style={{ height: 4, background: `linear-gradient(90deg, ${c0.color}, ${c0.color}55)` }} />
                   {/* Icône filigrane */}
                   <div style={{ position: "absolute", top: -14, right: -10, fontSize: 96, opacity: 0.05, pointerEvents: "none", transform: "rotate(12deg)" }}>{c0.icon}</div>
                   <div style={{ padding: "18px 18px 0" }}>
                     {/* Ligne type + badge bibliothèque */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: c0.color, boxShadow: `0 0 8px ${c0.color}` }} />
-                      <span style={{ fontSize: 10, color: c0.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em" }}>{c0.label}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 9, background: `${c0.color}1E`, border: `1px solid ${c0.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{c0.icon}</div>
+                      <span style={{ fontSize: 10.5, color: c0.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em" }}>{c0.label}</span>
                       {session._fallback && (
                         <span style={{ fontSize: 9, color: "#8E8E93", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 7px", fontWeight: 700 }}>📚 Bibliothèque</span>
                       )}
                       <span style={{ marginLeft: "auto", fontSize: 10, color: "#8E8E93", fontWeight: 600 }}>Séance du jour</span>
                     </div>
-                    {/* Titre */}
-                    <div className="bebas" style={{ fontSize: 28, color: "var(--white)", lineHeight: 1.05, letterSpacing: 0.5, marginBottom: 6 }}>{session.titre}</div>
+                    {/* Titre + objectif */}
+                    <div className="bebas" style={{ fontSize: 33, color: "var(--white)", lineHeight: 1.02, letterSpacing: 0.5, marginBottom: session.objectif ? 4 : 6 }}>{session.titre}</div>
+                    {session.objectif && (
+                      <div style={{ fontSize: 12, color: c0.color, fontWeight: 700, marginBottom: 8, display: "flex", alignItems: "center", gap: 5 }}>
+                        <span style={{ fontSize: 11 }}>🎯</span>{session.objectif}
+                      </div>
+                    )}
                     <div style={{ fontSize: 12, color: "#AEAEB2", lineHeight: 1.55, marginBottom: 14 }}>{session.explication?.slice(0, 110)}{(session.explication?.length || 0) > 110 ? "…" : ""}</div>
                     {/* Pourquoi cette séance — rend visible la boucle d'adaptation APEX (état du jour → séance) */}
                     {(() => {
@@ -16118,12 +16125,24 @@ JSON:
                                 <div style={{ width: 20, height: 20, borderRadius: 7, background: isDone0 ? "var(--green)" : `${c0.color}18`, border: isDone0 ? "none" : `1px solid ${c0.color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: isDone0 ? "#000" : c0.color, flexShrink: 0 }}>{isDone0 ? "✓" : ei + 1}</div>
                                 {!isLastShown && <div style={{ width: 1.5, flex: 1, background: `${c0.color}20`, minHeight: 8 }} />}
                               </div>
-                              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: isLastShown ? 0 : 9 }}>
-                                <span style={{ fontSize: 12.5, color: isDone0 ? "#8E8E93" : "var(--white)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: isDone0 ? "line-through" : "none", lineHeight: "20px" }}>{ex.nom}</span>
+                              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, paddingBottom: isLastShown ? 2 : 13 }}>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontSize: 13.5, color: isDone0 ? "#8E8E93" : "var(--white)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: isDone0 ? "line-through" : "none", lineHeight: "20px" }}>{ex.nom}</div>
+                                  {!isDone0 && (() => {
+                                    // La charge n'est montrée ici que si le badge affiche déjà les reps
+                                    // (sinon la charge est dans le badge → pas de doublon).
+                                    const det = [(ex.series || ex.reps) ? ex.charge : "", ex.repos ? `repos ${ex.repos}` : "", ex.tempo].filter(Boolean).join(" · ");
+                                    return det ? <div style={{ fontSize: 10.5, color: "#8E8E93", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{det}</div> : null;
+                                  })()}
+                                </div>
                                 {(ex.series || ex.reps) ? (
-                                  <span style={{ fontSize: 11, color: c0.color, fontWeight: 800, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{ex.series ? `${ex.series}×` : ""}{ex.reps || ""}</span>
+                                  <div style={{ flexShrink: 0, textAlign: "right", background: `${c0.color}12`, border: `1px solid ${c0.color}30`, borderRadius: 8, padding: "3px 9px", minWidth: 44 }}>
+                                    <span style={{ fontSize: 13, color: c0.color, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{ex.series ? `${ex.series}×` : ""}{ex.reps || ""}</span>
+                                  </div>
                                 ) : ex.charge ? (
-                                  <span style={{ fontSize: 11, color: c0.color, fontWeight: 800, flexShrink: 0 }}>{ex.charge}</span>
+                                  <div style={{ flexShrink: 0, background: `${c0.color}12`, border: `1px solid ${c0.color}30`, borderRadius: 8, padding: "3px 9px" }}>
+                                    <span style={{ fontSize: 12, color: c0.color, fontWeight: 800 }}>{ex.charge}</span>
+                                  </div>
                                 ) : null}
                               </div>
                             </div>
