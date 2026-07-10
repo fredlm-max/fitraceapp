@@ -7287,11 +7287,14 @@ JSON:
               };
 
               const poids = parseFloat(profile.poids) || 75;
+              // Nutrition périodisée : les objectifs s'adaptent au type de séance du jour
+              // (plus de glucides les jours durs/longs, moins les jours faciles/repos).
+              const _nutriObj = OBJECTIFS_NUTRI(poids, session?.type);
               const target = {
-                cal: profile.calories || Math.round(poids * 33),
-                prot: profile.proteines || Math.round(poids * 1.8),
-                gluc: profile.glucides || Math.round(poids * 4.5),
-                lip: profile.lipides || Math.round(poids * 1.0),
+                cal: profile.calories || _nutriObj.kcal,
+                prot: profile.proteines || _nutriObj.p,
+                gluc: profile.glucides || _nutriObj.g,
+                lip: profile.lipides || _nutriObj.l,
               };
               const totals = getMealsTotal(meals);
               const pctCal  = Math.min(100, Math.round((totals.cal / target.cal) * 100));
@@ -38129,7 +38132,11 @@ function NutritionTab({ profile }) {
     l: acc.l + (r.l || 0),
   }), { kcal: 0, p: 0, g: 0, l: 0 });
 
-  const objectifs = OBJECTIFS_NUTRI(profile.poids || 75);
+  // Nutrition périodisée : objectifs adaptés au type de séance du jour (si loggée aujourd'hui).
+  const _todayStr2 = new Date().toISOString().slice(0, 10);
+  const _lastSess2 = (profile.sessions || []).slice(-1)[0];
+  const _todaySessType2 = _lastSess2?.date?.startsWith(_todayStr2) ? _lastSess2.type : null;
+  const objectifs = OBJECTIFS_NUTRI(profile.poids || 75, _todaySessType2);
 
   async function estimer() {
     if (!searchText.trim()) return;
