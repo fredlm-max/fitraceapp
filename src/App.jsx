@@ -5072,6 +5072,20 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
       ? `\n═══ 🎯 FAIBLESSES À CIBLER EN PRIORITÉ ═══\nStations les plus faibles de l'athlète (à intégrer dans CETTE séance quand le type le permet — force/hybride surtout) :\n${weaknessFocus.map((w, i) => `${i + 1}. ${w.label} (${w.score.toFixed(0)}% du niveau élite) → ${w.fix}`).join("\n")}\nRÈGLE : si la séance est de type force ou hybride, INCLURE au moins un bloc travaillant la station n°1. En running, ignorer.`
       : "";
 
+    // #8 : PACING COURSE — allure cible des 8×1km HYROX déduite du temps objectif.
+    const racePaceDirective = (() => {
+      const g = profile.goalTargetTime;
+      if (!g || !String(g).includes(":")) return "";
+      const parts = String(g).split(":").map(Number);
+      const goalSec = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+        : parts.length === 2 ? parts[0] * 60 + parts[1] : null;
+      if (!goalSec || goalSec < 1800) return ""; // garde-fou : un HYROX dure > 30 min
+      const perKm = (goalSec * 0.5) / 8; // ~50% du temps en course, réparti sur 8 km
+      const m = Math.floor(perKm / 60), s = Math.round(perKm % 60);
+      const racePace = `${m}:${String(s).padStart(2, "0")}/km`;
+      return `\n═══ 🏁 ALLURE DE COURSE CIBLE (objectif ${g}) ═══\nPour viser ${g} au total, l'allure des 8×1km HYROX ≈ ${racePace}. En séance QUALITÉ ou HYBRIDE (phases développement/pic), prescris des intervalles À CETTE ALLURE (${racePace}) — ex: 6-8×1km @ ${racePace} récup courte, ou runs de liaison @ ${racePace} — pour ancrer le rythme de course et habituer l'athlète à ces splits.`;
+    })();
+
     // ── ANALYSE APPROFONDIE DES FEEDBACKS ──────────────────────────────
 
     // 1. Séances récentes enrichies (exercicesLog + douleurs + énergie)
@@ -5586,6 +5600,7 @@ ${adaptationContext}
 ${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
 Temps disponible: ${dailyData.temps} minutes${deferredHard ? `\n⚠️ RÉCUP PRIORITAIRE : une séance ${deferredHard === "running_qualite" ? "qualité" : "hybride"} était prévue mais l'athlète est en récupération insuffisante aujourd'hui → on la reporte. Fais une VRAIE séance de récupération douce (Z2 facile / mobilité), PAS d'intensité. Explique-lui qu'elle reprendra la séance dure une fois reposé.` : ""}
 ${weaknessDirective}
+${racePaceDirective}
 
 BASE NUTRITION À UTILISER:
 Avant (<2h): repas glucides complexes + protéines | Avant (<1h): banane + protéines légères | Pendant (>60min): 30-60g glucides/h | Après (dans 30min): 25-35g protéines + glucides rapides
