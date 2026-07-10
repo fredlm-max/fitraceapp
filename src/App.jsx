@@ -5030,6 +5030,33 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
 
     const sessionType = choixManuel ? dailyData.typeSeance : autoType;
 
+    // ═══ FAIBLESSES PAR STATION → pilotent le contenu de la séance ═══════
+    // Même logique que le Weakness Detector : on note chaque station vs benchmarks
+    // open/elite (par sexe) et on remonte les 2 plus faibles pour les cibler.
+    const weaknessFocus = (() => {
+      try {
+        const times = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}");
+        const isF = profile.sexe === "F" || profile.sexe === "femme";
+        const BM = {
+          skierg:    { open: isF ? 480 : 360, elite: isF ? 300 : 240, label: "SkiErg 1000m",  fix: "SkiErg 4×250m récup 30s (technique tirage+gainage)" },
+          sled_push: { open: isF ? 270 : 210, elite: isF ? 150 : 120, label: "Sled Push 50m", fix: "Force quad: goblet/front squat 4×12 + sled push 4×20m progressifs" },
+          sled_pull: { open: isF ? 300 : 240, elite: isF ? 180 : 150, label: "Sled Pull 50m", fix: "Traction dos 3×10 + step-ups 3×20 + sled pull 4×20m" },
+          burpee:    { open: isF ? 420 : 360, elite: isF ? 270 : 210, label: "Burpee BJ 80m", fix: "Burpees tabata 8×20s + EMOM box jumps" },
+          rowing:    { open: isF ? 420 : 360, elite: isF ? 270 : 210, label: "Rowing 1000m",  fix: "Rowing 4×500m à 85% FC (séquence jambes→dos→bras)" },
+          farmers:   { open: isF ? 180 : 150, elite: isF ? 120 : 90,  label: "Farmers 200m",  fix: "Farmers walk 4×50m lourd + grip work (dead hang)" },
+          sandbag:   { open: isF ? 450 : 360, elite: isF ? 270 : 210, label: "Sandbag 100m",  fix: "Fentes marchées 4×20/jambe + sandbag carry 4×50m" },
+          wall_balls:{ open: isF ? 360 : 300, elite: isF ? 240 : 180, label: "Wall Balls 100",fix: "Wall Balls EMOM 10min (10-12 reps/min)" },
+        };
+        const scored = Object.entries(BM)
+          .map(([id, b]) => { const t = times[id]; if (!t) return null; const pct = Math.max(0, Math.min(100, (b.open - t) / (b.open - b.elite) * 100)); return { id, label: b.label, fix: b.fix, score: pct }; })
+          .filter(Boolean).sort((a, b) => a.score - b.score);
+        return scored.slice(0, 2);
+      } catch { return []; }
+    })();
+    const weaknessDirective = weaknessFocus.length
+      ? `\n═══ 🎯 FAIBLESSES À CIBLER EN PRIORITÉ ═══\nStations les plus faibles de l'athlète (à intégrer dans CETTE séance quand le type le permet — force/hybride surtout) :\n${weaknessFocus.map((w, i) => `${i + 1}. ${w.label} (${w.score.toFixed(0)}% du niveau élite) → ${w.fix}`).join("\n")}\nRÈGLE : si la séance est de type force ou hybride, INCLURE au moins un bloc travaillant la station n°1. En running, ignorer.`
+      : "";
+
     // ── ANALYSE APPROFONDIE DES FEEDBACKS ──────────────────────────────
 
     // 1. Séances récentes enrichies (exercicesLog + douleurs + énergie)
@@ -5543,6 +5570,7 @@ ${adaptationContext}
 ═══ TYPE DE SÉANCE À GÉNÉRER ═══
 ${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
 Temps disponible: ${dailyData.temps} minutes
+${weaknessDirective}
 
 BASE NUTRITION À UTILISER:
 Avant (<2h): repas glucides complexes + protéines | Avant (<1h): banane + protéines légères | Pendant (>60min): 30-60g glucides/h | Après (dans 30min): 25-35g protéines + glucides rapides
