@@ -34911,6 +34911,34 @@ async function generateWeekPlanning(profile, setPlanningWeek, setLoadingPlanning
     return `${s.titre}(RPE:${s.difficulte||"?"},${s.ressenti}${log?","+log:""})`;
   }).join(" → ");
 
+  // Faiblesses par station (mêmes benchmarks que le détecteur) pour orienter la semaine.
+  const planWeakness = (() => {
+    try {
+      const times = JSON.parse(localStorage.getItem(`fitrace_hyrox_times_${profile.name}`) || "{}");
+      const isF = profile.sexe === "F" || profile.sexe === "femme";
+      const BM = {
+        skierg:{open:isF?480:360,elite:isF?300:240,label:"SkiErg"}, sled_push:{open:isF?270:210,elite:isF?150:120,label:"Sled Push"},
+        sled_pull:{open:isF?300:240,elite:isF?180:150,label:"Sled Pull"}, burpee:{open:isF?420:360,elite:isF?270:210,label:"Burpee BJ"},
+        rowing:{open:isF?420:360,elite:isF?270:210,label:"Rowing"}, farmers:{open:isF?180:150,elite:isF?120:90,label:"Farmers"},
+        sandbag:{open:isF?450:360,elite:isF?270:210,label:"Sandbag Lunges"}, wall_balls:{open:isF?360:300,elite:isF?240:180,label:"Wall Balls"},
+      };
+      const scored = Object.entries(BM).map(([id,b])=>{const t=times[id];if(!t)return null;const pct=Math.max(0,Math.min(100,(b.open-t)/(b.open-b.elite)*100));return{label:b.label,pct};}).filter(Boolean).sort((a,b)=>a.pct-b.pct);
+      return scored.slice(0,2);
+    } catch { return []; }
+  })();
+  const planWeaknessInstr = planWeakness.length
+    ? `\n══ 🎯 FAIBLESSES À CIBLER CETTE SEMAINE ══\nStations les plus faibles : ${planWeakness.map(w=>`${w.label} (${w.pct.toFixed(0)}%)`).join(", ")}. Programme du travail spécifique sur ${planWeakness[0].label} dans au moins une séance force/hybride de la semaine.`
+    : "";
+  const planPaceInstr = (() => {
+    const g = profile.goalTargetTime;
+    if (!g || !String(g).includes(":")) return "";
+    const p = String(g).split(":").map(Number);
+    const goalSec = p.length===3 ? p[0]*3600+p[1]*60+p[2] : p.length===2 ? p[0]*60+p[1] : null;
+    if (!goalSec || goalSec < 1800) return "";
+    const perKm = (goalSec*0.5)/8; const m=Math.floor(perKm/60), s=Math.round(perKm%60);
+    return `\n══ 🏁 ALLURE DE COURSE CIBLE ══\nObjectif ${g} → allure course ≈ ${m}:${String(s).padStart(2,"0")}/km. Inclure au moins une séance qualité/hybride avec des intervalles à cette allure.`;
+  })();
+
   const raw = await callClaudeStream(
     `Tu es Marc, coach HYROX Pro. Génère un planning hebdomadaire HYROX ultra-détaillé et personnalisé. Réponds UNIQUEMENT avec du JSON valide — aucun texte, aucun backtick, aucune explication.`,
     `Planifie la semaine HYROX complète pour ${profile.name}.
@@ -34939,6 +34967,7 @@ Wall Balls: ${wallBallKg}kg | Farmers Carry: 2×${farmersKg}kg | Sandbag: ${sand
 - Séances hybrides : alterner run-station-run-station
 
 JOURS: ${joursList} | SÉANCES: ${nbSeancesTarget} | RÉPARTITION: ${repartitionInstr}
+${planWeaknessInstr}${planPaceInstr}
 
 ══ FORMAT JSON OBLIGATOIRE ══
 Retourne EXACTEMENT ce format (remplis chaque champ avec des données réelles et précises):
