@@ -4983,23 +4983,50 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     const isDeloadWeek = week > 0 && week % 4 === 0 && phase !== "affûtage";
     // Éviter de répéter le même type que la dernière séance
     const lastSessionType = allSessions.length > 0 ? allSessions[allSessions.length - 1]?.type : null;
-    // Structure semaine HYROX validée par jour de la semaine
-    const dayOfWeek = new Date().getDay(); // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
-    const smartTypeByDay = {
-      0: "running_zone2",      // Dimanche → sortie longue Z2
-      1: "force_stations",     // Lundi → force + stations
-      2: "running_qualite",    // Mardi → qualité running
-      3: "running_zone2",      // Mercredi → Z2 récup
-      4: "force_stations",     // Jeudi → force
-      5: "hybride_compromis",  // Vendredi → hybride HYROX
-      6: "running_zone2",      // Samedi → sortie Z2
+
+    // ═══ MICROCYCLE INTELLIGENT ═══════════════════════════════════════
+    // Au lieu d'une rotation figée par jour, on choisit le type qui MANQUE
+    // à la semaine pour respecter la polarisation 80/20 et l'équilibre du bloc.
+    // Modèle hebdo idéal par phase (ordre = priorité). Max 2 séances dures/sem.
+    const weeklyTemplateByPhase = {
+      base:           ["running_zone2", "force_stations", "running_zone2", "force_stations", "running_qualite"],
+      développement:  ["running_qualite", "force_stations", "running_zone2", "hybride_compromis", "running_zone2"],
+      pic:            ["hybride_compromis", "running_qualite", "force_stations", "running_zone2", "hybride_compromis"],
+      affûtage:       ["running_qualite", "hybride_compromis", "running_zone2", "running_zone2"],
     };
-    const rotationFallback = ["running_zone2", "force_stations", "running_qualite", "hybride_compromis", "force_stations"];
-    let autoType = smartTypeByDay[dayOfWeek];
-    if (autoType === lastSessionType) {
-      const idx = rotationFallback.indexOf(lastSessionType);
-      autoType = rotationFallback[(idx + 1) % rotationFallback.length];
+    const template = weeklyTemplateByPhase[phase] || weeklyTemplateByPhase.base;
+
+    // Séances déjà faites cette semaine (lundi → aujourd'hui)
+    const _now = new Date();
+    const _daysSinceMonday = (_now.getDay() + 6) % 7; // lundi = 0
+    const _weekStart = new Date(_now); _weekStart.setHours(0, 0, 0, 0);
+    _weekStart.setDate(_weekStart.getDate() - _daysSinceMonday);
+    const doneThisWeek = allSessions.filter(s => { const d = parseLocalDate(s.date); return d && d >= _weekStart; });
+    const doneCount = (t) => doneThisWeek.filter(s => s.type === t).length;
+
+    // Besoins restants = cibles du modèle − déjà faites
+    const target = {};
+    template.forEach(t => { target[t] = (target[t] || 0) + 1; });
+    const remaining = {};
+    Object.keys(target).forEach(t => { remaining[t] = target[t] - doneCount(t); });
+
+    // Garde polarisation : max 2 séances "dures" (qualité + hybride) par semaine
+    const hardTypes = ["running_qualite", "hybride_compromis"];
+    const hardDone = doneThisWeek.filter(s => hardTypes.includes(s.type)).length;
+    const isHard = (t) => hardTypes.includes(t);
+
+    // Choix : 1er type du modèle avec un besoin restant, en évitant de répéter la
+    // dernière séance et en respectant le plafond de séances dures.
+    let autoType = null;
+    for (const t of template) {
+      if (remaining[t] <= 0) continue;
+      if (t === lastSessionType) continue;      // pas 2× le même type d'affilée
+      if (isHard(t) && hardDone >= 2) continue;  // plafond intensité hebdo
+      autoType = t; break;
     }
+    // Filet : si tout est comblé ou bloqué → volume Z2 facile (toujours sûr, polarisation)
+    if (!autoType) autoType = lastSessionType === "running_zone2" ? "force_stations" : "running_zone2";
+
     const sessionType = choixManuel ? dailyData.typeSeance : autoType;
 
     // ── ANALYSE APPROFONDIE DES FEEDBACKS ──────────────────────────────
