@@ -41677,10 +41677,10 @@ JSON: {
             )}
           </div>
 
-          {/* Modal ajout aliment */}
+          {/* Modal ajout aliment — centrée verticalement (apparaît au niveau des yeux) */}
           {showAdd && (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-              <div className="slide-up" style={{ background: "#0d0d0d", borderRadius: "22px 22px 0 0", padding: "0 0 32px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "92vh", overflowY: "auto", border: "1px solid rgba(0,0,0,0.06)" }}>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+              <div className="slide-up" style={{ background: "#0d0d0d", borderRadius: "22px", padding: "0 0 20px", width: "100%", maxWidth: 480, margin: "0 auto", maxHeight: "88vh", overflowY: "auto", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 20px 60px rgba(0,0,0,0.6)" }}>
                 {/* Poignée */}
                 <div style={{ padding: "14px 0 0", textAlign: "center" }}>
                   <div style={{ width: 36, height: 4, background: "#222", borderRadius: 99, margin: "0 auto" }} />
