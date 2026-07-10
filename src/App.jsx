@@ -5028,6 +5028,21 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     // Filet : si tout est comblé ou bloqué → volume Z2 facile (toujours sûr, polarisation)
     if (!autoType) autoType = lastSessionType === "running_zone2" ? "force_stations" : "running_zone2";
 
+    // ── #6 : LA RÉCUP RÉORGANISE LA SEMAINE ──────────────────────────
+    // Si aujourd'hui le microcycle appelle une séance DURE mais que la readiness
+    // est basse (fatigue déclarée, sommeil court ou VFC basse), on bascule en Z2
+    // récup. La séance dure n'étant pas "faite", le microcycle la re-proposera
+    // automatiquement sur un jour plus frais → la semaine s'auto-réorganise.
+    const _sleepH0 = parseFloat(dailyData.sleepHours) || 7.5;
+    const _fatigue0 = parseInt(dailyData.fatigue) || 3; // 1=épuisé … 4=frais
+    const _hrv0 = dailyData.hrv ? parseInt(dailyData.hrv) : null;
+    const lowReadiness = _fatigue0 <= 2 || _sleepH0 < 6 || (_hrv0 !== null && _hrv0 < 45);
+    let deferredHard = null;
+    if (!choixManuel && lowReadiness && hardTypes.includes(autoType)) {
+      deferredHard = autoType;
+      autoType = "running_zone2"; // récup active à la place
+    }
+
     const sessionType = choixManuel ? dailyData.typeSeance : autoType;
 
     // ═══ FAIBLESSES PAR STATION → pilotent le contenu de la séance ═══════
@@ -5569,7 +5584,7 @@ ${adaptationContext}
 
 ═══ TYPE DE SÉANCE À GÉNÉRER ═══
 ${sessionTypeDescriptions[sessionType] || "Séance HYROX générale"}
-Temps disponible: ${dailyData.temps} minutes
+Temps disponible: ${dailyData.temps} minutes${deferredHard ? `\n⚠️ RÉCUP PRIORITAIRE : une séance ${deferredHard === "running_qualite" ? "qualité" : "hybride"} était prévue mais l'athlète est en récupération insuffisante aujourd'hui → on la reporte. Fais une VRAIE séance de récupération douce (Z2 facile / mobilité), PAS d'intensité. Explique-lui qu'elle reprendra la séance dure une fois reposé.` : ""}
 ${weaknessDirective}
 
 BASE NUTRITION À UTILISER:
