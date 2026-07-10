@@ -4977,6 +4977,19 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     const allAdaptations = profile.adaptations || [];
     const nbSessions = allSessions.length;
 
+    // ─── PLAN DIRECTEUR : la séance du jour suit le planning hebdo (option A) ───
+    // On lit le plan de la semaine (clé stable) et on récupère le type prévu
+    // aujourd'hui. La récup pourra ensuite l'ajuster (cf. plus bas).
+    let planTypeToday = null;
+    try {
+      const _plan = await storage.get(`planning_current_${profile.name}`);
+      if (_plan?.jours?.length) {
+        const _todayName = JOURS_FULL[(new Date().getDay() + 6) % 7];
+        const _entry = _plan.jours.find(j => j.jour === _todayName);
+        if (_entry?.type) planTypeToday = _entry.type === "repos" ? "running_zone2" : _entry.type;
+      }
+    } catch {}
+
     // ── DÉTERMINER LE TYPE DE SÉANCE (avant l'analyse qui en dépend) ──
     const choixManuel = dailyData.typeSeance && dailyData.typeSeance !== "auto";
     // Détection semaine de décharge : toutes les 4 semaines
@@ -5027,6 +5040,11 @@ Dernière séance: ${lastSess ? `"${lastSess.titre}" — RPE ${lastSess.difficul
     }
     // Filet : si tout est comblé ou bloqué → volume Z2 facile (toujours sûr, polarisation)
     if (!autoType) autoType = lastSessionType === "running_zone2" ? "force_stations" : "running_zone2";
+
+    // ── PLAN DIRECTEUR PRIME ──────────────────────────────────────────
+    // Si le planning hebdo prévoit un type aujourd'hui, on le SUIT (option A).
+    // Le microcycle ci-dessus reste le filet quand aucun plan n'existe.
+    if (planTypeToday) autoType = planTypeToday;
 
     // ── #6 : LA RÉCUP RÉORGANISE LA SEMAINE ──────────────────────────
     // Si aujourd'hui le microcycle appelle une séance DURE mais que la readiness
@@ -34973,6 +34991,8 @@ IMPORTANT: Les champs "exercices" doivent contenir les vraies charges/allures/FC
     if (data?.jours?.length > 0) {
       setPlanningWeek(data);
       await storage.set(cacheKey, data);
+      // Clé stable : la séance du jour lit ce plan directeur pour suivre le planning.
+      await storage.set(`planning_current_${profile.name}`, data);
     } else {
       throw new Error("JSON sans jours");
     }
