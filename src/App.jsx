@@ -7451,7 +7451,7 @@ JSON:
             <div style={{ display: showAllHome ? "block" : "none" }}>
 
             {/* ── AI COACH WEEKLY SUMMARY — TrainingPeaks style ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -7584,7 +7584,7 @@ JSON:
             })()}
 
             {/* ── GARMIN TRAINING STATUS ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
 
@@ -7674,7 +7674,7 @@ JSON:
             })()}
 
             {/* ── RACE COUNTDOWN + PERIODIZATION TIMELINE ── */}
-            {(() => {
+            {false && (() => {
               if (!profile.raceDate) return null;
               const today = new Date(); today.setHours(0,0,0,0);
               const raceDay = new Date(profile.raceDate); raceDay.setHours(0,0,0,0);
@@ -7783,7 +7783,7 @@ JSON:
             })()}
 
             {/* ── WEEKLY CHALLENGE — Nike Training Club style ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const goal = parseInt(profile.seancesParSemaine) || 4;
 
@@ -7908,7 +7908,7 @@ JSON:
             })()}
 
             {/* ── HYROX RACE READINESS SCORE ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length < 2) return null;
 
@@ -8024,7 +8024,7 @@ JSON:
             })()}
 
             {/* ── 7-DAY LOAD OVERVIEW — Garmin Connect style ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               if (sessions.length === 0) return null;
 
@@ -8125,7 +8125,7 @@ JSON:
             })()}
 
             {/* ── ACTIVITY RINGS — Apple Watch style ── */}
-            {(() => {
+            {false && (() => {
               const todayStr = new Date().toISOString().slice(0,10);
               const sessions = profile.sessions || [];
               const todaySessions = sessions.filter(s => s.date?.slice(0,10) === todayStr);
@@ -8213,7 +8213,7 @@ JSON:
             })()}
 
             {/* ── WORKOUT LIBRARY — Nike Training Club style ── */}
-            {(() => {
+            {false && (() => {
               const LIBRARY = [
                 {
                   id:"skierg_intervals", type:"running_qualite", icon:"🎿", color:"#C9A840",
@@ -8740,7 +8740,7 @@ JSON:
             })()}
 
             {/* ── SMART TRAINING ALERTS ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const today = new Date().toISOString().slice(0,10);
               const KEY_DISMISS = `fitrace_alerts_dismissed_${profile.name}`;
@@ -9095,7 +9095,7 @@ JSON:
             })()}
 
             {/* ── FATIGUE STATUS BANNER ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               // ATL (7j) / CTL (42j) / TSB
               const kATL = 1 - Math.exp(-1/7), kCTL = 1 - Math.exp(-1/42);
@@ -9167,7 +9167,7 @@ JSON:
             })()}
 
             {/* ── WORKOUT READINESS SCORE ── */}
-            {(() => {
+            {false && (() => {
               const todayStr = new Date().toISOString().slice(0,10);
               const wellKey = `fitrace_wellness_${profile.name}_${todayStr}`;
               const well = (() => { try { return JSON.parse(localStorage.getItem(wellKey)) || {}; } catch { return {}; } })();
@@ -9251,7 +9251,7 @@ JSON:
             <div style={{ display: showAllHome ? "block" : "none" }}>
 
             {/* ── XP LEVEL BAR ── */}
-            {(() => {
+            {false && (() => {
               const totalXP = calcTotalXP(profile);
               const lvl = getXPLevel(totalXP);
               return (
@@ -9285,7 +9285,7 @@ JSON:
             })()}
 
             {/* ── STREAK WIDGET ── */}
-            {(()=>{
+            {false && (()=>{
               const allSessions = profile.sessions || [];
               const today = new Date(); today.setHours(0,0,0,0);
               const sessionDays = new Set(allSessions.map(s => s.date ? new Date(s.date).toISOString().split("T")[0] : null).filter(Boolean));
@@ -9326,7 +9326,7 @@ JSON:
             })()}
 
             {/* ── BILAN SEMAINE ── */}
-            {(()=>{
+            {false && (()=>{
               const sessions = profile.sessions || [];
               if (sessions.length < 2) return null;
               const now2 = new Date();
@@ -9415,7 +9415,7 @@ JSON:
             })()}
 
             {/* ── COACH INSIGHTS ── */}
-            {(()=>{
+            {false && (()=>{
               const sessions = profile.sessions || [];
               if (sessions.length < 3) return null;
               const now3 = new Date();
@@ -12866,7 +12866,7 @@ JSON:
             })()}
 
             {/* ── WEEKLY CHALLENGE ── */}
-            {(() => {
+            {false && (() => {
               const today = new Date();
               // Get start of current week (Monday)
               const dow = today.getDay();
