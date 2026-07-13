@@ -3,7 +3,7 @@ const p = "src/App.jsx";
 let lines = fs.readFileSync(p, "utf8").split("\n");
 
 // Commentaire de widget au niveau onglet = exactement 12 espaces d'indentation.
-const isSib = (l) => /^ {12}\{\/\* ── /.test(l);
+const isSib = (l) => /^ {12,16}\{\/\* ── /.test(l);
 
 // Désactive le rendu d'un widget SANS rien supprimer : insère `false && ` juste
 // après l'accolade ouvrante de l'expression qui suit le commentaire.

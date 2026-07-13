@@ -26413,7 +26413,7 @@ const sessions = profile.sessions || [];
               })()}
 
               {/* ── HR ZONES TRAINING GUIDE ── */}
-              {(() => {
+              {false && (() => {
                 const sex = profile.sexe === "F" ? "F" : "H";
                 const fcMax = profile.fcMax || estimateFCmax(profile.age, sex);
                 if (!fcMax) return null;
@@ -26489,7 +26489,7 @@ const sessions = profile.sessions || [];
               })()}
 
               {/* ── MENTAL TRAINING GUIDE ── */}
-              {(() => {
+              {false && (() => {
                 const daysLeft = profile.raceDate ? Math.ceil((new Date(profile.raceDate) - new Date()) / 86400000) : null;
                 const [activeTab, setActiveTab] = React.useState("visualize");
                 const TABS = [
@@ -26567,7 +26567,7 @@ const sessions = profile.sessions || [];
               })()}
 
               {/* ── ENERGY SYSTEMS GUIDE ── */}
-              {(() => {
+              {false && (() => {
                 const SYSTEMS = [
                   {
                     id: "atpcp", name: "Filière Phosphocréatine", abbr: "ATP-CP", icon: "⚡", color: "#FF453A",
@@ -26643,7 +26643,7 @@ const sessions = profile.sessions || [];
               })()}
 
               {/* ── BREATHING PROTOCOL ── */}
-              {(() => {
+              {false && (() => {
                 const PROTOCOLS = [
                   { id: "box", name: "Box Breathing", desc: "Cohérence cardiaque — avant la course", color: "#38bdf8", phases: [{ l: "Inspire", t: 4 }, { l: "Retiens", t: 4 }, { l: "Expire", t: 4 }, { l: "Pause", t: 4 }] },
                   { id: "478", name: "4-7-8", desc: "Relaxation profonde — avant de dormir", color: "#BF5AF2", phases: [{ l: "Inspire", t: 4 }, { l: "Retiens", t: 7 }, { l: "Expire", t: 8 }, { l: "Pause", t: 1 }] },
