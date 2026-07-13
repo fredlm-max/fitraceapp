@@ -17741,7 +17741,7 @@ JSON:
             })()}
 
             {/* ── ACTIVITY HEATMAP ── */}
-            {(() => {
+            {false && (() => {
               const sessions = profile.sessions || [];
               const sessMap = {};
               sessions.forEach(s => {
@@ -18194,7 +18194,7 @@ JSON:
 
 
             {/* ── SLEEP TRACKER ── */}
-            {(() => {
+            {false && (() => {
               const KEY = `fitrace_sleep_${profile.name}`;
               const [sleepLog, setSleepLog] = React.useState(() => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } });
               const [bedH, setBedH] = React.useState(23);
@@ -18320,7 +18320,7 @@ JSON:
             })()}
 
             {/* ── SESSION HISTORY DETAIL ── */}
-            {(() => {
+            {false && (() => {
               const sessions = [...(profile.sessions || [])].sort((a,b)=>b.date>a.date?1:-1).slice(0,30);
               if (sessions.length === 0) return null;
 
@@ -25683,7 +25683,7 @@ const sessions = profile.sessions || [];
             })()}
 
             {/* ── RACE DAY PACING CALCULATOR ── */}
-            {(()=>{
+            {false && (()=>{
               const [targetH, setTargetH] = React.useState("1");
               const [targetM, setTargetM] = React.useState("15");
               const [open, setOpen] = React.useState(false);
