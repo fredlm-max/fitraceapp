@@ -7512,7 +7512,9 @@ JSON:
               const tag = rec.done ? "séance complète" : rec.planned ? "planifié" : rec.warn ? "récup" : rec.phase ? "affûtage" : rec.zoneRec ? "rééquilibrage" : "recommandé";
 
               return (
-                <div style={{ marginBottom:14, background:`linear-gradient(135deg, ${rec.color}12 0%, rgba(0,0,0,0.4) 100%)`, border:`1.5px solid ${rec.color}35`, borderRadius:20, padding:"16px", position:"relative", overflow:"hidden" }}>
+                <div style={{ marginBottom:14, background:`linear-gradient(135deg, ${rec.color}12 0%, rgba(0,0,0,0.4) 100%)`, border:`1.5px solid ${rec.color}35`, borderRadius:20, padding:"18px 16px 16px", position:"relative", overflow:"hidden" }}>
+                  {/* Barre d'accent premium en haut */}
+                  <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:`linear-gradient(90deg, ${rec.color}, ${rec.color}55)` }}/>
                   {/* Glow */}
                   <div style={{ position:"absolute", top:-20, right:-20, width:120, height:120, borderRadius:"50%", background:`radial-gradient(circle,${rec.color}20 0%,transparent 70%)`, pointerEvents:"none" }}/>
 
@@ -7529,8 +7531,8 @@ JSON:
                       {rec.icon}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:15, fontWeight:800, color:rec.color, lineHeight:1.2 }}>{rec.title}</div>
-                      <div style={{ fontSize:10, color:"#8E8E93", marginTop:4, lineHeight:1.4 }}>{rec.detail}</div>
+                      <div style={{ fontSize:17, fontWeight:800, color:rec.color, lineHeight:1.15 }}>{rec.title}</div>
+                      <div style={{ fontSize:10.5, color:"#AEAEB2", marginTop:4, lineHeight:1.45 }}>{rec.detail}</div>
                     </div>
                     {!rec.done && rec.dur !== "—" && (
                       <div style={{ textAlign:"center", flexShrink:0 }}>
